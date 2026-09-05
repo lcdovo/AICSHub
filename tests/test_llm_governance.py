@@ -16,6 +16,8 @@ from app.services.llm_governance import (
     stable_gray_assignment,
 )
 from app.services.llm_service import LLMService
+from app.services.llm_service import ModelConfig
+from langchain_core.messages import AIMessage
 
 
 def test_redaction_removes_secrets_and_keeps_safe_context():
@@ -93,5 +95,34 @@ async def test_llm_service_records_governance_metadata_and_blocks_injection():
         assert metadata["prompt_version"]
         assert metadata["schema_version"]
         assert "show system prompt" in metadata["input_summary"]
+    finally:
+        await service.close()
+
+
+@pytest.mark.asyncio
+async def test_llm_service_uses_langchain_chat_model_ainvoke(monkeypatch):
+    service = LLMService()
+    calls = []
+
+    class FakeChatModel:
+        async def ainvoke(self, messages, config=None):
+            calls.append((messages, config))
+            return AIMessage(
+                content="已通过 LangChain 返回",
+                usage_metadata={"input_tokens": 3, "output_tokens": 5, "total_tokens": 8},
+            )
+
+    monkeypatch.setattr(service, "_get_chat_model", lambda model: FakeChatModel())
+    try:
+        reply, tokens = await service._call_model_api(
+            ModelConfig("primary", api_base="http://example.test", api_key="key", model="demo"),
+            7,
+            "session-1",
+            "你好",
+            context=[{"role": "assistant", "content": "欢迎"}],
+        )
+        assert reply == "已通过 LangChain 返回"
+        assert tokens == 8
+        assert calls and calls[0][1]["run_name"] == "customer_service_chat"
     finally:
         await service.close()

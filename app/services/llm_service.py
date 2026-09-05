@@ -8,7 +8,8 @@ import logging
 from typing import Optional, Tuple, List, Dict, Any
 from datetime import datetime
 
-import httpx
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
 from app.config.config import settings
 from app.services.llm_governance import BudgetManager, BudgetPolicy, CostEstimator, SensitiveDataRedactor, PromptInjectionScanner, ToolPolicy, build_default_registry
@@ -102,7 +103,7 @@ class LLMService:
         self.models: List[ModelConfig] = []
         self.current_model_index: int = 0
         self.circuit_breaker = CircuitBreaker()
-        self._client: Optional[httpx.AsyncClient] = None
+        self._chat_models: Dict[str, ChatOpenAI] = {}
         self.call_stats: Dict[str, Dict[str, int]] = {}
         self.registry = build_default_registry(settings.LLM_PROMPT_VERSION, settings.LLM_MODEL_VERSION or settings.LLM_MODEL, settings.LLM_SCHEMA_VERSION, settings.LLM_ROUTE_VERSION)
         self.redactor = SensitiveDataRedactor()
@@ -145,16 +146,8 @@ class LLMService:
         )
         self.models.append(local)
 
-    def _get_client(self) -> httpx.AsyncClient:
-        if self._client is None or self._client.is_closed:
-            self._client = httpx.AsyncClient(
-                timeout=self.TIMEOUT,
-            )
-        return self._client
-
     async def close(self):
-        if self._client and not self._client.is_closed:
-            await self._client.close()
+        self._chat_models.clear()
 
     def detect_intent(self, message: str) -> str:
         message_lower = message.lower()
@@ -262,40 +255,72 @@ class LLMService:
         message: str,
         context: Optional[list] = None,
     ) -> Tuple[str, int]:
-        client = self._get_client()
-
         system_prompt = self._get_system_prompt()
-        messages = [{"role": "system", "content": system_prompt}]
+        messages = [SystemMessage(content=system_prompt)]
 
         if context:
-            messages.extend(self.redactor.sanitize_messages(context[-10:]))
+            for item in self.redactor.sanitize_messages(context[-10:]):
+                role = item.get("role", "user")
+                content = item.get("content", "")
+                if role == "assistant":
+                    messages.append(AIMessage(content=content))
+                else:
+                    messages.append(HumanMessage(content=content))
 
-        messages.append({"role": "user", "content": self.redactor.redact(message)})
+        messages.append(HumanMessage(content=self.redactor.redact(message)))
 
-        payload = {
-            "model": model.model,
-            "messages": messages,
-            "max_tokens": min(settings.LLM_MAX_TOKENS, self.budget_manager.policy.max_tokens),
-            "temperature": 0.7,
-        }
-
-        headers = {
-            "Authorization": f"Bearer {model.api_key}",
-            "Content-Type": "application/json",
-        }
-
-        response = await client.post(
-            f"{model.api_base}/chat/completions",
-            json=payload,
-            headers=headers,
+        chat_model = self._get_chat_model(model)
+        response = await chat_model.ainvoke(
+            messages,
+            config={
+                "run_name": "customer_service_chat",
+                "tags": ["customer-service", model.name],
+                "metadata": {"user_id": user_id, "session_id": session_id},
+            },
         )
-        response.raise_for_status()
-        data = response.json()
 
-        reply = data["choices"][0]["message"]["content"]
-        token_count = data.get("usage", {}).get("total_tokens", len(message))
+        reply = self._message_content(response)
+        token_count = self._message_token_count(response, fallback=len(message))
 
         return reply, token_count
+
+    def _get_chat_model(self, model: ModelConfig) -> ChatOpenAI:
+        """Create one LangChain ChatOpenAI instance per configured model."""
+        cached = self._chat_models.get(model.name)
+        if cached is not None:
+            return cached
+
+        chat_model = ChatOpenAI(
+            model=model.model,
+            api_key=model.api_key,
+            base_url=model.api_base,
+            temperature=0.7,
+            timeout=self.TIMEOUT,
+            max_retries=0,
+            max_completion_tokens=min(settings.LLM_MAX_TOKENS, self.budget_manager.policy.max_tokens),
+            streaming=False,
+        )
+        self._chat_models[model.name] = chat_model
+        return chat_model
+
+    @staticmethod
+    def _message_content(message: Any) -> str:
+        content = getattr(message, "content", message)
+        if isinstance(content, list):
+            return "".join(
+                part.get("text", "") if isinstance(part, dict) else str(part)
+                for part in content
+            )
+        return str(content or "")
+
+    @staticmethod
+    def _message_token_count(message: Any, fallback: int = 0) -> int:
+        usage = getattr(message, "usage_metadata", None) or {}
+        if usage:
+            return int(usage.get("total_tokens", 0) or (usage.get("input_tokens", 0) + usage.get("output_tokens", 0)))
+        metadata = getattr(message, "response_metadata", None) or {}
+        token_usage = metadata.get("token_usage", metadata.get("usage", {})) or {}
+        return int(token_usage.get("total_tokens", fallback) or fallback)
 
     def _get_system_prompt(self) -> str:
         return """你是一个专业的智能客服助手。你的职责是：
