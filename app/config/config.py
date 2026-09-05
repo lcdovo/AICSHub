@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     LLM_API_BASE: str = Field(default="http://localhost:8001")
     LLM_API_KEY: str = Field(default="")
     LLM_MODEL: str = Field(default="gpt-4o-mini")
+    # Agent 规划默认关闭；开启后由上层接入受控的结构化规划器。
+    LLM_PLANNING_ENABLED: bool = Field(default=False)
+    LLM_REQUEST_TIMEOUT_SECONDS: float = Field(default=30.0, gt=0)
+    LLM_MAX_TOKENS: int = Field(default=1024, ge=64, le=8192)
+    LLM_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
 
     # Milvus 向量数据库
     MILVUS_HOST: str = Field(default="localhost")

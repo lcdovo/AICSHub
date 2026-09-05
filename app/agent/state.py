@@ -12,6 +12,7 @@ class ToolCall(BaseModel):
     result: Any = None
     success: bool = True
     error_message: Optional[str] = None
+    error_type: Optional[str] = None
 
 
 class AgentState(BaseModel):
@@ -27,14 +28,14 @@ class AgentState(BaseModel):
     needs_clarification: bool = False
     
     # 对话历史
-    messages: List[Dict[str, Any]] = []
+    messages: List[Dict[str, Any]] = Field(default_factory=list)
     conversation_summary: Optional[str] = None
     
     # Agent 执行状态
     current_node: str = "start"
-    tool_calls: List[ToolCall] = []
-    collected_info: Dict[str, Any] = {}  # 已收集的信息（如订单号等）
-    pending_confirmations: List[str] = []  # 待确认项
+    tool_calls: List[ToolCall] = Field(default_factory=list)
+    collected_info: Dict[str, Any] = Field(default_factory=dict)  # 已收集的信息（如订单号等）
+    pending_confirmations: List[str] = Field(default_factory=list)  # 待确认项
     
     # 结果
     reply: str = ""
@@ -43,7 +44,7 @@ class AgentState(BaseModel):
     human_reason: Optional[str] = None
     
     # 追踪
-    trace: List[Dict[str, Any]] = []  # 执行链路追踪
+    trace: List[Dict[str, Any]] = Field(default_factory=list)  # 执行链路追踪
     total_tokens: int = 0
     execution_time_ms: int = 0
     
@@ -60,7 +61,7 @@ class AgentState(BaseModel):
             "timestamp": __import__("datetime").datetime.now().isoformat(),
         })
     
-    def add_tool_call(self, tool_name: str, arguments: Dict[str, Any], result: Any = None, success: bool = True, error_message: Optional[str] = None):
+    def add_tool_call(self, tool_name: str, arguments: Dict[str, Any], result: Any = None, success: bool = True, error_message: Optional[str] = None, error_type: Optional[str] = None):
         """添加工具调用记录"""
         self.tool_calls.append(ToolCall(
             tool_name=tool_name,
@@ -68,6 +69,7 @@ class AgentState(BaseModel):
             result=result,
             success=success,
             error_message=error_message,
+            error_type=error_type,
         ))
     
     def get_last_tool_result(self, tool_name: str) -> Optional[Any]:
@@ -97,6 +99,7 @@ class AgentNode:
     CLARIFICATION = "clarification"
     RAG_RETRIEVAL = "rag_retrieval"
     TOOL_EXECUTION = "tool_execution"
+    CONFIRMATION = "confirmation"
     RESULT_VERIFICATION = "result_verification"
     RESPONSE_GENERATION = "response_generation"
     HUMAN_HANDOFF = "human_handoff"

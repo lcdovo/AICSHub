@@ -41,6 +41,7 @@ class ToolExecutionResult(BaseModel):
     hint: Optional[str] = None
     execution_time_ms: int = 0
     retry_count: int = 0
+    error_type: Optional[str] = None
 
 
 class BaseTool:
@@ -51,6 +52,13 @@ class BaseTool:
     max_retries: int = 3
     retry_delay_ms: int = 100
     timeout_ms: int = 5000
+    circuit_failure_threshold: int = 3
+    circuit_recovery_seconds: int = 30
+
+    def __init__(self):
+        self._idempotency_cache: Dict[str, ToolExecutionResult] = {}
+        self._consecutive_failures = 0
+        self._circuit_open_until = 0.0
 
     def validate_params(self, **kwargs) -> Tuple[bool, List[str]]:
         """参数验证，返回 (是否有效, 错误信息列表)"""
@@ -77,6 +85,25 @@ class BaseTool:
         start_time = time.time()
         last_error = None
 
+        if time.time() < self._circuit_open_until:
+            return ToolExecutionResult(
+                success=False,
+                error="工具熔断器已开启，请稍后重试",
+                error_type="circuit_open",
+            )
+
+        valid, errors = self.validate_params(**kwargs)
+        if not valid:
+            return ToolExecutionResult(
+                success=False,
+                error="；".join(errors),
+                error_type="validation",
+            )
+
+        idempotency_key = str(kwargs.get("idempotency_key", "")).strip()
+        if idempotency_key and idempotency_key in self._idempotency_cache:
+            return self._idempotency_cache[idempotency_key].model_copy(deep=True)
+
         for attempt in range(self.max_retries):
             try:
                 if attempt > 0:
@@ -84,19 +111,26 @@ class BaseTool:
                     await asyncio.sleep(delay)
                     logger.info(f"工具 {self.name} 第 {attempt + 1} 次重试")
 
-                result = await self.execute(**kwargs)
+                result = await asyncio.wait_for(
+                    self.execute(**kwargs), timeout=self.timeout_ms / 1000
+                )
                 execution_time = int((time.time() - start_time) * 1000)
 
                 if result.get("success", False):
-                    return ToolExecutionResult(
+                    self._consecutive_failures = 0
+                    tool_result = ToolExecutionResult(
                         success=True,
                         data=result.get("data"),
                         execution_time_ms=execution_time,
                         retry_count=attempt,
                     )
+                    if idempotency_key:
+                        self._idempotency_cache[idempotency_key] = tool_result.model_copy(deep=True)
+                    return tool_result
                 else:
                     last_error = result.get("error", "未知错误")
-                    if attempt < self.max_retries - 1:
+                    # 业务校验/权限错误不可通过重试修复；只有适配器明确标记的瞬时错误才重试。
+                    if result.get("retryable", False) and attempt < self.max_retries - 1:
                         continue
                     return ToolExecutionResult(
                         success=False,
@@ -104,18 +138,24 @@ class BaseTool:
                         hint=result.get("hint"),
                         execution_time_ms=execution_time,
                         retry_count=attempt,
+                        error_type=result.get("error_type", "business"),
                     )
 
             except asyncio.TimeoutError:
                 last_error = f"执行超时 (>{self.timeout_ms}ms)"
+                self._consecutive_failures += 1
                 if attempt < self.max_retries - 1:
                     continue
 
             except Exception as e:
                 last_error = str(e)
+                self._consecutive_failures += 1
                 logger.error(f"工具 {self.name} 执行异常: {e}")
                 if attempt < self.max_retries - 1:
                     continue
+
+        if self._consecutive_failures >= self.circuit_failure_threshold:
+            self._circuit_open_until = time.time() + self.circuit_recovery_seconds
 
         execution_time = int((time.time() - start_time) * 1000)
         return ToolExecutionResult(
@@ -124,6 +164,7 @@ class BaseTool:
             hint="请稍后重试或联系人工客服",
             execution_time_ms=execution_time,
             retry_count=self.max_retries,
+            error_type="timeout" if "超时" in (last_error or "") else "execution",
         )
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
@@ -136,10 +177,12 @@ class QueryOrderTool(BaseTool):
     description = "根据订单号查询订单状态、物流信息、订单详情"
     parameters = [
         {"name": "order_id", "type": "string", "description": "订单号 (如 ORD20260801)", "required": True},
+        {"name": "user_id", "type": "integer", "description": "资源所属用户ID", "required": False, "default": 0},
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         order_id = kwargs.get("order_id", "").strip().upper()
+        user_id = kwargs.get("user_id", 0)
 
         if not order_id:
             return {
@@ -147,6 +190,9 @@ class QueryOrderTool(BaseTool):
                 "error": "订单号不能为空",
                 "hint": "请提供有效的订单号，如 ORD20260801",
             }
+
+        if user_id and user_id != 1:
+            return {"success": False, "error": "无权访问该订单", "error_type": "permission"}
 
         mock_orders = {
             "ORD20260801": {
@@ -296,14 +342,17 @@ class ApplyRefundTool(BaseTool):
     parameters = [
         {"name": "order_id", "type": "string", "description": "订单号", "required": True},
         {"name": "reason", "type": "string", "description": "退换货原因", "required": True},
-        {"name": "type", "type": "string", "description": "类型：refund(仅退款)、return(退货退款)", "required": False,
-         "enum": ["refund", "return"], "default": "refund"},
+        {"name": "type", "type": "string", "description": "类型：refund(仅退款)、return(退货退款)、exchange(换货)", "required": False,
+         "enum": ["refund", "return", "exchange"], "default": "refund"},
+        {"name": "user_id", "type": "integer", "description": "资源所属用户ID", "required": False, "default": 0},
+        {"name": "idempotency_key", "type": "string", "description": "幂等键", "required": False, "default": ""},
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         order_id = kwargs.get("order_id", "").strip().upper()
         reason = kwargs.get("reason", "").strip()
         refund_type = kwargs.get("type", "refund")
+        user_id = kwargs.get("user_id", 0)
 
         if not order_id:
             return {"success": False, "error": "请提供订单号", "hint": "订单号格式：ORD + 数字，如 ORD20260801"}
@@ -311,8 +360,8 @@ class ApplyRefundTool(BaseTool):
         if not reason or len(reason) < 3:
             return {"success": False, "error": "请说明退换货原因", "hint": "请详细描述退换货原因，便于我们为您处理"}
 
-        if refund_type not in ["refund", "return"]:
-            return {"success": False, "error": f"无效的退换货类型: {refund_type}", "hint": "支持的类型：refund(仅退款)、return(退货退款)"}
+        if refund_type not in ["refund", "return", "exchange"]:
+            return {"success": False, "error": f"无效的退换货类型: {refund_type}", "hint": "支持的类型：refund(仅退款)、return(退货退款)、exchange(换货)"}
 
         valid_orders = ["ORD20260801", "ORD20260802"]
         if order_id not in valid_orders:
@@ -322,7 +371,10 @@ class ApplyRefundTool(BaseTool):
                 "hint": "仅已发货/已完成的订单可申请退换货。待付款或已取消的订单无法申请。",
             }
 
-        refund_type_labels = {"refund": "仅退款", "return": "退货退款"}
+        if user_id and user_id != 1:
+            return {"success": False, "error": "无权操作该订单", "error_type": "permission"}
+
+        refund_type_labels = {"refund": "仅退款", "return": "退货退款", "exchange": "换货"}
 
         return {
             "success": True,
@@ -354,7 +406,7 @@ class ApplyRefundTool(BaseTool):
                     "detail": "科技园路10号创新大厦A座",
                     "contact": "售后部",
                     "phone": "400-888-9999",
-                } if refund_type == "return" else None,
+                } if refund_type in {"return", "exchange"} else None,
             },
         }
 
@@ -773,4 +825,5 @@ async def execute_tool_with_fallback(
         "hint": result.hint,
         "execution_time_ms": result.execution_time_ms,
         "retry_count": result.retry_count,
+        "error_type": result.error_type,
     }

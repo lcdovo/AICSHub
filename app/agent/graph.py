@@ -6,7 +6,6 @@
 import os
 import time
 import json
-import asyncio
 import logging
 from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, TypedDict
 from datetime import datetime
@@ -15,11 +14,12 @@ from langchain_core.runnables import RunnableLambda
 from langgraph.graph import END as LANGGRAPH_END
 from langgraph.graph import StateGraph
 
-from app.agent.state import AgentState, AgentNode, IntentType, ToolCall
-from app.agent.intent import EnhancedIntentRecognizer, IntentResult
-from app.agent.tools import get_tool, execute_tool_with_fallback
-from app.agent.retrieval import HybridRetriever, create_default_hybrid_retriever
-from app.agent.validation import ResponseValidator, create_validator
+from app.agent.state import AgentState, AgentNode, IntentType
+from app.agent.intent import EnhancedIntentRecognizer
+from app.agent.tools import ToolExecutionResult
+from app.agent.langchain_tools import get_langchain_tool
+from app.agent.retrieval import create_default_hybrid_retriever
+from app.agent.validation import create_validator
 from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
@@ -109,6 +109,7 @@ class AgentGraph:
         self.nodes[AgentNode.START] = self._node_start
         self.nodes[AgentNode.INTENT_RECOGNITION] = self._node_intent_recognition
         self.nodes[AgentNode.CLARIFICATION] = self._node_clarification
+        self.nodes[AgentNode.CONFIRMATION] = self._node_confirmation
         self.nodes[AgentNode.RAG_RETRIEVAL] = self._node_rag_retrieval
         self.nodes[AgentNode.TOOL_EXECUTION] = self._node_tool_execution
         self.nodes[AgentNode.RESULT_VERIFICATION] = self._node_result_verification
@@ -117,240 +118,77 @@ class AgentGraph:
         self.nodes[AgentNode.END] = self._node_end
 
     async def run_stream(self, state: AgentState) -> AsyncGenerator[Dict[str, Any], None]:
-        """流式执行 Agent 状态机，逐步产出事件供 WebSocket/SSE 推送"""
+        """以同一张 LangGraph 编排图执行流式请求。
+
+        流式接口只负责把图的 updates 转换为事件，不再复制节点、路由或校验逻辑，
+        从而保证 ``run`` 与 WebSocket 的副作用和终止条件一致。
+        """
         start_time = time.time()
-        current_node = state.current_node
-        visited_nodes = set()
+        previous_tool_count = len(state.tool_calls)
+        initial_node = state.current_node
+        # 保持既有 WebSocket 协议：首事件仍为入口节点，同时附带流式能力标记。
+        yield {"type": "node_start", "node": initial_node, "timestamp": datetime.now().isoformat()}
+        yield {"type": "stream_mode", "mode": "graph_updates", "token_stream": "simulated", "timestamp": datetime.now().isoformat()}
+        first_update = True
+        async for update in self.langgraph.astream(
+            {"state": state, "next_node": state.current_node, "regeneration_count": 0},
+            config={"recursion_limit": 50},
+            stream_mode="updates",
+        ):
+            if not update:
+                continue
+            node_name, payload = next(iter(update.items()))
+            updated_state = payload.get("state", state)
+            node_start = datetime.now().isoformat()
+            if not (first_update and node_name == initial_node):
+                yield {"type": "node_start", "node": node_name, "timestamp": node_start}
+            first_update = False
+            state = updated_state
 
-        max_iterations = 15
-        iteration = 0
-        regeneration_count = 0
+            if node_name == AgentNode.INTENT_RECOGNITION:
+                yield {"type": "intent", "intent": state.detected_intent, "confidence": state.intent_confidence,
+                       "needs_clarification": state.needs_clarification, "timestamp": datetime.now().isoformat()}
+            if node_name == AgentNode.RAG_RETRIEVAL:
+                results = state.collected_info.get("kb_results", [])
+                yield {"type": "rag_result", "results_count": len(results),
+                       "top_score": results[0].get("final_score", 0) if results else 0,
+                       "timestamp": datetime.now().isoformat()}
+            if node_name == AgentNode.RESULT_VERIFICATION and state.collected_info.get("validation"):
+                validation = state.collected_info["validation"]
+                yield {"type": "validation", "passed": validation.get("passed", False),
+                       "overall_score": validation.get("overall_score", 0),
+                       "needs_regeneration": validation.get("needs_regeneration", False),
+                       "timestamp": datetime.now().isoformat()}
+            if node_name == AgentNode.HUMAN_HANDOFF:
+                yield {"type": "handoff", "reason": state.human_reason or "需要人工介入",
+                       "timestamp": datetime.now().isoformat()}
 
-        yield {"type": "node_start", "node": current_node, "timestamp": datetime.now().isoformat()}
+            for call in state.tool_calls[previous_tool_count:]:
+                yield {"type": "tool_call_start", "tool": call.tool_name, "args": call.arguments,
+                       "timestamp": datetime.now().isoformat()}
+                yield {"type": "tool_call_complete", "tool": call.tool_name, "success": call.success,
+                       "error": call.error_message, "timestamp": datetime.now().isoformat()}
+            previous_tool_count = len(state.tool_calls)
 
-        while current_node != AgentNode.END and iteration < max_iterations:
-            iteration += 1
+            trace = state.trace[-1] if state.trace else {}
+            yield {"type": "node_complete", "node": node_name,
+                   "duration_ms": trace.get("duration_ms", 0),
+                   "next_node": payload.get("next_node"), "timestamp": datetime.now().isoformat()}
 
-            node_key = f"{current_node}_{state.detected_intent}"
-            if node_key in visited_nodes:
-                break
-            visited_nodes.add(node_key)
-
-            if current_node in self.nodes:
-                node_func = self.nodes[current_node]
-                state.current_node = current_node
-
-                node_start = time.time()
-
-                if current_node == AgentNode.INTENT_RECOGNITION:
-                    yield {"type": "node_start", "node": "intent_recognition", "timestamp": datetime.now().isoformat()}
-                    next_node = await node_func(state)
-                    yield {
-                        "type": "intent",
-                        "intent": state.detected_intent,
-                        "confidence": state.intent_confidence,
-                        "needs_clarification": state.needs_clarification,
-                        "timestamp": datetime.now().isoformat(),
-                    }
-
-                elif current_node == AgentNode.RAG_RETRIEVAL:
-                    yield {"type": "node_start", "node": "rag_retrieval", "timestamp": datetime.now().isoformat()}
-                    next_node = await node_func(state)
-                    kb_results = state.collected_info.get("kb_results", [])
-                    yield {
-                        "type": "rag_result",
-                        "results_count": len(kb_results),
-                        "top_score": kb_results[0].get("final_score", 0) if kb_results else 0,
-                        "timestamp": datetime.now().isoformat(),
-                    }
-
-                elif current_node == AgentNode.TOOL_EXECUTION:
-                    extracted_info = self._extract_info_from_message(state.user_message)
-                    for key, value in extracted_info.items():
-                        if key not in state.collected_info or not state.collected_info[key]:
-                            state.collected_info[key] = value
-
-                    tools_to_execute = self._select_tools_for_intent(
-                        state.detected_intent, state.collected_info
-                    )
-
-                    next_node = AgentNode.RESULT_VERIFICATION
-                    for tool_name, tool_args in tools_to_execute:
-                        yield {
-                            "type": "tool_call_start",
-                            "tool": tool_name,
-                            "args": tool_args,
-                            "timestamp": datetime.now().isoformat(),
-                        }
-                        tool = get_tool(tool_name)
-                        if tool:
-                            try:
-                                result = await tool.execute_with_retry(**tool_args)
-                                state.add_tool_call(
-                                    tool_name=tool_name,
-                                    arguments=tool_args,
-                                    result={
-                                        "success": result.success,
-                                        "data": result.data,
-                                        "error": result.error,
-                                        "hint": result.hint,
-                                        "execution_time_ms": result.execution_time_ms,
-                                        "retry_count": result.retry_count,
-                                    },
-                                    success=result.success,
-                                    error_message=result.error,
-                                )
-
-                                if result.success and result.data:
-                                    if isinstance(result.data, dict):
-                                        state.collected_info.update(result.data)
-                                    state.collected_info[f"{tool_name}_result"] = result.data
-
-                                yield {
-                                    "type": "tool_call_complete",
-                                    "tool": tool_name,
-                                    "success": result.success,
-                                    "execution_time_ms": result.execution_time_ms,
-                                    "retry_count": result.retry_count,
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-
-                                if not result.success:
-                                    if result.error and "人工" in result.error:
-                                        state.need_human = True
-                                        state.human_reason = result.error
-                                        next_node = AgentNode.HUMAN_HANDOFF
-                                        yield {"type": "handoff", "reason": state.human_reason, "timestamp": datetime.now().isoformat()}
-                                        break
-
-                                    if result.retry_count >= 3:
-                                        state.need_human = True
-                                        state.human_reason = f"工具 {tool_name} 连续 {result.retry_count} 次失败"
-                                        next_node = AgentNode.HUMAN_HANDOFF
-                                        yield {"type": "handoff", "reason": state.human_reason, "timestamp": datetime.now().isoformat()}
-                                        break
-
-                            except Exception as e:
-                                logger.error(f"工具 {tool_name} 执行异常: {e}")
-                                state.add_tool_call(
-                                    tool_name=tool_name,
-                                    arguments=tool_args,
-                                    result=None,
-                                    success=False,
-                                    error_message=str(e),
-                                )
-                                yield {
-                                    "type": "tool_call_complete",
-                                    "tool": tool_name,
-                                    "success": False,
-                                    "error": str(e),
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-
-                elif current_node == AgentNode.CLARIFICATION:
-                    yield {"type": "node_start", "node": "clarification", "timestamp": datetime.now().isoformat()}
-                    next_node = await node_func(state)
-
-                elif current_node == AgentNode.RESULT_VERIFICATION:
-                    yield {"type": "node_start", "node": "result_verification", "timestamp": datetime.now().isoformat()}
-                    next_node = await node_func(state)
-
-                    if state.tool_calls:
-                        last_call = state.tool_calls[-1]
-                        if not last_call.success:
-                            tool_count = len(state.tool_calls)
-                            if tool_count >= 3:
-                                state.need_human = True
-                                state.human_reason = "工具调用连续失败"
-                                next_node = AgentNode.HUMAN_HANDOFF
-                                yield {"type": "handoff", "reason": state.human_reason, "timestamp": datetime.now().isoformat()}
-
-                    if next_node == AgentNode.RESPONSE_GENERATION and state.reply:
-                        validation_result = self.validator.validate(
-                            response=state.reply,
-                            user_query=state.user_message,
-                            intent=state.detected_intent,
-                            tool_results=[tc.result for tc in state.tool_calls],
-                        )
-                        state.collected_info["validation"] = validation_result.to_dict()
-                        yield {
-                            "type": "validation",
-                            "passed": validation_result.passed,
-                            "overall_score": validation_result.overall_score,
-                            "needs_regeneration": validation_result.needs_regeneration,
-                            "timestamp": datetime.now().isoformat(),
-                        }
-
-                        if validation_result.needs_regeneration and regeneration_count < 2:
-                            regeneration_count += 1
-                            state.reply = ""
-                            yield {"type": "node_start", "node": "result_verification", "regeneration": True, "timestamp": datetime.now().isoformat()}
-                            continue
-
-                        if not validation_result.passed and regeneration_count >= 2:
-                            state.need_human = True
-                            state.human_reason = "回答校验连续不通过，需人工介入"
-                            next_node = AgentNode.HUMAN_HANDOFF
-                            yield {"type": "handoff", "reason": state.human_reason, "timestamp": datetime.now().isoformat()}
-
-                elif current_node == AgentNode.HUMAN_HANDOFF:
-                    yield {"type": "node_start", "node": "human_handoff", "timestamp": datetime.now().isoformat()}
-                    next_node = await node_func(state)
-
-                elif current_node == AgentNode.RESPONSE_GENERATION:
-                    yield {"type": "node_start", "node": "response_generation", "timestamp": datetime.now().isoformat()}
-                    next_node = await node_func(state)
-
-                    full_reply = state.reply
-                    chunk_size = max(1, len(full_reply) // 8)
-                    for i in range(0, len(full_reply), chunk_size):
-                        chunk = full_reply[i:i + chunk_size]
-                        yield {"type": "token", "content": chunk, "index": i, "timestamp": datetime.now().isoformat()}
-                        await asyncio.sleep(0.02)
-
-                else:
-                    next_node = await node_func(state)
-
-                node_duration = int((time.time() - node_start) * 1000)
-
-                state.add_trace(
-                    node_name=current_node,
-                    input_data={"message": state.user_message, "intent": state.detected_intent},
-                    output_data={
-                        "next_node": next_node,
-                        "reply": state.reply[:100] if state.reply else "",
-                    },
-                    duration_ms=node_duration,
-                )
-
-                yield {
-                    "type": "node_complete",
-                    "node": current_node,
-                    "duration_ms": node_duration,
-                    "next_node": next_node,
-                    "timestamp": datetime.now().isoformat(),
-                }
-
-                current_node = next_node
-            else:
-                break
+            if node_name == AgentNode.RESPONSE_GENERATION and state.reply:
+                # Mock/非 streaming 供应商只能提供可观测的模拟切片，明确标记模式。
+                chunk_size = max(1, len(state.reply) // 8)
+                for index in range(0, len(state.reply), chunk_size):
+                    yield {"type": "token", "content": state.reply[index:index + chunk_size],
+                           "index": index, "simulated": True, "timestamp": datetime.now().isoformat()}
 
         state.execution_time_ms = int((time.time() - start_time) * 1000)
         state.response_ready = True
         state.current_node = AgentNode.END
-
-        yield {
-            "type": "done",
-            "reply": state.reply,
-            "intent": state.detected_intent,
-            "execution_time_ms": state.execution_time_ms,
-            "tool_calls": [
-                {"tool": tc.tool_name, "success": tc.success}
-                for tc in state.tool_calls
-            ],
-            "need_human": state.need_human,
-            "timestamp": datetime.now().isoformat(),
-        }
+        yield {"type": "done", "reply": state.reply, "intent": state.detected_intent,
+               "execution_time_ms": state.execution_time_ms,
+               "tool_calls": [{"tool": tc.tool_name, "success": tc.success} for tc in state.tool_calls],
+               "need_human": state.need_human, "timestamp": datetime.now().isoformat()}
 
     async def run(self, state: AgentState) -> AgentState:
         """Run the compiled LangGraph while preserving the public API."""
@@ -365,83 +203,17 @@ class AgentGraph:
         state.current_node = AgentNode.END
         return state
 
-        # Legacy implementation retained below for reference during rollout.
-        current_node = state.current_node
-        visited_nodes = set()
-
-        max_iterations = 15
-        iteration = 0
-        regeneration_count = 0
-
-        while current_node != AgentNode.END and iteration < max_iterations:
-            iteration += 1
-
-            node_key = f"{current_node}_{state.detected_intent}"
-            if node_key in visited_nodes:
-                break
-            visited_nodes.add(node_key)
-
-            if current_node in self.nodes:
-                node_func = self.nodes[current_node]
-                state.current_node = current_node
-
-                node_start = time.time()
-                next_node = await node_func(state)
-                node_duration = int((time.time() - node_start) * 1000)
-
-                state.add_trace(
-                    node_name=current_node,
-                    input_data={"message": state.user_message, "intent": state.detected_intent},
-                    output_data={
-                        "next_node": next_node,
-                        "reply": state.reply[:100] if state.reply else "",
-                        "need_regeneration": state.current_node == AgentNode.RESULT_VERIFICATION
-                        and not state.reply,
-                    },
-                    duration_ms=node_duration,
-                )
-
-                if (
-                    current_node == AgentNode.RESULT_VERIFICATION
-                    and next_node == AgentNode.RESPONSE_GENERATION
-                    and state.reply
-                ):
-                    validation_result = self.validator.validate(
-                        response=state.reply,
-                        user_query=state.user_message,
-                        intent=state.detected_intent,
-                        tool_results=[tc.result for tc in state.tool_calls],
-                    )
-
-                    state.collected_info["validation"] = validation_result.to_dict()
-
-                    if validation_result.needs_regeneration and regeneration_count < 2:
-                        regeneration_count += 1
-                        logger.info(
-                            f"回答校验不通过 (第{regeneration_count}次)，重新生成"
-                        )
-                        state.reply = ""
-                        continue
-
-                    if not validation_result.passed and regeneration_count >= 2:
-                        state.need_human = True
-                        state.human_reason = "回答校验连续不通过，需人工介入"
-                        logger.warning(f"回答校验失败，转人工: {state.human_reason}")
-                        next_node = AgentNode.HUMAN_HANDOFF
-
-                current_node = next_node
-            else:
-                break
-
-        state.execution_time_ms = int((time.time() - start_time) * 1000)
-        state.response_ready = True
-
-        return state
-
     async def _node_start(self, state: AgentState) -> str:
         return AgentNode.INTENT_RECOGNITION
 
     async def _node_intent_recognition(self, state: AgentState) -> str:
+        # 确认回复通常只有两个字，优先沿用待确认动作的意图，避免被识别为 general。
+        if state.collected_info.get("refund_preview") and self._refund_confirmed(state):
+            state.detected_intent = IntentType.REFUND
+            state.intent_confidence = 1.0
+            state.needs_clarification = False
+            return AgentNode.TOOL_EXECUTION
+
         intent_result = self.intent_recognizer.recognize(
             message=state.user_message,
             context=state.messages,
@@ -517,6 +289,8 @@ class AgentGraph:
         return AgentNode.RESPONSE_GENERATION
 
     async def _node_tool_execution(self, state: AgentState) -> str:
+        state.collected_info.setdefault("user_id", state.user_id)
+        state.collected_info.setdefault("session_id", state.session_id)
         extracted_info = self._extract_info_from_message(state.user_message)
 
         for key, value in extracted_info.items():
@@ -527,11 +301,21 @@ class AgentGraph:
             state.detected_intent, state.collected_info
         )
 
+        # 退款是不可逆副作用：第一次请求只生成预览，必须在独立确认节点中得到
+        # 明确同意后才能调用工具。确认状态放在 AgentState 中，跨普通/流式入口一致。
+        if state.detected_intent == IntentType.REFUND and tools_to_execute:
+            if not self._refund_confirmed(state):
+                state.pending_confirmations = ["apply_refund"]
+                state.collected_info["refund_preview"] = tools_to_execute[0][1]
+                return AgentNode.CONFIRMATION
+            state.pending_confirmations = []
+
         for tool_name, tool_args in tools_to_execute:
-            tool = get_tool(tool_name)
+            tool = get_langchain_tool(tool_name)
             if tool:
                 try:
-                    result = await tool.execute_with_retry(**tool_args)
+                    raw_result = await tool.ainvoke(tool_args)
+                    result = ToolExecutionResult.model_validate(raw_result)
 
                     state.add_tool_call(
                         tool_name=tool_name,
@@ -543,9 +327,11 @@ class AgentGraph:
                             "hint": result.hint,
                             "execution_time_ms": result.execution_time_ms,
                             "retry_count": result.retry_count,
+                            "error_type": result.error_type,
                         },
                         success=result.success,
                         error_message=result.error,
+                        error_type=result.error_type,
                     )
 
                     if result.success and result.data:
@@ -576,6 +362,34 @@ class AgentGraph:
                     )
 
         return AgentNode.RESULT_VERIFICATION
+
+    def _refund_confirmed(self, state: AgentState) -> bool:
+        """识别显式确认，避免将“好的/谢谢”等普通回复当作授权。"""
+        if state.collected_info.get("confirm_refund") is True:
+            return True
+        confirmations = {"确认", "同意", "确定", "提交", "是的", "可以"}
+        message = state.user_message.strip()
+        return message in confirmations or any(
+            msg.get("role") == "user" and msg.get("content", "").strip() in confirmations
+            for msg in state.messages[-3:]
+        )
+
+    async def _node_confirmation(self, state: AgentState) -> str:
+        preview = state.collected_info.get("refund_preview", {})
+        if self._refund_confirmed(state):
+            state.collected_info["confirm_refund"] = True
+            state.pending_confirmations = []
+            return AgentNode.TOOL_EXECUTION
+
+        order_id = preview.get("order_id", "")
+        refund_type = preview.get("type", "refund")
+        reason = preview.get("reason", "")[:80]
+        label = "退货退款" if refund_type in {"return", "exchange"} else "仅退款"
+        state.reply = (
+            f"即将为订单 {order_id} 提交{label}申请，原因：{reason or '未填写'}。"
+            "该操作提交后将进入审核，是否确认提交？（请回复“确认”）"
+        )
+        return AgentNode.RESPONSE_GENERATION
 
     def _extract_info_from_message(self, message: str) -> Dict[str, Any]:
         import re
@@ -614,7 +428,7 @@ class AgentGraph:
         if intent == IntentType.QUERY_ORDER:
             order_id = collected_info.get("order_id")
             if order_id:
-                tool_plan.append(("query_order", {"order_id": order_id}))
+                tool_plan.append(("query_order", {"order_id": order_id, "user_id": collected_info.get("user_id", 0)}))
 
         elif intent == IntentType.REFUND:
             order_id = collected_info.get("order_id", "")
@@ -628,6 +442,8 @@ class AgentGraph:
                         "order_id": order_id,
                         "reason": reason,
                         "type": refund_type,
+                        "user_id": collected_info.get("user_id", 0),
+                        "idempotency_key": f"refund:{collected_info.get('session_id', '')}:{order_id}:{refund_type}",
                     },
                 ))
 
@@ -916,14 +732,15 @@ class AgentGraph:
         return default_replies.get(intent, default_replies[IntentType.GENERAL])
 
     async def _node_human_handoff(self, state: AgentState) -> str:
-        tool = get_tool("escalate_to_human")
+        tool = get_langchain_tool("escalate_to_human")
         if tool:
-            result = await tool.execute(
-                reason=state.human_reason or "用户要求转人工",
-                priority="urgent" if state.need_human else "normal",
-                user_id=state.user_id,
-                session_id=state.session_id,
-            )
+            result = await tool.ainvoke({
+                "reason": state.human_reason or "用户要求转人工",
+                "priority": "urgent" if state.need_human else "normal",
+                "user_id": state.user_id,
+                "session_id": state.session_id,
+            })
+            result = ToolExecutionResult.model_validate(result).model_dump()
             state.add_tool_call(
                 tool_name="escalate_to_human",
                 arguments={"reason": state.human_reason},

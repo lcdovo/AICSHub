@@ -96,6 +96,8 @@ class LLMService:
     TIMEOUT = 30.0
 
     def __init__(self):
+        self.MAX_RETRIES = settings.LLM_MAX_RETRIES
+        self.TIMEOUT = settings.LLM_REQUEST_TIMEOUT_SECONDS
         self.models: List[ModelConfig] = []
         self.current_model_index: int = 0
         self.circuit_breaker = CircuitBreaker()
@@ -230,7 +232,7 @@ class LLMService:
         payload = {
             "model": model.model,
             "messages": messages,
-            "max_tokens": 1024,
+                "max_tokens": settings.LLM_MAX_TOKENS,
             "temperature": 0.7,
         }
 
