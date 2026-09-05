@@ -280,7 +280,11 @@ class AgentGraph:
         # The chat path and the admin knowledge APIs must share one source of truth.
         # KnowledgeBaseService loads published documents from SQLite/Milvus and keeps
         # the in-memory fallback when external services are unavailable.
-        search_result = get_knowledge_base().search(query=query, top_k=top_k)
+        knowledge_base = get_knowledge_base()
+        if hasattr(knowledge_base, "async_search"):
+            search_result = await knowledge_base.async_search(query=query, top_k=top_k)
+        else:
+            search_result = await asyncio.to_thread(knowledge_base.search, query=query, top_k=top_k)
 
         state.add_tool_call(
             tool_name="hybrid_search",

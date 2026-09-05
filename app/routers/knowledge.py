@@ -163,7 +163,7 @@ async def upload_document(
         doc_title = title or os.path.splitext(file.filename)[0]
         doc_keywords = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
 
-        result = kb.add_document(
+        result = await kb.async_add_document(
             title=doc_title,
             content=doc_content,
             category=category,
@@ -198,7 +198,7 @@ async def add_text_document(request: DocumentCreateRequest, _: User = Depends(re
     if not request.content.strip():
         raise HTTPException(status_code=400, detail="内容不能为空")
 
-    result = kb.add_document(
+    result = await kb.async_add_document(
         title=request.title,
         content=request.content,
         category=request.category,
@@ -217,7 +217,7 @@ async def search_knowledge(request: SearchRequest, _: User = Depends(require_use
     """搜索知识库"""
     kb = get_knowledge_base()
 
-    result = kb.search(
+    result = await kb.async_search(
         query=request.query,
         top_k=request.top_k,
         similarity_threshold=request.similarity_threshold,
@@ -234,9 +234,9 @@ async def search_knowledge(request: SearchRequest, _: User = Depends(require_use
 async def list_documents(_: User = Depends(require_admin)):
     """获取文档列表"""
     kb = get_knowledge_base()
-    stats = kb.get_stats()
+    stats = await kb.async_get_stats()
 
-    doc_list = kb.list_documents()
+    doc_list = await kb.async_list_documents()
 
     return {
         "code": 0,
@@ -253,7 +253,7 @@ async def update_document(document_id: str, request: DocumentUpdateRequest, _: U
     """以新版本更新文档，旧版本软删除并从检索索引中移除。"""
     if request.content is not None and not request.content.strip():
         raise HTTPException(status_code=400, detail="内容不能为空")
-    result = get_knowledge_base().update_document(document_id, **request.model_dump(exclude_unset=True))
+    result = await get_knowledge_base().async_update_document(document_id, **request.model_dump(exclude_unset=True))
     if not result.get("success"):
         raise HTTPException(status_code=404, detail=result.get("message", "文档不存在"))
     return {"code": 0, "message": "更新成功", "data": result}
@@ -261,14 +261,14 @@ async def update_document(document_id: str, request: DocumentUpdateRequest, _: U
 
 @router.post("/documents/{document_id}/publish")
 async def publish_document(document_id: str, published: bool = Query(True), _: User = Depends(require_admin)):
-    if not get_knowledge_base().set_document_published(document_id, published):
+    if not await get_knowledge_base().async_set_document_published(document_id, published):
         raise HTTPException(status_code=404, detail="文档不存在")
     return {"code": 0, "message": "发布状态已更新", "data": {"document_id": document_id, "is_published": published}}
 
 
 @router.post("/rebuild-index")
 async def rebuild_index(_: User = Depends(require_admin)):
-    return {"code": 0, "message": "索引重建完成", "data": get_knowledge_base().rebuild_index()}
+    return {"code": 0, "message": "索引重建完成", "data": await get_knowledge_base().async_rebuild_index()}
 
 
 @router.delete("/documents/{document_id}")
@@ -276,7 +276,7 @@ async def delete_document(document_id: str, _: User = Depends(require_admin)):
     """删除文档"""
     kb = get_knowledge_base()
 
-    success = kb.delete_document(document_id)
+    success = await kb.async_delete_document(document_id)
     if not success:
         raise HTTPException(status_code=404, detail="文档不存在")
 
@@ -290,7 +290,7 @@ async def delete_document(document_id: str, _: User = Depends(require_admin)):
 async def clear_all_documents(_: User = Depends(require_admin)):
     """清空所有文档"""
     kb = get_knowledge_base()
-    result = kb.clear_all()
+    result = await kb.async_clear_all()
 
     return {
         "code": 0,
@@ -335,7 +335,7 @@ async def batch_upload_documents(
                 doc_title = os.path.splitext(file.filename)[0]
                 doc_keywords = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
 
-                result = kb.add_document(
+                result = await kb.async_add_document(
                     title=doc_title,
                     content=doc_content,
                     category=category,
@@ -462,7 +462,7 @@ A: 在对话框输入"人工客服"或点击"转人工"按钮，工作日9:00-21
 
     results = []
     for doc in default_docs:
-        result = kb.add_document(
+        result = await kb.async_add_document(
             title=doc["title"],
             content=doc["content"],
             category=doc.get("category", ""),
@@ -487,7 +487,7 @@ A: 在对话框输入"人工客服"或点击"转人工"按钮，工作日9:00-21
 async def get_knowledge_stats(_: User = Depends(require_admin)):
     """获取知识库统计信息"""
     kb = get_knowledge_base()
-    stats = kb.get_stats()
+    stats = await kb.async_get_stats()
     return {
         "code": 0,
         "message": "获取成功",
@@ -506,7 +506,7 @@ class RagQueryRequest(BaseModel):
 async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
     """RAG问答：检索+LLM生成回答"""
     kb = get_knowledge_base()
-    search_result = kb.search(
+    search_result = await kb.async_search(
         query=request.query,
         top_k=request.top_k,
         similarity_threshold=request.similarity_threshold,

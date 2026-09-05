@@ -3,6 +3,7 @@ Embedding 服务 - 文本向量化
 支持多种 Embedding 后端，优先使用真实API，自动降级到本地模拟
 """
 import os
+import asyncio
 import math
 import hashlib
 import json
@@ -258,8 +259,15 @@ class EmbeddingService:
         self._dim = dim
         self._embedding: BaseEmbedding = MockEmbedding(dim=dim)
         self._backend_name = "mock"
-
         self._try_init_api_backend()
+
+    async def async_encode(self, text: str) -> List[float]:
+        """Run the backward-compatible sync encoder outside the event loop."""
+        return await asyncio.to_thread(self.encode, text)
+
+    async def async_encode_batch(self, texts: List[str]) -> List[List[float]]:
+        """Async facade for batch embedding generation."""
+        return await asyncio.to_thread(self.encode_batch, texts)
 
     def _try_init_api_backend(self):
         from app.config.config import settings

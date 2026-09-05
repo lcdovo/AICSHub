@@ -698,6 +698,41 @@ class KnowledgeBaseService:
         self._query_cache.set(cache_key, result)
         return result
 
+    async def async_search(
+        self,
+        query: str,
+        top_k: int = None,
+        similarity_threshold: float = None,
+    ) -> Dict[str, Any]:
+        """Async facade that isolates sync SQLite/Milvus/embedding work."""
+        return await asyncio.to_thread(
+            self.search, query, top_k, similarity_threshold
+        )
+
+    async def async_add_document(self, *args, **kwargs) -> Dict[str, Any]:
+        return await asyncio.to_thread(self.add_document, *args, **kwargs)
+
+    async def async_update_document(self, *args, **kwargs) -> Dict[str, Any]:
+        return await asyncio.to_thread(self.update_document, *args, **kwargs)
+
+    async def async_rebuild_index(self) -> Dict[str, Any]:
+        return await asyncio.to_thread(self.rebuild_index)
+
+    async def async_delete_document(self, document_id: str) -> bool:
+        return await asyncio.to_thread(self.delete_document, document_id)
+
+    async def async_set_document_published(self, document_id: str, published: bool) -> bool:
+        return await asyncio.to_thread(self.set_document_published, document_id, published)
+
+    async def async_clear_all(self) -> Dict[str, Any]:
+        return await asyncio.to_thread(self.clear_all)
+
+    async def async_get_stats(self) -> Dict[str, Any]:
+        return await asyncio.to_thread(self.get_stats)
+
+    async def async_list_documents(self) -> List[Dict[str, Any]]:
+        return await asyncio.to_thread(self.list_documents)
+
     def _bm25_search(self, query: str, top_k: int) -> List[Dict[str, Any]]:
         corpus = []
         meta_chunks = []
