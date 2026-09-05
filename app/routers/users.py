@@ -29,7 +29,6 @@ def _user_payload(user: User) -> dict:
 @router.post("/login", response_model=APIResponse)
 async def login(request: Request, username: Optional[str] = Query(default=None), password: Optional[str] = Query(default=None), db: AsyncSession = Depends(get_db)):
     """使用用户名和密码登录；客户端传入 role 参数会被忽略。"""
-    enforce_rate_limit(f"login:{request.client.host if request.client else 'unknown'}", settings.LOGIN_RATE_LIMIT_PER_MINUTE)
     # 同时兼容 JSON、表单和旧版 query 客户端，但不再接受 role 作为权限来源。
     if request.headers.get("content-type", "").startswith("application/x-www-form-urlencoded"):
         form = parse_qs((await request.body()).decode("utf-8"))
@@ -41,6 +40,9 @@ async def login(request: Request, username: Optional[str] = Query(default=None),
             username, password = body.get("username", username), body.get("password", password)
         except (json.JSONDecodeError, UnicodeDecodeError):
             pass
+    # 按 IP + 账号限流，避免同一测试/办公出口下的不同用户互相阻塞；未知账号仍共享 IP 桶。
+    host = request.client.host if request.client else "unknown"
+    enforce_rate_limit(f"login:{host}:{username or 'unknown'}", settings.LOGIN_RATE_LIMIT_PER_MINUTE)
     if not username or not password:
         raise HTTPException(status_code=400, detail="请输入用户名和密码")
     result = await db.execute(select(User).where(User.username == username))

@@ -2,6 +2,7 @@
 统计分析与监控 API - Phase 4 实现
 """
 from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi.responses import PlainTextResponse
 from typing import Optional
 from datetime import datetime, timedelta
 
@@ -9,8 +10,34 @@ from app.utils.tracking import get_tracer, alert_manager
 from app.services.evaluation import get_answer_evaluator, get_low_score_pool, get_ab_test_framework
 from app.models.models import User
 from app.security import require_admin
+from app.models.models import EvaluationResult, AgentTrace
+from app.utils.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["统计分析"])
+
+
+def _group_evaluations(rows, field: str) -> dict:
+    grouped = {}
+    for row in rows:
+        key = getattr(row, field, None) or "unknown"
+        grouped.setdefault(key, []).append(row.overall_score or 0)
+    return {key: {"count": len(scores), "avg_score": round(sum(scores) / len(scores), 2), "low_score": sum(score < 60 for score in scores)} for key, scores in grouped.items()}
+
+
+@router.get("/metrics/prometheus", response_class=PlainTextResponse)
+async def get_prometheus_metrics(_: User = Depends(require_admin)):
+    """输出无用户/消息等敏感标签的结构化 Prometheus 指标。"""
+    return get_tracer()._metrics.to_prometheus()
+
+
+@router.get("/traces/{trace_id}")
+async def get_trace(trace_id: str, db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)):
+    """按请求级 Trace ID 聚合数据库 Span，避免把每个节点误当成独立 Trace。"""
+    rows = (await db.execute(select(AgentTrace).where(AgentTrace.request_trace_id == trace_id).order_by(AgentTrace.node_order))).scalars().all()
+    spans = [{"trace_id": trace_id, "span_id": row.span_id, "node": row.node_name, "node_order": row.node_order, "duration_ms": row.duration_ms, "success": row.success, "input": row.input_data, "output": row.output_data} for row in rows]
+    return {"code": 0, "message": "获取成功", "data": {"trace_id": trace_id, "spans": spans, "span_count": len(spans)}}
 
 
 @router.get("/metrics")
@@ -64,12 +91,36 @@ async def get_metrics_summary(
 
 
 @router.get("/evaluation/stats")
-async def get_evaluation_stats(_: User = Depends(require_admin)):
+async def get_evaluation_stats(
+    hours: int = Query(default=0, ge=0, le=8760),
+    model: Optional[str] = Query(default=None),
+    intent: Optional[str] = Query(default=None),
+    db: AsyncSession = Depends(get_db), _: User = Depends(require_admin),
+):
     """获取评测统计"""
     evaluator = get_answer_evaluator()
     low_score_pool = get_low_score_pool()
 
-    stats = evaluator.get_evaluation_stats()
+    query = select(EvaluationResult)
+    if hours:
+        query = query.where(EvaluationResult.created_at >= datetime.utcnow() - timedelta(hours=hours))
+    if model:
+        query = query.where(EvaluationResult.model_name == model)
+    if intent:
+        query = query.where(EvaluationResult.intent == intent)
+    rows = (await db.execute(query)).scalars().all()
+    if rows:
+        scores = [r.overall_score or 0 for r in rows]
+        stats = {
+            "total": len(rows), "avg_score": round(sum(scores) / len(scores), 2),
+            "min_score": min(scores), "max_score": max(scores),
+            "low_score": sum(1 for r in rows if r.is_low_score),
+            "filters": {"hours": hours or None, "model": model, "intent": intent},
+            "by_model": _group_evaluations(rows, "model_name"),
+            "by_intent": _group_evaluations(rows, "intent"),
+        }
+    else:
+        stats = evaluator.get_evaluation_stats()
     failure_patterns = low_score_pool.get_failure_patterns()
 
     return {
@@ -78,7 +129,7 @@ async def get_evaluation_stats(_: User = Depends(require_admin)):
         "data": {
             "evaluation_stats": stats,
             "failure_patterns": failure_patterns,
-            "pending_low_score_samples": len(low_score_pool.get_pending_samples()),
+            "pending_low_score_samples": sum(1 for r in rows if r.is_low_score and not r.processed) if rows else len(low_score_pool.get_pending_samples()),
         },
     }
 
@@ -87,12 +138,19 @@ async def get_evaluation_stats(_: User = Depends(require_admin)):
 async def get_low_score_samples(
     limit: int = Query(default=50, ge=1, le=200),
     failure_type: Optional[str] = Query(default=None, description="失败类型过滤"),
+    db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
     """获取低分样本"""
     low_score_pool = get_low_score_pool()
 
-    if failure_type:
+    db_query = select(EvaluationResult).where(EvaluationResult.is_low_score.is_(True), EvaluationResult.processed.is_(False)).order_by(EvaluationResult.created_at.desc()).limit(limit)
+    db_rows = (await db.execute(db_query)).scalars().all()
+    if db_rows:
+        samples = [{"sample_id": r.sample_id, "session_id": r.session_id, "trace_id": r.trace_id, "user_query": r.user_query or "", "response": r.response or "", "score": r.overall_score or 0, "failure_reason": r.failure_reason or "", "status": "pending", "created_at": r.created_at.isoformat() if r.created_at else None} for r in db_rows]
+        if failure_type:
+            samples = [s for s in samples if failure_type in s["failure_reason"]]
+    elif failure_type:
         samples = low_score_pool.get_samples_by_failure_type(failure_type)
     else:
         samples = low_score_pool.get_pending_samples(limit)
@@ -112,11 +170,22 @@ async def resolve_low_score_sample(
     sample_id: str,
     action: str = Query(..., description="处理动作: knowledge_update/prompt_optimization/tool_fix"),
     note: str = Query(default="", description="处理备注"),
+    db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
     """处理低分样本"""
     low_score_pool = get_low_score_pool()
-    success = low_score_pool.mark_processed(sample_id, action, note)
+    row = await db.scalar(select(EvaluationResult).where(EvaluationResult.sample_id == sample_id))
+    success = False
+    if row:
+        row.processed = True
+        row.processed_at = datetime.utcnow()
+        row.processing_action = action
+        row.processing_note = note
+        await db.commit()
+        success = True
+    else:
+        success = low_score_pool.mark_processed(sample_id, action, note)
 
     if not success:
         raise HTTPException(status_code=404, detail="样本不存在")

@@ -55,6 +55,7 @@ class ChatResponse(BaseModel):
     reply: str
     intent: Optional[str] = None
     response_time_ms: int = 0
+    trace_id: Optional[str] = None
 
 
 class SessionCreate(BaseModel):

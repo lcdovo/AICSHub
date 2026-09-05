@@ -130,6 +130,12 @@ class Tracer:
     def get_metrics(self) -> Dict[str, Any]:
         return self._metrics.get_all_metrics()
 
+    def get_trace_spans(self, trace_id: str) -> List[Dict[str, Any]]:
+        """按请求 Trace ID 返回已缓冲和活动中的跨度。"""
+        active = [span.to_dict() for span in self._active_traces.get(trace_id, [])]
+        buffered = [span for span in self._trace_buffer if span.get("trace_id") == trace_id]
+        return buffered + active
+
     def reset_metrics(self):
         self._metrics.reset()
 
@@ -145,6 +151,7 @@ class MetricsCollector:
         self._tool_counts: Dict[str, Dict[str, int]] = {}
         self._response_times: List[int] = []
         self._error_counts: Dict[str, int] = {}
+        self._csat_scores: List[int] = []
 
     def increment_counter(self, name: str, value: int = 1):
         self._counters[name] = self._counters.get(name, 0) + value
@@ -204,6 +211,34 @@ class MetricsCollector:
         else:
             self.increment_counter("response.failure")
 
+    def record_rag(self, *, latency_ms: int = 0, empty: bool = False, backend: str = "unknown", degraded: bool = False):
+        self.increment_counter("rag.total")
+        self.record_time("rag.search.duration", latency_ms)
+        self.increment_counter(f"rag.backend.{backend}")
+        if empty:
+            self.increment_counter("rag.empty")
+        if degraded:
+            self.increment_counter("rag.degraded")
+
+    def record_model(self, *, model: str = "unknown", tokens: int = 0, latency_ms: int = 0, success: bool = True):
+        self.increment_counter("model.total")
+        self.increment_counter(f"model.{model}.total")
+        self.increment_counter("model.success" if success else "model.failure")
+        self.increment_counter("model.tokens", max(0, int(tokens or 0)))
+        self.record_time("model.duration", latency_ms)
+
+    def record_handoff(self):
+        self.increment_counter("handoff.total")
+
+    def record_evaluation(self, score: float, low_score: bool = False):
+        self.increment_counter("evaluation.total")
+        if low_score:
+            self.increment_counter("evaluation.low_score")
+
+    def record_csat(self, score: int):
+        if 1 <= int(score) <= 5:
+            self._csat_scores.append(int(score))
+
     def record_error(self, error_type: str, error_message: str = ""):
         self._error_counts[error_type] = self._error_counts.get(error_type, 0) + 1
         self.increment_counter("error.total")
@@ -253,7 +288,45 @@ class MetricsCollector:
                 self.get_counter("response.success") /
                 max(self.get_counter("response.total"), 1) * 100, 2
             ),
+            "rag": {
+                "total": self.get_counter("rag.total"),
+                "empty": self.get_counter("rag.empty"),
+                "empty_rate": round(self.get_counter("rag.empty") / max(self.get_counter("rag.total"), 1) * 100, 2),
+                "degraded": self.get_counter("rag.degraded"),
+            },
+            "model": {
+                "total": self.get_counter("model.total"),
+                "failures": self.get_counter("model.failure"),
+                "failure_rate": round(self.get_counter("model.failure") / max(self.get_counter("model.total"), 1) * 100, 2),
+                "tokens": self.get_counter("model.tokens"),
+            },
+            "handoff_rate": round(self.get_counter("handoff.total") / max(self.get_counter("response.total"), 1) * 100, 2),
+            "evaluation": {"total": self.get_counter("evaluation.total"), "low_score": self.get_counter("evaluation.low_score")},
+            "csat": {"count": len(self._csat_scores), "avg_score": round(sum(self._csat_scores) / len(self._csat_scores), 2) if self._csat_scores else 0},
         }
+
+    def to_prometheus(self) -> str:
+        metrics = self.get_all_metrics()
+        tool_total = sum(v["total"] for v in metrics["tool_statistics"].values())
+        tool_success = sum(v["success"] for v in metrics["tool_statistics"].values())
+        return "\n".join([
+            "# TYPE app_requests_total counter",
+            f"app_requests_total {metrics['total_responses']}",
+            "# TYPE app_response_success_rate gauge",
+            f"app_response_success_rate {metrics['success_rate'] / 100}",
+            "# TYPE app_response_latency_p95_ms gauge",
+            f"app_response_latency_p95_ms {metrics['response_time'].get('p95_ms', 0)}",
+            "# TYPE app_rag_empty_rate gauge",
+            f"app_rag_empty_rate {metrics['rag']['empty_rate'] / 100}",
+            "# TYPE app_tool_success_rate gauge",
+            f"app_tool_success_rate {tool_success / max(tool_total, 1)}",
+            "# TYPE app_handoff_rate gauge",
+            f"app_handoff_rate {metrics['handoff_rate'] / 100}",
+            "# TYPE app_model_tokens_total counter",
+            f"app_model_tokens_total {metrics['model']['tokens']}",
+            "# TYPE app_csat_average gauge",
+            f"app_csat_average {metrics['csat']['avg_score']}",
+        ]) + "\n"
 
     def _compute_response_time_stats(self) -> Dict[str, Any]:
         if not self._response_times:
@@ -277,6 +350,7 @@ class MetricsCollector:
         self._tool_counts.clear()
         self._response_times.clear()
         self._error_counts.clear()
+        self._csat_scores.clear()
 
 
 tracer = Tracer()

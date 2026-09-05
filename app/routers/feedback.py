@@ -56,6 +56,8 @@ async def submit_feedback(feedback: FeedbackRequest, db: AsyncSession = Depends(
                         score=feedback.score, content=feedback.content, categories=feedback.categories or [])
     db.add(item)
     await db.commit()
+    if feedback.feedback_type == "csat" and feedback.score is not None:
+        get_tracer()._metrics.record_csat(feedback.score)
     record = {"feedback_id": item.id, "user_id": item.user_id, "session_id": item.session_id,
               "message_id": item.message_id, "feedback_type": item.feedback_type, "score": item.score,
               "content": item.content, "categories": item.categories or [],

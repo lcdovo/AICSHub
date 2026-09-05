@@ -17,10 +17,10 @@ from app.schemas.schemas import ChatRequest, ChatResponse, APIResponse
 from app.agent.graph import AgentGraph
 from app.agent.state import AgentState
 from app.agent.memory import session_manager
-from app.utils.tracking import structured_logger, generate_trace_id
+from app.utils.tracking import structured_logger, generate_trace_id, get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, decode_token
 from app.config.config import settings
-from app.services.evaluation import get_answer_evaluator
+from app.services.evaluation import get_answer_evaluator, get_low_score_pool
 
 router = APIRouter(prefix="/api/v1/chat", tags=["对话管理"])
 
@@ -47,6 +47,15 @@ def _fmt_utc(dt):
     if dt is None:
         return None
     return dt.replace(tzinfo=timezone.utc).isoformat()
+
+
+def _build_rule_summary(messages: list[Message], intent: str | None = None) -> str:
+    """无 LLM 时的可复现摘要：仅保留用户目标、订单号、已完成动作和待办。"""
+    user_parts = [m.content.strip() for m in messages if m.role == MessageRole.USER and m.content.strip()][-3:]
+    assistant_parts = [m.content.strip() for m in messages if m.role == MessageRole.ASSISTANT and m.content.strip()][-2:]
+    target = "；".join(user_parts)
+    done = "；".join(assistant_parts)
+    return f"意图：{intent or 'general'}。用户目标：{target[:300]}。已完成/回复：{done[:300]}。待办：请根据最新消息继续处理。"
 
 
 @router.post("/sessions", response_model=APIResponse)
@@ -191,9 +200,11 @@ async def get_user_sessions(
 @router.post("/send", response_model=ChatResponse)
 async def send_message(
     chat_data: ChatRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    request_trace_id = getattr(getattr(request, "state", None), "trace_id", None) or generate_trace_id()
     enforce_rate_limit(f"chat:{current_user.id}", settings.CHAT_RATE_LIMIT_PER_MINUTE)
     ensure_owner_or_admin(current_user, chat_data.user_id)
     user = await db.get(User, chat_data.user_id)
@@ -247,10 +258,13 @@ async def send_message(
 
     # 保存 Agent 执行轨迹
     if agent_state.trace:
-        base_trace_id = str(uuid.uuid4())
         for i, trace_entry in enumerate(agent_state.trace):
+            span_id = str(uuid.uuid4())
             agent_trace = AgentTrace(
-                trace_id=f"{base_trace_id}_{i}",
+                # trace_id 保持历史唯一约束；request_trace_id 是一次请求复用的规范 Trace ID。
+                trace_id=f"{request_trace_id}:{span_id}",
+                request_trace_id=request_trace_id,
+                span_id=span_id,
                 session_id=session_id,
                 intent=agent_state.detected_intent,
                 node_name=trace_entry.get("node", "unknown"),
@@ -258,6 +272,9 @@ async def send_message(
                 input_data=trace_entry.get("input"),
                 output_data=trace_entry.get("output"),
                 duration_ms=trace_entry.get("duration_ms", 0),
+                token_usage={"total_tokens": agent_state.total_tokens},
+                model_name=getattr(settings, "LLM_MODEL", "mock") if not settings.MOCK_LLM_ENABLED else "mock",
+                prompt_version="v1",
                 success=True,
             )
             db.add(agent_trace)
@@ -273,6 +290,7 @@ async def send_message(
         tool_calls=[{"name": tc.tool_name, "success": tc.success} for tc in agent_state.tool_calls],
     )
     db.add(assistant_message)
+    await db.flush()
 
     # 评测结果与对话在同一事务中落库，避免只存在进程内存。
     evaluation = get_answer_evaluator().evaluate(
@@ -280,13 +298,40 @@ async def send_message(
         tool_results=[{"success": tc.success, "data": tc.result} for tc in agent_state.tool_calls],
         response_time_ms=response_time_ms,
     )
+    get_answer_evaluator().add_feedback_sample({
+        "sample_id": str(assistant_message.id), "trace_id": request_trace_id,
+        "query": chat_data.message, "response": agent_state.reply or "", "score": evaluation.to_dict(),
+    })
     db.add(EvaluationResult(
-        session_id=session_id, sample_id=str(assistant_message.id) if assistant_message.id else None,
+        session_id=session_id, sample_id=str(assistant_message.id), trace_id=request_trace_id, intent=agent_state.detected_intent,
         accuracy_score=round(evaluation.accuracy_score), completeness_score=round(evaluation.completeness_score),
         safety_score=round(evaluation.safety_score), overall_score=round(evaluation.overall_score),
         is_low_score=evaluation.is_low_score, failure_reason=evaluation.failure_reason,
+        evaluator="heuristic", model_name="heuristic", prompt_version="v1",
+        latency_ms=response_time_ms, token_usage={"total_tokens": agent_state.total_tokens},
+        user_query=chat_data.message, response=agent_state.reply or "", categories=[],
         processed=False,
     ))
+    get_tracer()._metrics.record_intent(agent_state.detected_intent, agent_state.intent_confidence)
+    get_tracer()._metrics.record_evaluation(evaluation.overall_score, evaluation.is_low_score)
+    for tool_call in agent_state.tool_calls:
+        get_tracer()._metrics.record_tool_call(tool_call.tool_name, tool_call.success, getattr(tool_call, "execution_time_ms", 0))
+        if tool_call.tool_name == "hybrid_search" and isinstance(tool_call.result, dict):
+            rag_meta = tool_call.result.get("meta", {})
+            get_tracer()._metrics.record_rag(
+                latency_ms=tool_call.result.get("execution_time_ms", 0),
+                empty=not bool(tool_call.result.get("results")),
+                backend=rag_meta.get("backend", "memory"),
+                degraded=bool(rag_meta.get("degraded", False)),
+            )
+    if agent_state.need_human:
+        get_tracer()._metrics.record_handoff()
+    get_low_score_pool().add_sample(
+        sample_id=str(assistant_message.id), session_id=session_id,
+        user_query=chat_data.message, response=agent_state.reply or "",
+        score=evaluation.overall_score, failure_reason=evaluation.failure_reason,
+        metadata={"trace_id": request_trace_id},
+    ) if evaluation.is_low_score else None
 
     session.message_count += 1
     session.last_intent = agent_state.detected_intent
@@ -294,6 +339,11 @@ async def send_message(
 
     await db.commit()
     await db.refresh(assistant_message)
+
+    if session.message_count >= 10:
+        recent = (await db.execute(select(Message).where(Message.session_id == session_id).order_by(Message.id.desc()).limit(12))).scalars().all()
+        session.summary = _build_rule_summary(list(reversed(recent)), agent_state.detected_intent)
+        await db.commit()
 
     # 更新会话管理器状态
     await session_manager.save_state(agent_state)
@@ -304,6 +354,7 @@ async def send_message(
         reply=agent_state.reply,
         intent=agent_state.detected_intent,
         response_time_ms=response_time_ms,
+        trace_id=request_trace_id,
     )
 
 
@@ -524,12 +575,36 @@ async def websocket_chat_stream(websocket: WebSocket):
                     tool_calls=[{"name": tc.tool_name, "success": tc.success} for tc in agent_state.tool_calls],
                 )
                 db.add(assistant_message)
+                await db.flush()
+
+                stream_evaluation = get_answer_evaluator().evaluate(
+                    response=agent_state.reply or full_reply, user_query=message,
+                    tool_results=[{"success": tc.success, "data": tc.result} for tc in agent_state.tool_calls],
+                    response_time_ms=agent_state.execution_time_ms,
+                )
+                get_answer_evaluator().add_feedback_sample({
+                    "sample_id": str(assistant_message.id), "trace_id": trace_id,
+                    "query": message, "response": agent_state.reply or full_reply,
+                    "score": stream_evaluation.to_dict(),
+                })
+                db.add(EvaluationResult(
+                    session_id=session_id, sample_id=str(assistant_message.id), trace_id=trace_id, intent=agent_state.detected_intent,
+                    accuracy_score=round(stream_evaluation.accuracy_score), completeness_score=round(stream_evaluation.completeness_score),
+                    safety_score=round(stream_evaluation.safety_score), overall_score=round(stream_evaluation.overall_score),
+                    is_low_score=stream_evaluation.is_low_score, failure_reason=stream_evaluation.failure_reason,
+                    evaluator="heuristic", model_name="mock" if settings.MOCK_LLM_ENABLED else settings.LLM_MODEL,
+                    prompt_version="v1", latency_ms=agent_state.execution_time_ms,
+                    token_usage={"total_tokens": agent_state.total_tokens}, user_query=message,
+                    response=agent_state.reply or full_reply, categories=[], processed=False,
+                ))
 
                 if agent_state.trace:
-                    base_trace_id = str(uuid.uuid4())
                     for i, trace_entry in enumerate(agent_state.trace):
+                        span_id = str(uuid.uuid4())
                         agent_trace = AgentTrace(
-                            trace_id=f"{base_trace_id}_{i}",
+                            trace_id=f"{trace_id}:{span_id}",
+                            request_trace_id=trace_id,
+                            span_id=span_id,
                             session_id=session_id,
                             intent=agent_state.detected_intent,
                             node_name=trace_entry.get("node", "unknown"),
@@ -537,6 +612,9 @@ async def websocket_chat_stream(websocket: WebSocket):
                             input_data=trace_entry.get("input"),
                             output_data=trace_entry.get("output"),
                             duration_ms=trace_entry.get("duration_ms", 0),
+                            token_usage={"total_tokens": agent_state.total_tokens},
+                            model_name="mock" if settings.MOCK_LLM_ENABLED else settings.LLM_MODEL,
+                            prompt_version="v1",
                             success=True,
                         )
                         db.add(agent_trace)
@@ -548,6 +626,20 @@ async def websocket_chat_stream(websocket: WebSocket):
                 await db.refresh(assistant_message)
 
                 await session_manager.save_state(agent_state)
+                tracer = get_tracer()
+                tracer._metrics.record_intent(agent_state.detected_intent, agent_state.intent_confidence)
+                tracer._metrics.record_evaluation(stream_evaluation.overall_score, stream_evaluation.is_low_score)
+                if stream_evaluation.is_low_score:
+                    get_low_score_pool().add_sample(
+                        sample_id=str(assistant_message.id), session_id=session_id,
+                        user_query=message, response=agent_state.reply or full_reply,
+                        score=stream_evaluation.overall_score,
+                        failure_reason=stream_evaluation.failure_reason,
+                        metadata={"trace_id": trace_id},
+                    )
+                for tool_call in agent_state.tool_calls:
+                    tracer._metrics.record_tool_call(tool_call.tool_name, tool_call.success)
+                tracer._metrics.record_response(agent_state.execution_time_ms, True)
 
                 await websocket.send_json({
                     "type": "stream_end",

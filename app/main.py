@@ -5,9 +5,9 @@ import os
 import time
 import uuid
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config.config import settings
@@ -16,6 +16,7 @@ from app.utils.database import engine, get_redis
 from sqlalchemy import text
 from app.services.llm_service import LLMService
 from app.utils.tracking import get_tracer, structured_logger, generate_trace_id
+from app.security import require_admin
 from app.routers.users import router as users_router
 from app.routers.sessions import router as sessions_router
 from app.routers.tickets import router as tickets_router
@@ -98,10 +99,15 @@ async def tracing_middleware(request: Request, call_next):
     trace_id = request.headers.get("X-Trace-Id", generate_trace_id())
     request.state.trace_id = trace_id
     request.state.start_time = time.time()
+    tracer = get_tracer()
+    tracer.start_trace(trace_id)
+    request_span = tracer.start_span(trace_id, "http_request")
 
     try:
         response = await call_next(request)
         duration_ms = int((time.time() - request.state.start_time) * 1000)
+        tracer.end_span(request_span, status="ok" if response.status_code < 400 else "error")
+        tracer.end_trace(trace_id)
 
         response.headers["X-Trace-Id"] = trace_id
         response.headers["X-Response-Time"] = f"{duration_ms}ms"
@@ -114,7 +120,6 @@ async def tracing_middleware(request: Request, call_next):
             path=request.url.path,
         )
 
-        tracer = get_tracer()
         if response.status_code < 400:
             tracer._metrics.record_response(duration_ms, True)
         else:
@@ -124,6 +129,8 @@ async def tracing_middleware(request: Request, call_next):
         return response
     except Exception as exc:
         duration_ms = int((time.time() - request.state.start_time) * 1000)
+        tracer.end_span(request_span, status="error", error_message=str(exc))
+        tracer.end_trace(trace_id)
         structured_logger.log_error(
             trace_id=trace_id,
             error_type="internal_error",
@@ -228,6 +235,12 @@ async def health_check():
         "version": settings.APP_VERSION,
         "dependencies": dependencies,
     }
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def prometheus_metrics(_: object = Depends(require_admin)):
+    """受管理员保护的 Prometheus 指标出口。"""
+    return get_tracer()._metrics.to_prometheus()
 
 
 @app.exception_handler(Exception)

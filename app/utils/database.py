@@ -115,6 +115,25 @@ async def init_database():
             }.items():
                 if name not in ticket_columns:
                     await conn.execute(text(f"ALTER TABLE tickets ADD COLUMN {name} {definition}"))
+            # 第 6 步可观测性兼容升级：为既有本地库补齐请求 Trace/Span 与评测元数据。
+            for table, additions in {
+                "agent_traces": {
+                    "request_trace_id": "VARCHAR(100)", "span_id": "VARCHAR(100)",
+                    "model_name": "VARCHAR(100)", "prompt_version": "VARCHAR(50)",
+                },
+                "evaluation_results": {
+                    "trace_id": "VARCHAR(100)", "intent": "VARCHAR(50)", "evaluator": "VARCHAR(50)",
+                    "model_name": "VARCHAR(100)", "prompt_version": "VARCHAR(50)",
+                    "latency_ms": "INTEGER", "token_usage": "JSON",
+                    "user_query": "TEXT", "response": "TEXT", "categories": "JSON",
+                    "processed_at": "DATETIME", "processing_action": "VARCHAR(50)", "processing_note": "TEXT",
+                },
+            }.items():
+                result = await conn.execute(text(f"PRAGMA table_info({table})"))
+                table_columns = {row[1] for row in result.fetchall()}
+                for name, definition in additions.items():
+                    if name not in table_columns:
+                        await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {definition}"))
 
     # 创建默认用户（如果不存在）
     async with async_session() as session:
