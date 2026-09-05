@@ -22,6 +22,8 @@ DEFAULT_DATASET = [
     {"query": "银行卡退款需要几天到账", "relevant_titles": ["退换货政策"]},
     {"query": "如何查询订单物流", "relevant_titles": ["订单查询说明"]},
     {"query": "如何联系人工客服", "relevant_titles": ["常见问题解答"]},
+    {"query": "积分如何使用", "relevant_titles": ["常见问题解答"]},
+    {"query": "当前有什么活动优惠", "relevant_titles": []},
     {"query": "量子纠缠实验室预约", "relevant_titles": []},
 ]
 
