@@ -1,6 +1,8 @@
 """第 8 步：LLM 治理最小基线回归。"""
 
 import pytest
+import json
+from pathlib import Path
 
 from app.services.llm_governance import (
     ArtifactRegistry,
@@ -68,6 +70,14 @@ def test_fallback_metadata_has_versions_and_no_cost():
     assert policy.validate("drop_database", {}) == (False, "tool_not_allowlisted")
     assert stable_gray_assignment("user-1", 100)
     assert not stable_gray_assignment("user-1", 0)
+
+
+def test_redteam_fixture_is_blocked_or_allowed_as_expected():
+    cases = json.loads((Path(__file__).parent / "data" / "llm_redteam.json").read_text(encoding="utf-8"))
+    scanner = PromptInjectionScanner()
+    for case in cases:
+        detected = bool(scanner.scan(case["input"]))
+        assert detected is (case["expected"] == "prompt_injection"), case["id"]
 
 
 @pytest.mark.asyncio
