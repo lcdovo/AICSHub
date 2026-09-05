@@ -129,13 +129,100 @@ class Ticket(Base):
     status = Column(Enum(TicketStatus), default=TicketStatus.PENDING, index=True)
     priority = Column(Enum(TicketPriority), default=TicketPriority.MEDIUM, index=True)
     content = Column(Text, nullable=False)
+    session_id = Column(String(36), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True, index=True)
     assigned_to = Column(String(50), nullable=True)
+    resolution = Column(Text, nullable=True)
+    idempotency_key = Column(String(128), nullable=True, unique=True, index=True)
     sla_deadline = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     resolved_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="tickets")
+
+
+class HandoffStatus(str, enum.Enum):
+    PENDING = "pending"
+    ASSIGNED = "assigned"
+    RESOLVED = "resolved"
+    CANCELLED = "cancelled"
+
+
+class HandoffRequestRecord(Base):
+    """转人工请求持久化记录，与客服分配内存缓存解耦。"""
+
+    __tablename__ = "handoff_requests"
+
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    session_id = Column(String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    reason = Column(String(100), nullable=False)
+    priority = Column(String(20), nullable=False, default="normal", index=True)
+    context = Column(JSON, nullable=True)
+    status = Column(Enum(HandoffStatus), nullable=False, default=HandoffStatus.PENDING, index=True)
+    assigned_to = Column(String(50), nullable=True, index=True)
+    resolution = Column(Text, nullable=True)
+    sla_deadline = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    assigned_at = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    idempotency_key = Column(String(128), nullable=True, unique=True, index=True)
+
+
+class NotificationStatus(str, enum.Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+
+
+class NotificationRecord(Base):
+    """Outbox 通知记录；真实渠道接入前由 Mock worker 消费。"""
+
+    __tablename__ = "notification_records"
+
+    id = Column(String(36), primary_key=True)
+    event_type = Column(String(50), nullable=False, index=True)
+    recipient = Column(String(200), nullable=False)
+    payload = Column(JSON, nullable=False)
+    status = Column(Enum(NotificationStatus), nullable=False, default=NotificationStatus.PENDING, index=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    last_error = Column(Text, nullable=True)
+    idempotency_key = Column(String(128), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    sent_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class OperationAudit(Base):
+    """副作用操作审计与幂等记录。"""
+
+    __tablename__ = "operation_audits"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    operation = Column(String(50), nullable=False, index=True)
+    idempotency_key = Column(String(128), nullable=False, unique=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    resource_id = Column(String(100), nullable=True, index=True)
+    request_payload = Column(JSON, nullable=True)
+    result_payload = Column(JSON, nullable=True)
+    status = Column(String(20), nullable=False, default="succeeded")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class UserFeedback(Base):
+    """用户反馈持久化记录。"""
+
+    __tablename__ = "user_feedback"
+
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    session_id = Column(String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True, index=True)
+    feedback_type = Column(String(20), nullable=False, index=True)
+    score = Column(Integer, nullable=True)
+    content = Column(Text, nullable=True)
+    categories = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
 class KnowledgeDoc(Base):

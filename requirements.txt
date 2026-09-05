@@ -5,6 +5,7 @@ python-multipart==0.0.9
 
 # Database
 SQLAlchemy==2.0.35
+alembic==1.14.0
 aiomysql==0.2.0
 PyMySQL==1.1.1
 cryptography>=42.0.0

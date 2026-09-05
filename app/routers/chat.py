@@ -20,6 +20,7 @@ from app.agent.memory import session_manager
 from app.utils.tracking import structured_logger, generate_trace_id
 from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, decode_token
 from app.config.config import settings
+from app.services.evaluation import get_answer_evaluator
 
 router = APIRouter(prefix="/api/v1/chat", tags=["对话管理"])
 
@@ -272,6 +273,20 @@ async def send_message(
         tool_calls=[{"name": tc.tool_name, "success": tc.success} for tc in agent_state.tool_calls],
     )
     db.add(assistant_message)
+
+    # 评测结果与对话在同一事务中落库，避免只存在进程内存。
+    evaluation = get_answer_evaluator().evaluate(
+        response=agent_state.reply or "", user_query=chat_data.message,
+        tool_results=[{"success": tc.success, "data": tc.result} for tc in agent_state.tool_calls],
+        response_time_ms=response_time_ms,
+    )
+    db.add(EvaluationResult(
+        session_id=session_id, sample_id=str(assistant_message.id) if assistant_message.id else None,
+        accuracy_score=round(evaluation.accuracy_score), completeness_score=round(evaluation.completeness_score),
+        safety_score=round(evaluation.safety_score), overall_score=round(evaluation.overall_score),
+        is_low_score=evaluation.is_low_score, failure_reason=evaluation.failure_reason,
+        processed=False,
+    ))
 
     session.message_count += 1
     session.last_intent = agent_state.detected_intent

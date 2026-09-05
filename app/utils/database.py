@@ -86,7 +86,11 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 async def init_database():
     from app.security import hash_password
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        # 生产结构由 Alembic 管理；本地 profile 允许首次启动时一次性初始化。
+        if settings.ENVIRONMENT.lower() == "local" or settings.DATABASE_URL.startswith("sqlite"):
+            await conn.run_sync(Base.metadata.create_all)
+        if settings.DATABASE_URL.startswith("sqlite"):
+            await conn.execute(__import__('sqlalchemy').text("PRAGMA foreign_keys=ON"))
 
         # 第 2 步的最小兼容升级：create_all 不会为已有 SQLite 表补列。
         # 第 3 步将由 Alembic 接管完整迁移。
@@ -103,6 +107,14 @@ async def init_database():
             for name, definition in additions.items():
                 if name not in columns:
                     await conn.execute(text(f"ALTER TABLE users ADD COLUMN {name} {definition}"))
+            # 本地开发库可能由第 1/2 步创建，补齐第 3 步新增字段。
+            result = await conn.execute(text("PRAGMA table_info(tickets)"))
+            ticket_columns = {row[1] for row in result.fetchall()}
+            for name, definition in {
+                "session_id": "VARCHAR(36)", "resolution": "TEXT", "idempotency_key": "VARCHAR(128)"
+            }.items():
+                if name not in ticket_columns:
+                    await conn.execute(text(f"ALTER TABLE tickets ADD COLUMN {name} {definition}"))
 
     # 创建默认用户（如果不存在）
     async with async_session() as session:
