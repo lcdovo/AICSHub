@@ -2,6 +2,7 @@
 LLM 服务 - Phase 3 增强版
 支持多模型切换、降级策略、重试机制、调用统计
 """
+import asyncio
 import json
 import time
 import logging
@@ -270,19 +271,7 @@ class LLMService:
         message: str,
         context: Optional[list] = None,
     ) -> Tuple[str, str, int]:
-        system_prompt = self._get_system_prompt()
-        messages = [SystemMessage(content=system_prompt)]
-
-        if context:
-            for item in self.redactor.sanitize_messages(context[-10:]):
-                role = item.get("role", "user")
-                content = item.get("content", "")
-                if role == "assistant":
-                    messages.append(AIMessage(content=content))
-                else:
-                    messages.append(HumanMessage(content=content))
-
-        messages.append(HumanMessage(content=self.redactor.redact(message)))
+        messages = self._build_messages(message, context)
 
         chat_model = self._get_chat_model(model)
         structured_model = (
@@ -318,9 +307,103 @@ class LLMService:
 
         return reply, response_intent, token_count
 
-    def _get_chat_model(self, model: ModelConfig) -> ChatOpenAI:
+    async def stream_chat(
+        self,
+        user_id: int,
+        session_id: str,
+        message: str,
+        context: Optional[list] = None,
+    ):
+        """Stream response text through LangChain's async model interface."""
+        started = time.perf_counter()
+        intent = self.detect_intent(message)
+        injection_patterns = self.injection_scanner.scan(message)
+        input_tokens = max(1, len(message) // 4)
+        budget = self.budget_manager.check(user_id, input_tokens, settings.LLM_MAX_TOKENS)
+        self.last_call_metadata = {
+            "prompt_version": self.registry.get("prompt").version,
+            "model_version": self.registry.get("model").version,
+            "schema_version": self.registry.get("schema").version,
+            "route_version": self.registry.get("route").version,
+            "input_summary": self.redactor.summary(message),
+            "injection_detected": bool(injection_patterns),
+            "injection_patterns": injection_patterns,
+            "budget_allowed": budget.allowed,
+            "budget_reason": budget.reason,
+            "estimated_cost_usd": budget.estimated_cost_usd,
+            "cost_basis": "configured_token_rates_estimate",
+        }
+
+        if injection_patterns or not budget.allowed or settings.MOCK_LLM_ENABLED:
+            reason = "prompt_injection" if injection_patterns else (budget.reason or "mock_mode")
+            reply = (
+                "抱歉，我不能执行修改系统规则、泄露凭据或绕过权限的请求。请描述具体的业务问题。"
+                if injection_patterns
+                else self._get_mock_reply(intent, message)
+            )
+            for index in range(0, len(reply), 24):
+                await asyncio.sleep(0)
+                yield reply[index:index + 24]
+            self._record_call_metadata(user_id, "rule_fallback" if injection_patterns or not budget.allowed else "local_fallback", len(reply) // 4, started, degraded=True, reason=reason)
+            self.last_call_metadata["stream_provider"] = "mock"
+            self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
+            return
+
+        messages = self._build_messages(message, context)
+        for model in self.models:
+            if model.is_local or not model.api_key or not self.circuit_breaker.can_execute(model.name):
+                continue
+            try:
+                chat_model = self._get_chat_model(model, streaming=True)
+                chunks: list[str] = []
+                async for chunk in chat_model.astream(
+                    messages,
+                    config={
+                        "run_name": "customer_service_chat_stream",
+                        "tags": ["customer-service", "stream", model.name],
+                        "metadata": {"user_id": user_id, "session_id": session_id},
+                    },
+                ):
+                    text = self._message_content(chunk)
+                    if text:
+                        chunks.append(text)
+                        yield text
+                reply = "".join(chunks)
+                self.circuit_breaker.record_success(model.name)
+                self._record_stats(model.name, True)
+                self._record_call_metadata(user_id, model.name, max(1, len(reply) // 4), started)
+                self.last_call_metadata["stream_provider"] = "langchain"
+                self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
+                return
+            except Exception as exc:
+                logger.warning("模型流式调用失败: %s", exc)
+                self.circuit_breaker.record_failure(model.name)
+                self._record_stats(model.name, False)
+
+        reply = self._get_mock_reply(intent, message)
+        for index in range(0, len(reply), 24):
+            await asyncio.sleep(0)
+            yield reply[index:index + 24]
+        self._record_call_metadata(user_id, "rule_fallback", len(reply) // 4, started, degraded=True, reason="provider_unavailable")
+        self.last_call_metadata["stream_provider"] = "fallback"
+        self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
+
+    def _build_messages(self, message: str, context: Optional[list] = None) -> list:
+        messages = [SystemMessage(content=self._get_system_prompt())]
+        if context:
+            for item in self.redactor.sanitize_messages(context[-10:]):
+                messages.append(
+                    AIMessage(content=item.get("content", ""))
+                    if item.get("role") == "assistant"
+                    else HumanMessage(content=item.get("content", ""))
+                )
+        messages.append(HumanMessage(content=self.redactor.redact(message)))
+        return messages
+
+    def _get_chat_model(self, model: ModelConfig, streaming: bool = False) -> ChatOpenAI:
         """Create one LangChain ChatOpenAI instance per configured model."""
-        cached = self._chat_models.get(model.name)
+        cache_key = f"{model.name}:{'stream' if streaming else 'invoke'}"
+        cached = self._chat_models.get(cache_key)
         if cached is not None:
             return cached
 
@@ -332,9 +415,9 @@ class LLMService:
             timeout=self.TIMEOUT,
             max_retries=0,
             max_completion_tokens=min(settings.LLM_MAX_TOKENS, self.budget_manager.policy.max_tokens),
-            streaming=False,
+            streaming=streaming,
         )
-        self._chat_models[model.name] = chat_model
+        self._chat_models[cache_key] = chat_model
         return chat_model
 
     @staticmethod

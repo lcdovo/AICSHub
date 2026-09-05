@@ -6,6 +6,8 @@
 import os
 import time
 import json
+import asyncio
+import contextvars
 import logging
 from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, TypedDict
 from datetime import datetime
@@ -23,6 +25,9 @@ from app.agent.validation import create_validator
 from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
+_stream_event_queue: contextvars.ContextVar[Optional[asyncio.Queue]] = contextvars.ContextVar(
+    "agent_stream_event_queue", default=None
+)
 
 
 class AgentGraph:
@@ -103,15 +108,45 @@ class AgentGraph:
         initial_node = state.current_node
         # 保持既有 WebSocket 协议：首事件仍为入口节点，同时附带流式能力标记。
         yield {"type": "node_start", "node": initial_node, "timestamp": datetime.now().isoformat()}
-        yield {"type": "stream_mode", "mode": "graph_updates", "token_stream": "simulated", "timestamp": datetime.now().isoformat()}
+        yield {"type": "stream_mode", "mode": "graph_updates", "token_stream": "langchain", "timestamp": datetime.now().isoformat()}
         first_update = True
-        async for update in self.langgraph.astream(
-            {"state": state, "next_node": state.current_node, "regeneration_count": 0},
-            config={"recursion_limit": 50},
-            stream_mode="updates",
-        ):
-            if not update:
+        token_index = 0
+        event_queue: asyncio.Queue = asyncio.Queue()
+
+        async def produce_updates():
+            try:
+                async for update in self.langgraph.astream(
+                    {"state": state, "next_node": state.current_node, "regeneration_count": 0},
+                    config={"recursion_limit": 50},
+                    stream_mode="updates",
+                ):
+                    if update:
+                        await event_queue.put(("update", update))
+            except Exception as exc:
+                await event_queue.put(("error", exc))
+            finally:
+                await event_queue.put(("graph_done", None))
+
+        queue_token = _stream_event_queue.set(event_queue)
+        producer = asyncio.create_task(produce_updates())
+        try:
+          graph_done = False
+          while not graph_done:
+            kind, payload = await event_queue.get()
+            if kind == "token":
+                content = str(payload or "")
+                if content:
+                    yield {"type": "token", "content": content, "index": token_index,
+                           "streaming": True, "provider": "langchain",
+                           "timestamp": datetime.now().isoformat()}
+                    token_index += len(content)
                 continue
+            if kind == "error":
+                raise payload
+            if kind == "graph_done":
+                graph_done = True
+                continue
+            update = payload
             node_name, payload = next(iter(update.items()))
             updated_state = payload.get("state", state)
             node_start = datetime.now().isoformat()
@@ -150,12 +185,16 @@ class AgentGraph:
                    "duration_ms": trace.get("duration_ms", 0),
                    "next_node": payload.get("next_node"), "timestamp": datetime.now().isoformat()}
 
-            if node_name == AgentNode.RESPONSE_GENERATION and state.reply:
+            if False and node_name == AgentNode.RESPONSE_GENERATION and state.reply:
                 # Mock/非 streaming 供应商只能提供可观测的模拟切片，明确标记模式。
                 chunk_size = max(1, len(state.reply) // 8)
                 for index in range(0, len(state.reply), chunk_size):
                     yield {"type": "token", "content": state.reply[index:index + chunk_size],
                            "index": index, "simulated": True, "timestamp": datetime.now().isoformat()}
+
+        finally:
+            _stream_event_queue.reset(queue_token)
+            await producer
 
         state.execution_time_ms = int((time.time() - start_time) * 1000)
         state.response_ready = True
@@ -539,12 +578,25 @@ class AgentGraph:
             prompt = self._build_llm_prompt(state)
             context_messages = self._build_context_messages(state)
 
-            reply, intent, token_count = await self.llm_runnable.ainvoke({
+            payload = {
                 "user_id": state.user_id,
                 "session_id": state.session_id,
                 "message": prompt,
                 "context": context_messages,
-            })
+            }
+            stream_queue = _stream_event_queue.get()
+            if stream_queue is not None:
+                chunks = []
+                async for chunk in self.llm_service.stream_chat(**payload):
+                    chunks.append(chunk)
+                    await stream_queue.put(("token", chunk))
+                reply = "".join(chunks)
+                metadata = self.llm_service.get_last_call_metadata()
+                structured = metadata.get("structured_output", {})
+                intent = structured.get("intent") or self.llm_service.detect_intent(prompt)
+                token_count = int(metadata.get("tokens", max(1, len(reply) // 4)))
+            else:
+                reply, intent, token_count = await self.llm_runnable.ainvoke(payload)
             state.total_tokens = token_count
             # 治理元数据只包含摘要、版本和预算结果，不保存发送给模型的敏感原文。
             state.collected_info["llm_governance"] = self.llm_service.get_last_call_metadata()

@@ -24,7 +24,11 @@ def test_run_and_stream_share_the_same_node_order():
         ]
         assert events[0]["type"] == "node_start"
         assert events[1]["type"] == "stream_mode"
-        assert events[1]["token_stream"] == "simulated"
+        assert events[1]["token_stream"] == "langchain"
+        token_events = [event for event in events if event["type"] == "token"]
+        assert token_events
+        assert all(event.get("streaming") is True for event in token_events)
+        assert all("simulated" not in event for event in token_events)
 
     asyncio.run(scenario())
 
