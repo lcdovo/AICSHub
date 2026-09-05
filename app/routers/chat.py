@@ -257,6 +257,7 @@ async def send_message(
     agent_state = await agent_graph.run(agent_state)
 
     # 保存 Agent 执行轨迹
+    llm_governance = agent_state.collected_info.get("llm_governance", {})
     if agent_state.trace:
         for i, trace_entry in enumerate(agent_state.trace):
             span_id = str(uuid.uuid4())
@@ -273,8 +274,10 @@ async def send_message(
                 output_data=trace_entry.get("output"),
                 duration_ms=trace_entry.get("duration_ms", 0),
                 token_usage={"total_tokens": agent_state.total_tokens},
-                model_name=getattr(settings, "LLM_MODEL", "mock") if not settings.MOCK_LLM_ENABLED else "mock",
-                prompt_version="v1",
+                model_name=llm_governance.get("model", "mock"),
+                prompt_version=llm_governance.get("prompt_version", settings.LLM_PROMPT_VERSION),
+                schema_version=llm_governance.get("schema_version", settings.LLM_SCHEMA_VERSION),
+                route_version=llm_governance.get("route_version", settings.LLM_ROUTE_VERSION),
                 success=True,
             )
             db.add(agent_trace)
@@ -307,7 +310,7 @@ async def send_message(
         accuracy_score=round(evaluation.accuracy_score), completeness_score=round(evaluation.completeness_score),
         safety_score=round(evaluation.safety_score), overall_score=round(evaluation.overall_score),
         is_low_score=evaluation.is_low_score, failure_reason=evaluation.failure_reason,
-        evaluator="heuristic", model_name="heuristic", prompt_version="v1",
+        evaluator="heuristic", model_name=llm_governance.get("model", "heuristic"), prompt_version=llm_governance.get("prompt_version", settings.LLM_PROMPT_VERSION), schema_version=llm_governance.get("schema_version", settings.LLM_SCHEMA_VERSION), route_version=llm_governance.get("route_version", settings.LLM_ROUTE_VERSION),
         latency_ms=response_time_ms, token_usage={"total_tokens": agent_state.total_tokens},
         user_query=chat_data.message, response=agent_state.reply or "", categories=[],
         processed=False,
@@ -592,8 +595,10 @@ async def websocket_chat_stream(websocket: WebSocket):
                     accuracy_score=round(stream_evaluation.accuracy_score), completeness_score=round(stream_evaluation.completeness_score),
                     safety_score=round(stream_evaluation.safety_score), overall_score=round(stream_evaluation.overall_score),
                     is_low_score=stream_evaluation.is_low_score, failure_reason=stream_evaluation.failure_reason,
-                    evaluator="heuristic", model_name="mock" if settings.MOCK_LLM_ENABLED else settings.LLM_MODEL,
-                    prompt_version="v1", latency_ms=agent_state.execution_time_ms,
+                    evaluator="heuristic", model_name=agent_state.collected_info.get("llm_governance", {}).get("model", "mock"),
+                    prompt_version=agent_state.collected_info.get("llm_governance", {}).get("prompt_version", settings.LLM_PROMPT_VERSION),
+                    schema_version=agent_state.collected_info.get("llm_governance", {}).get("schema_version", settings.LLM_SCHEMA_VERSION),
+                    route_version=agent_state.collected_info.get("llm_governance", {}).get("route_version", settings.LLM_ROUTE_VERSION), latency_ms=agent_state.execution_time_ms,
                     token_usage={"total_tokens": agent_state.total_tokens}, user_query=message,
                     response=agent_state.reply or full_reply, categories=[], processed=False,
                 ))
@@ -613,8 +618,10 @@ async def websocket_chat_stream(websocket: WebSocket):
                             output_data=trace_entry.get("output"),
                             duration_ms=trace_entry.get("duration_ms", 0),
                             token_usage={"total_tokens": agent_state.total_tokens},
-                            model_name="mock" if settings.MOCK_LLM_ENABLED else settings.LLM_MODEL,
-                            prompt_version="v1",
+                            model_name=agent_state.collected_info.get("llm_governance", {}).get("model", "mock"),
+                            prompt_version=agent_state.collected_info.get("llm_governance", {}).get("prompt_version", settings.LLM_PROMPT_VERSION),
+                            schema_version=agent_state.collected_info.get("llm_governance", {}).get("schema_version", settings.LLM_SCHEMA_VERSION),
+                            route_version=agent_state.collected_info.get("llm_governance", {}).get("route_version", settings.LLM_ROUTE_VERSION),
                             success=True,
                         )
                         db.add(agent_trace)

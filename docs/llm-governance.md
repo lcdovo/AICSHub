@@ -13,3 +13,12 @@
 ```powershell
 pytest tests/test_llm_governance.py
 ```
+
+实现入口为 `app.services.llm_governance`：`ArtifactRegistry` 管理 prompt/model/schema/route
+版本并支持激活与快照，`BudgetManager` 执行单次及用户日 token/费用预算，
+`SensitiveDataRedactor` 和 `PromptInjectionScanner` 在外部模型边界执行数据保护，
+`ToolPolicy` 只允许白名单工具。`LLMService.get_last_call_metadata()` 返回不含原文的
+版本、路由、token、估算费用、耗时和降级原因；规则、Mock、外部供应商路径均使用同一格式。
+预算单价来自 `LLM_INPUT_PRICE_PER_1K_USD`/`LLM_OUTPUT_PRICE_PER_1K_USD`，成本明确标记为
+`configured_token_rates_estimate`，不冒充供应商账单。生产部署应将预算计数从进程内替换为
+Redis 或数据库，并继续由代码执行 RBAC、资源归属、订单/退款资格、状态流转和最终副作用确认。

@@ -11,6 +11,7 @@ from datetime import datetime
 import httpx
 
 from app.config.config import settings
+from app.services.llm_governance import BudgetManager, BudgetPolicy, CostEstimator, SensitiveDataRedactor, PromptInjectionScanner, ToolPolicy, build_default_registry
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,12 @@ class LLMService:
         self.circuit_breaker = CircuitBreaker()
         self._client: Optional[httpx.AsyncClient] = None
         self.call_stats: Dict[str, Dict[str, int]] = {}
+        self.registry = build_default_registry(settings.LLM_PROMPT_VERSION, settings.LLM_MODEL_VERSION or settings.LLM_MODEL, settings.LLM_SCHEMA_VERSION, settings.LLM_ROUTE_VERSION)
+        self.redactor = SensitiveDataRedactor()
+        self.injection_scanner = PromptInjectionScanner()
+        self.tool_policy = ToolPolicy()
+        self.budget_manager = BudgetManager(BudgetPolicy(max_tokens=settings.LLM_MAX_TOKENS, max_cost_usd=settings.LLM_MAX_COST_USD, user_daily_tokens=settings.LLM_DAILY_USER_TOKEN_BUDGET, user_daily_cost_usd=settings.LLM_DAILY_USER_COST_USD, max_latency_seconds=settings.LLM_REQUEST_TIMEOUT_SECONDS), CostEstimator(settings.LLM_INPUT_PRICE_PER_1K_USD, settings.LLM_OUTPUT_PRICE_PER_1K_USD))
+        self.last_call_metadata: Dict[str, Any] = {}
 
         self._init_models()
 
@@ -168,14 +175,39 @@ class LLMService:
         message: str,
         context: Optional[list] = None,
     ) -> Tuple[str, str, int]:
+        started = time.perf_counter()
         intent = self.detect_intent(message)
+        injection_patterns = self.injection_scanner.scan(message)
+        input_tokens = max(1, len(message) // 4)
+        budget = self.budget_manager.check(user_id, input_tokens, settings.LLM_MAX_TOKENS)
+        self.last_call_metadata = {
+            "prompt_version": self.registry.get("prompt").version,
+            "model_version": self.registry.get("model").version,
+            "schema_version": self.registry.get("schema").version,
+            "route_version": self.registry.get("route").version,
+            "input_summary": self.redactor.summary(message),
+            "injection_detected": bool(injection_patterns),
+            "injection_patterns": injection_patterns,
+            "budget_allowed": budget.allowed,
+            "budget_reason": budget.reason,
+            "estimated_cost_usd": budget.estimated_cost_usd,
+            "cost_basis": "configured_token_rates_estimate",
+        }
+        if injection_patterns or not budget.allowed:
+            reason = "prompt_injection" if injection_patterns else budget.reason
+            reply = "抱歉，我不能执行修改系统规则、泄露凭据或绕过权限的请求。请描述具体的业务问题。" if injection_patterns else "当前模型预算已用尽，我将使用规则模式继续为您服务。"
+            tokens = max(1, len(reply) // 4)
+            self._record_call_metadata(user_id, "rule_fallback", tokens, started, degraded=True, reason=reason)
+            return reply, intent, tokens
 
         # 本地 profile 明确启用 Mock 时，不尝试访问外部模型，保证离线可复现。
         if settings.MOCK_LLM_ENABLED:
             model = next((m for m in self.models if m.is_local), None)
             if model:
                 self._record_stats(model.name, True)
-                return self._get_mock_reply(intent, message), intent, len(message)
+                reply = self._get_mock_reply(intent, message)
+                self._record_call_metadata(user_id, model.name, len(message), started, degraded=True, reason="mock_mode")
+                return reply, intent, len(message)
 
         for attempt in range(len(self.models)):
             model = self.models[attempt]
@@ -197,6 +229,7 @@ class LLMService:
                     )
                     self.circuit_breaker.record_success(model.name)
                     self._record_stats(model.name, True)
+                    self._record_call_metadata(user_id, model.name, token_count, started)
                     return reply, intent, token_count
 
             except Exception as e:
@@ -209,7 +242,17 @@ class LLMService:
                     continue
 
         reply = self._get_mock_reply(intent, message)
+        self._record_call_metadata(user_id, "rule_fallback", len(message), started, degraded=True, reason="provider_unavailable")
         return reply, intent, len(message)
+
+    def _record_call_metadata(self, user_id: int, model_name: str, tokens: int, started: float, *, degraded: bool = False, reason: str | None = None) -> None:
+        input_tokens = max(1, len(self.last_call_metadata.get("input_summary", "")) // 4)
+        cost = self.budget_manager.estimator.estimate(input_tokens, tokens)
+        self.budget_manager.consume(user_id, tokens, cost)
+        self.last_call_metadata.update({"model": model_name, "route": "mock" if model_name == "local_fallback" else ("rule_fallback" if model_name == "rule_fallback" else "external"), "tokens": max(0, int(tokens)), "cost_usd": cost, "latency_ms": int((time.perf_counter() - started) * 1000), "degraded": degraded, "degraded_reason": reason})
+
+    def get_last_call_metadata(self) -> Dict[str, Any]:
+        return dict(self.last_call_metadata)
 
     async def _call_model_api(
         self,
@@ -225,14 +268,14 @@ class LLMService:
         messages = [{"role": "system", "content": system_prompt}]
 
         if context:
-            messages.extend(context[-10:])
+            messages.extend(self.redactor.sanitize_messages(context[-10:]))
 
-        messages.append({"role": "user", "content": message})
+        messages.append({"role": "user", "content": self.redactor.redact(message)})
 
         payload = {
             "model": model.model,
             "messages": messages,
-                "max_tokens": settings.LLM_MAX_TOKENS,
+            "max_tokens": min(settings.LLM_MAX_TOKENS, self.budget_manager.policy.max_tokens),
             "temperature": 0.7,
         }
 

@@ -66,6 +66,11 @@ class ArtifactRegistry:
             }
 
 
+# Explicit names make the registry easy to discover in dependency injection code.
+PromptRegistry = ArtifactRegistry
+ModelRegistry = ArtifactRegistry
+
+
 @dataclass(frozen=True)
 class BudgetPolicy:
     max_tokens: int = 1024
@@ -144,15 +149,26 @@ class SensitiveDataRedactor:
         (re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"), "[EMAIL_REDACTED]"),
         (re.compile(r"(?i)(详细地址|收货地址|地址)\s*[:：]\s*[^,;，。\n]+"), r"\1：[ADDRESS_REDACTED]"),
     )
+    UNICODE_PATTERNS = (
+        (re.compile(r"(?i)(?:\u5bc6\u7801|\u4ee4\u724c|\u5bc6\u94a5|\u53e3\u4ee4)\s*[:=：]\s*[^\s,;，；。\n]+"), "[SECRET_REDACTED]"),
+        (re.compile(r"(?:\u8be6\u7ec6\u5730\u5740|\u6536\u8d27\u5730\u5740|\u5730\u5740)\s*[:：]\s*[^,;，；。\n]+"), "[ADDRESS_REDACTED]"),
+    )
 
     def redact(self, value: str) -> str:
         result = str(value or "")
         for pattern, replacement in self.PATTERNS:
             result = pattern.sub(replacement, result)
+        for pattern, replacement in self.UNICODE_PATTERNS:
+            result = pattern.sub(replacement, result)
         return result
+
+    # Stable aliases used by integrations and security tests.
+    redact_text = redact
 
     def sanitize_messages(self, messages: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         return [{**dict(message), "content": self.redact(str(message.get("content", "")))} for message in messages]
+
+    redact_messages = sanitize_messages
 
     def summary(self, value: str, limit: int = 240) -> str:
         clean = self.redact(value).replace("\n", " ").strip()
@@ -168,10 +184,16 @@ class PromptInjectionScanner:
     )
 
     def scan(self, text: str) -> list[str]:
-        return [pattern for pattern in self.PATTERNS if re.search(pattern, text or "")]
+        patterns = list(self.PATTERNS) + [
+            r"(?i)(?:\u5ffd\u7565|\u65e0\u89c6|\u5fd8\u8bb0)(?:\u4e4b\u524d|\u4ee5\u4e0a|\u524d\u9762)(?:\u7684)?(?:\u6307\u4ee4|\u63d0\u793a|prompt)",
+            r"(?i)(?:\u663e\u793a|\u8f93\u51fa|\u6cc4\u9732).{0,12}(?:\u5bc6\u94a5|\u4ee4\u724c|\u5bc6\u7801|\u7cfb\u7edf\u63d0\u793a)",
+        ]
+        return [pattern for pattern in patterns if re.search(pattern, text or "")]
 
     def is_safe(self, text: str) -> bool:
         return not self.scan(text)
+
+    contains_prompt_injection = lambda self, text: bool(self.scan(text))
 
 
 class ToolPolicy:
@@ -190,6 +212,38 @@ class ToolPolicy:
         return True, None
 
 
+class GovernanceBudgetExceeded(RuntimeError):
+    """Raised by strict integrations that choose to reject instead of degrade."""
+
+
+class LLMGovernance:
+    """Convenience facade for external integrations.
+
+    LLMService uses the lower-level components so it can preserve its historical
+    tuple return type; new callers can use this facade for explicit preflight/record.
+    """
+
+    def __init__(self, *, registry: ArtifactRegistry | None = None, budget: BudgetManager | None = None) -> None:
+        self.registry = registry or build_default_registry()
+        self.budget = budget or BudgetManager()
+        self.redactor = SensitiveDataRedactor()
+        self.injection = PromptInjectionScanner()
+
+    def preflight(self, user_id: int | str, text: str, output_tokens: int | None = None) -> dict[str, Any]:
+        patterns = self.injection.scan(text)
+        decision = self.budget.check(user_id, max(1, len(text) // 4), output_tokens)
+        result = {"allowed": not patterns and decision.allowed, "reason": ("prompt_injection" if patterns else decision.reason), "injection_patterns": patterns, "budget": decision}
+        return result
+
+    def record(self, user_id: int | str, input_tokens: int, output_tokens: int) -> dict[str, Any]:
+        cost = self.budget.estimator.estimate(input_tokens, output_tokens)
+        self.budget.consume(user_id, input_tokens + output_tokens, cost)
+        return {"tokens": input_tokens + output_tokens, "estimated_cost_usd": cost, "cost_basis": "configured_token_rates_estimate"}
+
+    def fallback(self, reason: str) -> dict[str, str]:
+        return {"route": "rule_fallback", "degraded": "true", "reason": reason}
+
+
 def build_default_registry(prompt_version: str = "v1", model_version: str = "gpt-4o-mini", schema_version: str = "response.v1", route_version: str = "rules-first.v1") -> ArtifactRegistry:
     registry = ArtifactRegistry()
     registry.register(VersionedArtifact("prompt", "customer_service", prompt_version, metadata={"safety": "code-enforced"}), activate=True)
@@ -203,3 +257,15 @@ def stable_gray_assignment(key: str, percentage: int) -> bool:
     """稳定灰度：同一用户在版本切换前后不会随机漂移。"""
     bucket = int(hashlib.sha256(str(key).encode()).hexdigest()[:8], 16) % 100
     return bucket < max(0, min(100, int(percentage)))
+
+
+def validate_structured_output(payload: Any, schema: Mapping[str, Any]) -> tuple[bool, list[str]]:
+    """Minimal, dependency-free schema guard for model JSON responses."""
+    errors: list[str] = []
+    if schema.get("type") == "object" and not isinstance(payload, Mapping):
+        errors.append("output_not_object")
+        return False, errors
+    for field_name in schema.get("required", []):
+        if not isinstance(payload, Mapping) or field_name not in payload:
+            errors.append(f"missing:{field_name}")
+    return not errors, errors

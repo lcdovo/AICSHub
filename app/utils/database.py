@@ -120,10 +120,12 @@ async def init_database():
                 "agent_traces": {
                     "request_trace_id": "VARCHAR(100)", "span_id": "VARCHAR(100)",
                     "model_name": "VARCHAR(100)", "prompt_version": "VARCHAR(50)",
+                    "schema_version": "VARCHAR(50)", "route_version": "VARCHAR(50)",
                 },
                 "evaluation_results": {
                     "trace_id": "VARCHAR(100)", "intent": "VARCHAR(50)", "evaluator": "VARCHAR(50)",
                     "model_name": "VARCHAR(100)", "prompt_version": "VARCHAR(50)",
+                    "schema_version": "VARCHAR(50)", "route_version": "VARCHAR(50)",
                     "latency_ms": "INTEGER", "token_usage": "JSON",
                     "user_query": "TEXT", "response": "TEXT", "categories": "JSON",
                     "processed_at": "DATETIME", "processing_action": "VARCHAR(50)", "processing_note": "TEXT",

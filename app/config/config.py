@@ -51,6 +51,17 @@ class Settings(BaseSettings):
     LLM_REQUEST_TIMEOUT_SECONDS: float = Field(default=30.0, gt=0)
     LLM_MAX_TOKENS: int = Field(default=1024, ge=64, le=8192)
     LLM_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
+    # LLM governance: limits are deliberately conservative in local/demo mode.
+    LLM_PROMPT_VERSION: str = Field(default="v1", min_length=1, max_length=50)
+    LLM_MODEL_VERSION: str = Field(default="gpt-4o-mini", min_length=1, max_length=100)
+    LLM_SCHEMA_VERSION: str = Field(default="response.v1", min_length=1, max_length=50)
+    LLM_ROUTE_VERSION: str = Field(default="rules-first.v1", min_length=1, max_length=50)
+    LLM_MAX_COST_USD: float = Field(default=0.05, ge=0)
+    LLM_DAILY_USER_TOKEN_BUDGET: int = Field(default=100000, ge=1)
+    LLM_DAILY_USER_COST_USD: float = Field(default=5.0, ge=0)
+    LLM_INPUT_PRICE_PER_1K_USD: float = Field(default=0.00015, ge=0)
+    LLM_OUTPUT_PRICE_PER_1K_USD: float = Field(default=0.00060, ge=0)
+    LLM_GRAY_ROLLOUT_PERCENT: int = Field(default=100, ge=0, le=100)
 
     # Milvus 向量数据库
     MILVUS_HOST: str = Field(default="localhost")

@@ -524,6 +524,8 @@ class AgentGraph:
                 "context": context_messages,
             })
             state.total_tokens = token_count
+            # 治理元数据只包含摘要、版本和预算结果，不保存发送给模型的敏感原文。
+            state.collected_info["llm_governance"] = self.llm_service.get_last_call_metadata()
 
             if state.detected_intent not in (IntentType.HUMAN, IntentType.COMPLAINT, IntentType.QUERY_ORDER, IntentType.REFUND):
                 state.detected_intent = intent
