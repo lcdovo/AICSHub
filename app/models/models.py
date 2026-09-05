@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Boolean, Enum,
+    Column, Integer, String, Text, DateTime, Boolean, Enum, Float,
     Index, ForeignKey, JSON
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -103,6 +103,23 @@ class Message(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     session = relationship("Session", back_populates="messages")
+
+
+class Order(Base):
+    """持久化订单投影，供客服演示中的订单查询工具使用。"""
+
+    __tablename__ = "orders"
+
+    order_id = Column(String(32), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String(50), nullable=False)
+    status_code = Column(String(50), nullable=False)
+    items = Column(JSON, nullable=False, default=list)
+    total_amount = Column(Float, nullable=False, default=0)
+    shipping = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    pay_method = Column(String(50), nullable=True)
+    address = Column(String(500), nullable=True)
 
 
 class TicketStatus(str, enum.Enum):

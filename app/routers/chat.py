@@ -252,6 +252,11 @@ async def send_message(
     if saved_state:
         agent_state.messages = saved_state.messages
         agent_state.collected_info = saved_state.collected_info
+        agent_state.detected_intent = saved_state.detected_intent
+        agent_state.intent_confidence = saved_state.intent_confidence
+        agent_state.pending_confirmations = saved_state.pending_confirmations
+        agent_state.conversation_summary = saved_state.conversation_summary
+    agent_state.messages.append({"role": "user", "content": chat_data.message, "timestamp": datetime.now().isoformat()})
 
     # 运行 Agent 状态机
     agent_state = await agent_graph.run(agent_state)
@@ -544,6 +549,11 @@ async def websocket_chat_stream(websocket: WebSocket):
                 if saved_state:
                     agent_state.messages = saved_state.messages
                     agent_state.collected_info = saved_state.collected_info
+                    agent_state.detected_intent = saved_state.detected_intent
+                    agent_state.intent_confidence = saved_state.intent_confidence
+                    agent_state.pending_confirmations = saved_state.pending_confirmations
+                    agent_state.conversation_summary = saved_state.conversation_summary
+                agent_state.messages.append({"role": "user", "content": message, "timestamp": datetime.now().isoformat()})
 
                 structured_logger.log_agent(
                     trace_id=trace_id,

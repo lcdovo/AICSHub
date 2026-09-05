@@ -168,3 +168,21 @@ async def init_database():
                     changed = True
             if changed:
                 await session.commit()
+
+    # 本地演示数据也落到数据库，业务工具读取真实持久化记录。
+    from app.models.models import Order
+    from sqlalchemy import select
+    async with async_session() as session:
+        existing = await session.scalar(select(Order.order_id).limit(1))
+        if existing is None:
+            session.add_all([
+                Order(order_id="ORD20260801", user_id=1, status="已发货", status_code="shipped",
+                      items=[{"name": "无线耳机", "qty": 1, "price": 299.0}], total_amount=299,
+                      shipping={"carrier": "顺丰快递", "tracking_no": "SF1234567890", "status": "运输中", "estimated_delivery": "2026-08-17"},
+                      pay_method="微信支付", address="北京市朝阳区建国路88号"),
+                Order(order_id="ORD20260802", user_id=1, status="已完成", status_code="completed",
+                      items=[{"name": "智能手表", "qty": 1, "price": 1299.0}], total_amount=1299,
+                      shipping={"carrier": "京东物流", "tracking_no": "JD9876543210", "status": "已签收"},
+                      pay_method="支付宝", address="上海市浦东新区"),
+            ])
+            await session.commit()

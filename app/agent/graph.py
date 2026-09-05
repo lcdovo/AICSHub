@@ -18,7 +18,7 @@ from app.agent.state import AgentState, AgentNode, IntentType
 from app.agent.intent import EnhancedIntentRecognizer
 from app.agent.tools import ToolExecutionResult
 from app.agent.langchain_tools import get_langchain_tool
-from app.agent.retrieval import create_default_hybrid_retriever
+from app.services.knowledge_base import get_knowledge_base
 from app.agent.validation import create_validator
 from app.services.llm_service import LLMService
 
@@ -32,16 +32,6 @@ class AgentGraph:
         self.llm_service = LLMService()
         self.intent_recognizer = EnhancedIntentRecognizer()
 
-        use_milvus = os.getenv("USE_MILVUS", "false").lower() == "true"
-        milvus_host = os.getenv("MILVUS_HOST", "localhost")
-        milvus_port = int(os.getenv("MILVUS_PORT", "19530"))
-        embedding_dim = int(os.getenv("EMBEDDING_DIM", "1024"))
-        self.hybrid_retriever = create_default_hybrid_retriever(
-            use_milvus=use_milvus,
-            milvus_host=milvus_host,
-            milvus_port=milvus_port,
-            embedding_dim=embedding_dim,
-        )
         self.validator = create_validator()
         self.nodes: Dict[str, Callable] = {}
         self._register_nodes()
@@ -79,21 +69,6 @@ class AgentGraph:
             node_start = time.time()
             next_node = await self.nodes[node_name](state)
             regeneration_count = payload.get("regeneration_count", 0)
-            if node_name == AgentNode.RESULT_VERIFICATION and next_node == AgentNode.RESPONSE_GENERATION and state.reply:
-                validation_result = self.validator.validate(
-                    response=state.reply,
-                    user_query=state.user_message,
-                    intent=state.detected_intent,
-                    tool_results=[tc.result for tc in state.tool_calls],
-                )
-                state.collected_info["validation"] = validation_result.to_dict()
-                if validation_result.needs_regeneration and regeneration_count < 2:
-                    regeneration_count += 1
-                    state.reply = ""
-                elif not validation_result.passed:
-                    state.need_human = True
-                    state.human_reason = "Response validation failed; human handoff required"
-                    next_node = AgentNode.HUMAN_HANDOFF
             state.add_trace(
                 node_name=node_name,
                 input_data={"message": state.user_message, "intent": state.detected_intent},
@@ -217,7 +192,7 @@ class AgentGraph:
         intent_result = self.intent_recognizer.recognize(
             message=state.user_message,
             context=state.messages,
-            history_intent=state.detected_intent if state.current_node != AgentNode.START else None,
+            history_intent=state.detected_intent if state.detected_intent != IntentType.GENERAL else None,
         )
 
         state.detected_intent = intent_result.intent
@@ -263,7 +238,10 @@ class AgentGraph:
         query = state.user_message
         top_k = 3
 
-        search_result = self.hybrid_retriever.search(query=query, top_k=top_k)
+        # The chat path and the admin knowledge APIs must share one source of truth.
+        # KnowledgeBaseService loads published documents from SQLite/Milvus and keeps
+        # the in-memory fallback when external services are unavailable.
+        search_result = get_knowledge_base().search(query=query, top_k=top_k)
 
         state.add_tool_call(
             tool_name="hybrid_search",
@@ -294,7 +272,7 @@ class AgentGraph:
         extracted_info = self._extract_info_from_message(state.user_message)
 
         for key, value in extracted_info.items():
-            if key not in state.collected_info or not state.collected_info[key]:
+            if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
                 state.collected_info[key] = value
 
         tools_to_execute = self._select_tools_for_intent(
@@ -494,12 +472,45 @@ class AgentGraph:
         if state.need_human and not state.reply:
             state.reply = f"非常抱歉，正在为您转接人工客服。{state.human_reason or ''}"
 
+        generated_by_llm = False
         if not state.reply:
             llm_reply = await self._generate_response_with_llm(state)
             if llm_reply:
                 state.reply = llm_reply
+                generated_by_llm = True
             else:
                 state.reply = self._get_default_reply(state.detected_intent, state.user_message)
+
+        # Validate the actual final text.  The old flow validated before this node,
+        # so normal LLM output never went through fact/safety/completeness checks.
+        if state.collected_info.get("kb_results"):
+            state.reply = self._add_rag_citations(state.reply, state.collected_info["kb_results"])
+
+        if generated_by_llm or not state.collected_info.get("validation"):
+            validation = self.validator.validate(
+                response=state.reply,
+                user_query=state.user_message,
+                intent=state.detected_intent,
+                tool_results=[tc.result for tc in state.tool_calls],
+            )
+            state.collected_info["validation"] = validation.to_dict()
+            if validation.needs_regeneration and generated_by_llm:
+                retry_reply = await self._generate_response_with_llm(state)
+                if retry_reply:
+                    state.reply = retry_reply
+                    if state.collected_info.get("kb_results"):
+                        state.reply = self._add_rag_citations(state.reply, state.collected_info["kb_results"])
+                    validation = self.validator.validate(
+                        response=state.reply,
+                        user_query=state.user_message,
+                        intent=state.detected_intent,
+                        tool_results=[tc.result for tc in state.tool_calls],
+                    )
+                    state.collected_info["validation"] = validation.to_dict()
+            if not validation.passed:
+                state.need_human = True
+                state.human_reason = "生成后回答校验未通过"
+                return AgentNode.HUMAN_HANDOFF
 
         state.messages.append({
             "role": "assistant",
@@ -510,6 +521,17 @@ class AgentGraph:
         })
 
         return AgentNode.END
+
+    def _add_rag_citations(self, reply: str, results: list[dict[str, Any]]) -> str:
+        """Expose the exact published chunks used by the answer."""
+        if "参考来源" in reply:
+            return reply
+        citations = []
+        for item in results[:3]:
+            title = item.get("title", "未命名文档")
+            snippet = " ".join(str(item.get("content", "")).split())[:120]
+            citations.append(f"- {title}: {snippet}")
+        return reply + ("\n\n参考来源：\n" + "\n".join(citations) if citations else "")
 
     async def _generate_response_with_llm(self, state: AgentState) -> str:
         """使用 LLM 生成响应，失败时返回 None 由调用方降级"""
