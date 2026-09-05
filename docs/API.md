@@ -40,7 +40,7 @@ curl -s http://localhost:8000/api/v1/chat/send \
   -d '{"user_id":1,"message":"请查询订单 ORD20240001"}'
 ```
 
-管理员可先调用 `POST /api/v1/knowledge/documents/seed` 导入演示资料，再调用 `POST /api/v1/knowledge/rag-query` 验证检索与引用。
+管理员可先调用 `POST /api/v1/knowledge/documents/seed` 导入内置知识资料，再调用 `POST /api/v1/knowledge/rag-query` 验证检索与引用。
 
 ## 错误码
 

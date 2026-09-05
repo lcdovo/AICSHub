@@ -2,7 +2,7 @@
 
 ## AI 应用开发项目说明
 
-这是一个面向 AI 应用开发岗位的可运行客服 Agent Demo，重点展示单体应用内的模型编排与业务闭环，而不是企业级微服务拆分。
+这是一个面向 AI 应用开发岗位的可运行客服 Agent 应用，重点展示单体应用内的模型编排与业务闭环，而不是企业级微服务拆分。
 
 核心链路：
 
@@ -79,6 +79,5 @@ CI 脚本位于 `scripts/ci.ps1`，Docker 镜像构建使用 [Dockerfile](<C:/Us
 
 - [部署与配置](<C:/Users/lz/Desktop/简历&项目/项目一/AI Customer/docs/DEPLOYMENT.md>)
 - [API](<C:/Users/lz/Desktop/简历&项目/项目一/AI Customer/docs/API.md>)
-- [演示脚本](<C:/Users/lz/Desktop/简历&项目/项目一/AI Customer/docs/DEMO.md>)
 - [RAG 可靠性](<C:/Users/lz/Desktop/简历&项目/项目一/AI Customer/docs/RAG_RELIABILITY.md>)
 - [可观测性](<C:/Users/lz/Desktop/简历&项目/项目一/AI Customer/docs/OBSERVABILITY.md>)
