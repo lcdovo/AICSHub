@@ -8,8 +8,12 @@ import time
 import json
 import asyncio
 import logging
-from typing import AsyncGenerator, Dict, List, Optional, Any, Callable
+from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, TypedDict
 from datetime import datetime
+
+from langchain_core.runnables import RunnableLambda
+from langgraph.graph import END as LANGGRAPH_END
+from langgraph.graph import StateGraph
 
 from app.agent.state import AgentState, AgentNode, IntentType, ToolCall
 from app.agent.intent import EnhancedIntentRecognizer, IntentResult
@@ -41,6 +45,65 @@ class AgentGraph:
         self.validator = create_validator()
         self.nodes: Dict[str, Callable] = {}
         self._register_nodes()
+        self.llm_runnable = RunnableLambda(self._invoke_llm_service)
+        self.langgraph = self._build_langgraph()
+
+    class _GraphState(TypedDict):
+        state: AgentState
+        next_node: str
+        regeneration_count: int
+
+    def _build_langgraph(self):
+        """Compile the existing node workflow as a LangGraph state machine."""
+        workflow = StateGraph(self._GraphState)
+        for node_name in self.nodes:
+            workflow.add_node(node_name, self._make_langgraph_node(node_name))
+        workflow.set_entry_point(AgentNode.START)
+        route_targets = {node_name: node_name for node_name in self.nodes}
+        route_targets[AgentNode.END] = LANGGRAPH_END
+        for node_name in self.nodes:
+            if node_name == AgentNode.END:
+                workflow.add_edge(node_name, LANGGRAPH_END)
+            else:
+                workflow.add_conditional_edges(
+                    node_name,
+                    lambda payload: payload["next_node"],
+                    route_targets,
+                )
+        return workflow.compile()
+
+    def _make_langgraph_node(self, node_name: str):
+        async def invoke(payload: "AgentGraph._GraphState") -> Dict[str, Any]:
+            state = payload["state"]
+            state.current_node = node_name
+            node_start = time.time()
+            next_node = await self.nodes[node_name](state)
+            regeneration_count = payload.get("regeneration_count", 0)
+            if node_name == AgentNode.RESULT_VERIFICATION and next_node == AgentNode.RESPONSE_GENERATION and state.reply:
+                validation_result = self.validator.validate(
+                    response=state.reply,
+                    user_query=state.user_message,
+                    intent=state.detected_intent,
+                    tool_results=[tc.result for tc in state.tool_calls],
+                )
+                state.collected_info["validation"] = validation_result.to_dict()
+                if validation_result.needs_regeneration and regeneration_count < 2:
+                    regeneration_count += 1
+                    state.reply = ""
+                elif not validation_result.passed:
+                    state.need_human = True
+                    state.human_reason = "Response validation failed; human handoff required"
+                    next_node = AgentNode.HUMAN_HANDOFF
+            state.add_trace(
+                node_name=node_name,
+                input_data={"message": state.user_message, "intent": state.detected_intent},
+                output_data={"next_node": next_node, "reply": state.reply[:100] if state.reply else ""},
+                duration_ms=int((time.time() - node_start) * 1000),
+            )
+            if next_node == AgentNode.END:
+                state.current_node = AgentNode.END
+            return {"state": state, "next_node": next_node, "regeneration_count": regeneration_count}
+        return invoke
 
     def _register_nodes(self):
         self.nodes[AgentNode.START] = self._node_start
@@ -274,6 +337,7 @@ class AgentGraph:
 
         state.execution_time_ms = int((time.time() - start_time) * 1000)
         state.response_ready = True
+        state.current_node = AgentNode.END
 
         yield {
             "type": "done",
@@ -289,7 +353,19 @@ class AgentGraph:
         }
 
     async def run(self, state: AgentState) -> AgentState:
+        """Run the compiled LangGraph while preserving the public API."""
         start_time = time.time()
+        result = await self.langgraph.ainvoke(
+            {"state": state, "next_node": state.current_node, "regeneration_count": 0},
+            config={"recursion_limit": 50},
+        )
+        state = result["state"]
+        state.execution_time_ms = int((time.time() - start_time) * 1000)
+        state.response_ready = True
+        state.current_node = AgentNode.END
+        return state
+
+        # Legacy implementation retained below for reference during rollout.
         current_node = state.current_node
         visited_nodes = set()
 
@@ -625,12 +701,12 @@ class AgentGraph:
             prompt = self._build_llm_prompt(state)
             context_messages = self._build_context_messages(state)
 
-            reply, intent, token_count = await self.llm_service.chat(
-                user_id=state.user_id,
-                session_id=state.session_id,
-                message=prompt,
-                context=context_messages,
-            )
+            reply, intent, token_count = await self.llm_runnable.ainvoke({
+                "user_id": state.user_id,
+                "session_id": state.session_id,
+                "message": prompt,
+                "context": context_messages,
+            })
             state.total_tokens = token_count
 
             if state.detected_intent not in (IntentType.HUMAN, IntentType.COMPLAINT, IntentType.QUERY_ORDER, IntentType.REFUND):
@@ -644,6 +720,9 @@ class AgentGraph:
         except Exception as e:
             logger.warning(f"LLM 调用失败: {e}")
             return None
+
+    async def _invoke_llm_service(self, payload: Dict[str, Any]):
+        return await self.llm_service.chat(**payload)
 
     def _build_llm_prompt(self, state: AgentState) -> str:
         """构建发送给 LLM 的富上下文 prompt"""
