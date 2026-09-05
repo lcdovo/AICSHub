@@ -119,6 +119,8 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        # 同一份 .env 同时供 Compose 和应用使用；忽略仅由 Compose 消费的额外变量。
+        extra = "ignore"
 
 
 settings = Settings()
