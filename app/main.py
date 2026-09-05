@@ -203,9 +203,15 @@ async def _probe_dependencies() -> dict:
         try:
             from app.routers.chat import agent_graph
             milvus = agent_graph.hybrid_retriever.vector.health_check()
-            result["milvus"] = {"status": "healthy" if milvus.get("healthy") else "degraded", **milvus}
+            backend = milvus.get("backend", "memory")
+            result["milvus"] = {
+                "status": "healthy" if milvus.get("healthy") and backend == "milvus" else "degraded",
+                **milvus,
+                "reason": milvus.get("message") if backend != "milvus" else None,
+                "timeout_seconds": timeout,
+            }
         except Exception as exc:
-            result["milvus"] = {"status": "degraded", "backend": "memory", "reason": str(exc)}
+            result["milvus"] = {"status": "degraded", "backend": "memory", "reason": str(exc), "timeout_seconds": timeout}
     return result
 
 

@@ -28,6 +28,8 @@ python -m pytest -q
 
 当前基线回归集覆盖健康检查、OpenAPI、聊天 API smoke test 以及最小 Mock Agent 流程。测试使用独立 SQLite 文件，不依赖外部服务。
 
+基线建立时工作树中已有一批旧测试、脚本、数据库和 README 被删除，另有 `app/agent/graph.py` 修改及 `app/agent/langchain_tools.py`、`改动计划.md` 未跟踪；这些变更不属于本步骤，均原样保留，未从历史恢复或覆盖。
+
 ## 状态约定
 
 `/health` 将数据库视为必需依赖；Redis、Milvus 和 LLM 为可选依赖。未配置或不可用时会返回 `degraded`/`disabled` 及原因，便于启动检查和故障演示。
