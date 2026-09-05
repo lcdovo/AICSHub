@@ -185,6 +185,7 @@ class PromptInjectionScanner:
 
     def scan(self, text: str) -> list[str]:
         patterns = list(self.PATTERNS) + [
+            r"(?i)(?:show|reveal|display|leak).{0,20}(?:api\s*key|password|token|system\s*prompt)",
             r"(?i)(?:\u5ffd\u7565|\u65e0\u89c6|\u5fd8\u8bb0)(?:\u4e4b\u524d|\u4ee5\u4e0a|\u524d\u9762)(?:\u7684)?(?:\u6307\u4ee4|\u63d0\u793a|prompt)",
             r"(?i)(?:\u663e\u793a|\u8f93\u51fa|\u6cc4\u9732).{0,12}(?:\u5bc6\u94a5|\u4ee4\u724c|\u5bc6\u7801|\u7cfb\u7edf\u63d0\u793a)",
         ]
