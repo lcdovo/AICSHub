@@ -8,8 +8,7 @@ from app.config.config import settings
 config = context.config
 _sync_url = settings.DATABASE_URL.replace("+aiosqlite", "").replace("+aiomysql", "+pymysql")
 config.set_main_option("sqlalchemy.url", _sync_url.replace("%", "%%"))
-if config.config_file_name:
-    fileConfig(config.config_file_name)
+# 项目 ini 保持最小配置；应用自身负责日志初始化，迁移不强制读取 logger 段。
 target_metadata = Base.metadata
 
 def run_migrations_offline():
