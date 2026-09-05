@@ -7,6 +7,7 @@
 PowerShell 执行：
 
 ```powershell
+python -m pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 ./scripts/dev.ps1
 ```
