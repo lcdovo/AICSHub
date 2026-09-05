@@ -41,6 +41,8 @@ redis_client: Optional[Redis] = None
 
 async def get_redis() -> Optional[Redis]:
     global redis_client
+    if not settings.REDIS_ENABLED:
+        return None
     if redis_client is None:
         try:
             redis_client = aioredis.Redis.from_url(

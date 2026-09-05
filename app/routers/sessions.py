@@ -37,11 +37,16 @@ async def create_session(
 
     if redis is None:
         redis = await get_redis()
-    await redis.setex(
-        f"session:{session_id}",
-        SESSION_TTL_SECONDS,
-        str(session_data.user_id),
-    )
+    # Redis 是可选依赖；本地 profile 不可用时由 SessionManager 使用内存降级。
+    if redis is not None:
+        try:
+            await redis.setex(
+                f"session:{session_id}",
+                SESSION_TTL_SECONDS,
+                str(session_data.user_id),
+            )
+        except Exception:
+            pass
 
     return APIResponse(
         code=0,

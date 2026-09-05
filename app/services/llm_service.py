@@ -168,6 +168,13 @@ class LLMService:
     ) -> Tuple[str, str, int]:
         intent = self.detect_intent(message)
 
+        # 本地 profile 明确启用 Mock 时，不尝试访问外部模型，保证离线可复现。
+        if settings.MOCK_LLM_ENABLED:
+            model = next((m for m in self.models if m.is_local), None)
+            if model:
+                self._record_stats(model.name, True)
+                return self._get_mock_reply(intent, message), intent, len(message)
+
         for attempt in range(len(self.models)):
             model = self.models[attempt]
 

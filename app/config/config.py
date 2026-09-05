@@ -6,6 +6,10 @@ class Settings(BaseSettings):
     APP_NAME: str = Field(default="智能客服系统")
     APP_VERSION: str = Field(default="1.0.0")
     DEBUG: bool = Field(default=True)
+    # 本地 profile 默认开启 Mock，避免启动时依赖外部模型服务。
+    MOCK_LLM_ENABLED: bool = Field(default=True)
+    HEALTHCHECK_TIMEOUT_SECONDS: float = Field(default=2.0, gt=0)
+    CORS_ALLOW_ORIGINS: str = Field(default="http://localhost:8000,http://127.0.0.1:8000")
 
     HOST: str = Field(default="0.0.0.0")
     PORT: int = Field(default=8000)
@@ -23,6 +27,7 @@ class Settings(BaseSettings):
     REDIS_PORT: int = Field(default=6379)
     REDIS_PASSWORD: str = Field(default="")
     REDIS_DB: int = Field(default=0)
+    REDIS_ENABLED: bool = Field(default=True)
 
     LLM_API_BASE: str = Field(default="http://localhost:8001")
     LLM_API_KEY: str = Field(default="")
@@ -64,6 +69,11 @@ class Settings(BaseSettings):
         if self.REDIS_PASSWORD:
             return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """将逗号分隔的白名单转换为 FastAPI 可用格式。"""
+        return [origin.strip() for origin in self.CORS_ALLOW_ORIGINS.split(",") if origin.strip()]
 
     class Config:
         env_file = ".env"
