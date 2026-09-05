@@ -1,35 +1,51 @@
-# 部署与运行手册
+# Docker 部署
 
-## Profiles
+项目唯一支持的 Compose 部署是完整依赖栈：应用、MySQL、Redis、Milvus、etcd 和 MinIO。所有服务都在 [docker-compose.yml](<C:/Users/lz/Desktop/简历&项目/项目一/AI Customer/docker-compose.yml>) 中定义，不使用 Docker profiles。
 
-| profile | 服务 | 数据与模型 | 用途 |
-| --- | --- | --- | --- |
-| `local` | `app-local` | SQLite、内存检索、Mock LLM | 面试演示、离线回归 |
-| `integration` | `app-integration`、MySQL、Redis、Milvus（etcd/minio） | 外部数据库、向量服务、可选真实 LLM | 联调与预生产 |
-
-Compose 为每个服务配置 healthcheck、持久化卷和依赖启动顺序。应用镜像使用 UID/GID 10001 的 `appuser`，生产环境 `DEBUG=false` 且关闭演示账号。不要把 `.env` 或 `.env.integration` 提交到仓库。
-
-## 数据库迁移
-
-生产结构由 Alembic 管理：
+## 首次部署
 
 ```powershell
-alembic upgrade head
-alembic downgrade -1  # 仅在明确回滚窗口执行
+Copy-Item .env.example .env
+notepad .env
+docker compose up -d --build
+docker compose ps
 ```
 
-local 首次启动允许 SQLite `create_all` 便于演示；升级结构仍应先生成并审查 migration。数据库文件挂载在 Compose 的 `local_data` 卷，重启不会丢失会话、工单、评测和知识库。
+`.env` 必须提供非空的 `MYSQL_ROOT_PASSWORD`、`MYSQL_APP_PASSWORD`、`MINIO_ROOT_PASSWORD` 和至少 32 字符的 `AUTH_SECRET_KEY`。真实 LLM/Embedding 服务还需要填写对应的 API 地址、密钥和模型名称。
 
-## 健康与就绪
+首次启动依赖健康后，在应用容器中执行 Alembic 迁移：
 
-- `/health`：返回 `healthy/unhealthy`、运行模式、数据库/Redis/Milvus/LLM 状态、延迟和降级原因。
-- `/metrics`：管理员专用 Prometheus 文本出口；标签只使用意图、工具和后端等白名单值，不包含用户原文或 Token。
-- Docker healthcheck 仅在 `/health` 可访问时判定容器 ready；数据库不健康时应用仍保留进程以输出诊断。
+```powershell
+docker compose run --rm app alembic upgrade head
+```
+
+迁移完成后访问 `/health`；应用和所有依赖正常时，数据库、Redis 和 Milvus 应显示为 healthy。Compose 已配置健康检查、依赖启动顺序和持久化卷。
+
+## 日常操作
+
+```powershell
+docker compose up -d                 # 启动或恢复全部服务
+docker compose logs -f app           # 查看应用日志
+docker compose restart app           # 仅重启应用
+docker compose pull                  # 拉取新基础镜像
+docker compose up -d --build app     # 发布新的应用代码
+docker compose down                  # 停止服务，保留数据卷
+```
+
+数据卷包括 `mysql_data`、`redis_data`、`etcd_data`、`minio_data` 和 `milvus_data`。`docker compose down -v` 会删除它们，执行前必须确认已经完成备份。
 
 ## 安全上线清单
 
-1. 设置随机 `AUTH_SECRET_KEY`（至少 32 字符），关闭 `AUTH_DEMO_ACCOUNTS_ENABLED`。
-2. 设置明确的 `CORS_ALLOW_ORIGINS`，禁止 `*` + credentials。
-3. 配置 MySQL/Redis/Milvus/LLM 凭据到密钥管理系统，不写入镜像或日志。
-4. 先执行 `alembic upgrade head`，再启动应用；集成测试通过后切换流量。
-5. 为 LLM 配置 Token/延迟预算和超时；不可用时确认规则/Mock 降级仍可用。
+1. 使用随机且至少 32 字符的 `AUTH_SECRET_KEY`，不要使用示例值。
+2. 保持 `DEBUG=false` 和 `AUTH_DEMO_ACCOUNTS_ENABLED=false`。
+3. 设置明确的 `CORS_ALLOW_ORIGINS`，禁止生产环境使用 `*` 配合 credentials。
+4. 通过密钥管理系统注入 MySQL、MinIO、LLM 和 Embedding 凭据，不要写入镜像或日志。
+5. 首次上线先执行 `alembic upgrade head`，确认迁移成功后再接入流量。
+6. 为 MySQL、Milvus、MinIO 数据卷制定备份和恢复方案。
+
+## 健康检查与故障
+
+- `GET /health` 返回应用、数据库、Redis、Milvus 和 LLM 状态及降级原因。
+- `GET /docs` 提供 OpenAPI 文档。
+- 如果 MySQL、Redis 或 Milvus 尚未 healthy，应用容器会等待依赖；使用 `docker compose ps` 和 `docker compose logs <service>` 定位问题。
+- LLM 或 Embedding 不可用时，应用会记录可解释的降级信息；生产环境仍应配置外部服务的超时、重试和监控。
