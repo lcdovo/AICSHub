@@ -5,9 +5,10 @@ LLM 服务 - Phase 3 增强版
 import json
 import time
 import logging
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, List, Dict, Any, Literal
 from datetime import datetime
 
+from pydantic import BaseModel, Field
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
@@ -15,6 +16,20 @@ from app.config.config import settings
 from app.services.llm_governance import BudgetManager, BudgetPolicy, CostEstimator, SensitiveDataRedactor, PromptInjectionScanner, ToolPolicy, build_default_registry
 
 logger = logging.getLogger(__name__)
+
+
+class LLMResponse(BaseModel):
+    """Stable contract for model-generated customer-service responses."""
+
+    reply: str = Field(default="", description="给用户的中文回复")
+    intent: Literal[
+        "query_order", "refund", "complaint", "technical",
+        "promotion", "human", "general"
+    ] = "general"
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    citations: List[str] = Field(default_factory=list)
+    need_human: bool = False
+    next_action: Optional[str] = None
 
 INTENT_KEYWORDS = {
     "query_order": ["订单", "物流", "发货", "快递", "查询", "单号"],
@@ -217,13 +232,13 @@ class LLMService:
                     return reply, intent, len(message)
 
                 if model.api_key and model.api_key != "your-api-key-here":
-                    reply, token_count = await self._call_model_api(
+                    reply, model_intent, token_count = await self._call_model_api(
                         model, user_id, session_id, message, context
                     )
                     self.circuit_breaker.record_success(model.name)
                     self._record_stats(model.name, True)
                     self._record_call_metadata(user_id, model.name, token_count, started)
-                    return reply, intent, token_count
+                    return reply, model_intent or intent, token_count
 
             except Exception as e:
                 logger.warning(f"模型 {model.name} 调用失败: {e}")
@@ -254,7 +269,7 @@ class LLMService:
         session_id: str,
         message: str,
         context: Optional[list] = None,
-    ) -> Tuple[str, int]:
+    ) -> Tuple[str, str, int]:
         system_prompt = self._get_system_prompt()
         messages = [SystemMessage(content=system_prompt)]
 
@@ -270,7 +285,12 @@ class LLMService:
         messages.append(HumanMessage(content=self.redactor.redact(message)))
 
         chat_model = self._get_chat_model(model)
-        response = await chat_model.ainvoke(
+        structured_model = (
+            chat_model.with_structured_output(LLMResponse)
+            if hasattr(chat_model, "with_structured_output")
+            else chat_model
+        )
+        response = await structured_model.ainvoke(
             messages,
             config={
                 "run_name": "customer_service_chat",
@@ -279,10 +299,24 @@ class LLMService:
             },
         )
 
-        reply = self._message_content(response)
+        if isinstance(response, LLMResponse):
+            reply = response.reply
+            response_intent = response.intent
+            self.last_call_metadata["structured_output"] = response.model_dump()
+        else:
+            reply = self._message_content(response)
+            response_intent = self.detect_intent(message)
+            self.last_call_metadata["structured_output"] = {
+                "reply": reply,
+                "intent": response_intent,
+                "confidence": 0.0,
+                "citations": [],
+                "need_human": False,
+                "next_action": None,
+            }
         token_count = self._message_token_count(response, fallback=len(message))
 
-        return reply, token_count
+        return reply, response_intent, token_count
 
     def _get_chat_model(self, model: ModelConfig) -> ChatOpenAI:
         """Create one LangChain ChatOpenAI instance per configured model."""

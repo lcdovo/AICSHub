@@ -114,7 +114,7 @@ async def test_llm_service_uses_langchain_chat_model_ainvoke(monkeypatch):
 
     monkeypatch.setattr(service, "_get_chat_model", lambda model: FakeChatModel())
     try:
-        reply, tokens = await service._call_model_api(
+        reply, response_intent, tokens = await service._call_model_api(
             ModelConfig("primary", api_base="http://example.test", api_key="key", model="demo"),
             7,
             "session-1",
@@ -122,7 +122,41 @@ async def test_llm_service_uses_langchain_chat_model_ainvoke(monkeypatch):
             context=[{"role": "assistant", "content": "欢迎"}],
         )
         assert reply == "已通过 LangChain 返回"
+        assert response_intent == "general"
         assert tokens == 8
         assert calls and calls[0][1]["run_name"] == "customer_service_chat"
+    finally:
+        await service.close()
+
+
+@pytest.mark.asyncio
+async def test_llm_service_accepts_pydantic_structured_response(monkeypatch):
+    service = LLMService()
+
+    class FakeStructuredModel:
+        async def ainvoke(self, messages, config=None):
+            from app.services.llm_service import LLMResponse
+            return LLMResponse(
+                reply="退款政策说明",
+                intent="refund",
+                confidence=0.94,
+                citations=["退款政策"],
+            )
+
+    class FakeChatModel:
+        def with_structured_output(self, schema):
+            assert schema.__name__ == "LLMResponse"
+            return FakeStructuredModel()
+
+    monkeypatch.setattr(service, "_get_chat_model", lambda model: FakeChatModel())
+    try:
+        reply, intent, _ = await service._call_model_api(
+            ModelConfig("primary", api_base="http://example.test", api_key="key", model="demo"),
+            7,
+            "session-1",
+            "我想退款",
+        )
+        assert (reply, intent) == ("退款政策说明", "refund")
+        assert service.get_last_call_metadata()["structured_output"]["confidence"] == 0.94
     finally:
         await service.close()
