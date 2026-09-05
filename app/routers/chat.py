@@ -259,7 +259,10 @@ async def send_message(
     agent_state.messages.append({"role": "user", "content": chat_data.message, "timestamp": datetime.now().isoformat()})
 
     # 运行 Agent 状态机
-    agent_state = await agent_graph.run(agent_state)
+    if saved_state and saved_state.collected_info.get("graph_interrupt"):
+        agent_state = await agent_graph.resume(session_id, agent_state, chat_data.message)
+    else:
+        agent_state = await agent_graph.run(agent_state)
 
     # 保存 Agent 执行轨迹
     llm_governance = agent_state.collected_info.get("llm_governance", {})

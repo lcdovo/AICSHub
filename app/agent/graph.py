@@ -15,6 +15,8 @@ from datetime import datetime
 from langchain_core.runnables import RunnableLambda
 from langgraph.graph import END as LANGGRAPH_END
 from langgraph.graph import StateGraph
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.types import Command, interrupt
 
 from app.agent.state import AgentState, AgentNode, IntentType
 from app.agent.intent import EnhancedIntentRecognizer
@@ -41,6 +43,7 @@ class AgentGraph:
         self.nodes: Dict[str, Callable] = {}
         self._register_nodes()
         self.llm_runnable = RunnableLambda(self._invoke_llm_service)
+        self.checkpointer = InMemorySaver()
         self.langgraph = self._build_langgraph()
 
     class _GraphState(TypedDict):
@@ -65,7 +68,7 @@ class AgentGraph:
                     lambda payload: payload["next_node"],
                     route_targets,
                 )
-        return workflow.compile()
+        return workflow.compile(checkpointer=self.checkpointer)
 
     def _make_langgraph_node(self, node_name: str):
         async def invoke(payload: "AgentGraph._GraphState") -> Dict[str, Any]:
@@ -117,7 +120,7 @@ class AgentGraph:
             try:
                 async for update in self.langgraph.astream(
                     {"state": state, "next_node": state.current_node, "regeneration_count": 0},
-                    config={"recursion_limit": 50},
+                    config={"recursion_limit": 50, "configurable": {"thread_id": state.session_id}},
                     stream_mode="updates",
                 ):
                     if update:
@@ -209,13 +212,40 @@ class AgentGraph:
         start_time = time.time()
         result = await self.langgraph.ainvoke(
             {"state": state, "next_node": state.current_node, "regeneration_count": 0},
-            config={"recursion_limit": 50},
+            config={"recursion_limit": 50, "configurable": {"thread_id": state.session_id}},
         )
-        state = result["state"]
+        state = result.get("state", state)
+        if result.get("__interrupt__"):
+            state.collected_info["graph_interrupt"] = result["__interrupt__"]
+            state.response_ready = True
+            return state
         state.execution_time_ms = int((time.time() - start_time) * 1000)
         state.response_ready = True
         state.current_node = AgentNode.END
         return state
+
+    async def resume(self, session_id: str, state: AgentState, decision: Any) -> AgentState:
+        """Resume a checkpointed graph after an interrupt decision."""
+        try:
+            result = await self.langgraph.ainvoke(
+                Command(resume=decision),
+                config={"recursion_limit": 50, "configurable": {"thread_id": session_id}},
+            )
+        except Exception:
+            # A process restart may lose the in-memory checkpoint.  Redis-backed
+            # AgentState can still safely resume because the confirmation flag is
+            # explicit and the refund tool remains idempotent.
+            state.user_message = str(decision)
+            state.collected_info["confirm_refund"] = decision is True or str(decision).strip() in {"确认", "同意", "确定", "提交", "是的", "可以", "true", "1"}
+            state.collected_info.pop("graph_interrupt", None)
+            return await self.run(state)
+        resumed = result.get("state", state)
+        resumed.collected_info.pop("graph_interrupt", None)
+        if result.get("__interrupt__"):
+            resumed.collected_info["graph_interrupt"] = result["__interrupt__"]
+        resumed.response_ready = True
+        resumed.current_node = AgentNode.END
+        return resumed
 
     async def _node_start(self, state: AgentState) -> str:
         return AgentNode.INTENT_RECOGNITION
@@ -410,6 +440,16 @@ class AgentGraph:
             f"即将为订单 {order_id} 提交{label}申请，原因：{reason or '未填写'}。"
             "该操作提交后将进入审核，是否确认提交？（请回复“确认”）"
         )
+        decision = interrupt({
+            "type": "refund_confirmation",
+            "order_id": order_id,
+            "refund_type": refund_type,
+            "reason": reason,
+        })
+        if decision is True or str(decision).strip() in {"确认", "同意", "确定", "提交", "是的", "可以", "true", "1"}:
+            state.collected_info["confirm_refund"] = True
+            state.pending_confirmations = []
+            return AgentNode.TOOL_EXECUTION
         return AgentNode.RESPONSE_GENERATION
 
     def _extract_info_from_message(self, message: str) -> Dict[str, Any]:

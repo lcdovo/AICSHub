@@ -61,6 +61,41 @@ def test_refund_requires_explicit_confirmation_before_side_effect():
     asyncio.run(scenario())
 
 
+def test_checkpoint_interrupt_and_command_resume_refund():
+    async def scenario():
+        graph = AgentGraph()
+        state = AgentState(
+            session_id="refund-checkpoint",
+            user_id=1,
+            user_message="我要退款，订单号 ORD20260801，质量问题",
+        )
+        preview = await graph.run(state)
+        assert preview.pending_confirmations == ["apply_refund"]
+        assert preview.collected_info.get("graph_interrupt")
+        assert not any(call.tool_name == "apply_refund" for call in preview.tool_calls)
+
+        resumed = await graph.resume("refund-checkpoint", preview, "确认")
+        assert resumed.pending_confirmations == []
+        assert any(call.tool_name == "apply_refund" and call.success for call in resumed.tool_calls)
+
+    asyncio.run(scenario())
+
+
+def test_refund_resume_falls_back_to_persisted_state_after_process_restart():
+    async def scenario():
+        first_graph = AgentGraph()
+        preview = await first_graph.run(AgentState(
+            session_id="refund-restart",
+            user_id=1,
+            user_message="我要退款，订单号 ORD20260801，质量问题",
+        ))
+        restarted_graph = AgentGraph()
+        resumed = await restarted_graph.resume("refund-restart", preview, "确认")
+        assert any(call.tool_name == "apply_refund" and call.success for call in resumed.tool_calls)
+
+    asyncio.run(scenario())
+
+
 def test_exchange_refund_type_is_supported_by_tool_contract():
     async def scenario():
         result = await get_tool("apply_refund").execute_with_retry(
