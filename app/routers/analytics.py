@@ -1,18 +1,20 @@
 """
 统计分析与监控 API - Phase 4 实现
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 from datetime import datetime, timedelta
 
 from app.utils.tracking import get_tracer, alert_manager
 from app.services.evaluation import get_answer_evaluator, get_low_score_pool, get_ab_test_framework
+from app.models.models import User
+from app.security import require_admin
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["统计分析"])
 
 
 @router.get("/metrics")
-async def get_system_metrics():
+async def get_system_metrics(_: User = Depends(require_admin)):
     """获取系统指标"""
     tracer = get_tracer()
     metrics = tracer.get_metrics()
@@ -34,6 +36,7 @@ async def get_system_metrics():
 @router.get("/metrics/summary")
 async def get_metrics_summary(
     hours: int = Query(default=1, ge=1, le=168, description="统计小时数"),
+    _: User = Depends(require_admin),
 ):
     """获取指标摘要"""
     tracer = get_tracer()
@@ -61,7 +64,7 @@ async def get_metrics_summary(
 
 
 @router.get("/evaluation/stats")
-async def get_evaluation_stats():
+async def get_evaluation_stats(_: User = Depends(require_admin)):
     """获取评测统计"""
     evaluator = get_answer_evaluator()
     low_score_pool = get_low_score_pool()
@@ -84,6 +87,7 @@ async def get_evaluation_stats():
 async def get_low_score_samples(
     limit: int = Query(default=50, ge=1, le=200),
     failure_type: Optional[str] = Query(default=None, description="失败类型过滤"),
+    _: User = Depends(require_admin),
 ):
     """获取低分样本"""
     low_score_pool = get_low_score_pool()
@@ -108,6 +112,7 @@ async def resolve_low_score_sample(
     sample_id: str,
     action: str = Query(..., description="处理动作: knowledge_update/prompt_optimization/tool_fix"),
     note: str = Query(default="", description="处理备注"),
+    _: User = Depends(require_admin),
 ):
     """处理低分样本"""
     low_score_pool = get_low_score_pool()
@@ -124,7 +129,7 @@ async def resolve_low_score_sample(
 
 
 @router.get("/ab-test/experiments")
-async def get_ab_experiments():
+async def get_ab_experiments(_: User = Depends(require_admin)):
     """获取A/B测试实验列表"""
     framework = get_ab_test_framework()
     experiments = framework.get_active_experiments()
@@ -144,6 +149,7 @@ async def create_ab_experiment(
     variant_a: str = Query(..., description="变体A ID"),
     variant_b: str = Query(..., description="变体B ID"),
     traffic_split: float = Query(default=0.5, ge=0.1, le=0.9, description="流量分配比例"),
+    _: User = Depends(require_admin),
 ):
     """创建A/B测试实验"""
     framework = get_ab_test_framework()
@@ -173,7 +179,7 @@ async def create_ab_experiment(
 
 
 @router.get("/ab-test/experiments/{experiment_id}/results")
-async def get_ab_experiment_results(experiment_id: str):
+async def get_ab_experiment_results(experiment_id: str, _: User = Depends(require_admin)):
     """获取A/B测试结果"""
     framework = get_ab_test_framework()
     results = framework.get_experiment_results(experiment_id)

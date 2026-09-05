@@ -26,9 +26,13 @@ def test_root_and_openapi_are_available():
 
 def test_chat_api_smoke_uses_mock_llm():
     with TestClient(app) as client:
+        login = client.post("/api/v1/users/login", json={"username": "user001", "password": "user12345"})
+        assert login.status_code == 200
+        token = login.json()["data"]["access_token"]
         response = client.post(
             "/api/v1/chat/send",
             json={"user_id": 1, "message": "请查询订单"},
+            headers={"Authorization": f"Bearer {token}"},
         )
 
     assert response.status_code == 200

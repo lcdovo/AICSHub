@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=8, max_length=128)
     nickname: Optional[str] = None
     level: str = "normal"
 
@@ -14,6 +15,7 @@ class UserResponse(BaseModel):
     username: str
     nickname: Optional[str]
     level: str
+    role: str = "user"
     avatar_url: Optional[str]
     tags: List[str]
     status: bool
@@ -26,6 +28,19 @@ class UserUpdate(BaseModel):
     nickname: Optional[str] = None
     level: Optional[str] = None
     tags: Optional[List[str]] = None
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=8, max_length=128)
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(..., min_length=20, max_length=2048)
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = Field(default=None, min_length=20, max_length=2048)
 
 
 class ChatRequest(BaseModel):

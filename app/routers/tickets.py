@@ -12,9 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.utils.database import get_db
-from app.models.models import Ticket, TicketStatus, TicketPriority
+from app.models.models import Ticket, TicketStatus, TicketPriority, User, UserRole
 from app.services.collaboration import get_collaboration_service
 from app.utils.tracking import get_tracer
+from app.security import get_current_user, ensure_owner_or_admin, require_admin
 
 router = APIRouter(prefix="/api/v1", tags=["工单管理"])
 
@@ -46,8 +47,10 @@ class HandoffRequest(BaseModel):
 async def create_ticket(
     request: TicketCreateRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """创建工单"""
+    ensure_owner_or_admin(current_user, request.user_id)
     collaboration_service = get_collaboration_service()
 
     ticket = collaboration_service.ticket_manager.create_ticket(
@@ -72,9 +75,16 @@ async def list_tickets(
     category: Optional[str] = Query(default=None, description="分类"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
 ):
     """获取工单列表"""
     collaboration_service = get_collaboration_service()
+
+    if current_user.role != UserRole.ADMIN.value:
+        # 当前内存 TicketManager 只支持过滤条件，使用 user_id 过滤避免跨用户泄露。
+        user_filter = current_user.id
+    else:
+        user_filter = None
 
     result = collaboration_service.ticket_manager.list_tickets(
         status=status,
@@ -82,6 +92,7 @@ async def list_tickets(
         category=category,
         page=page,
         page_size=page_size,
+        user_id=user_filter,
     )
 
     return {
@@ -92,7 +103,7 @@ async def list_tickets(
 
 
 @router.get("/tickets/stats")
-async def get_ticket_stats():
+async def get_ticket_stats(_: User = Depends(require_admin)):
     """获取工单统计"""
     collaboration_service = get_collaboration_service()
     stats = collaboration_service.ticket_manager.get_ticket_stats()
@@ -105,13 +116,14 @@ async def get_ticket_stats():
 
 
 @router.get("/tickets/{ticket_id}")
-async def get_ticket(ticket_id: str):
+async def get_ticket(ticket_id: str, current_user: User = Depends(get_current_user)):
     """获取工单详情"""
     collaboration_service = get_collaboration_service()
     ticket = collaboration_service.ticket_manager.get_ticket(ticket_id)
 
     if not ticket:
         raise HTTPException(status_code=404, detail="工单不存在")
+    ensure_owner_or_admin(current_user, ticket.get("user_id"))
 
     return {
         "code": 0,
@@ -124,6 +136,7 @@ async def get_ticket(ticket_id: str):
 async def update_ticket(
     ticket_id: str,
     request: TicketUpdateRequest,
+    current_user: User = Depends(require_admin),
 ):
     """更新工单"""
     collaboration_service = get_collaboration_service()
@@ -146,7 +159,7 @@ async def update_ticket(
 
 
 @router.delete("/tickets/{ticket_id}")
-async def delete_ticket(ticket_id: str):
+async def delete_ticket(ticket_id: str, current_user: User = Depends(require_admin)):
     """删除工单"""
     collaboration_service = get_collaboration_service()
 
@@ -161,8 +174,9 @@ async def delete_ticket(ticket_id: str):
 
 
 @router.post("/handoff")
-async def request_handoff(request: HandoffRequest):
+async def request_handoff(request: HandoffRequest, current_user: User = Depends(get_current_user)):
     """请求转人工"""
+    ensure_owner_or_admin(current_user, request.user_id)
     collaboration_service = get_collaboration_service()
 
     result = collaboration_service.execute_handoff(
@@ -185,6 +199,7 @@ async def list_handoff_requests(
     status: Optional[str] = Query(default=None),
     priority: Optional[str] = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
+    _: User = Depends(require_admin),
 ):
     """获取转人工请求列表"""
     collaboration_service = get_collaboration_service()
@@ -208,6 +223,7 @@ async def list_handoff_requests(
 async def assign_handoff(
     request_id: str,
     agent_id: str = Query(..., description="客服ID"),
+    _: User = Depends(require_admin),
 ):
     """分配人工客服"""
     collaboration_service = get_collaboration_service()
@@ -231,6 +247,7 @@ async def resolve_handoff(
     request_id: str,
     resolution: str = Query(..., description="处理结果"),
     agent_id: Optional[str] = Query(default=None, description="客服ID"),
+    _: User = Depends(require_admin),
 ):
     """解决转人工请求"""
     collaboration_service = get_collaboration_service()
@@ -254,6 +271,7 @@ async def resolve_handoff(
 async def list_agents(
     skill: Optional[str] = Query(default=None, description="技能筛选"),
     status: Optional[str] = Query(default=None, description="状态筛选"),
+    _: User = Depends(require_admin),
 ):
     """获取人工客服列表"""
     collaboration_service = get_collaboration_service()
@@ -270,7 +288,7 @@ async def list_agents(
 
 
 @router.get("/collaboration/stats")
-async def get_collaboration_stats():
+async def get_collaboration_stats(_: User = Depends(require_admin)):
     """获取人机协同统计"""
     collaboration_service = get_collaboration_service()
     stats = collaboration_service.get_collaboration_stats()

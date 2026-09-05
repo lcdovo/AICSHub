@@ -18,6 +18,11 @@ class UserLevel(str, enum.Enum):
     ENTERPRISE = "enterprise"
 
 
+class UserRole(str, enum.Enum):
+    USER = "user"
+    ADMIN = "admin"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -25,6 +30,10 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False, index=True)
     nickname = Column(String(50), nullable=True)
     level = Column(Enum(UserLevel), default=UserLevel.NORMAL)
+    role = Column(String(20), nullable=False, default=UserRole.USER.value, index=True)
+    password_hash = Column(String(255), nullable=True)
+    token_version = Column(Integer, nullable=False, default=0)
+    disabled_at = Column(DateTime, nullable=True)
     avatar_url = Column(String(500), nullable=True)
     tags = Column(JSON, default=list)
     status = Column(Boolean, default=True)
@@ -33,6 +42,21 @@ class User(Base):
 
     sessions = relationship("Session", back_populates="user")
     tickets = relationship("Ticket", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    revoked_at = Column(DateTime, nullable=True, index=True)
+    replaced_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="refresh_tokens")
 
 
 class SessionStatus(str, enum.Enum):

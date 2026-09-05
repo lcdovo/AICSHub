@@ -379,6 +379,7 @@ class TicketManager:
         category: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
+        user_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         tickets = list(self._tickets.values())
 
@@ -388,6 +389,8 @@ class TicketManager:
             tickets = [t for t in tickets if t["priority"] == priority]
         if category:
             tickets = [t for t in tickets if t["category"] == category]
+        if user_id is not None:
+            tickets = [t for t in tickets if t.get("user_id") == user_id]
 
         total = len(tickets)
         start = (page - 1) * page_size

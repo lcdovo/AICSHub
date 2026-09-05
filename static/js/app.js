@@ -43,6 +43,8 @@ async function api(method, path, data, params) {
     method,
     headers: { 'Content-Type': 'application/json' },
   };
+  const accessToken = localStorage.getItem('cs_access_token');
+  if (accessToken) opts.headers.Authorization = `Bearer ${accessToken}`;
   if (data) opts.body = JSON.stringify(data);
   let url = `${API_BASE}${path}`;
   if (params) {
@@ -60,7 +62,8 @@ async function api(method, path, data, params) {
 function initWebSocket() {
   if (state.ws && state.ws.readyState <= 1) return;
 
-  state.ws = new WebSocket(WS_URL);
+  const token = localStorage.getItem('cs_access_token');
+  state.ws = new WebSocket(token ? `${WS_URL}?access_token=${encodeURIComponent(token)}` : WS_URL);
 
   state.ws.onopen = () => {
     state.wsConnected = true;
@@ -878,6 +881,8 @@ async function init() {
       localStorage.removeItem('cs_user_role');
       localStorage.removeItem('cs_user_name');
       localStorage.removeItem('cs_user_id');
+      localStorage.removeItem('cs_access_token');
+      localStorage.removeItem('cs_refresh_token');
       window.location.href = '/login.html';
     }
   });

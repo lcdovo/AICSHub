@@ -5,7 +5,7 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -18,6 +18,8 @@ from app.agent.graph import AgentGraph
 from app.agent.state import AgentState
 from app.agent.memory import session_manager
 from app.utils.tracking import structured_logger, generate_trace_id
+from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, decode_token
+from app.config.config import settings
 
 router = APIRouter(prefix="/api/v1/chat", tags=["对话管理"])
 
@@ -50,8 +52,10 @@ def _fmt_utc(dt):
 async def create_session(
     user_id: int,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """创建新会话"""
+    ensure_owner_or_admin(current_user, user_id)
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
@@ -82,11 +86,13 @@ async def create_session(
 async def close_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """关闭会话"""
     session = await db.get(Session, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="会话不存在")
+    ensure_owner_or_admin(current_user, session.user_id)
 
     session.status = SessionStatus.CLOSED
     session.closed_at = datetime.utcnow()
@@ -103,6 +109,7 @@ async def close_session(
 async def delete_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """删除会话（级联删除相关数据）"""
     from sqlalchemy import delete as sql_delete
@@ -110,6 +117,7 @@ async def delete_session(
     session = await db.get(Session, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="会话不存在")
+    ensure_owner_or_admin(current_user, session.user_id)
 
     # 先删除关联的AgentTrace记录
     await db.execute(
@@ -139,7 +147,9 @@ async def get_user_sessions(
     page_size: int = 20,
     include_closed: bool = True,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    ensure_owner_or_admin(current_user, user_id)
     query = select(Session).where(Session.user_id == user_id)
     if not include_closed:
         query = query.where(Session.status == SessionStatus.ACTIVE)
@@ -181,7 +191,10 @@ async def get_user_sessions(
 async def send_message(
     chat_data: ChatRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    enforce_rate_limit(f"chat:{current_user.id}", settings.CHAT_RATE_LIMIT_PER_MINUTE)
+    ensure_owner_or_admin(current_user, chat_data.user_id)
     user = await db.get(User, chat_data.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
@@ -193,6 +206,7 @@ async def send_message(
             raise HTTPException(status_code=404, detail="会话不存在")
         if session.status == SessionStatus.CLOSED:
             raise HTTPException(status_code=400, detail="会话已关闭")
+        ensure_owner_or_admin(current_user, session.user_id)
     else:
         session_id = str(uuid.uuid4())
         session = Session(
@@ -283,10 +297,12 @@ async def get_chat_history(
     session_id: str,
     limit: int = 50,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     session = await db.get(Session, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="会话不存在")
+    ensure_owner_or_admin(current_user, session.user_id)
 
     query = select(Message).where(Message.session_id == session_id)
     query = query.order_by(Message.id.desc(), Message.created_at.desc()).limit(limit)
@@ -314,7 +330,7 @@ async def get_chat_history(
 
 
 @router.get("/tools", response_model=APIResponse)
-async def get_available_tools():
+async def get_available_tools(_: User = Depends(require_user)):
     """获取所有可用工具列表"""
     from app.agent.tools import get_all_tools
 
@@ -342,7 +358,7 @@ async def get_available_tools():
 
 
 @router.get("/intents", response_model=APIResponse)
-async def get_intent_types():
+async def get_intent_types(_: User = Depends(require_user)):
     """获取支持的意图类型"""
     intents = [
         {"code": "query_order", "name": "订单查询", "description": "查询订单状态与物流"},
@@ -359,6 +375,17 @@ async def get_intent_types():
 @router.websocket("/stream")
 async def websocket_chat_stream(websocket: WebSocket):
     """WebSocket 实时对话流式接口"""
+    auth_header = websocket.headers.get("authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip() or websocket.query_params.get("access_token")
+    if not token:
+        await websocket.close(code=4401, reason="请先登录")
+        return
+    try:
+        payload = decode_token(token, "access")
+        authenticated_user_id = int(payload["sub"])
+    except (HTTPException, KeyError, TypeError, ValueError):
+        await websocket.close(code=4401, reason="Token 无效")
+        return
     await websocket.accept()
     trace_id = generate_trace_id()
     structured_logger.log_request(
@@ -384,6 +411,12 @@ async def websocket_chat_stream(websocket: WebSocket):
             message = data.get("message", "").strip()
             session_id = data.get("session_id")
 
+            if user_id and int(user_id) != authenticated_user_id:
+                await websocket.send_json({"type": "error", "code": 403, "message": "无权使用其他用户身份", "timestamp": datetime.now().isoformat()})
+                continue
+            user_id = authenticated_user_id
+            enforce_rate_limit(f"chat:{authenticated_user_id}", settings.CHAT_RATE_LIMIT_PER_MINUTE)
+
             if not user_id:
                 await websocket.send_json(
                     {"type": "error", "code": 400, "message": "缺少 user_id", "timestamp": datetime.now().isoformat()}
@@ -394,6 +427,9 @@ async def websocket_chat_stream(websocket: WebSocket):
                 await websocket.send_json(
                     {"type": "error", "code": 400, "message": "消息内容不能为空", "timestamp": datetime.now().isoformat()}
                 )
+                continue
+            if len(message) > settings.CHAT_MESSAGE_MAX_LENGTH:
+                await websocket.send_json({"type": "error", "code": 413, "message": "消息长度超出限制", "timestamp": datetime.now().isoformat()})
                 continue
 
             from app.utils.database import async_session
@@ -408,8 +444,11 @@ async def websocket_chat_stream(websocket: WebSocket):
                 if session_id:
                     session = await db.get(Session, session_id)
                     if not session:
-                        session = Session(id=session_id, user_id=user_id, status=SessionStatus.ACTIVE)
-                        db.add(session)
+                        await websocket.send_json({"type": "error", "code": 404, "message": "会话不存在", "timestamp": datetime.now().isoformat()})
+                        continue
+                    elif session.user_id != authenticated_user_id:
+                        await websocket.send_json({"type": "error", "code": 403, "message": "无权访问该会话", "timestamp": datetime.now().isoformat()})
+                        continue
                     elif session.status == SessionStatus.CLOSED:
                         session.status = SessionStatus.ACTIVE
                         session.closed_at = None

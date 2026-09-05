@@ -8,11 +8,14 @@ import tempfile
 import logging
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query, Depends
 from pydantic import BaseModel
 
 from app.services.knowledge_base import get_knowledge_base
 from app.services.llm_service import LLMService
+from app.models.models import User
+from app.security import require_admin, require_user
+from app.config.config import settings
 
 router = APIRouter(prefix="/api/v1/knowledge", tags=["知识库管理"])
 logger = logging.getLogger(__name__)
@@ -124,6 +127,7 @@ async def upload_document(
     title: Optional[str] = Form(None, description="文档标题（默认使用文件名）"),
     category: str = Form("", description="文档分类"),
     keywords: Optional[str] = Form(None, description="关键词，逗号分隔"),
+    _: User = Depends(require_admin),
 ):
     """上传文件到知识库"""
     kb = get_knowledge_base()
@@ -136,6 +140,8 @@ async def upload_document(
     suffix = f".{file_type}"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         content = await file.read()
+        if len(content) > settings.MAX_UPLOAD_FILE_BYTES:
+            raise HTTPException(status_code=413, detail=f"文件大小不能超过 {settings.MAX_UPLOAD_FILE_BYTES} 字节")
         tmp.write(content)
         temp_path = tmp.name
 
@@ -176,7 +182,7 @@ async def upload_document(
 
 
 @router.post("/documents/text")
-async def add_text_document(request: DocumentCreateRequest):
+async def add_text_document(request: DocumentCreateRequest, _: User = Depends(require_admin)):
     """直接添加文本内容到知识库"""
     kb = get_knowledge_base()
 
@@ -198,7 +204,7 @@ async def add_text_document(request: DocumentCreateRequest):
     }
 
 @router.post("/search")
-async def search_knowledge(request: SearchRequest):
+async def search_knowledge(request: SearchRequest, _: User = Depends(require_user)):
     """搜索知识库"""
     kb = get_knowledge_base()
 
@@ -216,7 +222,7 @@ async def search_knowledge(request: SearchRequest):
 
 
 @router.get("/documents")
-async def list_documents():
+async def list_documents(_: User = Depends(require_admin)):
     """获取文档列表"""
     kb = get_knowledge_base()
     stats = kb.get_stats()
@@ -273,7 +279,7 @@ async def list_documents():
 
 
 @router.delete("/documents/{document_id}")
-async def delete_document(document_id: str):
+async def delete_document(document_id: str, _: User = Depends(require_admin)):
     """删除文档"""
     kb = get_knowledge_base()
 
@@ -288,7 +294,7 @@ async def delete_document(document_id: str):
 
 
 @router.delete("/documents")
-async def clear_all_documents():
+async def clear_all_documents(_: User = Depends(require_admin)):
     """清空所有文档"""
     kb = get_knowledge_base()
     result = kb.clear_all()
@@ -305,8 +311,11 @@ async def batch_upload_documents(
     files: List[UploadFile] = File(..., description="多个文件上传"),
     category: str = Form("", description="文档分类"),
     keywords: Optional[str] = Form(None, description="关键词，逗号分隔"),
+    _: User = Depends(require_admin),
 ):
     """批量上传文件"""
+    if len(files) > settings.MAX_BATCH_UPLOAD_FILES:
+        raise HTTPException(status_code=413, detail=f"批量上传数量不能超过 {settings.MAX_BATCH_UPLOAD_FILES} 个")
     kb = get_knowledge_base()
     results = []
 
@@ -316,6 +325,13 @@ async def batch_upload_documents(
         suffix = f".{file_type}"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             content = await file.read()
+            if len(content) > settings.MAX_UPLOAD_FILE_BYTES:
+                results.append({"filename": file.filename, "success": False, "error": f"文件大小不能超过 {settings.MAX_UPLOAD_FILE_BYTES} 字节"})
+                try:
+                    os.unlink(tmp.name)
+                except OSError:
+                    pass
+                continue
             tmp.write(content)
             temp_path = tmp.name
 
@@ -373,7 +389,7 @@ async def batch_upload_documents(
 
 
 @router.post("/documents/seed")
-async def seed_default_documents():
+async def seed_default_documents(_: User = Depends(require_admin)):
     """导入默认种子文档"""
     kb = get_knowledge_base()
 
@@ -475,7 +491,7 @@ A: 在对话框输入"人工客服"或点击"转人工"按钮，工作日9:00-21
 
 
 @router.get("/stats")
-async def get_knowledge_stats():
+async def get_knowledge_stats(_: User = Depends(require_admin)):
     """获取知识库统计信息"""
     kb = get_knowledge_base()
     stats = kb.get_stats()
@@ -494,7 +510,7 @@ class RagQueryRequest(BaseModel):
 
 
 @router.post("/rag-query")
-async def rag_query(request: RagQueryRequest):
+async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
     """RAG问答：检索+LLM生成回答"""
     kb = get_knowledge_base()
     search_result = kb.search(

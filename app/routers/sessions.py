@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.utils.database import get_db, get_redis
-from app.models.models import Session, SessionStatus, User
+from app.models.models import Session, SessionStatus, User, UserRole
 from app.schemas.schemas import SessionCreate, APIResponse
+from app.security import get_current_user, ensure_owner_or_admin, require_admin
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["会话管理"])
 
@@ -20,15 +21,15 @@ async def create_session(
     session_data: SessionCreate,
     db: AsyncSession = Depends(get_db),
     redis=None,
+    current_user: User = Depends(get_current_user),
 ):
-    user = await db.get(User, session_data.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
+    ensure_owner_or_admin(current_user, session_data.user_id)
+    user = current_user
 
     session_id = str(uuid.uuid4())
     session = Session(
         id=session_id,
-        user_id=session_data.user_id,
+        user_id=user.id,
         status=SessionStatus.ACTIVE,
     )
     db.add(session)
@@ -67,8 +68,11 @@ async def list_sessions(
     page: int = 1,
     page_size: int = 20,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     query = select(Session)
+    if current_user.role != UserRole.ADMIN.value:
+        user_id = current_user.id
     if user_id:
         query = query.where(Session.user_id == user_id)
     if status:
@@ -99,10 +103,11 @@ async def list_sessions(
 
 
 @router.get("/{session_id}", response_model=APIResponse)
-async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
+async def get_session(session_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     session = await db.get(Session, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="会话不存在")
+    ensure_owner_or_admin(current_user, session.user_id)
 
     return APIResponse(
         code=0,
@@ -125,10 +130,12 @@ async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
 async def close_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     session = await db.get(Session, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="会话不存在")
+    ensure_owner_or_admin(current_user, session.user_id)
 
     session.status = SessionStatus.CLOSED
     session.closed_at = datetime.utcnow()
@@ -142,10 +149,12 @@ async def score_session(
     session_id: str,
     score: int,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     session = await db.get(Session, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="会话不存在")
+    ensure_owner_or_admin(current_user, session.user_id)
 
     if score < 1 or score > 5:
         raise HTTPException(status_code=400, detail="评分必须在1-5之间")

@@ -19,6 +19,9 @@ pydantic-settings==2.5.2
 # Environment
 python-dotenv==1.0.1
 
+# Authentication
+PyJWT==2.10.1
+
 # LLM
 httpx==0.27.2
 langchain==1.3.15

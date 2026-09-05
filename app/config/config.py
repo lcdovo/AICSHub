@@ -1,15 +1,29 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, model_validator
 
 
 class Settings(BaseSettings):
     APP_NAME: str = Field(default="智能客服系统")
     APP_VERSION: str = Field(default="1.0.0")
     DEBUG: bool = Field(default=True)
+    ENVIRONMENT: str = Field(default="local")
     # 本地 profile 默认开启 Mock，避免启动时依赖外部模型服务。
     MOCK_LLM_ENABLED: bool = Field(default=True)
     HEALTHCHECK_TIMEOUT_SECONDS: float = Field(default=2.0, gt=0)
     CORS_ALLOW_ORIGINS: str = Field(default="http://localhost:8000,http://127.0.0.1:8000")
+
+    # 认证与限流。生产环境必须通过环境变量替换密钥，并关闭演示账号初始化。
+    AUTH_SECRET_KEY: str = Field(default="local-dev-change-me-at-least-32-chars")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, ge=1, le=1440)
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, ge=1, le=90)
+    AUTH_DEMO_ACCOUNTS_ENABLED: bool = Field(default=True)
+    DEMO_USER_PASSWORD: str = Field(default="user12345", min_length=8)
+    DEMO_ADMIN_PASSWORD: str = Field(default="admin12345", min_length=8)
+    LOGIN_RATE_LIMIT_PER_MINUTE: int = Field(default=10, ge=1)
+    CHAT_RATE_LIMIT_PER_MINUTE: int = Field(default=60, ge=1)
+    CHAT_MESSAGE_MAX_LENGTH: int = Field(default=5000, ge=1, le=20000)
+    MAX_UPLOAD_FILE_BYTES: int = Field(default=5 * 1024 * 1024, ge=1024)
+    MAX_BATCH_UPLOAD_FILES: int = Field(default=10, ge=1, le=100)
 
     HOST: str = Field(default="0.0.0.0")
     PORT: int = Field(default=8000)
@@ -17,7 +31,7 @@ class Settings(BaseSettings):
     MYSQL_HOST: str = Field(default="localhost")
     MYSQL_PORT: int = Field(default=3306)
     MYSQL_USER: str = Field(default="root")
-    MYSQL_PASSWORD: str = Field(default="123456")
+    MYSQL_PASSWORD: str = Field(default="")
     MYSQL_DATABASE: str = Field(default="customer_service")
 
     # 如果设置了 DATABASE_URL，则优先使用
@@ -74,6 +88,17 @@ class Settings(BaseSettings):
     def cors_origins(self) -> list[str]:
         """将逗号分隔的白名单转换为 FastAPI 可用格式。"""
         return [origin.strip() for origin in self.CORS_ALLOW_ORIGINS.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def validate_production_security(self):
+        if self.ENVIRONMENT.lower() == "production":
+            if len(self.AUTH_SECRET_KEY) < 32 or self.AUTH_SECRET_KEY == "local-dev-change-me-at-least-32-chars":
+                raise ValueError("生产模式必须配置 AUTH_SECRET_KEY")
+            if self.AUTH_DEMO_ACCOUNTS_ENABLED:
+                raise ValueError("生产模式必须关闭 AUTH_DEMO_ACCOUNTS_ENABLED")
+            if "*" in self.cors_origins:
+                raise ValueError("生产模式禁止使用通配 CORS 来源")
+        return self
 
     class Config:
         env_file = ".env"

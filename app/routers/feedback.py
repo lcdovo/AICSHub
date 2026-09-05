@@ -6,11 +6,13 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 
 from app.services.evaluation import get_answer_evaluator, get_low_score_pool
 from app.utils.tracking import get_tracer
+from app.models.models import User
+from app.security import get_current_user, ensure_owner_or_admin, require_admin
 
 router = APIRouter(prefix="/api/v1/feedback", tags=["用户反馈"])
 
@@ -35,8 +37,9 @@ _feedback_records = []
 
 
 @router.post("/submit", response_model=FeedbackResponse)
-async def submit_feedback(feedback: FeedbackRequest):
+async def submit_feedback(feedback: FeedbackRequest, current_user: User = Depends(get_current_user)):
     """提交用户反馈"""
+    ensure_owner_or_admin(current_user, feedback.user_id)
     feedback_id = str(uuid.uuid4())
     timestamp = datetime.utcnow().isoformat()
 
@@ -86,8 +89,10 @@ async def get_feedback_history(
     user_id: int,
     feedback_type: Optional[str] = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
 ):
     """获取用户反馈历史"""
+    ensure_owner_or_admin(current_user, user_id)
     records = [r for r in _feedback_records if r["user_id"] == user_id]
 
     if feedback_type:
@@ -108,6 +113,7 @@ async def get_feedback_history(
 @router.get("/stats")
 async def get_feedback_stats(
     days: int = Query(default=7, ge=1, le=30),
+    _: User = Depends(require_admin),
 ):
     """获取反馈统计"""
     cutoff_date = datetime.utcnow()
