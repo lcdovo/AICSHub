@@ -235,8 +235,35 @@ class KnowledgeDoc(Base):
     chunk_count = Column(Integer, default=0)
     version = Column(Integer, default=1)
     is_published = Column(Boolean, default=True)
+    keywords = Column(JSON, nullable=True, default=list)
+    source = Column(String(500), nullable=True, default="")
+    deleted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    chunks = relationship("KnowledgeChunk", back_populates="document", cascade="all, delete-orphan")
+
+
+class KnowledgeChunk(Base):
+    """持久化的文档分块及其 embedding。
+
+    chunk_id 在索引后端和数据库中保持稳定，version/is_active 用于避免文档更新时
+    旧向量与新内容混用。embedding 使用 JSON 保存，SQLite 本地 profile 无需额外服务。
+    """
+
+    __tablename__ = "knowledge_chunks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey("knowledge_docs.id", ondelete="CASCADE"), nullable=False, index=True)
+    chunk_id = Column(String(100), unique=True, nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    embedding = Column(JSON, nullable=True)
+    chunk_index = Column(Integer, nullable=False, default=0)
+    version = Column(Integer, nullable=False, default=1, index=True)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    document = relationship("KnowledgeDoc", back_populates="chunks")
 
 
 class AgentTrace(Base):

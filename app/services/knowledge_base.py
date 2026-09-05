@@ -11,6 +11,11 @@ import uuid
 import logging
 import hashlib
 import asyncio
+import json
+import os
+import sqlite3
+from pathlib import Path
+from urllib.parse import urlparse, unquote
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from collections import Counter
@@ -248,12 +253,20 @@ class KnowledgeBaseService:
         self._bm25 = BM25Scorer()
         self._bm25_built = False
         self._bm25_chunks = []
+        self.backend = "memory"
+        self.degraded = False
+        self.degraded_reason = ""
+        self._index_version = 1
 
     def initialize(self):
         if self._initialized:
             return
 
         self._embedding_service = get_embedding_service(dim=settings.EMBEDDING_DIM)
+        embedding_health = self._embedding_service.health_check()
+        if embedding_health.get("backend") == "mock":
+            self.degraded = True
+            self.degraded_reason = "embedding_mock"
 
         use_milvus = settings.USE_MILVUS
         if use_milvus:
@@ -266,22 +279,88 @@ class KnowledgeBaseService:
                 )
                 if self._vector_store.connect():
                     logger.info("KnowledgeBase: Milvus connected")
+                    self.backend = "milvus"
                     self._load_bm25_from_milvus()
                 else:
                     logger.warning("KnowledgeBase: Milvus connection failed, using memory")
                     self._vector_store = None
+                    self.degraded = True
+                    self.degraded_reason = "milvus_unavailable"
             except Exception as e:
                 logger.warning(f"KnowledgeBase: Milvus init error: {e}")
                 self._vector_store = None
+                self.degraded = True
+                self.degraded_reason = "milvus_init_failed"
         else:
             logger.info("KnowledgeBase: Using memory-based storage")
+            self.degraded = True
+            self.degraded_reason = self.degraded_reason or "milvus_disabled"
 
-        self._load_from_mysql()
+        self._load_from_database()
 
         self._initialized = True
 
+    def _sqlite_path(self) -> Optional[str]:
+        """解析 sqlite+aiosqlite URL，供启动时同步恢复索引使用。"""
+        url = settings.DATABASE_URL
+        if not url.startswith("sqlite"):
+            return None
+        raw = url.split("///", 1)[-1].split("?", 1)[0]
+        raw = unquote(raw)
+        path = Path(raw)
+        if not path.is_absolute():
+            path = Path.cwd() / path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return str(path)
+
+    def _ensure_sqlite_schema(self, conn: sqlite3.Connection):
+        """兼容第 1~3 步已经存在的本地库，补齐 RAG 表/列。"""
+        conn.execute("CREATE TABLE IF NOT EXISTS knowledge_docs (id INTEGER PRIMARY KEY AUTOINCREMENT, title VARCHAR(200) NOT NULL, category VARCHAR(50) NOT NULL DEFAULT '', content TEXT NOT NULL, chunk_count INTEGER DEFAULT 0, version INTEGER DEFAULT 1, is_published BOOLEAN DEFAULT 1, keywords JSON, source VARCHAR(500), deleted_at DATETIME, created_at DATETIME, updated_at DATETIME)")
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(knowledge_docs)").fetchall()}
+        for name, definition in {
+            "keywords": "JSON", "source": "VARCHAR(500)", "deleted_at": "DATETIME",
+        }.items():
+            if name not in cols:
+                conn.execute(f"ALTER TABLE knowledge_docs ADD COLUMN {name} {definition}")
+        conn.execute("CREATE TABLE IF NOT EXISTS knowledge_chunks (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL, chunk_id VARCHAR(100) NOT NULL UNIQUE, content TEXT NOT NULL, embedding JSON, chunk_index INTEGER NOT NULL DEFAULT 0, version INTEGER NOT NULL DEFAULT 1, is_active BOOLEAN NOT NULL DEFAULT 1, created_at DATETIME, FOREIGN KEY(document_id) REFERENCES knowledge_docs(id) ON DELETE CASCADE)")
+        conn.execute("CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_document_id ON knowledge_chunks(document_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_active ON knowledge_chunks(is_active)")
+
+    def _load_from_database(self):
+        """恢复已发布文档及 chunk 内容，保证重启后检索契约不变。"""
+        sqlite_path = self._sqlite_path()
+        if sqlite_path:
+            try:
+                with sqlite3.connect(sqlite_path) as conn:
+                    conn.execute("PRAGMA foreign_keys=ON")
+                    self._ensure_sqlite_schema(conn)
+                    rows = conn.execute("SELECT id,title,category,content,chunk_count,version,is_published,keywords,source,created_at FROM knowledge_docs WHERE COALESCE(deleted_at,'')='' ORDER BY id").fetchall()
+                    for row in rows:
+                        doc_id, title, category, content, chunk_count, version, published, keywords, source, created_at = row
+                        chunks = []
+                        chunk_rows = conn.execute("SELECT chunk_id,content,embedding,chunk_index,version FROM knowledge_chunks WHERE document_id=? AND is_active=1 ORDER BY chunk_index", (doc_id,)).fetchall()
+                        for cid, ccontent, embedding, cindex, cversion in chunk_rows:
+                            try:
+                                vector = json.loads(embedding) if isinstance(embedding, str) else embedding
+                            except (TypeError, json.JSONDecodeError):
+                                vector = None
+                            item = {"id": cid, "content": ccontent, "chunk_index": cindex, "version": cversion}
+                            if vector:
+                                item["_embedding"] = vector
+                            chunks.append(item)
+                        self._documents.append({"id": f"doc_db_{doc_id}", "db_id": doc_id, "title": title, "category": category or "", "content": content or "", "keywords": json.loads(keywords) if keywords else [], "source": source or "", "chunks": chunks, "chunk_count": chunk_count or len(chunks), "version": version or 1, "is_published": bool(published), "created_at": str(created_at or "")})
+                        if not chunks and (chunk_count or 0):
+                            self.degraded = True
+                            self.degraded_reason = self.degraded_reason or "persisted_chunks_missing"
+                    logger.info("Loaded %s documents and persisted chunks from SQLite", len(self._documents))
+                    return
+            except Exception as exc:
+                logger.warning("Failed to load documents from SQLite: %s", exc)
+
+        self._load_from_mysql()
+
     def _load_from_mysql(self):
-        """从 MySQL 加载文档元数据 (同步方式)"""
+        """从 MySQL 加载已发布文档及 chunk（集成 profile）。"""
         try:
             from app.config.config import settings
             import pymysql
@@ -296,19 +375,32 @@ class KnowledgeBaseService:
             )
             try:
                 with conn.cursor() as cursor:
-                    cursor.execute("SELECT id, title, category, chunk_count, created_at FROM knowledge_docs ORDER BY id")
+                    cursor.execute("SELECT id, title, category, content, chunk_count, version, is_published, keywords, source, created_at FROM knowledge_docs WHERE COALESCE(deleted_at,'')='' ORDER BY id")
                     rows = cursor.fetchall()
                     for row in rows:
+                        chunks = []
+                        try:
+                            cursor.execute("SELECT chunk_id, content, embedding, chunk_index, version FROM knowledge_chunks WHERE document_id=%s AND is_active=1 ORDER BY chunk_index", (row[0],))
+                            for cid, ccontent, embedding, cindex, cversion in cursor.fetchall():
+                                vector = json.loads(embedding) if isinstance(embedding, str) else embedding
+                                item = {"id": cid, "content": ccontent, "chunk_index": cindex, "version": cversion}
+                                if vector: item["_embedding"] = vector
+                                chunks.append(item)
+                        except Exception:
+                            pass
                         self._documents.append({
                             "id": f"doc_mysql_{row[0]}",
+                            "db_id": row[0],
                             "title": row[1],
                             "category": row[2],
-                            "content": "",
-                            "keywords": [],
+                            "content": row[3] or "",
+                            "keywords": json.loads(row[7]) if isinstance(row[7], str) and row[7] else (row[7] or []),
                             "source": "mysql",
-                            "chunks": [],
-                            "chunk_count": row[3] or 0,
-                            "created_at": str(row[4]) if row[4] else "",
+                            "chunks": chunks,
+                            "chunk_count": row[4] or len(chunks),
+                            "version": row[5] or 1,
+                            "is_published": bool(row[6]),
+                            "created_at": str(row[9]) if row[9] else "",
                         })
                     if rows:
                         logger.info(f"Loaded {len(rows)} documents from MySQL")
@@ -338,6 +430,7 @@ class KnowledgeBaseService:
         category: str = "",
         keywords: Optional[List[str]] = None,
         source: str = "",
+        is_published: bool = True,
     ) -> Dict[str, Any]:
         self.initialize()
 
@@ -346,6 +439,10 @@ class KnowledgeBaseService:
             "category": category,
             "keywords": keywords or [],
             "source": source,
+            "chunk_size": self.chunker.chunk_size,
+            "chunk_overlap": self.chunker.chunk_overlap,
+            "embedding_model": self._embedding_service.backend_name,
+            "index_version": self._index_version,
         }
 
         chunks = self.chunker.chunk_document(content, metadata)
@@ -366,8 +463,18 @@ class KnowledgeBaseService:
             "keywords": keywords or [],
             "source": source,
             "chunks": chunks,
+            "chunk_count": len(chunks),
+            "version": 1,
+            "is_published": is_published,
+            "index_version": self._index_version,
             "created_at": datetime.now().isoformat(),
         }
+
+        for chunk, embedding in zip(chunks, embeddings):
+            chunk["_embedding"] = embedding
+            chunk["version"] = 1
+
+        self._save_to_database(doc_record)
 
         self._documents.append(doc_record)
         self._bm25_built = False
@@ -385,10 +492,7 @@ class KnowledgeBaseService:
                 })
             self._bm25_built = False
 
-        for chunk, embedding in zip(chunks, embeddings):
-            chunk["_embedding"] = embedding
-
-        if self._vector_store:
+        if self._vector_store and is_published:
             try:
                 docs_for_milvus = []
                 for chunk in chunks:
@@ -409,16 +513,38 @@ class KnowledgeBaseService:
         else:
             logger.info(f"Document '{title}' stored in memory with {len(chunks)} chunks")
 
-        self._save_to_mysql(doc_record)
-
         return {
             "success": True,
             "document_id": doc_record["id"],
             "chunks_count": len(chunks),
+            "version": 1,
+            "status": "published" if is_published else "draft",
         }
 
-    def _save_to_mysql(self, doc_record: Dict[str, Any]):
-        """保存文档到 MySQL (同步方式)"""
+    def _save_to_database(self, doc_record: Dict[str, Any]):
+        """持久化文档、chunk 和 embedding；本地与集成 profile 使用同一字段契约。"""
+        sqlite_path = self._sqlite_path()
+        if sqlite_path:
+            try:
+                with sqlite3.connect(sqlite_path) as conn:
+                    conn.execute("PRAGMA foreign_keys=ON")
+                    self._ensure_sqlite_schema(conn)
+                    cursor = conn.execute(
+                        "INSERT INTO knowledge_docs(title,category,content,chunk_count,version,is_published,keywords,source,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (doc_record["title"], doc_record.get("category", ""), doc_record["content"], len(doc_record.get("chunks", [])), doc_record.get("version", 1), int(doc_record.get("is_published", True)), json.dumps(doc_record.get("keywords", []), ensure_ascii=False), doc_record.get("source", ""), doc_record["created_at"], doc_record["created_at"]),
+                    )
+                    doc_record["db_id"] = cursor.lastrowid
+                    for chunk in doc_record.get("chunks", []):
+                        conn.execute(
+                            "INSERT INTO knowledge_chunks(document_id,chunk_id,content,embedding,chunk_index,version,is_active,created_at) VALUES(?,?,?,?,?,?,?,?)",
+                            (cursor.lastrowid, chunk["id"], chunk["content"], json.dumps(chunk.get("_embedding"), ensure_ascii=False), chunk.get("chunk_index", 0), doc_record.get("version", 1), 1, chunk.get("created_at", doc_record["created_at"])),
+                        )
+                    conn.commit()
+                return
+            except Exception as exc:
+                logger.error("Failed to save knowledge document to SQLite: %s", exc)
+                raise RuntimeError("知识库文档持久化失败") from exc
+
         try:
             from app.config.config import settings
             import pymysql
@@ -433,24 +559,29 @@ class KnowledgeBaseService:
             )
             try:
                 with conn.cursor() as cursor:
-                    sql = """INSERT INTO knowledge_docs 
-                             (title, category, content, chunk_count, version, is_published, created_at, updated_at)
-                             VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())"""
-                    content = doc_record["content"][:65000]
+                    sql = """INSERT INTO knowledge_docs
+                             (title, category, content, chunk_count, version, is_published, keywords, source, created_at, updated_at)
+                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"""
                     cursor.execute(sql, (
                         doc_record["title"],
                         doc_record.get("category", ""),
-                        content,
+                        doc_record["content"],
                         len(doc_record.get("chunks", [])),
-                        1,
-                        True,
+                        doc_record.get("version", 1),
+                        doc_record.get("is_published", True),
+                        json.dumps(doc_record.get("keywords", []), ensure_ascii=False),
+                        doc_record.get("source", ""),
                     ))
+                    doc_record["db_id"] = cursor.lastrowid
+                    for chunk in doc_record.get("chunks", []):
+                        cursor.execute("INSERT INTO knowledge_chunks(document_id,chunk_id,content,embedding,chunk_index,version,is_active,created_at) VALUES(%s,%s,%s,%s,%s,%s,%s,NOW())", (cursor.lastrowid, chunk["id"], chunk["content"], json.dumps(chunk.get("_embedding")), chunk.get("chunk_index", 0), doc_record.get("version", 1), True))
                 conn.commit()
                 logger.info(f"Saved document '{doc_record['title']}' to MySQL")
             finally:
                 conn.close()
         except Exception as e:
-            logger.warning(f"Failed to save document to MySQL: {e}")
+            logger.error(f"Failed to save document to MySQL: {e}")
+            raise RuntimeError("知识库文档持久化失败") from e
 
     def _delete_from_mysql(self, doc_record: Dict[str, Any]):
         """从 MySQL 删除文档 (同步方式)"""
@@ -511,14 +642,17 @@ class KnowledgeBaseService:
     ) -> Dict[str, Any]:
         self.initialize()
 
-        top_k = top_k or settings.RAG_TOP_K
-        similarity_threshold = similarity_threshold or settings.RAG_SIMILARITY_THRESHOLD
+        top_k = top_k if top_k is not None else settings.RAG_TOP_K
+        similarity_threshold = similarity_threshold if similarity_threshold is not None else settings.RAG_SIMILARITY_THRESHOLD
+        top_k = max(1, min(int(top_k), 50))
+        similarity_threshold = max(0.0, min(float(similarity_threshold), 1.0))
 
         cache_key = QueryCache.make_key(query, top_k, similarity_threshold)
         cached = self._query_cache.get(cache_key)
         if cached:
             return {**cached, "from_cache": True}
 
+        started = time.perf_counter()
         query_embedding = self._embedding_service.encode(query)
 
         if self._vector_store:
@@ -555,6 +689,10 @@ class KnowledgeBaseService:
             "total_candidates": len(merged),
             "search_strategy": strategy,
             "from_cache": False,
+            "backend": self.backend,
+            "degraded": self.degraded,
+            "degraded_reason": self.degraded_reason or None,
+            "latency_ms": round((time.perf_counter() - started) * 1000, 3),
         }
 
         self._query_cache.set(cache_key, result)
@@ -569,6 +707,8 @@ class KnowledgeBaseService:
             corpus = [c["content"] for c in meta_chunks]
         elif self._documents:
             for doc in self._documents:
+                if not doc.get("is_published", True):
+                    continue
                 for chunk in doc["chunks"]:
                     corpus.append(chunk["content"])
                     meta_chunks.append({
@@ -658,6 +798,8 @@ class KnowledgeBaseService:
     ) -> List[Dict[str, Any]]:
         results = []
         for doc in self._documents:
+            if not doc.get("is_published", True):
+                continue
             for chunk in doc["chunks"]:
                 if "_embedding" not in chunk:
                     continue
@@ -798,7 +940,24 @@ class KnowledgeBaseService:
             "vector_store_count": vector_count,
             "backend": "milvus" if self._vector_store else "memory",
             "collection_name": settings.COLLECTION_NAME if self._vector_store else "memory",
+            "degraded": self.degraded,
+            "degraded_reason": self.degraded_reason or None,
+            "index_version": self._index_version,
         }
+
+    def list_documents(self) -> List[Dict[str, Any]]:
+        self.initialize()
+        return [{
+            "id": doc.get("id", ""),
+            "title": doc.get("title", ""),
+            "category": doc.get("category", ""),
+            "source": doc.get("source", ""),
+            "keywords": doc.get("keywords", []),
+            "chunks_count": len(doc.get("chunks", [])),
+            "version": doc.get("version", 1),
+            "status": "published" if doc.get("is_published", True) else "draft",
+            "created_at": doc.get("created_at", ""),
+        } for doc in self._documents]
 
     def delete_document(self, document_id: str) -> bool:
         self.initialize()
@@ -821,9 +980,122 @@ class KnowledgeBaseService:
             except Exception as e:
                 logger.error(f"Failed to delete document from Milvus: {e}")
 
-        self._delete_from_mysql(doc_to_remove)
+        sqlite_path = self._sqlite_path()
+        if sqlite_path and doc_to_remove.get("db_id"):
+            try:
+                with sqlite3.connect(sqlite_path) as conn:
+                    conn.execute("PRAGMA foreign_keys=ON")
+                    conn.execute("UPDATE knowledge_docs SET deleted_at=?, is_published=0, updated_at=? WHERE id=?", (datetime.now().isoformat(), datetime.now().isoformat(), doc_to_remove["db_id"]))
+                    conn.execute("UPDATE knowledge_chunks SET is_active=0 WHERE document_id=?", (doc_to_remove["db_id"],))
+                    conn.commit()
+            except Exception as exc:
+                logger.error("Failed to delete document from SQLite: %s", exc)
+                return False
+        elif not sqlite_path:
+            self._delete_from_mysql(doc_to_remove)
+
+        self._bm25_built = False
+        self._query_cache.clear()
 
         return True
+
+    def update_document(
+        self,
+        document_id: str,
+        *,
+        title: Optional[str] = None,
+        content: Optional[str] = None,
+        category: Optional[str] = None,
+        keywords: Optional[List[str]] = None,
+        source: Optional[str] = None,
+        is_published: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """创建新版本并停用旧 chunk，避免更新期间新旧向量混用。"""
+        self.initialize()
+        current = next((doc for doc in self._documents if doc.get("id") == document_id), None)
+        if not current:
+            return {"success": False, "message": "文档不存在"}
+        next_version = int(current.get("version", 1)) + 1
+        new_doc = self.add_document(
+            title=title if title is not None else current["title"],
+            content=content if content is not None else current["content"],
+            category=category if category is not None else current.get("category", ""),
+            keywords=keywords if keywords is not None else current.get("keywords", []),
+            source=source if source is not None else current.get("source", ""),
+            is_published=is_published if is_published is not None else current.get("is_published", True),
+        )
+        if not new_doc.get("success"):
+            return new_doc
+        new_record = self._documents[-1]
+        new_record["version"] = next_version
+        if self._vector_store:
+            try:
+                old_chunk_ids = [chunk["id"] for chunk in current.get("chunks", [])]
+                if old_chunk_ids:
+                    self._vector_store.delete(old_chunk_ids)
+            except Exception as exc:
+                logger.warning("Failed to remove old document vectors during update: %s", exc)
+        # 同步数据库版本号，并停用旧版本；新记录以同版本写入时更新为目标版本。
+        sqlite_path = self._sqlite_path()
+        if sqlite_path and current.get("db_id"):
+            try:
+                with sqlite3.connect(sqlite_path) as conn:
+                    conn.execute("UPDATE knowledge_docs SET deleted_at=?, is_published=0, updated_at=? WHERE id=?", (datetime.now().isoformat(), datetime.now().isoformat(), current["db_id"]))
+                    conn.execute("UPDATE knowledge_chunks SET is_active=0 WHERE document_id=?", (current["db_id"],))
+                    conn.execute("UPDATE knowledge_docs SET version=? WHERE id=?", (next_version, new_record.get("db_id")))
+                    conn.execute("UPDATE knowledge_chunks SET version=? WHERE document_id=?", (next_version, new_record.get("db_id")))
+                    conn.commit()
+            except Exception as exc:
+                logger.error("Failed to persist document version: %s", exc)
+        self._documents = [doc for doc in self._documents if doc is not current]
+        self._bm25_built = False
+        self._query_cache.clear()
+        new_doc["version"] = next_version
+        return {**new_doc, "previous_document_id": document_id}
+
+    def set_document_published(self, document_id: str, published: bool) -> bool:
+        self.initialize()
+        doc = next((item for item in self._documents if item.get("id") == document_id), None)
+        if not doc:
+            return False
+        doc["is_published"] = bool(published)
+        if self._vector_store:
+            try:
+                chunk_ids = [chunk["id"] for chunk in doc.get("chunks", [])]
+                if not published and chunk_ids:
+                    self._vector_store.delete(chunk_ids)
+                elif published and chunk_ids:
+                    vectors = [chunk.get("_embedding") for chunk in doc.get("chunks", [])]
+                    payload = [{"id": chunk["id"], "title": doc["title"], "content": chunk["content"], "category": doc.get("category", ""), "keywords": ",".join(doc.get("keywords", [])), "source": doc.get("source", "")} for chunk in doc.get("chunks", [])]
+                    if all(vectors):
+                        self._vector_store.insert(payload, vectors)
+            except Exception as exc:
+                logger.warning("Failed to update vector publication state: %s", exc)
+        if doc.get("db_id"):
+            sqlite_path = self._sqlite_path()
+            if sqlite_path:
+                with sqlite3.connect(sqlite_path) as conn:
+                    conn.execute("UPDATE knowledge_docs SET is_published=?, updated_at=? WHERE id=?", (int(published), datetime.now().isoformat(), doc["db_id"]))
+                    conn.execute("UPDATE knowledge_chunks SET is_active=? WHERE document_id=?", (int(published), doc["db_id"]))
+                    conn.commit()
+        self._bm25_built = False
+        self._query_cache.clear()
+        return True
+
+    def rebuild_index(self) -> Dict[str, Any]:
+        """从已发布、持久化内容重建 BM25/向量索引，返回可观测结果。"""
+        self.initialize()
+        self._bm25 = BM25Scorer()
+        self._bm25_chunks = []
+        for doc in self._documents:
+            if not doc.get("is_published", True):
+                continue
+            for chunk in doc.get("chunks", []):
+                self._bm25_chunks.append({"id": chunk["id"], "title": doc["title"], "content": chunk["content"], "category": doc.get("category", ""), "keywords": doc.get("keywords", []), "source": doc.get("source", "")})
+        self._bm25.build_index([item["content"] for item in self._bm25_chunks])
+        self._bm25_built = True
+        self._query_cache.clear()
+        return {"success": True, "documents": sum(1 for d in self._documents if d.get("is_published", True)), "chunks": len(self._bm25_chunks), "backend": self.backend, "degraded": self.degraded, "degraded_reason": self.degraded_reason or None}
 
     def _delete_from_mysql(self, doc_record: Dict[str, Any]):
         """从 MySQL 删除文档"""
@@ -871,9 +1143,20 @@ class KnowledgeBaseService:
             except Exception as e:
                 logger.error(f"Failed to clear Milvus collection: {e}")
 
-        self._clear_mysql()
+        sqlite_path = self._sqlite_path()
+        if sqlite_path:
+            try:
+                with sqlite3.connect(sqlite_path) as conn:
+                    conn.execute("PRAGMA foreign_keys=ON")
+                    conn.execute("DELETE FROM knowledge_chunks")
+                    conn.execute("DELETE FROM knowledge_docs")
+                    conn.commit()
+            except Exception as exc:
+                logger.error("Failed to clear SQLite knowledge base: %s", exc)
+        else:
+            self._clear_mysql()
 
-        return {"success": True, "message": "Knowledge base cleared"}
+        return {"success": True, "message": "Knowledge base cleared", "backend": self.backend, "degraded": self.degraded, "degraded_reason": self.degraded_reason or None}
 
     def _clear_mysql(self):
         """清空 MySQL 文档表"""

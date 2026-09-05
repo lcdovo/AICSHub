@@ -29,6 +29,15 @@ class DocumentCreateRequest(BaseModel):
     source: str = ""
 
 
+class DocumentUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    category: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    source: Optional[str] = None
+    is_published: Optional[bool] = None
+
+
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 3
@@ -227,46 +236,7 @@ async def list_documents(_: User = Depends(require_admin)):
     kb = get_knowledge_base()
     stats = kb.get_stats()
 
-    doc_list = []
-    try:
-        from app.config.config import settings
-        import pymysql
-        conn = pymysql.connect(
-            host=settings.MYSQL_HOST,
-            port=int(settings.MYSQL_PORT),
-            user=settings.MYSQL_USER,
-            password=settings.MYSQL_PASSWORD,
-            database=settings.MYSQL_DATABASE,
-            charset="utf8mb4",
-        )
-        try:
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT id, title, category, chunk_count, created_at FROM knowledge_docs ORDER BY id DESC")
-                rows = cursor.fetchall()
-                for row in rows:
-                    doc_list.append({
-                        "id": f"doc_mysql_{row[0]}",
-                        "title": row[1],
-                        "category": row[2],
-                        "source": "mysql",
-                        "keywords": [],
-                        "chunks_count": row[3] or 0,
-                        "created_at": str(row[4]) if row[4] else "",
-                    })
-        finally:
-            conn.close()
-    except Exception as e:
-        logger.warning(f"Failed to load documents from MySQL: {e}")
-        for doc in kb._documents:
-            doc_list.append({
-                "id": doc.get("id", ""),
-                "title": doc.get("title", ""),
-                "category": doc.get("category", ""),
-                "source": doc.get("source", ""),
-                "keywords": doc.get("keywords", []),
-                "chunks_count": len(doc.get("chunks", [])),
-                "created_at": doc.get("created_at", ""),
-            })
+    doc_list = kb.list_documents()
 
     return {
         "code": 0,
@@ -276,6 +246,29 @@ async def list_documents(_: User = Depends(require_admin)):
             "documents": doc_list,
         },
     }
+
+
+@router.patch("/documents/{document_id}")
+async def update_document(document_id: str, request: DocumentUpdateRequest, _: User = Depends(require_admin)):
+    """以新版本更新文档，旧版本软删除并从检索索引中移除。"""
+    if request.content is not None and not request.content.strip():
+        raise HTTPException(status_code=400, detail="内容不能为空")
+    result = get_knowledge_base().update_document(document_id, **request.model_dump(exclude_unset=True))
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=result.get("message", "文档不存在"))
+    return {"code": 0, "message": "更新成功", "data": result}
+
+
+@router.post("/documents/{document_id}/publish")
+async def publish_document(document_id: str, published: bool = Query(True), _: User = Depends(require_admin)):
+    if not get_knowledge_base().set_document_published(document_id, published):
+        raise HTTPException(status_code=404, detail="文档不存在")
+    return {"code": 0, "message": "发布状态已更新", "data": {"document_id": document_id, "is_published": published}}
+
+
+@router.post("/rebuild-index")
+async def rebuild_index(_: User = Depends(require_admin)):
+    return {"code": 0, "message": "索引重建完成", "data": get_knowledge_base().rebuild_index()}
 
 
 @router.delete("/documents/{document_id}")
