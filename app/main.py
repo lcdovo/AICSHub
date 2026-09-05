@@ -82,6 +82,13 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=[
+        {"name": "用户管理", "description": "登录、Token 轮换与用户资源管理"},
+        {"name": "对话管理", "description": "同步/流式聊天、会话历史与工具目录"},
+        {"name": "知识库管理", "description": "文档生命周期、检索与 RAG 问答（管理员写入）"},
+        {"name": "工单管理", "description": "工单状态机、转人工与通知 outbox"},
+        {"name": "评测与可观测性", "description": "Trace、评测结果、反馈样本与指标"},
+    ],
 )
 
 app.add_middleware(

@@ -1,14 +1,14 @@
 # Web Framework
-fastapi==0.115.0
+fastapi==0.141.1
 uvicorn[standard]==0.30.6
-python-multipart==0.0.9
+python-multipart==0.0.32
 
 # Database
 SQLAlchemy==2.0.35
 alembic==1.14.0
-aiomysql==0.2.0
+aiomysql==0.3.2
 PyMySQL==1.1.1
-cryptography>=42.0.0
+cryptography==50.0.1
 
 # Cache
 redis==5.2.0
@@ -18,10 +18,10 @@ pydantic==2.9.2
 pydantic-settings==2.5.2
 
 # Environment
-python-dotenv==1.0.1
+python-dotenv==1.2.3
 
 # Authentication
-PyJWT==2.10.1
+PyJWT==2.13.0
 
 # LLM
 httpx==0.27.2

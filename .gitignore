@@ -14,10 +14,14 @@ build/
 # 敏感配置
 .env
 .env.local
+.env.integration
 
 # 数据库
 *.db
 *.sqlite
+
+# Docker 本地数据卷
+data/
 
 # 临时文件
 *.tmp
