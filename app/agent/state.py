@@ -36,6 +36,10 @@ class AgentState(BaseModel):
     tool_calls: List[ToolCall] = Field(default_factory=list)
     missing_slots: List[str] = Field(default_factory=list)
     route_reason: Optional[str] = None
+    # RAG 查询字段；user_message 始终保留用户原文
+    rewritten_query: Optional[str] = None
+    query_rewrite_applied: bool = False
+    query_rewrite_reason: Optional[str] = None
     collected_info: Dict[str, Any] = Field(default_factory=dict)  # 已收集的信息（如订单号等）
     pending_confirmations: List[str] = Field(default_factory=list)  # 待确认项
     
@@ -100,6 +104,7 @@ class AgentNode:
     INTENT_RECOGNITION = "intent_recognition"
     ROUTE_DECISION = "route_decision"
     SLOT_FILLING = "slot_filling"
+    QUERY_REWRITE = "query_rewrite"
     CLARIFICATION = "clarification"
     RAG_RETRIEVAL = "rag_retrieval"
     TOOL_EXECUTION = "tool_execution"

@@ -24,6 +24,7 @@ from app.agent.tools import ToolExecutionResult
 from app.agent.langchain_tools import get_langchain_tool
 from app.services.knowledge_base import get_knowledge_base
 from app.agent.validation import create_validator
+from app.agent.query_rewrite import ConservativeQueryRewriter
 from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ class AgentGraph:
     def __init__(self):
         self.llm_service = LLMService()
         self.intent_recognizer = EnhancedIntentRecognizer()
+        self.query_rewriter = ConservativeQueryRewriter()
 
         self.validator = create_validator()
         self.nodes: Dict[str, Callable] = {}
@@ -95,6 +97,7 @@ class AgentGraph:
         self.nodes[AgentNode.INTENT_RECOGNITION] = self._node_intent_recognition
         self.nodes[AgentNode.ROUTE_DECISION] = self._node_route_decision
         self.nodes[AgentNode.SLOT_FILLING] = self._node_slot_filling
+        self.nodes[AgentNode.QUERY_REWRITE] = self._node_query_rewrite
         self.nodes[AgentNode.CLARIFICATION] = self._node_clarification
         self.nodes[AgentNode.CONFIRMATION] = self._node_confirmation
         self.nodes[AgentNode.RAG_RETRIEVAL] = self._node_rag_retrieval
@@ -165,6 +168,12 @@ class AgentGraph:
             if node_name == AgentNode.INTENT_RECOGNITION:
                 yield {"type": "intent", "intent": state.detected_intent, "confidence": state.intent_confidence,
                        "needs_clarification": state.needs_clarification, "timestamp": datetime.now().isoformat()}
+            if node_name == AgentNode.QUERY_REWRITE:
+                yield {"type": "query_rewrite", "applied": state.query_rewrite_applied,
+                       "original_query": state.user_message,
+                       "rewritten_query": state.rewritten_query or state.user_message,
+                       "reason": state.query_rewrite_reason or "",
+                       "timestamp": datetime.now().isoformat()}
             if node_name == AgentNode.RAG_RETRIEVAL:
                 results = state.collected_info.get("kb_results", [])
                 yield {"type": "rag_result", "results_count": len(results),
@@ -287,8 +296,8 @@ class AgentGraph:
             IntentType.QUERY_ORDER: AgentNode.TOOL_EXECUTION,
             IntentType.REFUND: AgentNode.TOOL_EXECUTION,
             IntentType.COMPLAINT: AgentNode.TOOL_EXECUTION,
-            IntentType.TECHNICAL: AgentNode.RAG_RETRIEVAL,
-            IntentType.PROMOTION: AgentNode.RAG_RETRIEVAL,
+            IntentType.TECHNICAL: AgentNode.QUERY_REWRITE,
+            IntentType.PROMOTION: AgentNode.QUERY_REWRITE,
             IntentType.HUMAN: AgentNode.HUMAN_HANDOFF,
             IntentType.GENERAL: AgentNode.RESPONSE_GENERATION,
         }
@@ -336,6 +345,25 @@ class AgentGraph:
             state.reply = f"为了查询订单，请提供：{'、'.join(labels)}。"
         return AgentNode.RESPONSE_GENERATION
 
+    async def _node_query_rewrite(self, state: AgentState) -> str:
+        """为 RAG 补全多轮上下文，不修改用户原文或工具参数。"""
+        result = self.query_rewriter.rewrite(
+            query=state.user_message,
+            messages=state.messages,
+            collected_info=state.collected_info,
+        )
+        state.rewritten_query = result.rewritten_query
+        state.query_rewrite_applied = result.applied
+        state.query_rewrite_reason = result.reason
+        state.collected_info["query_rewrite"] = {
+            "original_query": result.original_query,
+            "rewritten_query": result.rewritten_query,
+            "applied": result.applied,
+            "reason": result.reason,
+            "confidence": result.confidence,
+        }
+        return AgentNode.RAG_RETRIEVAL
+
     async def _node_clarification(self, state: AgentState) -> str:
         question = self.intent_recognizer.get_clarification_question(state.detected_intent)
         state.reply = question
@@ -350,7 +378,7 @@ class AgentGraph:
         return AgentNode.RESPONSE_GENERATION
 
     async def _node_rag_retrieval(self, state: AgentState) -> str:
-        query = state.user_message
+        query = state.rewritten_query or state.user_message
         top_k = 3
 
         # The chat path and the admin knowledge APIs must share one source of truth.
