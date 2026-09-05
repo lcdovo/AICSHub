@@ -77,3 +77,53 @@ def test_response_is_validated_after_generation():
         return validator.responses
 
     assert asyncio.run(scenario()) == ["generated final response"]
+
+
+def test_order_query_without_order_id_uses_slot_filling_node():
+    async def scenario():
+        graph = AgentGraph()
+        return await graph.run(AgentState(
+            session_id="slot-filling-order",
+            user_id=1,
+            user_message="请查询物流状态",
+        ))
+
+    state = asyncio.run(scenario())
+    assert "order_id" in state.missing_slots
+    assert any(trace["node"] == "route_decision" for trace in state.trace)
+    assert any(trace["node"] == "slot_filling" for trace in state.trace)
+    assert not any(call.tool_name == "query_order" for call in state.tool_calls)
+    assert "订单号" in state.reply
+
+
+def test_low_confidence_rag_sets_safe_fallback_without_llm():
+    class LowConfidenceKnowledgeBase:
+        async def async_search(self, **kwargs):
+            return {
+                "success": True,
+                "results": [{"title": "weak", "content": "unrelated", "final_score": 0.1}],
+                "meta": {"backend": "memory"},
+            }
+
+    async def scenario():
+        graph = AgentGraph()
+        graph_knowledge_base = LowConfidenceKnowledgeBase()
+        graph_module = __import__("app.agent.graph", fromlist=["get_knowledge_base"])
+        original = graph_module.get_knowledge_base
+        graph_module.get_knowledge_base = lambda: graph_knowledge_base
+        try:
+            state = AgentState(
+                session_id="rag-fallback",
+                user_id=1,
+                user_message="一个知识库没有答案的问题",
+            )
+            next_node = await graph._node_rag_retrieval(state)
+            return state, next_node
+        finally:
+            graph_module.get_knowledge_base = original
+
+    state, next_node = asyncio.run(scenario())
+    assert next_node == "response_generation"
+    assert state.collected_info["rag_grounded"] is False
+    assert state.collected_info["rag_fallback_reason"] == "low_score"
+    assert "没有在知识库中找到" in state.reply

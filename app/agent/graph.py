@@ -35,6 +35,8 @@ _stream_event_queue: contextvars.ContextVar[Optional[asyncio.Queue]] = contextva
 class AgentGraph:
     """Agent 状态机 - 核心编排器 (Phase 3)"""
 
+    RAG_MIN_SCORE = 0.35
+
     def __init__(self):
         self.llm_service = LLMService()
         self.intent_recognizer = EnhancedIntentRecognizer()
@@ -91,6 +93,8 @@ class AgentGraph:
     def _register_nodes(self):
         self.nodes[AgentNode.START] = self._node_start
         self.nodes[AgentNode.INTENT_RECOGNITION] = self._node_intent_recognition
+        self.nodes[AgentNode.ROUTE_DECISION] = self._node_route_decision
+        self.nodes[AgentNode.SLOT_FILLING] = self._node_slot_filling
         self.nodes[AgentNode.CLARIFICATION] = self._node_clarification
         self.nodes[AgentNode.CONFIRMATION] = self._node_confirmation
         self.nodes[AgentNode.RAG_RETRIEVAL] = self._node_rag_retrieval
@@ -256,7 +260,7 @@ class AgentGraph:
             state.detected_intent = IntentType.REFUND
             state.intent_confidence = 1.0
             state.needs_clarification = False
-            return AgentNode.TOOL_EXECUTION
+            return AgentNode.ROUTE_DECISION
 
         intent_result = self.intent_recognizer.recognize(
             message=state.user_message,
@@ -276,7 +280,7 @@ class AgentGraph:
         if intent_result.needs_clarification:
             return AgentNode.CLARIFICATION
 
-        return self._route_by_intent(state.detected_intent)
+        return AgentNode.ROUTE_DECISION
 
     def _route_by_intent(self, intent: str) -> str:
         intent_routes = {
@@ -289,6 +293,48 @@ class AgentGraph:
             IntentType.GENERAL: AgentNode.RESPONSE_GENERATION,
         }
         return intent_routes.get(intent, AgentNode.RESPONSE_GENERATION)
+
+    async def _node_route_decision(self, state: AgentState) -> str:
+        """根据意图和已收集槽位选择业务分支。"""
+        state.collected_info.setdefault("user_id", state.user_id)
+        state.collected_info.setdefault("session_id", state.session_id)
+        extracted = self._extract_info_from_message(state.user_message)
+        for key, value in extracted.items():
+            if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
+                state.collected_info[key] = value
+        missing = self._missing_slots_for_intent(state)
+        state.missing_slots = missing
+        if missing:
+            state.route_reason = f"missing_slots:{','.join(missing)}"
+            return AgentNode.SLOT_FILLING
+
+        next_node = self._route_by_intent(state.detected_intent)
+        state.route_reason = f"intent:{state.detected_intent}->{next_node}"
+        return next_node
+
+    def _missing_slots_for_intent(self, state: AgentState) -> List[str]:
+        collected = state.collected_info
+        if state.detected_intent == IntentType.QUERY_ORDER:
+            return ["order_id"] if not collected.get("order_id") else []
+        if state.detected_intent == IntentType.REFUND:
+            missing = []
+            if not collected.get("order_id"):
+                missing.append("order_id")
+            reason = str(collected.get("reason") or "").strip()
+            if not reason or len(reason) < 6:
+                missing.append("reason")
+            return missing
+        return []
+
+    async def _node_slot_filling(self, state: AgentState) -> str:
+        """提示用户补齐业务工具所需的最小参数。"""
+        prompts = {"order_id": "订单号", "reason": "退款原因"}
+        labels = [prompts.get(slot, slot) for slot in state.missing_slots]
+        if state.detected_intent == IntentType.REFUND:
+            state.reply = f"为了处理退款申请，请补充：{'、'.join(labels)}。"
+        else:
+            state.reply = f"为了查询订单，请提供：{'、'.join(labels)}。"
+        return AgentNode.RESPONSE_GENERATION
 
     async def _node_clarification(self, state: AgentState) -> str:
         question = self.intent_recognizer.get_clarification_question(state.detected_intent)
@@ -331,6 +377,19 @@ class AgentGraph:
             state.collected_info["best_match_score"] = best_match.get(
                 "final_score", best_match.get("hybrid_score", 0)
             )
+
+        score = float(state.collected_info.get("best_match_score") or 0)
+        if not state.collected_info["kb_results"] or score < self.RAG_MIN_SCORE:
+            state.collected_info["rag_grounded"] = False
+            state.collected_info["rag_fallback_reason"] = (
+                "no_results" if not state.collected_info["kb_results"] else "low_score"
+            )
+            state.reply = (
+                "我暂时没有在知识库中找到足够可靠的答案。"
+                "请补充更多细节，或回复“转人工”获取客服协助。"
+            )
+        else:
+            state.collected_info["rag_grounded"] = True
 
         logger.info(
             f"混合检索完成: {len(search_result.get('results', []))} 条结果, "
@@ -566,10 +625,11 @@ class AgentGraph:
 
         # Validate the actual final text.  The old flow validated before this node,
         # so normal LLM output never went through fact/safety/completeness checks.
-        if state.collected_info.get("kb_results"):
+        if state.collected_info.get("kb_results") and state.collected_info.get("rag_grounded", True):
             state.reply = self._add_rag_citations(state.reply, state.collected_info["kb_results"])
 
-        if generated_by_llm or not state.collected_info.get("validation"):
+        # 槽位追问是流程提示，不是业务答案，不应因“信息尚未齐全”被判定为低质量并转人工。
+        if (generated_by_llm or not state.collected_info.get("validation")) and not state.missing_slots:
             validation = self.validator.validate(
                 response=state.reply,
                 user_query=state.user_message,

@@ -34,6 +34,8 @@ class AgentState(BaseModel):
     # Agent 执行状态
     current_node: str = "start"
     tool_calls: List[ToolCall] = Field(default_factory=list)
+    missing_slots: List[str] = Field(default_factory=list)
+    route_reason: Optional[str] = None
     collected_info: Dict[str, Any] = Field(default_factory=dict)  # 已收集的信息（如订单号等）
     pending_confirmations: List[str] = Field(default_factory=list)  # 待确认项
     
@@ -96,6 +98,8 @@ class IntentType:
 class AgentNode:
     START = "start"
     INTENT_RECOGNITION = "intent_recognition"
+    ROUTE_DECISION = "route_decision"
+    SLOT_FILLING = "slot_filling"
     CLARIFICATION = "clarification"
     RAG_RETRIEVAL = "rag_retrieval"
     TOOL_EXECUTION = "tool_execution"
