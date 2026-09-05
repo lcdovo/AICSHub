@@ -42,6 +42,7 @@ def run_benchmark(kb: Any, dataset: Iterable[dict[str, Any]] | None = None, top_
     if not samples:
         return {"dataset_size": 0, "recall_at_k": 0.0, "mrr": 0.0, "precision_at_k": 0.0, "empty_recall_rate": 0.0, "latency_ms": {"p50": 0.0, "p95": 0.0}}
     recalls: list[float] = []
+    top1_hits: list[float] = []
     precisions: list[float] = []
     reciprocal_ranks: list[float] = []
     empty_hits = 0
@@ -61,15 +62,16 @@ def run_benchmark(kb: Any, dataset: Iterable[dict[str, Any]] | None = None, top_
             continue
         hits = sum(title in relevant for title in titles)
         recalls.append(1.0 if hits else 0.0)
+        top1_hits.append(1.0 if titles and titles[0] in relevant else 0.0)
         precisions.append(hits / max(top_k, 1))
         rank = next((idx + 1 for idx, title in enumerate(titles) if title in relevant), None)
         reciprocal_ranks.append(1.0 / rank if rank else 0.0)
-    answerable = max(len(samples) - sum(1 for s in samples if not s.get("relevant_titles")), 1)
     unknown_count = sum(1 for s in samples if not s.get("relevant_titles"))
     return {
         "dataset_size": len(samples),
         "answerable_samples": len(recalls),
         "recall_at_k": round(statistics.mean(recalls), 4) if recalls else 0.0,
+        "top1_accuracy": round(statistics.mean(top1_hits), 4) if top1_hits else 0.0,
         "mrr": round(statistics.mean(reciprocal_ranks), 4) if reciprocal_ranks else 0.0,
         "precision_at_k": round(statistics.mean(precisions), 4) if precisions else 0.0,
         "empty_recall_rate": round(empty_hits / max(unknown_count, 1), 4),

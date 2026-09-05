@@ -3,7 +3,6 @@ LLM 服务 - Phase 3 增强版
 支持多模型切换、降级策略、重试机制、调用统计
 """
 import asyncio
-import json
 import time
 import logging
 from typing import Optional, Tuple, List, Dict, Any, Literal
@@ -31,6 +30,17 @@ class LLMResponse(BaseModel):
     citations: List[str] = Field(default_factory=list)
     need_human: bool = False
     next_action: Optional[str] = None
+
+
+class IntentClassification(BaseModel):
+    """Structured intent contract used only for low-confidence fallback."""
+
+    intent: Literal[
+        "query_order", "refund", "complaint", "technical",
+        "promotion", "human", "general"
+    ] = "general"
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    need_clarification: bool = False
 
 INTENT_KEYWORDS = {
     "query_order": ["订单", "物流", "发货", "快递", "查询", "单号"],
@@ -177,6 +187,45 @@ class LLMService:
             return max(scores, key=scores.get)
         return "general"
 
+    async def classify_intent(
+        self, message: str, context: Optional[list] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Use a structured model only when planning is explicitly enabled.
+
+        Rule matching remains the default and is intentionally not replaced by
+        this fallback.  Returning ``None`` keeps offline/demo profiles fully
+        deterministic and lets the caller retain its existing clarification
+        behaviour.
+        """
+        if not settings.LLM_PLANNING_ENABLED:
+            return None
+        if settings.MOCK_LLM_ENABLED:
+            intent = self.detect_intent(message)
+            return {"intent": intent, "confidence": 0.0, "need_clarification": True}
+
+        messages = [
+            SystemMessage(content=(
+                "你是客服意图分类器。只输出结构化结果。"
+                "意图只能是 query_order、refund、complaint、technical、"
+                "promotion、human、general。置信度范围为 0 到 1；"
+                "无法确定时使用 general 并将 need_clarification 设为 true。"
+            )),
+            HumanMessage(content=self.redactor.redact(message)),
+        ]
+        for model in self.models:
+            if model.is_local or not model.api_key or not self.circuit_breaker.can_execute(model.name):
+                continue
+            try:
+                structured = self._get_chat_model(model).with_structured_output(IntentClassification)
+                result = await structured.ainvoke(messages)
+                parsed = result if isinstance(result, IntentClassification) else IntentClassification.model_validate(result)
+                self.circuit_breaker.record_success(model.name)
+                return parsed.model_dump()
+            except Exception as exc:
+                self.circuit_breaker.record_failure(model.name)
+                logger.warning("意图分类模型调用失败: %s", exc)
+        return None
+
     async def chat(
         self,
         user_id: int,
@@ -247,7 +296,7 @@ class LLMService:
                 self._record_stats(model.name, False)
 
                 if attempt < len(self.models) - 1:
-                    logger.info(f"降级到下一个模型")
+                    logger.info("降级到下一个模型")
                     continue
 
         reply = self._get_mock_reply(intent, message)

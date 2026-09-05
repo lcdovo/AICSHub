@@ -1,6 +1,26 @@
 # AI Customer
 
-企业智能客服与工单自动处理系统，包含用户认证、意图路由、RAG 检索、工具调用、工单流转和可观测性能力。
+## AI 应用开发项目说明
+
+这是一个面向 AI 应用开发岗位的可运行客服 Agent Demo，重点展示单体应用内的模型编排与业务闭环，而不是企业级微服务拆分。
+
+核心链路：
+
+```text
+用户消息 → 规则优先意图识别 → 低置信度时 LLM 结构化兜底
+→ 槽位填充 → RAG 检索或业务工具调用
+→ 退款确认/人工转接 → LLM 生成 → 答案校验 → 流式输出
+```
+
+当前实现的重点：
+
+- 规则优先、LLM 兜底的意图识别，并记录 `intent_source`。
+- 技术/活动咨询采用 BM25 + 向量召回 + 合并重排，提供离线评测脚本和样例集，可输出 Recall@K、Top-1 准确率、MRR、Precision@K 和 P50/P95 延迟：`python scripts/rag_benchmark.py --dataset scripts/rag_eval_dataset.json`。
+- 退款操作使用 LangGraph interrupt，明确确认后才执行，支持幂等键和取消路径。
+- REST 与 WebSocket 入口共用 `app/services/chat_service.py` 的状态恢复与 Agent 执行逻辑，流式入口同时复用统一的结果评测、Trace 和落库服务。
+- 核心链路测试位于 `tests/test_ai_application_optimizations.py`，覆盖 LLM 意图兜底、会话上下文恢复和退款取消。
+
+项目包含用户认证、意图路由、RAG 检索、工具调用、工单流转和可观测性能力，重点用于展示 AI 应用开发中的 Agent 编排与业务闭环。
 
 ## Docker 部署
 

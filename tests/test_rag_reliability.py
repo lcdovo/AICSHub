@@ -49,5 +49,6 @@ def test_benchmark_reports_quality_and_latency(monkeypatch, tmp_path):
     report = run_benchmark(kb, [{"query": "几天可以退货", "relevant_titles": ["退换货政策"]}, {"query": "火星旅行", "relevant_titles": [], "similarity_threshold": 1.0}], top_k=1)
     assert report["dataset_size"] == 2
     assert 0 <= report["recall_at_k"] <= 1
+    assert 0 <= report["top1_accuracy"] <= 1
     assert "p95" in report["latency_ms"]
     assert report["empty_recall_rate"] == 1

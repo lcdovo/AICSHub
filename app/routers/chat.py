@@ -1,9 +1,6 @@
 import json
-import time
 import uuid
-import asyncio
 from datetime import datetime, timezone
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,16 +12,17 @@ from app.models.models import (
 )
 from app.schemas.schemas import ChatRequest, ChatResponse, APIResponse
 from app.agent.graph import AgentGraph
-from app.agent.state import AgentState
 from app.agent.memory import session_manager
 from app.utils.tracking import structured_logger, generate_trace_id, get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, decode_token
 from app.config.config import settings
 from app.services.evaluation import get_answer_evaluator, get_low_score_pool
+from app.services.chat_service import chat_service
 
 router = APIRouter(prefix="/api/v1/chat", tags=["对话管理"])
 
 agent_graph = AgentGraph()
+chat_service.agent_graph = agent_graph
 
 INTENT_LABELS = {
     "query_order": "订单查询",
@@ -241,28 +239,13 @@ async def send_message(
     await db.commit()
 
     # 使用 Agent 处理
-    agent_state = AgentState(
-        session_id=session_id,
-        user_id=chat_data.user_id,
-        user_message=chat_data.message,
-    )
+    agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message)
 
     # 从会话管理器加载历史上下文
-    saved_state = await session_manager.get_state(session_id)
-    if saved_state:
-        agent_state.messages = saved_state.messages
-        agent_state.collected_info = saved_state.collected_info
-        agent_state.detected_intent = saved_state.detected_intent
-        agent_state.intent_confidence = saved_state.intent_confidence
-        agent_state.pending_confirmations = saved_state.pending_confirmations
-        agent_state.conversation_summary = saved_state.conversation_summary
-    agent_state.messages.append({"role": "user", "content": chat_data.message, "timestamp": datetime.now().isoformat()})
+    # State hydration already appends the current user message.
 
     # 运行 Agent 状态机
-    if saved_state and saved_state.collected_info.get("graph_interrupt"):
-        agent_state = await agent_graph.resume(session_id, agent_state, chat_data.message)
-    else:
-        agent_state = await agent_graph.run(agent_state)
+    agent_state = await chat_service.process(agent_state)
 
     # 保存 Agent 执行轨迹
     llm_governance = agent_state.collected_info.get("llm_governance", {})
@@ -541,22 +524,9 @@ async def websocket_chat_stream(websocket: WebSocket):
                 )
                 db.add(user_message)
                 await db.commit()
+                session.message_count += 1
 
-                agent_state = AgentState(
-                    session_id=session_id,
-                    user_id=user_id,
-                    user_message=message,
-                )
-
-                saved_state = await session_manager.get_state(session_id)
-                if saved_state:
-                    agent_state.messages = saved_state.messages
-                    agent_state.collected_info = saved_state.collected_info
-                    agent_state.detected_intent = saved_state.detected_intent
-                    agent_state.intent_confidence = saved_state.intent_confidence
-                    agent_state.pending_confirmations = saved_state.pending_confirmations
-                    agent_state.conversation_summary = saved_state.conversation_summary
-                agent_state.messages.append({"role": "user", "content": message, "timestamp": datetime.now().isoformat()})
+                agent_state = await chat_service.hydrate_state(session_id, user_id, message)
 
                 structured_logger.log_agent(
                     trace_id=trace_id,
@@ -574,7 +544,7 @@ async def websocket_chat_stream(websocket: WebSocket):
                 })
 
                 full_reply = ""
-                async for event in agent_graph.run_stream(agent_state):
+                async for event in chat_service.process_stream(agent_state):
                     if event["type"] == "token":
                         full_reply += event["content"]
                     elif event["type"] == "done":
@@ -582,84 +552,12 @@ async def websocket_chat_stream(websocket: WebSocket):
 
                     await websocket.send_json(event)
 
-                assistant_message = Message(
-                    session_id=session_id,
-                    role=MessageRole.ASSISTANT,
-                    content=agent_state.reply or full_reply,
-                    token_count=agent_state.total_tokens,
-                    response_time_ms=agent_state.execution_time_ms,
-                    tool_calls=[{"name": tc.tool_name, "success": tc.success} for tc in agent_state.tool_calls],
+                agent_state.reply = agent_state.reply or full_reply
+                assistant_message, stream_evaluation = await chat_service.persist_result(
+                    db, session, agent_state, message, trace_id
                 )
-                db.add(assistant_message)
-                await db.flush()
 
-                stream_evaluation = get_answer_evaluator().evaluate(
-                    response=agent_state.reply or full_reply, user_query=message,
-                    tool_results=[{"success": tc.success, "data": tc.result} for tc in agent_state.tool_calls],
-                    response_time_ms=agent_state.execution_time_ms,
-                )
-                get_answer_evaluator().add_feedback_sample({
-                    "sample_id": str(assistant_message.id), "trace_id": trace_id,
-                    "query": message, "response": agent_state.reply or full_reply,
-                    "score": stream_evaluation.to_dict(),
-                })
-                db.add(EvaluationResult(
-                    session_id=session_id, sample_id=str(assistant_message.id), trace_id=trace_id, intent=agent_state.detected_intent,
-                    accuracy_score=round(stream_evaluation.accuracy_score), completeness_score=round(stream_evaluation.completeness_score),
-                    safety_score=round(stream_evaluation.safety_score), overall_score=round(stream_evaluation.overall_score),
-                    is_low_score=stream_evaluation.is_low_score, failure_reason=stream_evaluation.failure_reason,
-                    evaluator="heuristic", model_name=agent_state.collected_info.get("llm_governance", {}).get("model", "mock"),
-                    prompt_version=agent_state.collected_info.get("llm_governance", {}).get("prompt_version", settings.LLM_PROMPT_VERSION),
-                    schema_version=agent_state.collected_info.get("llm_governance", {}).get("schema_version", settings.LLM_SCHEMA_VERSION),
-                    route_version=agent_state.collected_info.get("llm_governance", {}).get("route_version", settings.LLM_ROUTE_VERSION), latency_ms=agent_state.execution_time_ms,
-                    token_usage={"total_tokens": agent_state.total_tokens}, user_query=message,
-                    response=agent_state.reply or full_reply, categories=[], processed=False,
-                ))
-
-                if agent_state.trace:
-                    for i, trace_entry in enumerate(agent_state.trace):
-                        span_id = str(uuid.uuid4())
-                        agent_trace = AgentTrace(
-                            trace_id=f"{trace_id}:{span_id}",
-                            request_trace_id=trace_id,
-                            span_id=span_id,
-                            session_id=session_id,
-                            intent=agent_state.detected_intent,
-                            node_name=trace_entry.get("node", "unknown"),
-                            node_order=i,
-                            input_data=trace_entry.get("input"),
-                            output_data=trace_entry.get("output"),
-                            duration_ms=trace_entry.get("duration_ms", 0),
-                            token_usage={"total_tokens": agent_state.total_tokens},
-                            model_name=agent_state.collected_info.get("llm_governance", {}).get("model", "mock"),
-                            prompt_version=agent_state.collected_info.get("llm_governance", {}).get("prompt_version", settings.LLM_PROMPT_VERSION),
-                            schema_version=agent_state.collected_info.get("llm_governance", {}).get("schema_version", settings.LLM_SCHEMA_VERSION),
-                            route_version=agent_state.collected_info.get("llm_governance", {}).get("route_version", settings.LLM_ROUTE_VERSION),
-                            success=True,
-                        )
-                        db.add(agent_trace)
-
-                session.message_count += 2
-                session.last_intent = agent_state.detected_intent
-                session.updated_at = datetime.utcnow()
-                await db.commit()
-                await db.refresh(assistant_message)
-
-                await session_manager.save_state(agent_state)
-                tracer = get_tracer()
-                tracer._metrics.record_intent(agent_state.detected_intent, agent_state.intent_confidence)
-                tracer._metrics.record_evaluation(stream_evaluation.overall_score, stream_evaluation.is_low_score)
-                if stream_evaluation.is_low_score:
-                    get_low_score_pool().add_sample(
-                        sample_id=str(assistant_message.id), session_id=session_id,
-                        user_query=message, response=agent_state.reply or full_reply,
-                        score=stream_evaluation.overall_score,
-                        failure_reason=stream_evaluation.failure_reason,
-                        metadata={"trace_id": trace_id},
-                    )
-                for tool_call in agent_state.tool_calls:
-                    tracer._metrics.record_tool_call(tool_call.tool_name, tool_call.success)
-                tracer._metrics.record_response(agent_state.execution_time_ms, True)
+                get_tracer()._metrics.record_response(agent_state.execution_time_ms, True)
 
                 await websocket.send_json({
                     "type": "stream_end",

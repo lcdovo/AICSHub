@@ -3,7 +3,6 @@
 实现类似 LangGraph 的节点式 Agent 编排
 支持条件分支、工具调用、状态追踪、混合检索、结果校验
 """
-import os
 import time
 import json
 import asyncio
@@ -264,6 +263,16 @@ class AgentGraph:
         return AgentNode.INTENT_RECOGNITION
 
     async def _node_intent_recognition(self, state: AgentState) -> str:
+        if state.collected_info.get("refund_preview") and self._refund_cancelled(state):
+            state.detected_intent = IntentType.REFUND
+            state.intent_confidence = 1.0
+            state.needs_clarification = False
+            state.pending_confirmations = []
+            state.collected_info.pop("refund_preview", None)
+            state.collected_info.pop("confirm_refund", None)
+            state.reply = "已取消本次退款申请，未执行任何退款操作。"
+            return AgentNode.RESPONSE_GENERATION
+
         # 确认回复通常只有两个字，优先沿用待确认动作的意图，避免被识别为 general。
         if state.collected_info.get("refund_preview") and self._refund_confirmed(state):
             state.detected_intent = IntentType.REFUND
@@ -276,6 +285,22 @@ class AgentGraph:
             context=state.messages,
             history_intent=state.detected_intent if state.detected_intent != IntentType.GENERAL else None,
         )
+
+        # Rules are the fast path. A structured LLM classifier is consulted
+        # only for ambiguous inputs when explicitly enabled in configuration.
+        if intent_result.confidence < 0.4 or intent_result.needs_clarification:
+            refined = await self.llm_service.classify_intent(
+                state.user_message, context=state.messages[-6:]
+            )
+            if refined and refined.get("confidence", 0) > intent_result.confidence:
+                intent_result.intent = refined.get("intent", intent_result.intent)
+                intent_result.confidence = float(refined.get("confidence", intent_result.confidence))
+                intent_result.needs_clarification = bool(refined.get("need_clarification", False))
+                state.collected_info["intent_source"] = "llm_fallback"
+            else:
+                state.collected_info["intent_source"] = "rules"
+        else:
+            state.collected_info["intent_source"] = "rules"
 
         state.detected_intent = intent_result.intent
         state.intent_confidence = intent_result.confidence
@@ -352,6 +377,7 @@ class AgentGraph:
             messages=state.messages,
             collected_info=state.collected_info,
         )
+
         state.rewritten_query = result.rewritten_query
         state.query_rewrite_applied = result.applied
         state.query_rewrite_reason = result.reason
@@ -511,6 +537,10 @@ class AgentGraph:
             msg.get("role") == "user" and msg.get("content", "").strip() in confirmations
             for msg in state.messages[-3:]
         )
+
+    @staticmethod
+    def _refund_cancelled(state: AgentState) -> bool:
+        return state.user_message.strip() in {"取消", "不同意", "先不退", "不提交", "算了", "false", "0"}
 
     async def _node_confirmation(self, state: AgentState) -> str:
         preview = state.collected_info.get("refund_preview", {})
