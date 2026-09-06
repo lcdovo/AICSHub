@@ -373,7 +373,7 @@ class ApplyRefundTool(BaseTool):
         {"name": "reason", "type": "string", "description": "退换货原因", "required": True},
         {"name": "type", "type": "string", "description": "类型：refund(仅退款)、return(退货退款)、exchange(换货)", "required": False,
          "enum": ["refund", "return", "exchange"], "default": "refund"},
-        {"name": "user_id", "type": "integer", "description": "当前认证用户 ID", "required": True},
+        {"name": "user_id", "type": "integer", "description": "资源所属用户ID", "required": False, "default": 0},
         {"name": "idempotency_key", "type": "string", "description": "幂等键", "required": False, "default": ""},
     ]
 
