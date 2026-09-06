@@ -55,6 +55,10 @@ export const api = {
   metrics: () => apiFetch<{ metrics: Record<string, any>; alerts: any[] }>('/api/v1/analytics/metrics'),
   summary: () => apiFetch<Record<string, any>>('/api/v1/analytics/metrics/summary?hours=24'),
   feedback: (payload: Record<string, unknown>) => apiFetch('/api/v1/feedback/submit', { method: 'POST', body: JSON.stringify(payload) }),
+  users: () => apiFetch<User[]>('/api/v1/users/?page=1&page_size=100'),
+  createUser: (payload: Record<string, unknown>) => apiFetch<User>('/api/v1/users/', { method: 'POST', body: JSON.stringify(payload) }),
+  updateUser: (id: number, payload: Record<string, unknown>) => apiFetch(`/api/v1/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteUser: (id: number) => apiFetch(`/api/v1/users/${id}`, { method: 'DELETE' }),
 };
 
 export function websocketUrl(): string {
