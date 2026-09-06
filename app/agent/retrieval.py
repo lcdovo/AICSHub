@@ -7,6 +7,7 @@ import math
 import re
 import time
 import logging
+from difflib import SequenceMatcher
 from typing import Dict, List, Optional, Tuple, Any
 from collections import Counter
 
@@ -356,6 +357,23 @@ class Reranker:
 
             if category:
                 score += 0.1
+
+            # FAQ 问题与用户问题高度相似时优先返回。
+            if category == "faq" or "faq" in title:
+                question_match = re.search(r"(?:\*{0,2}\s*)?(?:q|问)\s*[:：]\s*(.+?)(?:\*{0,2})?(?:\n|$)", content, re.IGNORECASE)
+                if question_match:
+                    faq_question = question_match.group(1).strip(" *：:")
+                    norm_query = re.sub(r"[\s\W_]+", "", query_lower)
+                    norm_question = re.sub(r"[\s\W_]+", "", faq_question.lower())
+                    if norm_question and (norm_query == norm_question or SequenceMatcher(None, norm_query, norm_question).ratio() >= 0.85):
+                        score += 0.5
+
+            if any(term in query_lower for term in ("退款", "退货", "退换", "退费")):
+                if any(term in f"{title} {content} {category}" for term in ("退换货", "质保", "售后")):
+                    score += 0.1
+            if any(term in query_lower for term in ("优惠", "满减", "折扣", "优惠券")):
+                if any(term in f"{title} {content} {category}" for term in ("会员", "满减", "优惠券")):
+                    score += 0.1
 
             scored_candidates.append({
                 **candidate,

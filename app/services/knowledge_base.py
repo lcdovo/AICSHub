@@ -14,6 +14,7 @@ import asyncio
 import json
 import os
 import sqlite3
+from difflib import SequenceMatcher
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 from typing import List, Dict, Any, Optional, Tuple
@@ -149,7 +150,12 @@ class DocumentChunker:
         if not content or not content.strip():
             return []
 
-        if self.split_pattern == "sentence":
+        is_faq = self._is_faq(metadata)
+        if is_faq:
+            chunks = self._split_faq(content, metadata)
+        elif self.split_pattern in {"heading", "title", "按标题"}:
+            chunks = self._split_by_heading(content, metadata)
+        elif self.split_pattern == "sentence":
             chunks = self._split_by_sentence(content)
         elif self.split_pattern == "paragraph":
             chunks = self._split_by_paragraph(content)
@@ -176,6 +182,79 @@ class DocumentChunker:
 
         logger.info(f"文档分块完成: {len(content)} 字符 -> {len(result)} 个分块")
         return result
+
+    @staticmethod
+    def _is_faq(metadata: Optional[Dict[str, Any]]) -> bool:
+        metadata = metadata or {}
+        title = str(metadata.get("title", "")).strip().lower()
+        category = str(metadata.get("category", "")).strip().lower()
+        source = str(metadata.get("source", "")).strip().lower()
+        return title in {"faq", "faq.md"} or category == "faq" or source.endswith("faq.md")
+
+    @staticmethod
+    def _heading_prefix(metadata: Optional[Dict[str, Any]], heading: str, subsection: str = "") -> str:
+        metadata = metadata or {}
+        title = str(metadata.get("title") or metadata.get("source") or "未命名文档")
+        title = title.split("/")[-1].split("\\")[-1]
+        if title.lower().endswith(".md"):
+            title = title[:-3].rstrip(".")
+        chapter = heading.strip() or "文档概览"
+        if subsection and subsection.strip() and subsection.strip() != chapter:
+            chapter = f"{chapter} / {subsection.strip()}"
+        return f"文档：{title}\n章节：{chapter}\n"
+
+    def _split_by_heading(self, text: str, metadata: Optional[Dict[str, Any]]) -> List[str]:
+        """按 Markdown 二级标题切分；超过 800 字的章节才按句切分。"""
+        matches = list(re.finditer(r"(?m)^##(?!#)\s+(.+?)\s*$", text))
+        sections: List[Tuple[str, str]] = []
+        if not matches:
+            body = text.strip()
+            parts = self._split_by_sentence(body) if len(body) > 800 else [body]
+            # 无二级标题的旧格式保持兼容；规范 Markdown 文档均会走标题分块路径。
+            return [part for part in parts if part.strip()]
+        # 顶层 # 文档标题仅作为来源元数据，不单独占用一个分块。
+        for index, match in enumerate(matches):
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+            sections.append((match.group(1).strip(), text[match.start():end].strip()))
+        chunks: List[str] = []
+        for heading, body in sections:
+            parts = self._split_by_sentence(body) if len(body) > 800 else [body]
+            prefix = self._heading_prefix(metadata, heading)
+            chunks.extend(prefix + part.strip() for part in parts if part.strip())
+        return chunks
+
+    def _split_faq(self, text: str, metadata: Optional[Dict[str, Any]]) -> List[str]:
+        """FAQ 按单个问答对切分，并保留所属章节。"""
+        lines = text.splitlines()
+        question_re = re.compile(r"^\s*\*{0,2}\s*(?:Q|问)\s*[:：]\s*(.+?)\s*\*{0,2}\s*$", re.IGNORECASE)
+        blocks: List[Tuple[str, str, str]] = []
+        current: Optional[List[str]] = None
+        current_heading, current_subsection = "文档概览", ""
+        for line in lines:
+            h2 = re.match(r"^##(?!#)\s+(.+?)\s*$", line)
+            h3 = re.match(r"^###\s+(.+?)\s*$", line)
+            if h2:
+                if current:
+                    blocks.append((current_heading, current_subsection, "\n".join(current).strip()))
+                    current = None
+                current_heading, current_subsection = h2.group(1).strip(), ""
+            elif h3:
+                if current:
+                    blocks.append((current_heading, current_subsection, "\n".join(current).strip()))
+                    current = None
+                current_subsection = h3.group(1).strip()
+            if question_re.match(line):
+                if current:
+                    blocks.append((current_heading, current_subsection, "\n".join(current).strip()))
+                current = [line.strip()]
+            elif current is not None:
+                current.append(line.rstrip())
+        if current:
+            blocks.append((current_heading, current_subsection, "\n".join(current).strip()))
+        if not blocks:
+            return self._split_by_heading(text, metadata)
+        return [self._heading_prefix(metadata, heading, subsection) + body
+                for heading, subsection, body in blocks if body]
 
     def _split_by_sentence(self, text: str) -> List[str]:
         sentences = re.split(r'(?<=[。！？.!?；;])', text)
@@ -574,7 +653,7 @@ class KnowledgeBaseService:
                     ))
                     doc_record["db_id"] = cursor.lastrowid
                     for chunk in doc_record.get("chunks", []):
-                        cursor.execute("INSERT INTO knowledge_chunks(document_id,chunk_id,content,embedding,chunk_index,version,is_active,created_at) VALUES(%s,%s,%s,%s,%s,%s,%s,NOW())", (cursor.lastrowid, chunk["id"], chunk["content"], json.dumps(chunk.get("_embedding")), chunk.get("chunk_index", 0), doc_record.get("version", 1), True))
+                        cursor.execute("INSERT INTO knowledge_chunks(document_id,chunk_id,content,embedding,chunk_index,version,is_active,created_at) VALUES(%s,%s,%s,%s,%s,%s,%s,NOW())", (doc_record["db_id"], chunk["id"], chunk["content"], json.dumps(chunk.get("_embedding")), chunk.get("chunk_index", 0), doc_record.get("version", 1), True))
                 conn.commit()
                 logger.info(f"Saved document '{doc_record['title']}' to MySQL")
             finally:
@@ -909,6 +988,27 @@ class KnowledgeBaseService:
             cat = candidate.get("category", "")
             if cat and cat.lower() in query_lower:
                 score += 0.15
+
+            # FAQ 问题与用户问题高度相似时优先返回（不依赖额外模型）。
+            if str(candidate.get("category", "")).lower() == "faq" or "faq" in title:
+                question_match = re.search(r"(?:\*{0,2}\s*)?(?:q|问)\s*[:：]\s*(.+?)(?:\*{0,2})?(?:\n|$)", content, re.IGNORECASE)
+                if question_match:
+                    faq_question = question_match.group(1).strip(" *：:")
+                    normalized_query = re.sub(r"[\s\W_]+", "", query_lower)
+                    normalized_question = re.sub(r"[\s\W_]+", "", faq_question.lower())
+                    if normalized_question and (
+                        normalized_query == normalized_question
+                        or SequenceMatcher(None, normalized_query, normalized_question).ratio() >= 0.85
+                    ):
+                        score += 0.5
+
+            # 领域加权：退款/退换货问题偏向售后政策，优惠问题偏向会员与满减文档。
+            if any(term in query_lower for term in ("退款", "退货", "退换", "退费")):
+                if any(term in f"{title} {content} {cat}" for term in ("退换货", "质保", "售后")):
+                    score += 0.1
+            if any(term in query_lower for term in ("优惠", "满减", "折扣", "优惠券")):
+                if any(term in f"{title} {content} {cat}" for term in ("会员", "满减", "优惠券")):
+                    score += 0.1
 
             if len(content) > 50:
                 score += 0.02

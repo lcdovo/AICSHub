@@ -78,15 +78,15 @@ class Settings(BaseSettings):
     COLLECTION_NAME: str = Field(default="customer_service_knowledge")
     RAG_TOP_K: int = Field(default=5)
     RAG_SIMILARITY_THRESHOLD: float = Field(default=0.2)
-    RAG_BM25_WEIGHT: float = Field(default=0.5)
-    RAG_VECTOR_WEIGHT: float = Field(default=0.5)
+    RAG_BM25_WEIGHT: float = Field(default=0.65)
+    RAG_VECTOR_WEIGHT: float = Field(default=0.35)
     RAG_USE_RERANKER: bool = Field(default=True)
     RAG_SEARCH_TOP_K_MULTIPLIER: int = Field(default=3)
 
     # 文档分块配置
     CHUNK_SIZE: int = Field(default=500)
     CHUNK_OVERLAP: int = Field(default=50)
-    CHUNK_SPLIT_PATTERN: str = Field(default="sentence")
+    CHUNK_SPLIT_PATTERN: str = Field(default="heading")
 
     @property
     def DATABASE_URL(self) -> str:
