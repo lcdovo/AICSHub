@@ -796,7 +796,13 @@ class KnowledgeBaseService:
         if any(term in query_lower for term in ("便宜", "划算", "实惠", "性价比", "贵不贵", "多少钱")):
             expansions.extend(["优惠", "折扣", "满减", "促销", "活动", "会员"])
         if any(term in query_lower for term in ("下班", "几点", "营业时间", "上班时间", "工作时间")):
-            expansions.extend(["客服时间", "服务时间", "FAQ"])
+            expansions.extend(["客服", "工作时间", "服务时间", "客服时间", "FAQ"])
+        # 退款/退换货类短查询扩展，帮助"能退吗""怎么退"命中售后政策文档
+        if any(term in query_lower for term in ("能退", "可以退", "好退", "给退", "退吗", "怎么退", "如何退", "退款", "退货", "退换")):
+            expansions.extend(["退换货", "无理由", "售后", "政策", "退款流程", "退货流程"])
+        # 换货/换颜色类查询
+        if any(term in query_lower for term in ("换货", "换一个", "换个", "换颜色")):
+            expansions.extend(["退换货", "换货流程", "售后", "政策"])
         return " ".join([query, *expansions])
 
     async def async_search(
@@ -1036,6 +1042,10 @@ class KnowledgeBaseService:
             if any(term in query_lower for term in ("优惠", "满减", "折扣", "优惠券", "赠品", "礼包")):
                 if any(term in f"{title} {content} {cat}" for term in ("会员", "满减", "优惠券", "促销", "活动")):
                     score += 0.1
+            # 通用咨询类查询（营业时间/地址/电话等）偏向 FAQ 文档
+            if any(term in query_lower for term in ("下班", "几点", "营业时间", "地址", "在哪", "电话", "联系方式", "工作时间", "上班")):
+                if str(cat).lower() == "faq" or "faq" in title:
+                    score += 0.2
 
             if len(content) > 50:
                 score += 0.02

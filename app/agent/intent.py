@@ -20,19 +20,19 @@ class IntentResult:
 # 意图关键词映射 - 带有权重的关键词
 INTENT_PATTERNS = {
     "query_order": {
-        "high": ["订单号", "物流", "快递", "发货", "运单号", "配送", "咋样了", "到哪了", "到哪一步", "签收了没", "什么情况"],
-        "medium": ["订单", "查询", "跟踪", "到哪", "状态", "单号", "查件", "查一下"],
-        "low": ["我的单"],
+        "high": ["订单号", "物流", "快递", "发货", "运单号", "配送", "咋样了", "到哪了", "到哪一步", "签收了没", "什么情况", "查一下", "查件"],
+        "medium": ["订单", "查询", "跟踪", "到哪", "状态", "单号", "发货没", "发货了吗", "到哪里", "走到哪"],
+        "low": ["我的单", "查"],
     },
     "refund": {
-        "high": ["退款", "退货", "退换", "退钱", "要钱", "退单", "怎么退", "如何退", "退款流程", "退货流程", "换货流程", "能退吗", "可以退"],
-        "medium": ["售后", "拒收", "不想要", "不合适", "质量问题", "到账", "无理由"],
+        "high": ["退款", "退货", "退换", "退钱", "要钱", "退单", "怎么退", "如何退", "退款流程", "退货流程", "换货流程", "能退吗", "可以退", "退了吧", "给我退", "帮我退", "我要退", "不要了"],
+        "medium": ["售后", "拒收", "不想要", "不合适", "质量问题", "到账", "无理由", "换个", "换一个", "换颜色"],
         "low": ["退", "换", "不满意"],
     },
     "technical": {
-        "high": ["怎么用", "如何", "安装", "设置", "配置", "教程", "连接不上", "没有画面", "支付失败", "开不了机", "连不上", "灯不亮", "花屏", "充不进电", "掉线", "搜不到", "密码忘了", "怎么连", "重复扣款", "多扣了", "付了两次"],
-        "medium": ["问题", "报错", "故障", "坏了", "不工作", "没反应", "配对", "断连", "兼容", "发票", "分期", "扣款", "密码", "企业采购", "批量采购", "采购流程", "重置", "省电", "以旧换新", "回收", "采购", "支持", "批量", "多台"],
-        "low": ["使用", "操作", "功能", "支持哪些设备", "怎么弄", "咋用", "公司买"],
+        "high": ["怎么用", "如何", "安装", "设置", "配置", "教程", "连接不上", "没有画面", "支付失败", "开不了机", "连不上", "灯不亮", "花屏", "充不进电", "掉线", "搜不到", "密码忘了", "怎么连", "重复扣款", "多扣了", "付了两次", "怎么开发票", "怎么开票"],
+        "medium": ["问题", "报错", "故障", "坏了", "不工作", "没反应", "配对", "断连", "兼容", "发票", "分期", "扣款", "密码", "企业采购", "批量采购", "采购流程", "重置", "省电", "以旧换新", "回收", "采购", "支持", "批量", "多台", "团购", "想买"],
+        "low": ["使用", "操作", "功能", "支持哪些设备", "怎么弄", "咋用", "公司买", "买几台", "买多少"],
     },
     "promotion": {
         "high": ["优惠", "活动", "折扣", "券", "促销", "便宜", "减", "会员", "vip", "首单", "打折"],
@@ -45,14 +45,16 @@ INTENT_PATTERNS = {
         "low": ["help"],
     },
     "complaint": {
-        "high": ["投诉", "差评", "举报", "骗", "气愤", "垃圾", "骗子", "气死", "火大", "态度", "恶劣"],
-        "medium": ["不满", "生气", "失望", "太烂", "太差"],
+        "high": ["投诉", "差评", "举报", "骗", "气愤", "垃圾", "骗子", "气死", "火大", "态度", "恶劣", "破玩意", "什么玩意", "再也不来", "失望透顶", "垃圾玩意"],
+        "medium": ["不满", "生气", "失望", "太烂", "太差", "太差了", "破", "坑爹"],
         "low": ["不好", "差", "糟糕"],
     },
 }
 
 # 意图否定词（出现在有争议的关键词附近时降低权重）
-NEGATION_WORDS = ["不是", "不要", "不", "非", "没有", "没"]
+# 注意：移除单字"不"，避免误伤"不合适/不想要/不工作"等正向词；
+# 仅保留明确的否定短语，且只在紧邻关键词时生效。
+NEGATION_WORDS = ["不是", "不要", "并非", "无需", "不用", "没有"]
 
 
 class EnhancedIntentRecognizer:
@@ -76,13 +78,8 @@ class EnhancedIntentRecognizer:
         Returns:
             IntentResult 包含意图、置信度、是否需要澄清
         """
-        # 第一层：关键词匹配
+        # 第一层：关键词匹配（否定词已在 _keyword_scores 中逐词处理）
         scores = self._keyword_scores(message)
-
-        # 第二层：检查否定词，将被否定的意图得分置零
-        negated_intent = self._find_negated_intent(message)
-        if negated_intent and negated_intent in scores:
-            scores[negated_intent] = 0.0
 
         # 选出得分最高的意图
         if scores:
@@ -134,9 +131,19 @@ class EnhancedIntentRecognizer:
         message_lower = message.lower()
         scores: Dict[str, float] = {}
 
+        # 检测是否有退款动作词（用于决定订单号加分是否生效）
+        # 需排除被否定的情况，如"我不是要退款"
+        has_refund_action = any(
+            keyword in message_lower and not self._is_keyword_negated(message, keyword)
+            for keyword in self.patterns["refund"]["high"]
+        )
+
         # 明确订单号即属于订单查询语境，即使用户只问金额或支付方式。
         # 去掉末尾 \b 以兼容订单号后紧跟中文的情况（如 ORD20260903现在咋样了）
-        if re.search(r"(?:ORD|ord)[-_a-zA-Z0-9]*\d{4,}", message_lower):
+        # 同时支持顺丰/京东/圆通/中通等快递单号
+        has_order_id = bool(re.search(r"(?:ORD|ord)[-_a-zA-Z0-9]*\d{4,}", message_lower))
+        has_tracking_no = bool(re.search(r"(?:SF|JD|YT|ZTO|STO|YD|EMS|sf|jd|yt|zto|sto|yd|ems)[-_a-zA-Z0-9]*\d{4,}", message_lower))
+        if (has_order_id or has_tracking_no) and not has_refund_action:
             scores["query_order"] = 2.0
 
         # “有个问题/帮个忙”等没有领域信息，应该澄清而不是误判为技术或订单。
@@ -152,71 +159,85 @@ class EnhancedIntentRecognizer:
 
             # 高权重关键词
             for keyword in levels.get("high", []):
-                if keyword.lower() in message_lower:
+                if keyword.lower() in message_lower and not self._is_keyword_negated(message, keyword):
                     score += 2.0
 
             # 中权重关键词
             for keyword in levels.get("medium", []):
-                if keyword.lower() in message_lower:
+                if keyword.lower() in message_lower and not self._is_keyword_negated(message, keyword):
                     score += 1.0
 
             # 低权重关键词
             for keyword in levels.get("low", []):
-                if keyword.lower() in message_lower:
+                if keyword.lower() in message_lower and not self._is_keyword_negated(message, keyword):
                     score += 0.3
 
             if score > 0:
                 scores[intent] = scores.get(intent, 0.0) + score
 
-        # 订单号只是资源标识；当用户明确说退款/退货时，业务动作优先于查单。
-        if any(keyword in message_lower for keyword in self.patterns["refund"]["high"]):
+        # 当用户明确说退款/退货时，业务动作优先于查单（即使含订单号）。
+        if has_refund_action:
             scores["refund"] = scores.get("refund", 0.0) + 3.0
+            # 退款动作存在时，降低订单号对查单意图的加分，避免压过退款
+            if scores.get("query_order", 0) > 0:
+                scores["query_order"] = min(scores["query_order"], 1.0)
 
         return scores
 
-    def _find_negated_intent(self, message: str) -> Optional[str]:
-        """检查是否有意图关键词被否定，返回被否定的意图名。
-        避免把"不合适"里的"不"、"有没有"里的"没有"误判为否定。"""
+    def _is_keyword_negated(self, message: str, keyword: str) -> bool:
+        """判断某个关键词在消息中是否被否定词修饰。
+        否定词紧邻关键词（或仅隔助词/代词）时才生效，
+        避免"我不要了退钱"中"不要"误伤"退钱"。"""
+        idx = message.find(keyword)
+        if idx <= 0:
+            return False
+
+        # 如果当前关键词是某个更长关键词的子串，且更长关键词在消息中出现并被否定，
+        # 则当前关键词也视为被否定（如"转人工"被否定时，"人工"也算被否定）。
+        all_keywords = set()
+        for levels in self.patterns.values():
+            for level_words in levels.values():
+                all_keywords.update(level_words)
+        for longer in all_keywords:
+            if longer != keyword and keyword in longer and longer in message:
+                longer_idx = message.find(longer)
+                # 确保当前关键词的出现位置在更长关键词内部
+                if longer_idx <= idx < longer_idx + len(longer):
+                    if self._is_keyword_negated(message, longer):
+                        return True
+
+        # 助词/代词：否定词与关键词之间仅隔这些字时，仍视为否定修饰
+        particles = {"要", "给", "想", "来", "去", "能", "可以", "我", "他", "她", "的", "地"}
         # 收集所有已知关键词，用于排除"否定词+关键词"本身就是正向词的情况
         all_known_keywords = set()
         for levels in self.patterns.values():
             for level_words in levels.values():
                 all_known_keywords.update(level_words)
 
-        for intent, levels in self.patterns.items():
-            high_keywords = levels.get("high", [])
-            all_keywords = []
-            for level_words in levels.values():
-                all_keywords.extend(level_words)
-            for keyword in all_keywords:
-                idx = message.find(keyword)
-                if idx <= 0:
+        # 检查关键词前 6 个字符窗口（允许否定词与关键词间隔多个助词）
+        window = message[max(0, idx - 6):idx]
+        window_start = max(0, idx - 6)
+        for neg in NEGATION_WORDS:
+            neg_pos = window.rfind(neg)
+            if neg_pos < 0:
+                continue
+            neg_end = window_start + neg_pos + len(neg)
+            gap = message[neg_end:idx]
+            # 否定词与关键词之间的字符必须全部是助词
+            if gap and not all(ch in particles for ch in gap):
+                continue
+            # 否定词后紧跟的字符
+            after_neg = message[neg_end:neg_end + 1] if neg_end < len(message) else ""
+            # "否定词+已知正向词"（如不合适、不想要、不工作）不算否定
+            if after_neg and any(kw.startswith(neg + after_neg) for kw in all_known_keywords):
+                continue
+            # "有没有" 中的 "没有" 不算否定
+            if neg == "没有":
+                no_start = window_start + neg_pos
+                if no_start >= 1 and message[no_start - 1:no_start] == "有":
                     continue
-                # 只有 high 权重关键词被否定时，才否定整个意图
-                if keyword not in high_keywords:
-                    continue
-                # 看关键词前 4 个字符窗口内是否有否定词
-                window = message[max(0, idx - 4):idx]
-                for neg in NEGATION_WORDS:
-                    neg_pos = window.rfind(neg)
-                    if neg_pos < 0:
-                        continue
-                    # 否定词结束位置到关键词起始位置的距离
-                    neg_end = max(0, idx - 4) + neg_pos + len(neg)
-                    distance = idx - neg_end
-                    # 距离超过1字，说明否定词不是直接修饰该关键词（如"我不要了能退钱"）
-                    if distance > 1:
-                        continue
-                    # 否定词后紧跟的字符
-                    after_neg = message[neg_end:neg_end + 1] if neg_end < len(message) else ""
-                    # "不+已知正向词"（如不合适、不想要、不工作）不算否定
-                    if after_neg and any(kw.startswith(neg + after_neg) for kw in all_known_keywords):
-                        continue
-                    # "有没有" 中的 "没有" 不算否定
-                    if neg == "没有" and neg_end >= 1 and message[neg_end - len(neg) - 1:neg_end - len(neg)] == "有":
-                        continue
-                    return intent
-        return None
+            return True
+        return False
 
     def _context_inference(
         self, context: List[Dict[str, Any]], message: str

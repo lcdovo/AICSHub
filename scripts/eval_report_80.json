@@ -1,0 +1,526 @@
+﻿{
+  "dataset_size": 86,
+  "intent_recognition": {
+    "accuracy": 0.8837,
+    "total": 86,
+    "correct": 76,
+    "by_difficulty": {
+      "colloquial": {
+        "accuracy": 0.84,
+        "total": 25
+      },
+      "short": {
+        "accuracy": 1.0,
+        "total": 14
+      },
+      "indirect": {
+        "accuracy": 0.0,
+        "total": 1
+      },
+      "vague": {
+        "accuracy": 1.0,
+        "total": 2
+      },
+      "ultra_short": {
+        "accuracy": 1.0,
+        "total": 4
+      },
+      "ambiguous": {
+        "accuracy": 0.6667,
+        "total": 3
+      },
+      "normal": {
+        "accuracy": 1.0,
+        "total": 22
+      },
+      "policy": {
+        "accuracy": 1.0,
+        "total": 1
+      },
+      "typo": {
+        "accuracy": 1.0,
+        "total": 1
+      },
+      "emotion_only": {
+        "accuracy": 0.5,
+        "total": 2
+      },
+      "greeting": {
+        "accuracy": 1.0,
+        "total": 3
+      },
+      "negation": {
+        "accuracy": 0.5,
+        "total": 4
+      },
+      "multi_intent": {
+        "accuracy": 0.75,
+        "total": 4
+      }
+    },
+    "confusion_matrix": {
+      "query_order": {
+        "query_order": 13,
+        "general": 2,
+        "refund": 1
+      },
+      "refund": {
+        "refund": 14,
+        "query_order": 2
+      },
+      "complaint": {
+        "complaint": 8,
+        "general": 2
+      },
+      "technical": {
+        "technical": 13,
+        "general": 1
+      },
+      "promotion": {
+        "promotion": 13
+      },
+      "human": {
+        "human": 6
+      },
+      "general": {
+        "general": 9,
+        "technical": 1,
+        "human": 1
+      }
+    },
+    "low_confidence_or_wrong": [
+      {
+        "id": "n_qo_04",
+        "question": "SF20260913CN这个件",
+        "expected": "query_order",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_qo_10",
+        "question": "订单还没发？",
+        "expected": "query_order",
+        "predicted": "query_order",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_qo_12",
+        "question": "查",
+        "expected": "query_order",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_rf_07",
+        "question": "拒收了",
+        "expected": "refund",
+        "predicted": "refund",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_rf_08",
+        "question": "ORD20260913帮我退了吧",
+        "expected": "refund",
+        "predicted": "query_order",
+        "confidence": 0.5,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_rf_09",
+        "question": "退宽",
+        "expected": "refund",
+        "predicted": "refund",
+        "confidence": 0.07,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_rf_13",
+        "question": "ORD20260907这个单我不要了退钱",
+        "expected": "refund",
+        "predicted": "query_order",
+        "confidence": 0.5,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_cp_08",
+        "question": "你们太让我失望了",
+        "expected": "complaint",
+        "predicted": "complaint",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_cp_09",
+        "question": "这破玩意什么玩意",
+        "expected": "complaint",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_cp_10",
+        "question": "再也不来了",
+        "expected": "complaint",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_tc_05",
+        "question": "这个支持iphone吗",
+        "expected": "technical",
+        "predicted": "technical",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_tc_06",
+        "question": "发票抬头开错了能改吗",
+        "expected": "technical",
+        "predicted": "technical",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_tc_10",
+        "question": "公司想买20台",
+        "expected": "technical",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_tc_14",
+        "question": "怎么开发票",
+        "expected": "technical",
+        "predicted": "technical",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_pm_04",
+        "question": "新人有啥福利",
+        "expected": "promotion",
+        "predicted": "promotion",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_pm_08",
+        "question": "赠品有哪些",
+        "expected": "promotion",
+        "predicted": "promotion",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_01",
+        "question": "你好",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_02",
+        "question": "谢谢",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_03",
+        "question": "你们几点下班",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_gn_04",
+        "question": "公司地址在哪",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_gn_05",
+        "question": "嗯",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_06",
+        "question": "在吗",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_07",
+        "question": "有什么可以帮到我",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_gn_08",
+        "question": "好的",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_ng_01",
+        "question": "我不是要退款，我就是问问",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_ng_02",
+        "question": "没有问题，不用查了",
+        "expected": "general",
+        "predicted": "technical",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_ng_03",
+        "question": "不是质量问题，就是想换个颜色",
+        "expected": "refund",
+        "predicted": "refund",
+        "confidence": 0.23,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_ng_04",
+        "question": "不要给我转人工",
+        "expected": "general",
+        "predicted": "human",
+        "confidence": 1.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_mt_01",
+        "question": "ORD20260910的物流查一下，另外这个能退吗",
+        "expected": "query_order",
+        "predicted": "refund",
+        "confidence": 0.7,
+        "needs_clarification": false
+      }
+    ]
+  },
+  "rag_recall": {
+    "recall_at3": 0.9091,
+    "recall_at5": 0.9394,
+    "first_hit_rate": 0.7273,
+    "total": 33,
+    "latency_ms": {
+      "p50": 332.33,
+      "p95": 484.86
+    },
+    "failures": [
+      {
+        "id": "n_rf_14",
+        "question": "能退吗",
+        "expected": [
+          "05-7天无理由退换货政策详解"
+        ],
+        "got": [
+          "08-售后服务全流程操作指南",
+          "17-礼品卡与储值卡使用说明",
+          "FAQ",
+          "FAQ",
+          "FAQ"
+        ]
+      },
+      {
+        "id": "n_gn_03",
+        "question": "你们几点下班",
+        "expected": [
+          "FAQ"
+        ],
+        "got": [
+          "08-售后服务全流程操作指南",
+          "09-购物下单操作完整指南",
+          "06-产品质保与售后服务政策",
+          "08-售后服务全流程操作指南",
+          "14-满减活动与优惠券使用规则"
+        ]
+      }
+    ]
+  },
+  "tool_call": {
+    "success_rate": 0.9259,
+    "total_attempts": 27,
+    "successes": 25,
+    "per_tool": {
+      "query_order": {
+        "success_rate": 1.0,
+        "attempts": 10
+      },
+      "refund": {
+        "success_rate": 0.7143,
+        "attempts": 7
+      },
+      "complaint": {
+        "success_rate": 1.0,
+        "attempts": 10
+      }
+    }
+  },
+  "end_to_end_resolution": {
+    "resolution_rate": 0.8488,
+    "total": 86,
+    "resolved": 73,
+    "by_intent": {
+      "query_order": {
+        "resolution_rate": 0.625,
+        "total": 16
+      },
+      "refund": {
+        "resolution_rate": 0.5625,
+        "total": 16
+      },
+      "complaint": {
+        "resolution_rate": 1.0,
+        "total": 10
+      },
+      "technical": {
+        "resolution_rate": 1.0,
+        "total": 14
+      },
+      "promotion": {
+        "resolution_rate": 1.0,
+        "total": 13
+      },
+      "human": {
+        "resolution_rate": 1.0,
+        "total": 6
+      },
+      "general": {
+        "resolution_rate": 1.0,
+        "total": 11
+      }
+    },
+    "failures": [
+      {
+        "id": "n_qo_02",
+        "question": "我的快递到哪里了",
+        "expected_intent": "query_order",
+        "detected_intent": "query_order",
+        "reason": "missing_order_id",
+        "reply": "为了查询订单，请提供：订单号。"
+      },
+      {
+        "id": "n_qo_06",
+        "question": "我上周买的平板发货没",
+        "expected_intent": "query_order",
+        "detected_intent": "query_order",
+        "reason": "missing_order_id",
+        "reply": "为了查询订单，请提供：订单号。"
+      },
+      {
+        "id": "n_qo_07",
+        "question": "查物流",
+        "expected_intent": "query_order",
+        "detected_intent": "query_order",
+        "reason": "missing_order_id",
+        "reply": "为了查询订单，请提供：订单号。"
+      },
+      {
+        "id": "n_qo_10",
+        "question": "订单还没发？",
+        "expected_intent": "query_order",
+        "detected_intent": "query_order",
+        "reason": "missing_order_id",
+        "reply": "您想查询订单的什么信息呢？请提供订单号，我可以帮您查询物流状态和订单详情。"
+      },
+      {
+        "id": "n_qo_11",
+        "question": "我那键盘到哪了",
+        "expected_intent": "query_order",
+        "detected_intent": "query_order",
+        "reason": "missing_order_id",
+        "reply": "为了查询订单，请提供：订单号。"
+      },
+      {
+        "id": "n_qo_14",
+        "question": "我那个快递走到哪儿了啊",
+        "expected_intent": "query_order",
+        "detected_intent": "query_order",
+        "reason": "missing_order_id",
+        "reply": "为了查询订单，请提供：订单号。"
+      },
+      {
+        "id": "n_rf_02",
+        "question": "这玩意儿我不要了能退钱不",
+        "expected_intent": "refund",
+        "detected_intent": "refund",
+        "reason": "missing_refund_slots",
+        "reply": "为了处理退款申请，请补充：订单号、退款原因。"
+      },
+      {
+        "id": "n_rf_07",
+        "question": "拒收了",
+        "expected_intent": "refund",
+        "detected_intent": "refund",
+        "reason": "missing_refund_slots",
+        "reply": "您是想申请仅退款还是退货退款呢？另外，请提供订单号以便我为您处理。"
+      },
+      {
+        "id": "n_rf_09",
+        "question": "退宽",
+        "expected_intent": "refund",
+        "detected_intent": "refund",
+        "reason": "missing_refund_slots",
+        "reply": "您是想申请仅退款还是退货退款呢？另外，请提供订单号以便我为您处理。"
+      },
+      {
+        "id": "n_rf_10",
+        "question": "ORD20260901这个单子能退吗",
+        "expected_intent": "refund",
+        "detected_intent": "refund",
+        "reason": "missing_refund_slots",
+        "reply": "为了处理退款申请，请补充：退款原因。"
+      },
+      {
+        "id": "n_rf_11",
+        "question": "东西不合适想换一个",
+        "expected_intent": "refund",
+        "detected_intent": "refund",
+        "reason": "missing_refund_slots",
+        "reply": "您是想申请仅退款还是退货退款呢？另外，请提供订单号以便我为您处理。"
+      },
+      {
+        "id": "n_ng_03",
+        "question": "不是质量问题，就是想换个颜色",
+        "expected_intent": "refund",
+        "detected_intent": "refund",
+        "reason": "missing_refund_slots",
+        "reply": "您是想申请仅退款还是退货退款呢？另外，请提供订单号以便我为您处理。"
+      },
+      {
+        "id": "n_mt_03",
+        "question": "手表连不上蓝牙，我要退货",
+        "expected_intent": "refund",
+        "detected_intent": "refund",
+        "reason": "missing_refund_slots",
+        "reply": "为了处理退款申请，请补充：订单号。"
+      }
+    ]
+  }
+}

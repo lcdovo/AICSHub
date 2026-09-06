@@ -1,0 +1,330 @@
+﻿{
+  "dataset_size": 86,
+  "intent_recognition": {
+    "accuracy": 0.9884,
+    "total": 86,
+    "correct": 85,
+    "by_difficulty": {
+      "colloquial": {
+        "accuracy": 1.0,
+        "total": 25
+      },
+      "short": {
+        "accuracy": 1.0,
+        "total": 14
+      },
+      "indirect": {
+        "accuracy": 1.0,
+        "total": 1
+      },
+      "vague": {
+        "accuracy": 1.0,
+        "total": 2
+      },
+      "ultra_short": {
+        "accuracy": 1.0,
+        "total": 4
+      },
+      "ambiguous": {
+        "accuracy": 1.0,
+        "total": 3
+      },
+      "normal": {
+        "accuracy": 1.0,
+        "total": 22
+      },
+      "policy": {
+        "accuracy": 1.0,
+        "total": 1
+      },
+      "typo": {
+        "accuracy": 1.0,
+        "total": 1
+      },
+      "emotion_only": {
+        "accuracy": 1.0,
+        "total": 2
+      },
+      "greeting": {
+        "accuracy": 1.0,
+        "total": 3
+      },
+      "negation": {
+        "accuracy": 1.0,
+        "total": 4
+      },
+      "multi_intent": {
+        "accuracy": 0.75,
+        "total": 4
+      }
+    },
+    "confusion_matrix": {
+      "query_order": {
+        "query_order": 15,
+        "refund": 1
+      },
+      "refund": {
+        "refund": 16
+      },
+      "complaint": {
+        "complaint": 10
+      },
+      "technical": {
+        "technical": 14
+      },
+      "promotion": {
+        "promotion": 13
+      },
+      "human": {
+        "human": 6
+      },
+      "general": {
+        "general": 11
+      }
+    },
+    "low_confidence_or_wrong": [
+      {
+        "id": "n_qo_10",
+        "question": "订单还没发？",
+        "expected": "query_order",
+        "predicted": "query_order",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_qo_12",
+        "question": "查",
+        "expected": "query_order",
+        "predicted": "query_order",
+        "confidence": 0.07,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_rf_07",
+        "question": "拒收了",
+        "expected": "refund",
+        "predicted": "refund",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_rf_09",
+        "question": "退宽",
+        "expected": "refund",
+        "predicted": "refund",
+        "confidence": 0.07,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_cp_08",
+        "question": "你们太让我失望了",
+        "expected": "complaint",
+        "predicted": "complaint",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_tc_05",
+        "question": "这个支持iphone吗",
+        "expected": "technical",
+        "predicted": "technical",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_tc_06",
+        "question": "发票抬头开错了能改吗",
+        "expected": "technical",
+        "predicted": "technical",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_tc_10",
+        "question": "公司想买20台",
+        "expected": "technical",
+        "predicted": "technical",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_pm_04",
+        "question": "新人有啥福利",
+        "expected": "promotion",
+        "predicted": "promotion",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_pm_08",
+        "question": "赠品有哪些",
+        "expected": "promotion",
+        "predicted": "promotion",
+        "confidence": 0.25,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_01",
+        "question": "你好",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_02",
+        "question": "谢谢",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_03",
+        "question": "你们几点下班",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_gn_04",
+        "question": "公司地址在哪",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_gn_05",
+        "question": "嗯",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_06",
+        "question": "在吗",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_gn_07",
+        "question": "有什么可以帮到我",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_gn_08",
+        "question": "好的",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": true
+      },
+      {
+        "id": "n_ng_01",
+        "question": "我不是要退款，我就是问问",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_ng_02",
+        "question": "没有问题，不用查了",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_ng_04",
+        "question": "不要给我转人工",
+        "expected": "general",
+        "predicted": "general",
+        "confidence": 0.0,
+        "needs_clarification": false
+      },
+      {
+        "id": "n_mt_01",
+        "question": "ORD20260910的物流查一下，另外这个能退吗",
+        "expected": "query_order",
+        "predicted": "refund",
+        "confidence": 1.0,
+        "needs_clarification": false
+      }
+    ]
+  },
+  "rag_recall": {
+    "recall_at3": 0.9697,
+    "recall_at5": 1.0,
+    "first_hit_rate": 0.8182,
+    "total": 33,
+    "latency_ms": {
+      "p50": 217.78,
+      "p95": 392.2
+    },
+    "failures": []
+  },
+  "tool_call": {
+    "success_rate": 1.0,
+    "total_attempts": 27,
+    "successes": 27,
+    "per_tool": {
+      "query_order": {
+        "success_rate": 1.0,
+        "attempts": 10
+      },
+      "refund": {
+        "success_rate": 1.0,
+        "attempts": 7
+      },
+      "complaint": {
+        "success_rate": 1.0,
+        "attempts": 10
+      }
+    }
+  },
+  "end_to_end_resolution": {
+    "resolution_rate": 1.0,
+    "total": 86,
+    "resolved": 86,
+    "by_intent": {
+      "query_order": {
+        "resolution_rate": 1.0,
+        "total": 16
+      },
+      "refund": {
+        "resolution_rate": 1.0,
+        "total": 16
+      },
+      "complaint": {
+        "resolution_rate": 1.0,
+        "total": 10
+      },
+      "technical": {
+        "resolution_rate": 1.0,
+        "total": 14
+      },
+      "promotion": {
+        "resolution_rate": 1.0,
+        "total": 13
+      },
+      "human": {
+        "resolution_rate": 1.0,
+        "total": 6
+      },
+      "general": {
+        "resolution_rate": 1.0,
+        "total": 11
+      }
+    },
+    "failures": []
+  }
+}
