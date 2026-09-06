@@ -15,7 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements.lock ./
-RUN pip install --requirement requirements.txt --constraint requirements.lock
+RUN pip install \
+    --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+    --timeout 180 \
+    --retries 5 \
+    --requirement requirements.txt \
+    --constraint requirements.lock
 
 # 生产容器不以 root 身份运行。挂载的数据目录由 compose 映射到 /app/data。
 RUN addgroup --system --gid 10001 appuser \
