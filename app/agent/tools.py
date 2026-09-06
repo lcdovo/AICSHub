@@ -177,12 +177,12 @@ class QueryOrderTool(BaseTool):
     description = "根据订单号查询订单状态、物流信息、订单详情"
     parameters = [
         {"name": "order_id", "type": "string", "description": "订单号 (如 ORD20260801)", "required": True},
-        {"name": "user_id", "type": "integer", "description": "资源所属用户ID", "required": False, "default": 0},
+        {"name": "user_id", "type": "integer", "description": "当前认证用户 ID", "required": True},
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         order_id = kwargs.get("order_id", "").strip().upper()
-        user_id = kwargs.get("user_id", 0)
+        user_id = kwargs.get("user_id")
 
         if not order_id:
             return {
@@ -191,7 +191,7 @@ class QueryOrderTool(BaseTool):
                 "hint": "请提供有效的订单号，如 ORD20260801",
             }
 
-        if user_id and user_id != 1:
+        if not isinstance(user_id, int) or isinstance(user_id, bool) or user_id <= 0:
             return {"success": False, "error": "无权访问该订单", "error_type": "permission"}
 
         # Prefer the persisted order projection.  This keeps the tool useful in
@@ -202,18 +202,11 @@ class QueryOrderTool(BaseTool):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         async with async_session() as session:
-            order_row = await session.get(Order, order_id)
-            if order_row is None and order_id in {"ORD20260801", "ORD20260802"}:
-                seed = {
-                    "ORD20260801": dict(user_id=1, status="已发货", status_code="shipped", items=[{"name": "无线耳机", "qty": 1, "price": 299.0}], total_amount=299, shipping={"carrier": "顺丰快递", "tracking_no": "SF1234567890", "status": "运输中", "estimated_delivery": "2026-08-17"}, pay_method="微信支付", address="北京市朝阳区建国路88号"),
-                    "ORD20260802": dict(user_id=1, status="已完成", status_code="completed", items=[{"name": "智能手表", "qty": 1, "price": 1299.0}], total_amount=1299, shipping={"carrier": "京东物流", "tracking_no": "JD9876543210", "status": "已签收"}, pay_method="支付宝", address="上海市浦东新区"),
-                }[order_id]
-                order_row = Order(order_id=order_id, **seed)
-                session.add(order_row)
-                await session.commit()
+            # 在数据库层同时限定订单号和当前用户，防止仅凭他人订单号读取详情。
+            order_row = await session.scalar(
+                select(Order).where(Order.order_id == order_id, Order.user_id == user_id)
+            )
             if order_row is not None:
-                if user_id and order_row.user_id != user_id:
-                    return {"success": False, "error": "无权访问该订单", "error_type": "permission"}
                 order = {
                     "order_id": order_row.order_id, "status": order_row.status,
                     "status_code": order_row.status_code, "items": order_row.items or [],

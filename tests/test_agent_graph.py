@@ -117,7 +117,8 @@ def test_tool_contract_validation_idempotency_and_permission_failure():
 
         forbidden = await query.execute_with_retry(order_id="ORD20260801", user_id=2)
         assert forbidden.success is False
-        assert forbidden.error_type == "permission"
+        # 不区分“订单不存在”和“订单属于别人”，避免泄露订单是否存在。
+        assert forbidden.error_type == "business"
 
         refund = get_tool("apply_refund")
         first = await refund.execute_with_retry(

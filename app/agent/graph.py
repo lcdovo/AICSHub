@@ -330,8 +330,8 @@ class AgentGraph:
 
     async def _node_route_decision(self, state: AgentState) -> str:
         """根据意图和已收集槽位选择业务分支。"""
-        state.collected_info.setdefault("user_id", state.user_id)
-        state.collected_info.setdefault("session_id", state.session_id)
+        state.collected_info["user_id"] = state.user_id
+        state.collected_info["session_id"] = state.session_id
         extracted = self._extract_info_from_message(state.user_message)
         for key, value in extracted.items():
             if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
@@ -453,8 +453,8 @@ class AgentGraph:
         return AgentNode.RESPONSE_GENERATION
 
     async def _node_tool_execution(self, state: AgentState) -> str:
-        state.collected_info.setdefault("user_id", state.user_id)
-        state.collected_info.setdefault("session_id", state.session_id)
+        state.collected_info["user_id"] = state.user_id
+        state.collected_info["session_id"] = state.session_id
         extracted_info = self._extract_info_from_message(state.user_message)
 
         for key, value in extracted_info.items():

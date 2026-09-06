@@ -37,6 +37,9 @@ class ChatService:
             state.intent_confidence = saved.intent_confidence
             state.pending_confirmations = saved.pending_confirmations
             state.conversation_summary = saved.conversation_summary
+        # 认证入口传入的用户与当前会话才是可信身份，不能沿用缓存状态中的值。
+        state.collected_info["user_id"] = user_id
+        state.collected_info["session_id"] = session_id
         state.messages.append({"role": "user", "content": message, "timestamp": datetime.now().isoformat()})
         return state
 
