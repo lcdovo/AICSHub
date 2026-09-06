@@ -9,3 +9,14 @@
 @media(max-width:1200px){.content{padding-left:28px;padding-right:28px}.page-body{max-width:none}.user-chat-layout{grid-template-columns:235px minmax(440px,1fr)}}
 @media(max-width:800px){.content{padding:0 14px 20px}.topbar{height:78px;margin-bottom:18px}.topbar h2{font-size:19px}.page-actions h3{font-size:21px}.chat-layout,.user-chat-layout{min-height:0;height:calc(100vh - 112px)}.messages{padding:21px 15px}.welcome{margin-top:50px}.composer{padding:12px}.stat-row{gap:9px}.stat{padding:13px}.stat strong{font-size:20px}.table-wrap{padding:0;overflow-x:auto}.table-wrap table{min-width:680px}.page-actions .actions{align-self:flex-start}.user-help{display:none}}
 .login-error{margin-top:11px;border:1px solid #673547;background:#351d31;color:#ff9baa;border-radius:7px;padding:9px 10px;font-size:11px;line-height:1.55}.demo-hint{margin-top:16px;color:#75829d;font-size:10px;line-height:1.7}.demo-hint code{color:#b9b1ff;background:#24294d;padding:2px 4px;border-radius:3px}
+
+/* 用户端在窄屏下仍保留多会话入口，方便查看和切换历史对话 */
+@media(max-width:800px){
+  .user-chat-layout{display:flex;flex-direction:column;gap:10px}
+  .user-chat-layout .sessions{display:flex;flex:0 0 auto;max-height:174px;flex-direction:column}
+  .user-chat-layout .sessions .panel-head{padding:13px 15px}
+  .user-chat-layout .sessions .session-list{display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;padding:0 10px 10px}
+  .user-chat-layout .sessions .session{flex:0 0 190px;grid-template-columns:29px minmax(0,1fr) auto;margin:0;padding:9px 8px;background:#16243a}
+  .user-chat-layout .sessions .session.active{background:#214256}
+  .user-chat-layout .conversation{flex:1;min-height:0}
+}
