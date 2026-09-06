@@ -96,6 +96,11 @@ services:
       HOST: 0.0.0.0
       PORT: 8000
       HEALTHCHECK_TIMEOUT_SECONDS: ${HEALTHCHECK_TIMEOUT_SECONDS:-2}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_APP_USER:-customer_service}
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-customer_service}
       DATABASE_URL_OVERRIDE: mysql+aiomysql://${MYSQL_APP_USER:-customer_service}:${MYSQL_APP_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-customer_service}
       USE_MILVUS: "true"
       MILVUS_HOST: milvus
