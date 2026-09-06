@@ -163,9 +163,9 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 async def root():
-    login_path = os.path.join(STATIC_DIR, "login.html")
-    if os.path.exists(login_path):
-        return FileResponse(login_path)
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
         "name": settings.APP_NAME,
         "version": settings.APP_VERSION,
@@ -176,17 +176,17 @@ async def root():
 
 @app.get("/login.html")
 async def login_page():
-    return FileResponse(os.path.join(STATIC_DIR, "login.html"))
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/user.html")
 async def user_page():
-    return FileResponse(os.path.join(STATIC_DIR, "user.html"))
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/admin.html")
 async def admin_page():
-    return FileResponse(os.path.join(STATIC_DIR, "admin.html"))
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 async def _probe_dependencies() -> dict:
