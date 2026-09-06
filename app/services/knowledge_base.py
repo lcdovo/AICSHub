@@ -758,7 +758,7 @@ class KnowledgeBaseService:
         else:
             vector_results = self._memory_search(query_embedding, query, top_k, similarity_threshold)
 
-        bm25_results = self._bm25_search(query, top_k)
+        bm25_results = self._bm25_search(self._expand_bm25_query(query), top_k)
 
         merged = self._merge_results(vector_results, bm25_results, top_k)
 
@@ -785,6 +785,15 @@ class KnowledgeBaseService:
 
         self._query_cache.set(cache_key, result)
         return result
+
+    @staticmethod
+    def _expand_bm25_query(query: str) -> str:
+        """为少量明确领域词补充同义词，扩大候选召回，不改变原始语义。"""
+        query_lower = query.lower()
+        expansions: list[str] = []
+        if any(term in query_lower for term in ("赠品", "礼包", "买赠", "送什么")):
+            expansions.extend(["优惠", "促销", "活动", "会员", "礼包"])
+        return " ".join([query, *expansions])
 
     async def async_search(
         self,
@@ -1015,8 +1024,8 @@ class KnowledgeBaseService:
             if any(term in query_lower for term in ("退款", "退货", "退换", "退费")):
                 if any(term in f"{title} {content} {cat}" for term in ("退换货", "质保", "售后")):
                     score += 0.1
-            if any(term in query_lower for term in ("优惠", "满减", "折扣", "优惠券")):
-                if any(term in f"{title} {content} {cat}" for term in ("会员", "满减", "优惠券")):
+            if any(term in query_lower for term in ("优惠", "满减", "折扣", "优惠券", "赠品", "礼包")):
+                if any(term in f"{title} {content} {cat}" for term in ("会员", "满减", "优惠券", "促销", "活动")):
                     score += 0.1
 
             if len(content) > 50:

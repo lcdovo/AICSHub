@@ -62,3 +62,12 @@ def test_document_list_refreshes_after_external_writer(monkeypatch, tmp_path):
 
     # first 实例已初始化过，但列表读取应能看到另一个进程写入的文档。
     assert {item["title"] for item in first.list_documents()} == {"第一篇", "第二篇"}
+
+
+def test_promotional_gift_query_expands_bm25_terms():
+    expanded = KnowledgeBaseService._expand_bm25_query("买电子产品送什么赠品？")
+
+    assert "赠品" in expanded
+    assert "优惠" in expanded
+    assert "促销" in expanded
+    assert KnowledgeBaseService._expand_bm25_query("耳机如何连接") == "耳机如何连接"

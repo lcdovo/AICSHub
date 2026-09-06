@@ -371,8 +371,8 @@ class Reranker:
             if any(term in query_lower for term in ("退款", "退货", "退换", "退费")):
                 if any(term in f"{title} {content} {category}" for term in ("退换货", "质保", "售后")):
                     score += 0.1
-            if any(term in query_lower for term in ("优惠", "满减", "折扣", "优惠券")):
-                if any(term in f"{title} {content} {category}" for term in ("会员", "满减", "优惠券")):
+            if any(term in query_lower for term in ("优惠", "满减", "折扣", "优惠券", "赠品", "礼包")):
+                if any(term in f"{title} {content} {category}" for term in ("会员", "满减", "优惠券", "促销", "活动")):
                     score += 0.1
 
             scored_candidates.append({

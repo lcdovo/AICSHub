@@ -22,7 +22,7 @@ INTENT_PATTERNS = {
     "query_order": {
         "high": ["订单号", "物流", "快递", "发货", "运单号", "配送"],
         "medium": ["订单", "查询", "跟踪", "到哪", "状态"],
-        "low": ["查一下", "帮我看看", "我的单"],
+        "low": ["我的单"],
     },
     "refund": {
         "high": ["退款", "退货", "退换", "退钱", "要钱", "退单"],
@@ -35,13 +35,13 @@ INTENT_PATTERNS = {
         "low": ["不好", "差", "糟糕"],
     },
     "technical": {
-        "high": ["怎么用", "如何", "安装", "设置", "配置", "教程"],
-        "medium": ["问题", "报错", "故障", "坏了", "不工作", "没反应"],
-        "low": ["使用", "操作", "功能"],
+        "high": ["怎么用", "如何", "安装", "设置", "配置", "教程", "连接不上", "没有画面", "支付失败"],
+        "medium": ["问题", "报错", "故障", "坏了", "不工作", "没反应", "配对", "断连", "兼容", "发票", "分期", "扣款", "密码", "企业采购", "批量采购", "采购流程", "重置", "省电"],
+        "low": ["使用", "操作", "功能", "支持哪些设备"],
     },
     "promotion": {
-        "high": ["优惠", "活动", "折扣", "券", "促销", "便宜", "减"],
-        "medium": ["满减", "赠品", "特价", "限时", "满就送"],
+        "high": ["优惠", "活动", "折扣", "券", "促销", "便宜", "减", "会员", "vip", "首单"],
+        "medium": ["满减", "赠品", "礼包", "新人", "特价", "限时", "满就送", "最近有什么"],
         "low": ["划算", "实惠", "性价比"],
     },
     "human": {
@@ -114,6 +114,18 @@ class EnhancedIntentRecognizer:
         message_lower = message.lower()
         scores: Dict[str, float] = {}
 
+        # 明确订单号即属于订单查询语境，即使用户只问金额或支付方式。
+        if re.search(r"\bord[-_a-z0-9]*\d{4,}\b", message_lower, re.IGNORECASE):
+            scores["query_order"] = 2.0
+
+        # “有个问题/帮个忙”等没有领域信息，应该澄清而不是误判为技术或订单。
+        generic_request = re.fullmatch(
+            r"(?:我)?(?:有个?|有一个)?问题[，, ]*(?:能)?帮(?:个忙|忙)?(?:吗|么)?[？?]?",
+            message_lower.strip(),
+        )
+        if generic_request:
+            return IntentResult(intent="general", confidence=0.0)
+
         for intent, levels in self.patterns.items():
             score = 0.0
             
@@ -133,7 +145,11 @@ class EnhancedIntentRecognizer:
                     score += 0.3
 
             if score > 0:
-                scores[intent] = score
+                scores[intent] = scores.get(intent, 0.0) + score
+
+        # 订单号只是资源标识；当用户明确说退款/退货时，业务动作优先于查单。
+        if any(keyword in message_lower for keyword in self.patterns["refund"]["high"]):
+            scores["refund"] = scores.get("refund", 0.0) + 3.0
 
         if scores:
             best_intent = max(scores, key=scores.get)
@@ -200,6 +216,8 @@ class EnhancedIntentRecognizer:
             r"^(谢谢|感谢|多谢)",
             r"^\d+$",  # 纯数字，可能是在提供订单号
             r"^(对|是|没错|正确)",
+            r"^(现在|目前|大概|预计|什么时候)",
+            r"^(还是|仍然|依然|重试|重置).*(没用|不行|失败)",
         ]
         
         for pattern in continuation_patterns:
