@@ -5,6 +5,7 @@ Milvus 客户端封装
 """
 import logging
 import time
+import json
 from typing import List, Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -251,7 +252,9 @@ class MilvusClient:
             raise RuntimeError("Milvus not connected")
         self._ensure_collection()
         try:
-            expr = f'{PRIMARY_FIELD} in {ids}'
+            # 主键为 VARCHAR，Milvus 表达式中的值必须使用双引号包裹。
+            escaped_ids = [str(item).replace('\\', '\\\\').replace('"', '\\"') for item in ids]
+            expr = f'{PRIMARY_FIELD} in [{",".join(json.dumps(item, ensure_ascii=False) for item in escaped_ids)}]'
             self._collection.delete(expr)
             self._collection.flush()
             logger.info(f"Deleted {len(ids)} documents from Milvus")
