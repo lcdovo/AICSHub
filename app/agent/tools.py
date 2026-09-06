@@ -329,8 +329,8 @@ class CreateTicketTool(BaseTool):
         if not category:
             return {"success": False, "error": "请选择工单分类", "hint": "可选分类: 产品咨询、订单问题、退换货、投诉建议、技术支持"}
 
-        if not content or len(content.strip()) < 5:
-            return {"success": False, "error": "工单内容过于简短", "hint": "请详细描述您的问题（至少5个字符），以便我们更好地为您服务"}
+        if not content or len(content.strip()) < 2:
+            return {"success": False, "error": "工单内容过于简短", "hint": "请简要描述您的问题（至少2个字符），以便我们更好地为您服务"}
 
         ticket_id = str(uuid.uuid4())
         sla_hours = {"low": 48, "medium": 24, "high": 12, "urgent": 4}
@@ -392,13 +392,36 @@ class ApplyRefundTool(BaseTool):
         if refund_type not in ["refund", "return", "exchange"]:
             return {"success": False, "error": f"无效的退换货类型: {refund_type}", "hint": "支持的类型：refund(仅退款)、return(退货退款)、exchange(换货)"}
 
-        valid_orders = ["ORD20260801", "ORD20260802"]
-        if order_id not in valid_orders:
-            return {
-                "success": False,
-                "error": f"订单 {order_id} 不支持退换货",
-                "hint": "仅已发货/已完成的订单可申请退换货。待付款或已取消的订单无法申请。",
-            }
+        # 校验订单是否存在且属于当前用户、状态可退
+        from app.utils.database import async_session, engine
+        from app.models.models import Base, Order
+        from sqlalchemy import select
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            async with async_session() as session:
+                order_row = await session.scalar(
+                    select(Order).where(Order.order_id == order_id, Order.user_id == user_id)
+                )
+                if order_row is None:
+                    return {"success": False, "error": f"未找到订单 {order_id}", "hint": "请确认订单号是否正确"}
+                if order_row.status_code not in {"shipped", "delivered", "completed"}:
+                    return {
+                        "success": False,
+                        "error": f"订单 {order_id} 当前状态（{order_row.status}）不支持退换货",
+                        "hint": "仅已发货/已完成的订单可申请退换货。待付款或已取消的订单无法申请。",
+                    }
+                refundable_amount = float(order_row.total_amount)
+        except Exception:
+            # 数据库不可用时回退到示例订单校验
+            valid_orders = ["ORD20260801", "ORD20260802"]
+            if order_id not in valid_orders:
+                return {
+                    "success": False,
+                    "error": f"订单 {order_id} 不支持退换货",
+                    "hint": "仅已发货/已完成的订单可申请退换货。待付款或已取消的订单无法申请。",
+                }
+            refundable_amount = 299.0
 
         if user_id and user_id != 1:
             return {"success": False, "error": "无权操作该订单", "error_type": "permission"}
@@ -415,7 +438,7 @@ class ApplyRefundTool(BaseTool):
                 "reason": reason,
                 "status": "pending_review",
                 "status_label": "待审核",
-                "amount": 299.0,
+                "amount": refundable_amount,
                 "currency": "CNY",
                 "apply_time": datetime.now().isoformat(),
                 "next_steps": [

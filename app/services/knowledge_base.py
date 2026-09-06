@@ -793,6 +793,10 @@ class KnowledgeBaseService:
         expansions: list[str] = []
         if any(term in query_lower for term in ("赠品", "礼包", "买赠", "送什么")):
             expansions.extend(["优惠", "促销", "活动", "会员", "礼包"])
+        if any(term in query_lower for term in ("便宜", "划算", "实惠", "性价比", "贵不贵", "多少钱")):
+            expansions.extend(["优惠", "折扣", "满减", "促销", "活动", "会员"])
+        if any(term in query_lower for term in ("下班", "几点", "营业时间", "上班时间", "工作时间")):
+            expansions.extend(["客服时间", "服务时间", "FAQ"])
         return " ".join([query, *expansions])
 
     async def async_search(
@@ -1004,8 +1008,13 @@ class KnowledgeBaseService:
                 score += min(keyword_match * 0.1, 0.3)
 
             cat = candidate.get("category", "")
-            if cat and cat.lower() in query_lower:
-                score += 0.15
+            if cat:
+                cat_lower = cat.lower()
+                # 双向包含：category 出现在 query 中，或 query 关键词出现在 category 中
+                if cat_lower in query_lower or any(
+                    t in cat_lower for t in query_tokens if len(t) >= 2
+                ):
+                    score += 0.15
 
             # FAQ 问题与用户问题高度相似时优先返回（不依赖额外模型）。
             if str(candidate.get("category", "")).lower() == "faq" or "faq" in title:

@@ -336,6 +336,13 @@ class AgentGraph:
         for key, value in extracted.items():
             if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
                 state.collected_info[key] = value
+
+        # 退款意图分流：政策咨询类（无订单号且询问流程/时效/规则）走 RAG，
+        # 实际申请退款（有订单号+动作词）才走工具执行。
+        if state.detected_intent == IntentType.REFUND and self._is_refund_policy_inquiry(state.user_message, state.collected_info):
+            state.route_reason = "refund:policy_inquiry->rag"
+            return AgentNode.QUERY_REWRITE
+
         missing = self._missing_slots_for_intent(state)
         state.missing_slots = missing
         if missing:
@@ -345,6 +352,21 @@ class AgentGraph:
         next_node = self._route_by_intent(state.detected_intent)
         state.route_reason = f"intent:{state.detected_intent}->{next_node}"
         return next_node
+
+    def _is_refund_policy_inquiry(self, message: str, collected: Dict[str, Any]) -> bool:
+        """判断退款意图是否为政策咨询（应走 RAG）而非实际退款申请（应走工具）。"""
+        policy_keywords = ["流程", "几天", "多久", "怎么退", "如何退", "政策", "规则", "到账", "无理由", "质保期", "保修期", "售后", "换货流程", "退货流程", "运费谁出", "能退吗"]
+        action_keywords = ["申请", "退钱", "帮我退", "给我退", "我要退", "直接退", "马上退", "退款成功"]
+        has_policy_kw = any(kw in message for kw in policy_keywords)
+        has_action_kw = any(kw in message for kw in action_keywords)
+        has_order_id = bool(collected.get("order_id"))
+        # 有政策词且没有明确动作词、且没有订单号 → 政策咨询
+        if has_policy_kw and not has_action_kw and not has_order_id:
+            return True
+        # "能退吗/可以退吗" 这类询问是否可退，无订单号 → 政策咨询
+        if any(kw in message for kw in ["能退吗", "可以退", "好退吗", "给退吗"]) and not has_order_id:
+            return True
+        return False
 
     def _missing_slots_for_intent(self, state: AgentState) -> List[str]:
         collected = state.collected_info
@@ -959,15 +981,21 @@ class AgentGraph:
         return self._get_default_reply(intent, state.user_message)
 
     def _get_default_reply(self, intent: str, message: str) -> str:
+        if intent == IntentType.GENERAL:
+            msg = (message or "").strip().lower()
+            if any(g in msg for g in ["你好", "您好", "hi", "hello", "在吗", "在不在", "哈喽", "嗨"]):
+                return "您好，请问有什么可以帮您？"
+            if any(t in msg for t in ["谢谢", "感谢", "多谢", "thanks", "thank"]):
+                return "不客气，还有其他可以帮您的吗？"
+            return "我可以帮助您查询订单、处理退换货、解答产品问题等。请问有什么可以帮您的？"
         default_replies = {
             IntentType.QUERY_ORDER: "请提供您的订单号，我可以帮您查询最新的订单状态和物流信息。",
             IntentType.REFUND: "关于退换货问题，请提供订单号和退换货原因，我将为您处理。",
             IntentType.COMPLAINT: "非常抱歉给您带来不好的体验。请详细描述您遇到的问题，我们会尽快为您解决。",
             IntentType.TECHNICAL: "我来帮您解决这个问题。请详细描述遇到的情况，包括操作步骤和报错信息。",
             IntentType.PROMOTION: "我们目前有多种优惠活动。您可以在官网或 APP 首页查看最新的促销信息。",
-            IntentType.GENERAL: "感谢您的咨询。我可以帮助您查询订单、处理退换货、解答产品问题等。请问有什么可以帮您的？",
         }
-        return default_replies.get(intent, default_replies[IntentType.GENERAL])
+        return default_replies.get(intent, "我可以帮助您查询订单、处理退换货、解答产品问题等。请问有什么可以帮您的？")
 
     async def _node_human_handoff(self, state: AgentState) -> str:
         tool = get_langchain_tool("escalate_to_human")
