@@ -405,7 +405,7 @@ class KnowledgeBaseService:
         conn.execute("CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_document_id ON knowledge_chunks(document_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_active ON knowledge_chunks(is_active)")
 
-    def _load_from_database(self):
+    def _load_from_database(self) -> bool:
         """恢复已发布文档及 chunk 内容，保证重启后检索契约不变。"""
         sqlite_path = self._sqlite_path()
         if sqlite_path:
@@ -432,13 +432,13 @@ class KnowledgeBaseService:
                             self.degraded = True
                             self.degraded_reason = self.degraded_reason or "persisted_chunks_missing"
                     logger.info("Loaded %s documents and persisted chunks from SQLite", len(self._documents))
-                    return
+                    return True
             except Exception as exc:
                 logger.warning("Failed to load documents from SQLite: %s", exc)
 
-        self._load_from_mysql()
+        return self._load_from_mysql()
 
-    def _load_from_mysql(self):
+    def _load_from_mysql(self) -> bool:
         """从 MySQL 加载已发布文档及 chunk（集成 profile）。"""
         try:
             from app.config.config import settings
@@ -485,8 +485,17 @@ class KnowledgeBaseService:
                         logger.info(f"Loaded {len(rows)} documents from MySQL")
             finally:
                 conn.close()
+            return True
         except Exception as e:
             logger.warning(f"Failed to load documents from MySQL: {e}")
+            return False
+
+    def _refresh_documents_from_database(self) -> None:
+        """刷新文档列表，确保外部导入进程写入后管理页面不会继续使用旧缓存。"""
+        previous = self._documents
+        self._documents = []
+        if not self._load_from_database():
+            self._documents = previous
 
     def _load_bm25_from_milvus(self):
         """从Milvus加载所有chunk数据用于BM25索引"""
@@ -1111,6 +1120,7 @@ class KnowledgeBaseService:
 
     def list_documents(self) -> List[Dict[str, Any]]:
         self.initialize()
+        self._refresh_documents_from_database()
         return [{
             "id": doc.get("id", ""),
             "title": doc.get("title", ""),

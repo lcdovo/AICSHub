@@ -52,3 +52,13 @@ def test_benchmark_reports_quality_and_latency(monkeypatch, tmp_path):
     assert 0 <= report["top1_accuracy"] <= 1
     assert "p95" in report["latency_ms"]
     assert report["empty_recall_rate"] == 1
+
+
+def test_document_list_refreshes_after_external_writer(monkeypatch, tmp_path):
+    first = _new_kb(monkeypatch, tmp_path)
+    first.add_document("第一篇", "第一篇内容")
+    second = _new_kb(monkeypatch, tmp_path)
+    second.add_document("第二篇", "第二篇内容")
+
+    # first 实例已初始化过，但列表读取应能看到另一个进程写入的文档。
+    assert {item["title"] for item in first.list_documents()} == {"第一篇", "第二篇"}
