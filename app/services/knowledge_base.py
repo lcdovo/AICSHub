@@ -980,6 +980,35 @@ class KnowledgeBaseService:
             "index_version": self._index_version,
         }
 
+    def health_check(self) -> Dict[str, Any]:
+        """检查实际使用的知识库向量后端，避免依赖 AgentGraph 内部属性。"""
+        self.initialize()
+        if self._vector_store:
+            try:
+                healthy, message = self._vector_store.health_check()
+                return {
+                    "backend": "milvus",
+                    "healthy": healthy,
+                    "message": message,
+                    "degraded": self.degraded,
+                    "degraded_reason": self.degraded_reason or None,
+                }
+            except Exception as exc:
+                return {
+                    "backend": "milvus",
+                    "healthy": False,
+                    "message": str(exc),
+                    "degraded": True,
+                    "degraded_reason": "milvus_health_check_failed",
+                }
+        return {
+            "backend": "memory",
+            "healthy": False,
+            "message": "Milvus 未连接，使用内存检索降级",
+            "degraded": True,
+            "degraded_reason": self.degraded_reason or "milvus_unavailable",
+        }
+
     def list_documents(self) -> List[Dict[str, Any]]:
         self.initialize()
         return [{

@@ -215,13 +215,14 @@ async def _probe_dependencies() -> dict:
 
     if settings.USE_MILVUS:
         try:
-            from app.routers.chat import agent_graph
-            milvus = agent_graph.hybrid_retriever.vector.health_check()
+            from app.services.knowledge_base import get_knowledge_base
+            knowledge_base = await asyncio.to_thread(get_knowledge_base)
+            milvus = await asyncio.to_thread(knowledge_base.health_check)
             backend = milvus.get("backend", "memory")
             result["milvus"] = {
                 "status": "healthy" if milvus.get("healthy") and backend == "milvus" else "degraded",
                 **milvus,
-                "reason": milvus.get("message") if backend != "milvus" else None,
+                "reason": milvus.get("degraded_reason") or (milvus.get("message") if backend != "milvus" else None),
                 "timeout_seconds": timeout,
             }
         except Exception as exc:
