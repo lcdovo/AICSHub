@@ -9,6 +9,9 @@ __pycache__
 *.db
 *.sqlite
 .pytest_cache
+.pytest-tmp-*
+.mypy_cache
+.ruff_cache
 tests
 customer_service.db
 .gitignore
