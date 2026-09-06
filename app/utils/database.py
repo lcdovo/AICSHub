@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 from typing import AsyncGenerator, Optional
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -8,6 +9,8 @@ from redis.asyncio import Redis
 
 from app.config.config import settings
 from app.models.models import Base, User, UserRole
+
+logger = logging.getLogger(__name__)
 
 
 # 根据数据库类型选择引擎配置
@@ -173,6 +176,10 @@ async def init_database():
     from app.models.models import Order
     from sqlalchemy import select
     async with async_session() as session:
+        owner_exists = await session.scalar(select(User.id).where(User.id == 1))
+        if owner_exists is None:
+            logger.info("Skip demo order seed because demo user id=1 is not enabled")
+            return
         existing = await session.scalar(select(Order.order_id).limit(1))
         if existing is None:
             session.add_all([
