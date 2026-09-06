@@ -234,7 +234,7 @@ async def _probe_dependencies() -> dict:
 async def health_check():
     dependencies = await _probe_dependencies()
     required_ok = dependencies.get("database", {}).get("status") == "healthy"
-    degraded = any(item.get("status") in {"degraded", "disabled", "optional", "configured"} for item in dependencies.values())
+    degraded = any(item.get("status") in {"degraded", "disabled", "optional"} for item in dependencies.values())
     return {
         "status": "healthy" if required_ok else "unhealthy",
         "mode": "local" if settings.MOCK_LLM_ENABLED and not settings.USE_MILVUS else "integration",
