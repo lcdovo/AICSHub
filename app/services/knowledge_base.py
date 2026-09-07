@@ -1315,38 +1315,6 @@ class KnowledgeBaseService:
         self._query_cache.clear()
         return {"success": True, "documents": sum(1 for d in self._documents if d.get("is_published", True)), "chunks": len(self._bm25_chunks), "backend": self.backend, "degraded": self.degraded, "degraded_reason": self.degraded_reason or None}
 
-    def _delete_from_mysql(self, doc_record: Dict[str, Any]):
-        """从 MySQL 删除文档"""
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                asyncio.ensure_future(self._async_delete_from_mysql(doc_record))
-            else:
-                loop.run_until_complete(self._async_delete_from_mysql(doc_record))
-        except Exception as e:
-            logger.warning(f"Failed to delete document from MySQL: {e}")
-
-    async def _async_delete_from_mysql(self, doc_record: Dict[str, Any]):
-        """异步从 MySQL 删除文档"""
-        try:
-            from app.utils.database import async_session
-            from app.models.models import KnowledgeDoc
-            from sqlalchemy import delete
-
-            async with async_session() as session:
-                title = doc_record.get("title", "")
-                category = doc_record.get("category", "")
-                await session.execute(
-                    delete(KnowledgeDoc).where(
-                        KnowledgeDoc.title == title,
-                        KnowledgeDoc.category == category,
-                    )
-                )
-                await session.commit()
-                logger.info(f"Deleted document '{title}' from MySQL")
-        except Exception as e:
-            logger.warning(f"Failed to delete from MySQL: {e}")
-
     def clear_all(self) -> Dict[str, Any]:
         self._documents.clear()
         self._query_cache.clear()
@@ -1375,31 +1343,6 @@ class KnowledgeBaseService:
             self._clear_mysql()
 
         return {"success": True, "message": "Knowledge base cleared", "backend": self.backend, "degraded": self.degraded, "degraded_reason": self.degraded_reason or None}
-
-    def _clear_mysql(self):
-        """清空 MySQL 文档表"""
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                asyncio.ensure_future(self._async_clear_mysql())
-            else:
-                loop.run_until_complete(self._async_clear_mysql())
-        except Exception as e:
-            logger.warning(f"Failed to clear MySQL: {e}")
-
-    async def _async_clear_mysql(self):
-        """异步清空 MySQL"""
-        try:
-            from app.utils.database import async_session
-            from app.models.models import KnowledgeDoc
-            from sqlalchemy import delete
-
-            async with async_session() as session:
-                await session.execute(delete(KnowledgeDoc))
-                await session.commit()
-                logger.info("Cleared all documents from MySQL")
-        except Exception as e:
-            logger.warning(f"Failed to clear MySQL: {e}")
 
 
 _knowledge_base: Optional[KnowledgeBaseService] = None

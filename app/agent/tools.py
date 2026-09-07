@@ -340,9 +340,8 @@ class ApplyRefundTool(BaseTool):
                 }
             refundable_amount = 299.0
 
-        if user_id and user_id != 1:
-            return {"success": False, "error": "无权操作该订单", "error_type": "permission"}
-
+        # 订单归属已在数据库查询（Order.user_id == user_id）中校验；
+        # 数据库不可用时的降级路径无法做归属校验，但不应硬编码拒绝合法用户。
         refund_type_labels = {"refund": "仅退款", "return": "退货退款", "exchange": "换货"}
 
         return {
