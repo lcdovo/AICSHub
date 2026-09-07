@@ -194,10 +194,9 @@ class LLMService:
         """Classify the intent with a structured model when one is available.
 
         Availability gates on real credentials rather than the planning flag, so
-        both the legacy low-confidence fallback and the newer ``LLM_INTENT_PRIMARY``
-        path can reuse it.  Returning ``None`` keeps offline/demo profiles fully
-        deterministic and lets the caller retain its existing clarification
-        behaviour.
+        the rule-first intent flow's low-confidence fallback can reuse it.
+        Returning ``None`` keeps offline/demo profiles fully deterministic and
+        lets the caller retain its existing clarification behaviour.
         """
         if not self.is_available():
             return None

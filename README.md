@@ -21,7 +21,7 @@
 
 ## 当前实现重点
 
-- **LLM 主导、规则保底的意图识别**：`EnhancedIntentRecognizer` 关键词加权匹配 + 否定词修正，开启 `LLM_INTENT_PRIMARY` 后由 `LLMService.classify_intent` 主导模糊/通用输入的意图解释；转人工/投诉/退款/查单等关键意图在规则高置信命中时仍被锁定保底，防止模型误判越权。低置信度输入自动进入 `CLARIFICATION` 澄清节点；支持意图升级模式检测（如 `query_order → refund → complaint` 自动转人工），并记录 `intent_source` 便于审计。
+- **规则优先、LLM 兜底的意图识别**：`EnhancedIntentRecognizer` 关键词加权匹配 + 否定词修正，置信度 < 0.4 或需澄清时调用 `LLMService.classify_intent` 结构化兜底，关键意图仍由确定性规则主导；低置信度输入自动进入 `CLARIFICATION` 澄清节点；支持意图升级模式检测（如 `query_order → refund → complaint` 自动转人工），并记录 `intent_source` 便于审计。
 - **混合 RAG 检索**：`KnowledgeBaseService` 实现 BM25 + 向量召回 + 分数融合 + 重排，支持查询扩展、同义词扩展、双向类目匹配；Milvus 不可用时降级到内存 + BM25，搜索结果中返回 `backend`、`degraded`、`degraded_reason`，不静默假装高可用。
 - **组合式多轮查询改写**：`LLMQueryRewriter` 采用"规则优先、LLM 增强"策略——先是 `ConservativeQueryRewriter` 无开销地改写指代/省略类追问，规则未命中且模型可用时再由 `LLMService.run_structured` 做语义改写增强 RAG 召回，全程零延迟保底、可观测。
 - **LLM-as-judge 防幻觉**：`validation_llm.py` 对 RAG/工具回答做事实一致性、引用对齐与"无据陈述"判定，无法锚定证据时选择"无据不答"并引导补充信息或转人工，而不是让模型为生成而编造；LLM 不可用自动退化为启发式校验。

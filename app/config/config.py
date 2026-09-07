@@ -62,9 +62,6 @@ class Settings(BaseSettings):
     LLM_GRAY_ROLLOUT_PERCENT: int = Field(default=100, ge=0, le=100)
 
     # ---- LLM 参与决策增强（Phase 3+）----
-    # 意图识别是否以 LLM 为主导，规则仅保证关键意图兜底。
-    # 当未配置可用 LLM 时自动退回纯规则模式。
-    LLM_INTENT_PRIMARY: bool = Field(default=True)
     # 规则改写未命中时，是否尝试 LLM 做多轮语义改写以增强 RAG 召回。
     LLM_QUERY_REWRITE_ENABLED: bool = Field(default=True)
     # 是否启用 LLM-as-judge 对 RAG/工具回答做事实与引用一致性校验（防幻觉）。

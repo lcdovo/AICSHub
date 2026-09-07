@@ -292,40 +292,18 @@ class AgentGraph:
             history_intent=state.detected_intent if state.detected_intent != IntentType.GENERAL else None,
         )
 
-        # LLM 参与决策：模糊/通用输入交由模型主导，关键意图由规则保底。
-        # 开启后意图解释权从"规则为主"变为"模型为主 + 规则兜底"。
-        llm_enabled = bool(settings.LLM_INTENT_PRIMARY) and self.llm_service.is_available()
-        if llm_enabled and not self._rule_should_lock(intent_result):
-            llm = await self.llm_service.classify_intent(
+        # 规则优先、LLM 兜底：仅对低置信度输入（<0.4 或需澄清）调用模型二次确认，
+        # 关键意图仍由确定性规则主导，避免模型误判导致越权或误操作。
+        state.collected_info["intent_source"] = "rules"
+        if intent_result.confidence < 0.4 or intent_result.needs_clarification:
+            refined = await self.llm_service.classify_intent(
                 state.user_message, context=state.messages[-6:]
             )
-            if llm:
-                llm_conf = float(llm.get("confidence", 0) or 0)
-                rule_conf = intent_result.confidence
-                want_llm = llm_conf > rule_conf or intent_result.intent == IntentType.GENERAL
-                if want_llm:
-                    intent_result.intent = llm.get("intent", intent_result.intent)
-                    intent_result.confidence = max(llm_conf, 0.05)
-                    intent_result.needs_clarification = bool(
-                        llm.get("need_clarification", False)
-                    ) and llm_conf < 0.4
-                    state.collected_info["intent_source"] = "llm_primary"
-                else:
-                    state.collected_info["intent_source"] = "rules_llm_agree"
-            else:
-                state.collected_info["intent_source"] = "rules"
-        else:
-            # 关键意图已由规则高置信锁定，或 LLM 不可用：仅对低置信输入做 LLM 二次确认。
-            state.collected_info["intent_source"] = "rules"
-            if intent_result.confidence < 0.4 or intent_result.needs_clarification:
-                refined = await self.llm_service.classify_intent(
-                    state.user_message, context=state.messages[-6:]
-                )
-                if refined and refined.get("confidence", 0) > intent_result.confidence:
-                    intent_result.intent = refined.get("intent", intent_result.intent)
-                    intent_result.confidence = float(refined.get("confidence", intent_result.confidence))
-                    intent_result.needs_clarification = bool(refined.get("need_clarification", False))
-                    state.collected_info["intent_source"] = "llm_fallback"
+            if refined and refined.get("confidence", 0) > intent_result.confidence:
+                intent_result.intent = refined.get("intent", intent_result.intent)
+                intent_result.confidence = float(refined.get("confidence", intent_result.confidence))
+                intent_result.needs_clarification = bool(refined.get("need_clarification", False))
+                state.collected_info["intent_source"] = "llm_fallback"
 
         state.detected_intent = intent_result.intent
         state.intent_confidence = intent_result.confidence
@@ -380,21 +358,6 @@ class AgentGraph:
                     return tail
 
         return None
-
-    _RULE_LOCK_INTENTS = {
-        IntentType.HUMAN,
-        IntentType.COMPLAINT,
-        IntentType.REFUND,
-        IntentType.QUERY_ORDER,
-    }
-
-    def _rule_should_lock(self, result) -> bool:
-        """关键意图在规则高置信命中时由规则保底，LLM 不能覆盖为 general。
-
-        这是对"LLM 主导意图"的护栏：转人工/投诉/退款/查单涉及敏感副作用或
-        关键业务操作，必须由确定性规则兜底，避免模型误判导致越权或误操作。
-        """
-        return result.intent in self._RULE_LOCK_INTENTS and result.confidence >= 0.6
 
     def _route_by_intent(self, intent: str) -> str:
         intent_routes = {
