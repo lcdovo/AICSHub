@@ -44,6 +44,17 @@ class ToolExecutionResult(BaseModel):
     error_type: Optional[str] = None
 
 
+def _level_label(value: Any) -> str:
+    """把用户等级枚举/字符串映射为中文展示名。"""
+    mapping = {
+        "normal": "普通用户",
+        "vip": "VIP",
+        "VIP": "VIP",
+        "enterprise": "企业用户",
+    }
+    return mapping.get(str(value), str(value or "普通用户"))
+
+
 class BaseTool:
     """工具基类 - 支持重试、超时、错误处理"""
     name: str = ""
@@ -654,56 +665,59 @@ class UpdateTicketStatusTool(BaseTool):
 class GetUserHistoryTool(BaseTool):
     """获取用户历史咨询记录"""
     name = "get_user_history"
-    description = "获取用户的历史咨询记录、工单历史、偏好标签等"
+    description = "获取用户的历史咨询记录、工单历史、偏好标签等（跨会话长期记忆/用户画像）"
     parameters = [
         {"name": "user_id", "type": "integer", "description": "用户ID", "required": True},
         {"name": "limit", "type": "integer", "description": "返回条数", "required": False, "default": 10},
+        {"name": "query", "type": "string", "description": "用于语义回忆的当前问题（可选）", "required": False, "default": ""},
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         user_id = kwargs.get("user_id", 0)
-        limit = kwargs.get("limit", 10)
+        limit = max(1, int(kwargs.get("limit", 10) or 10))
+        query = str(kwargs.get("query", "") or "").strip()
+        session_id = str(kwargs.get("session_id", "") or "")
 
         if not user_id or user_id <= 0:
             return {"success": False, "error": "请提供有效的用户ID", "hint": "用户ID应为正整数"}
 
-        mock_history = {
-            1: {
-                "user_id": 1,
-                "user_level": "VIP",
-                "total_orders": 15,
-                "total_tickets": 3,
-                "tags": ["高价值用户", "电子产品爱好者"],
-                "history": [
-                    {"date": "2026-08-10", "type": "订单咨询", "summary": "查询订单 ORD20260801 物流状态", "resolved": True},
-                    {"date": "2026-07-25", "type": "退换货", "summary": "申请退货 ORD20260720（商品质量问题）", "resolved": True},
-                    {"date": "2026-07-15", "type": "产品咨询", "summary": "询问产品使用方法和保修政策", "resolved": True},
-                    {"date": "2026-06-20", "type": "投诉建议", "summary": "物流配送延迟投诉", "resolved": True},
-                    {"date": "2026-05-10", "type": "订单咨询", "summary": "批量订单查询", "resolved": True},
-                ],
-            },
-        }
+        # 跨会话长期记忆 / 用户画像：聚合 SQLite 历史，Embedding 可用时做向量回忆。
+        try:
+            from app.services.user_memory import get_user_memory_service
 
-        user_data = mock_history.get(user_id, {
-            "user_id": user_id,
-            "user_level": "普通用户",
-            "total_orders": 0,
-            "total_tickets": 0,
-            "tags": [],
-            "history": [],
-        })
-
-        return {
-            "success": True,
-            "data": {
-                "user_id": user_id,
-                "user_level": user_data.get("user_level", "普通用户"),
-                "total_orders": user_data.get("total_orders", 0),
-                "total_tickets": user_data.get("total_tickets", 0),
-                "tags": user_data.get("tags", []),
-                "history": user_data.get("history", [])[:limit],
-            },
-        }
+            profile = await get_user_memory_service().get_user_profile(
+                user_id=user_id, query=query, session_id=session_id
+            )
+            level = _level_label(profile.get("user_level", "normal"))
+            history = [
+                {
+                    "date": (item.get("timestamp") or "")[:10],
+                    "type": "用户咨询" if item.get("role") == "user" else "客服回复",
+                    "summary": str(item.get("content", ""))[:200],
+                    "resolved": True,
+                }
+                for item in (profile.get("history") or [])
+            ]
+            return {
+                "success": True,
+                "data": {
+                    "user_id": user_id,
+                    "user_level": level,
+                    "total_sessions": profile.get("total_sessions", 0),
+                    "total_tickets": profile.get("total_tickets", 0),
+                    "tags": profile.get("tags", []),
+                    "history": history[:limit],
+                    "recalled": (profile.get("recalled") or [])[:limit],
+                    "memory_source": profile.get("memory_source", "degraded"),
+                },
+            }
+        except Exception as exc:
+            logger.warning("用户历史查询失败: %s", exc)
+            return {
+                "success": False,
+                "error": "用户历史查询失败",
+                "hint": "请稍后重试或转人工处理",
+            }
 
 
 TOOL_REGISTRY: Dict[str, BaseTool] = {

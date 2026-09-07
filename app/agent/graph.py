@@ -24,7 +24,11 @@ from app.agent.langchain_tools import get_langchain_tool
 from app.services.knowledge_base import get_knowledge_base
 from app.agent.validation import create_validator
 from app.agent.query_rewrite import ConservativeQueryRewriter
+from app.agent.query_rewrite_llm import LLMQueryRewriter
+from app.agent.validation_llm import LLMRAGJudge
+from app.services.user_memory import get_user_memory_service
 from app.services.llm_service import LLMService
+from app.config.config import settings
 
 logger = logging.getLogger(__name__)
 _stream_event_queue: contextvars.ContextVar[Optional[asyncio.Queue]] = contextvars.ContextVar(
@@ -41,6 +45,8 @@ class AgentGraph:
         self.llm_service = LLMService()
         self.intent_recognizer = EnhancedIntentRecognizer()
         self.query_rewriter = ConservativeQueryRewriter()
+        self.llm_rewriter = LLMQueryRewriter(self.llm_service)
+        self.llm_judge = LLMRAGJudge(self.llm_service)
 
         self.validator = create_validator()
         self.nodes: Dict[str, Callable] = {}
@@ -286,21 +292,40 @@ class AgentGraph:
             history_intent=state.detected_intent if state.detected_intent != IntentType.GENERAL else None,
         )
 
-        # Rules are the fast path. A structured LLM classifier is consulted
-        # only for ambiguous inputs when explicitly enabled in configuration.
-        if intent_result.confidence < 0.4 or intent_result.needs_clarification:
-            refined = await self.llm_service.classify_intent(
+        # LLM 参与决策：模糊/通用输入交由模型主导，关键意图由规则保底。
+        # 开启后意图解释权从"规则为主"变为"模型为主 + 规则兜底"。
+        llm_enabled = bool(settings.LLM_INTENT_PRIMARY) and self.llm_service.is_available()
+        if llm_enabled and not self._rule_should_lock(intent_result):
+            llm = await self.llm_service.classify_intent(
                 state.user_message, context=state.messages[-6:]
             )
-            if refined and refined.get("confidence", 0) > intent_result.confidence:
-                intent_result.intent = refined.get("intent", intent_result.intent)
-                intent_result.confidence = float(refined.get("confidence", intent_result.confidence))
-                intent_result.needs_clarification = bool(refined.get("need_clarification", False))
-                state.collected_info["intent_source"] = "llm_fallback"
+            if llm:
+                llm_conf = float(llm.get("confidence", 0) or 0)
+                rule_conf = intent_result.confidence
+                want_llm = llm_conf > rule_conf or intent_result.intent == IntentType.GENERAL
+                if want_llm:
+                    intent_result.intent = llm.get("intent", intent_result.intent)
+                    intent_result.confidence = max(llm_conf, 0.05)
+                    intent_result.needs_clarification = bool(
+                        llm.get("need_clarification", False)
+                    ) and llm_conf < 0.4
+                    state.collected_info["intent_source"] = "llm_primary"
+                else:
+                    state.collected_info["intent_source"] = "rules_llm_agree"
             else:
                 state.collected_info["intent_source"] = "rules"
         else:
+            # 关键意图已由规则高置信锁定，或 LLM 不可用：仅对低置信输入做 LLM 二次确认。
             state.collected_info["intent_source"] = "rules"
+            if intent_result.confidence < 0.4 or intent_result.needs_clarification:
+                refined = await self.llm_service.classify_intent(
+                    state.user_message, context=state.messages[-6:]
+                )
+                if refined and refined.get("confidence", 0) > intent_result.confidence:
+                    intent_result.intent = refined.get("intent", intent_result.intent)
+                    intent_result.confidence = float(refined.get("confidence", intent_result.confidence))
+                    intent_result.needs_clarification = bool(refined.get("need_clarification", False))
+                    state.collected_info["intent_source"] = "llm_fallback"
 
         state.detected_intent = intent_result.intent
         state.intent_confidence = intent_result.confidence
@@ -355,6 +380,21 @@ class AgentGraph:
                     return tail
 
         return None
+
+    _RULE_LOCK_INTENTS = {
+        IntentType.HUMAN,
+        IntentType.COMPLAINT,
+        IntentType.REFUND,
+        IntentType.QUERY_ORDER,
+    }
+
+    def _rule_should_lock(self, result) -> bool:
+        """关键意图在规则高置信命中时由规则保底，LLM 不能覆盖为 general。
+
+        这是对"LLM 主导意图"的护栏：转人工/投诉/退款/查单涉及敏感副作用或
+        关键业务操作，必须由确定性规则兜底，避免模型误判导致越权或误操作。
+        """
+        return result.intent in self._RULE_LOCK_INTENTS and result.confidence >= 0.6
 
     def _route_by_intent(self, intent: str) -> str:
         intent_routes = {
@@ -433,8 +473,11 @@ class AgentGraph:
         return AgentNode.RESPONSE_GENERATION
 
     async def _node_query_rewrite(self, state: AgentState) -> str:
-        """为 RAG 补全多轮上下文，不修改用户原文或工具参数。"""
-        result = self.query_rewriter.rewrite(
+        """为 RAG 补全多轮上下文，不修改用户原文或工具参数。
+
+        组合改写：保守规则优先，规则未命中且 LLM 可用时由模型做语义改写。
+        """
+        result = await self.llm_rewriter.rewrite(
             query=state.user_message,
             messages=state.messages,
             collected_info=state.collected_info,
@@ -734,6 +777,17 @@ class AgentGraph:
         if state.need_human and not state.reply:
             state.reply = f"非常抱歉，正在为您转接人工客服。{state.human_reason or ''}"
 
+        # 注入跨会话用户画像，使 LLM 能结合用户历史作答（本文改进第 5 项）。
+        if settings.USER_MEMORY_ENABLED and not state.collected_info.get("user_memory"):
+            try:
+                state.collected_info["user_memory"] = await get_user_memory_service().get_user_profile(
+                    user_id=state.user_id,
+                    query=state.user_message,
+                    session_id=state.session_id,
+                )
+            except Exception:
+                state.collected_info["user_memory"] = {"memory_source": "degraded"}
+
         generated_by_llm = False
         if not state.reply:
             llm_reply = await self._generate_response_with_llm(state)
@@ -748,8 +802,27 @@ class AgentGraph:
         if state.collected_info.get("kb_results") and state.collected_info.get("rag_grounded", True):
             state.reply = self._add_rag_citations(state.reply, state.collected_info["kb_results"])
 
-        # 槽位追问是流程提示，不是业务答案，不应因“信息尚未齐全”被判定为低质量并转人工。
-        if (generated_by_llm or not state.collected_info.get("validation")) and not state.missing_slots:
+        # LLM-as-judge 防幻觉：对 RAG 生成回答做证据一致性核查，
+        # 无法锚定证据时选择"无据不答"，而非让模型为生成而编造（本文改进第 2 项）。
+        if generated_by_llm and self._rag_judge_applicable(state):
+            judgement = await self.llm_judge.judge(
+                response=state.reply,
+                user_query=state.user_message,
+                kb_context=state.collected_info.get("kb_results", []),
+                tool_evidence=self._tool_evidence_text(state),
+            )
+            if judgement:
+                state.collected_info["llm_judge"] = judgement
+                if judgement.get("refuse_recommended"):
+                    state.collected_info["rag_refused"] = True
+                    state.reply = (
+                        "抱歉，我暂时没有足够可靠的依据回答这个问题。"
+                        "为避免误导，建议您补充更具体的信息，"
+                        "或回复“转人工”由客服协助确认。"
+                    )
+
+        # 槽位追问是流程提示，不是业务答案，不应因"信息尚未齐全"被判定为低质量并转人工。
+        if (generated_by_llm or not state.collected_info.get("validation")) and not state.missing_slots and not state.collected_info.get("rag_refused"):
             validation = self.validator.validate(
                 response=state.reply,
                 user_query=state.user_message,
@@ -795,6 +868,29 @@ class AgentGraph:
             snippet = " ".join(str(item.get("content", "")).split())[:120]
             citations.append(f"- {title}: {snippet}")
         return reply + ("\n\n参考来源：\n" + "\n".join(citations) if citations else "")
+
+    _TOOL_ANSWER_INTENTS = {
+        IntentType.QUERY_ORDER,
+        IntentType.COMPLAINT,
+        IntentType.REFUND,
+    }
+
+    def _rag_judge_applicable(self, state: AgentState) -> bool:
+        """仅对证据型（RAG）回答启用 LLM judge；工具型回答已有启发式事实校验。"""
+        return (
+            bool(state.collected_info.get("rag_grounded"))
+            and not state.missing_slots
+            and state.detected_intent not in self._TOOL_ANSWER_INTENTS
+        )
+
+    @staticmethod
+    def _tool_evidence_text(state: AgentState) -> str:
+        """把成功工具返回的数据压缩成给 judge 的证据文本。"""
+        parts = []
+        for tc in state.tool_calls:
+            if tc.success and isinstance(tc.result, dict) and tc.result.get("data"):
+                parts.append(json.dumps(tc.result["data"], ensure_ascii=False)[:300])
+        return "\n".join(parts)
 
     async def _generate_response_with_llm(self, state: AgentState) -> str:
         """使用 LLM 生成响应，失败时返回 None 由调用方降级"""
@@ -855,6 +951,21 @@ class AgentGraph:
         intent_label = intent_labels.get(state.detected_intent, state.detected_intent)
         parts.append(f"【用户意图】{intent_label}")
         parts.append(f"【用户消息】{state.user_message}")
+
+        # 注入跨会话用户画像，帮助模型结合用户历史与偏好作答（改进第 5 项）。
+        user_memory = state.collected_info.get("user_memory")
+        if isinstance(user_memory, dict) and user_memory.get("memory_source") not in (None, "none"):
+            mem_parts = []
+            mem_parts.append(f"用户等级：{user_memory.get('user_level', '普通')}")
+            tags = user_memory.get("tags") or []
+            if tags:
+                mem_parts.append(f"用户标签：{'、'.join(str(t) for t in tags[:5])}")
+            recalled = user_memory.get("recalled") or []
+            if recalled:
+                for item in recalled[:3]:
+                    mem_parts.append(f"近期相关记录：{str(item.get('content', ''))[:120]}")
+            if mem_parts:
+                parts.append("【用户画像】" + "；".join(mem_parts))
 
         successful_tools = [tc for tc in state.tool_calls if tc.success]
         if successful_tools:

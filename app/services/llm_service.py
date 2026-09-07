@@ -177,17 +177,29 @@ class LLMService:
             return max(scores, key=scores.get)
         return "general"
 
+    def is_available(self) -> bool:
+        """Whether at least one model has a real credential and is usable.
+
+        Used by intent/rewrite/judge enhancements to decide whether LLM
+        participation is possible; callers fall back to rules when absent.
+        """
+        return any(
+            bool(m.api_key) and m.api_key != "your-api-key-here"
+            for m in self.models
+        )
+
     async def classify_intent(
         self, message: str, context: Optional[list] = None
     ) -> Optional[Dict[str, Any]]:
-        """Use a structured model only when planning is explicitly enabled.
+        """Classify the intent with a structured model when one is available.
 
-        Rule matching remains the default and is intentionally not replaced by
-        this fallback.  Returning ``None`` keeps offline/demo profiles fully
+        Availability gates on real credentials rather than the planning flag, so
+        both the legacy low-confidence fallback and the newer ``LLM_INTENT_PRIMARY``
+        path can reuse it.  Returning ``None`` keeps offline/demo profiles fully
         deterministic and lets the caller retain its existing clarification
         behaviour.
         """
-        if not settings.LLM_PLANNING_ENABLED:
+        if not self.is_available():
             return None
 
         messages = [
@@ -211,6 +223,44 @@ class LLMService:
             except Exception as exc:
                 self.circuit_breaker.record_failure(model.name)
                 logger.warning("意图分类模型调用失败: %s", exc)
+        return None
+
+    async def run_structured(
+        self,
+        system_prompt: str,
+        user_text: str,
+        contract: type[BaseModel],
+        *,
+        tags: Optional[list[str]] = None,
+    ) -> Optional[BaseModel]:
+        """Run one structured (JSON-schema) completion against the active models.
+
+        Shared by the LLM query rewriter and the RAG judge so both reuse the plain
+        degradation chain (real credential -> circuit breaker -> None).  Callers
+        decide what to do when ``None`` is returned.
+        """
+        if not self.is_available():
+            return None
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=self.redactor.redact(user_text)),
+        ]
+        for model in self.models:
+            if not model.api_key or not self.circuit_breaker.can_execute(model.name):
+                continue
+            try:
+                structured_model = self._get_chat_model(model).with_structured_output(contract)
+                result = await structured_model.ainvoke(
+                    messages,
+                    config={"run_name": "llm_structured", "tags": tags or ["llm_structured"]},
+                )
+                parsed = result if isinstance(result, contract) else contract.model_validate(result)
+                self.circuit_breaker.record_success(model.name)
+                return parsed
+            except Exception as exc:
+                self.circuit_breaker.record_failure(model.name)
+                logger.warning("结构化 LLM 调用失败 (%s): %s", getattr(contract, "__name__", "contract"), exc)
         return None
 
     async def chat(

@@ -61,6 +61,19 @@ class Settings(BaseSettings):
     LLM_OUTPUT_PRICE_PER_1K_USD: float = Field(default=0.00060, ge=0)
     LLM_GRAY_ROLLOUT_PERCENT: int = Field(default=100, ge=0, le=100)
 
+    # ---- LLM 参与决策增强（Phase 3+）----
+    # 意图识别是否以 LLM 为主导，规则仅保证关键意图兜底。
+    # 当未配置可用 LLM 时自动退回纯规则模式。
+    LLM_INTENT_PRIMARY: bool = Field(default=True)
+    # 规则改写未命中时，是否尝试 LLM 做多轮语义改写以增强 RAG 召回。
+    LLM_QUERY_REWRITE_ENABLED: bool = Field(default=True)
+    # 是否启用 LLM-as-judge 对 RAG/工具回答做事实与引用一致性校验（防幻觉）。
+    LLM_JUDGE_ENABLED: bool = Field(default=True)
+    # 是否启用长期记忆 / 用户画像（聚合 SQLite 历史，可选向量召回）。
+    USER_MEMORY_ENABLED: bool = Field(default=True)
+    # 用户画像注入 LLM 提示词的最大历史条数。
+    USER_MEMORY_MAX_ITEMS: int = Field(default=5, ge=0, le=50)
+
     # Milvus 向量数据库
     MILVUS_HOST: str = Field(default="localhost")
     MILVUS_PORT: int = Field(default=19530)
