@@ -162,16 +162,6 @@ class LLMService:
             )
             self.models.append(backup)
 
-        local = ModelConfig(
-            name="local_fallback",
-            api_base="",
-            api_key="",
-            model="local_mock",
-            is_local=True,
-            priority=2,
-        )
-        self.models.append(local)
-
     async def close(self):
         self._chat_models.clear()
 
@@ -199,9 +189,6 @@ class LLMService:
         """
         if not settings.LLM_PLANNING_ENABLED:
             return None
-        if settings.MOCK_LLM_ENABLED:
-            intent = self.detect_intent(message)
-            return {"intent": intent, "confidence": 0.0, "need_clarification": True}
 
         messages = [
             SystemMessage(content=(
@@ -213,7 +200,7 @@ class LLMService:
             HumanMessage(content=self.redactor.redact(message)),
         ]
         for model in self.models:
-            if model.is_local or not model.api_key or not self.circuit_breaker.can_execute(model.name):
+            if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
                 structured = self._get_chat_model(model).with_structured_output(IntentClassification)
@@ -258,15 +245,6 @@ class LLMService:
             self._record_call_metadata(user_id, "rule_fallback", tokens, started, degraded=True, reason=reason)
             return reply, intent, tokens
 
-        # 本地 profile 明确启用 Mock 时，不尝试访问外部模型，保证离线可复现。
-        if settings.MOCK_LLM_ENABLED:
-            model = next((m for m in self.models if m.is_local), None)
-            if model:
-                self._record_stats(model.name, True)
-                reply = self._get_mock_reply(intent, message)
-                self._record_call_metadata(user_id, model.name, len(message), started, degraded=True, reason="mock_mode")
-                return reply, intent, len(message)
-
         for attempt in range(len(self.models)):
             model = self.models[attempt]
 
@@ -275,12 +253,6 @@ class LLMService:
                 continue
 
             try:
-                if model.is_local:
-                    reply = self._get_mock_reply(intent, message)
-                    self.circuit_breaker.record_success(model.name)
-                    self._record_stats(model.name, True)
-                    return reply, intent, len(message)
-
                 if model.api_key and model.api_key != "your-api-key-here":
                     reply, model_intent, token_count = await self._call_model_api(
                         model, user_id, session_id, message, context
@@ -299,15 +271,16 @@ class LLMService:
                     logger.info("降级到下一个模型")
                     continue
 
-        reply = self._get_mock_reply(intent, message)
-        self._record_call_metadata(user_id, "rule_fallback", len(message), started, degraded=True, reason="provider_unavailable")
-        return reply, intent, len(message)
+        # 所有模型均不可用：返回空回复，由上层降级到默认话术。
+        self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")
+        return "", intent, 0
 
     def _record_call_metadata(self, user_id: int, model_name: str, tokens: int, started: float, *, degraded: bool = False, reason: str | None = None) -> None:
         input_tokens = max(1, len(self.last_call_metadata.get("input_summary", "")) // 4)
         cost = self.budget_manager.estimator.estimate(input_tokens, tokens)
         self.budget_manager.consume(user_id, tokens, cost)
-        self.last_call_metadata.update({"model": model_name, "route": "mock" if model_name == "local_fallback" else ("rule_fallback" if model_name == "rule_fallback" else "external"), "tokens": max(0, int(tokens)), "cost_usd": cost, "latency_ms": int((time.perf_counter() - started) * 1000), "degraded": degraded, "degraded_reason": reason})
+        route = "rule_fallback" if model_name == "rule_fallback" else "external"
+        self.last_call_metadata.update({"model": model_name, "route": route, "tokens": max(0, int(tokens)), "cost_usd": cost, "latency_ms": int((time.perf_counter() - started) * 1000), "degraded": degraded, "degraded_reason": reason})
 
     def get_last_call_metadata(self) -> Dict[str, Any]:
         return dict(self.last_call_metadata)
@@ -383,24 +356,24 @@ class LLMService:
             "cost_basis": "configured_token_rates_estimate",
         }
 
-        if injection_patterns or not budget.allowed or settings.MOCK_LLM_ENABLED:
-            reason = "prompt_injection" if injection_patterns else (budget.reason or "mock_mode")
+        if injection_patterns or not budget.allowed:
+            reason = "prompt_injection" if injection_patterns else budget.reason
             reply = (
                 "抱歉，我不能执行修改系统规则、泄露凭据或绕过权限的请求。请描述具体的业务问题。"
                 if injection_patterns
-                else self._get_mock_reply(intent, message)
+                else "当前模型预算已用尽，请稍后再试。"
             )
             for index in range(0, len(reply), 24):
                 await asyncio.sleep(0)
                 yield reply[index:index + 24]
-            self._record_call_metadata(user_id, "rule_fallback" if injection_patterns or not budget.allowed else "local_fallback", len(reply) // 4, started, degraded=True, reason=reason)
-            self.last_call_metadata["stream_provider"] = "mock"
+            self._record_call_metadata(user_id, "rule_fallback", len(reply) // 4, started, degraded=True, reason=reason)
+            self.last_call_metadata["stream_provider"] = "rule_fallback"
             self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
             return
 
         messages = self._build_messages(message, context)
         for model in self.models:
-            if model.is_local or not model.api_key or not self.circuit_breaker.can_execute(model.name):
+            if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
                 chat_model = self._get_chat_model(model, streaming=True)
@@ -429,13 +402,10 @@ class LLMService:
                 self.circuit_breaker.record_failure(model.name)
                 self._record_stats(model.name, False)
 
-        reply = self._get_mock_reply(intent, message)
-        for index in range(0, len(reply), 24):
-            await asyncio.sleep(0)
-            yield reply[index:index + 24]
-        self._record_call_metadata(user_id, "rule_fallback", len(reply) // 4, started, degraded=True, reason="provider_unavailable")
-        self.last_call_metadata["stream_provider"] = "fallback"
-        self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
+        # 所有模型均不可用：不输出内容，由上层降级到默认话术。
+        self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")
+        self.last_call_metadata["stream_provider"] = "none"
+        self.last_call_metadata["structured_output"] = {"reply": "", "intent": intent, "confidence": 0.0}
 
     def _build_messages(self, message: str, context: Optional[list] = None) -> list:
         messages = [SystemMessage(content=self._get_system_prompt())]
@@ -495,18 +465,6 @@ class LLMService:
 3. 对于订单查询、退换货等操作，引导用户提供必要信息
 4. 当无法解决时，主动建议转接人工客服
 5. 回答要简洁明了，避免冗长"""
-
-    def _get_mock_reply(self, intent: str, message: str) -> str:
-        replies = {
-            "query_order": "好的，我来帮您查询订单信息。请提供您的订单号，我会为您查询最新的物流状态和订单详情。",
-            "refund": "关于退换货的问题，我可以帮您处理。请问您的订单号是多少？另外，请说明退换货的原因，我会为您指引相应的流程。",
-            "complaint": "非常抱歉给您带来不好的体验。我已经记录了您的反馈，会有专门的客服团队尽快与您联系处理。",
-            "technical": "我来帮您解决这个问题。请详细描述一下您遇到的情况，包括具体的操作步骤和报错信息，这样我能更准确地为您提供解决方案。",
-            "promotion": "目前我们有以下优惠活动：\n1. 新用户首单立减20元\n2. 满199减30\n3. VIP会员享受95折优惠\n您可以在结算时自动享受相应优惠。",
-            "human": "好的，正在为您转接人工客服。预计等待时间约1-3分钟，请稍候...",
-            "general": "感谢您的咨询。我已经收到您的消息，会尽快为您处理。如果您有订单相关的问题，可以提供订单号；如果是其他问题，请详细描述，我会尽力帮助您。",
-        }
-        return replies.get(intent, replies["general"])
 
     def _record_stats(self, model_name: str, success: bool):
         stats = self.call_stats.setdefault(model_name, {"success": 0, "failure": 0, "total": 0})

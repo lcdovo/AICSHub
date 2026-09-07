@@ -37,10 +37,14 @@ class ChatService:
             state.intent_confidence = saved.intent_confidence
             state.pending_confirmations = saved.pending_confirmations
             state.conversation_summary = saved.conversation_summary
+            # 从摘要中恢复意图序列，用于检测意图升级模式
+            summary = await session_manager.get_summary(session_id)
+            if summary and summary.intent_history:
+                state.collected_info["intent_history"] = summary.intent_history
         # 认证入口传入的用户与当前会话才是可信身份，不能沿用缓存状态中的值。
         state.collected_info["user_id"] = user_id
         state.collected_info["session_id"] = session_id
-        state.messages.append({"role": "user", "content": message, "timestamp": datetime.now().isoformat()})
+        state.messages.append({"role": "user", "content": message, "timestamp": datetime.now().isoformat(timespec="milliseconds")})
         return state
 
     async def process(self, state: AgentState) -> AgentState:
@@ -166,6 +170,14 @@ class ChatService:
         await db.commit()
         await db.refresh(assistant_message)
         await session_manager.save_state(state)
+        # 如果有摘要，更新意图序列到摘要并持久化
+        summary = await session_manager.get_summary(state.session_id)
+        if summary:
+            current_intent = state.detected_intent
+            if current_intent not in summary.intent_history:
+                summary.intent_history.append(current_intent)
+                summary.intent_history = summary.intent_history[-10:]
+            await session_manager._save_summary_to_redis(state.session_id, summary)
         return assistant_message, evaluation
 
 

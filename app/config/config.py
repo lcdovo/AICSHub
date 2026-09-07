@@ -7,8 +7,6 @@ class Settings(BaseSettings):
     APP_VERSION: str = Field(default="1.0.0")
     DEBUG: bool = Field(default=True)
     ENVIRONMENT: str = Field(default="local")
-    # 本地 profile 默认开启 Mock，避免启动时依赖外部模型服务。
-    MOCK_LLM_ENABLED: bool = Field(default=True)
     HEALTHCHECK_TIMEOUT_SECONDS: float = Field(default=2.0, gt=0)
     CORS_ALLOW_ORIGINS: str = Field(default="http://localhost:8000,http://127.0.0.1:8000")
 

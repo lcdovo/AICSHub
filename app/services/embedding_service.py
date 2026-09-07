@@ -1,16 +1,11 @@
 """
 Embedding 服务 - 文本向量化
-支持多种 Embedding 后端，优先使用真实API，自动降级到本地模拟
+仅支持真实 Embedding API；未配置时 encode 抛出 RuntimeError，不再使用伪向量降级。
 """
-import os
 import asyncio
-import math
-import hashlib
-import json
 import logging
 import time
 from typing import List, Optional, Dict, Any
-from collections import Counter
 
 import httpx
 
@@ -173,92 +168,17 @@ class APIEmbedding(BaseEmbedding):
             self._client = None
 
 
-class MockEmbedding(BaseEmbedding):
-    """
-    本地模拟 Embedding - 基于哈希的伪向量生成
-    当没有真实 Embedding 服务时使用
-    """
-
-    def __init__(self, dim: int = 1024):
-        self.dim = dim
-        self.name = "mock"
-        self._text_cache: Dict[str, List[float]] = {}
-
-    def encode(self, text: str) -> List[float]:
-        if text in self._text_cache:
-            return self._text_cache[text]
-
-        vector = self._text_to_embedding(text)
-        self._text_cache[text] = vector
-        return vector
-
-    def _text_to_embedding(self, text: str) -> List[float]:
-        text_lower = text.lower().strip()
-        words = self._tokenize(text_lower)
-
-        if not words:
-            return [0.0] * self.dim
-
-        word_vectors = {}
-        for word in words:
-            word_vectors[word] = self._word_to_vector(word)
-
-        aggregated = [0.0] * self.dim
-        word_counts = Counter(words)
-        total = len(words)
-
-        for word, count in word_counts.items():
-            wv = word_vectors[word]
-            weight = count / total
-            for i in range(self.dim):
-                aggregated[i] += wv[i] * weight
-
-        norm = math.sqrt(sum(x * x for x in aggregated))
-        if norm > 1e-8:
-            aggregated = [x / norm for x in aggregated]
-
-        return aggregated
-
-    def _word_to_vector(self, word: str) -> List[float]:
-        hash_bytes = hashlib.sha256(word.encode('utf-8')).digest()
-        vector = []
-        for i in range(0, self.dim, 32):
-            chunk = hash_bytes[i % len(hash_bytes):i % len(hash_bytes) + 32]
-            for j in range(0, 32, 4):
-                if len(vector) >= self.dim:
-                    break
-                val = int.from_bytes(chunk[j:j + 4], 'big')
-                normalized = (val / 0xFFFFFFFF) * 2 - 1
-                vector.append(normalized)
-
-        while len(vector) < self.dim:
-            vector.append(0.0)
-        vector = vector[:self.dim]
-
-        norm = math.sqrt(sum(x * x for x in vector))
-        if norm > 1e-8:
-            vector = [x / norm for x in vector]
-        return vector
-
-    def _tokenize(self, text: str) -> List[str]:
-        import re
-        tokens = []
-        english_words = re.findall(r'[a-zA-Z0-9]+', text)
-        tokens.extend(english_words)
-        chinese_chars = re.findall(r'[\u4e00-\u9fff]', text)
-        tokens.extend(chinese_chars)
-        for i in range(len(chinese_chars) - 1):
-            tokens.append(chinese_chars[i] + chinese_chars[i + 1])
-        return tokens
-
-
 class EmbeddingService:
-    """Embedding 服务管理器"""
+    """Embedding 服务管理器
+
+    仅支持真实 Embedding API。未配置或初始化失败时，encode 会抛出
+    RuntimeError，避免以无意义的伪向量参与 RAG 检索。
+    """
 
     def __init__(self, dim: int = 1024):
         self._dim = dim
-        self._embedding: BaseEmbedding = MockEmbedding(dim=dim)
-        self._backend_name = "mock"
+        self._embedding: Optional[BaseEmbedding] = None
+        self._backend_name = "unconfigured"
         self._try_init_api_backend()
 
     async def async_encode(self, text: str) -> List[float]:
@@ -277,7 +197,7 @@ class EmbeddingService:
         model = settings.EMBEDDING_MODEL
 
         if not api_base or not api_key or not model:
-            logger.info("No Embedding API config found, using mock backend")
+            logger.warning("No Embedding API config found (EMBEDDING_API_BASE/KEY/MODEL), RAG 检索不可用")
             return
 
         try:
@@ -288,17 +208,23 @@ class EmbeddingService:
                 model=model,
                 dim=dim,
             )
-            test_result = api_embedding.encode("test")
+            api_embedding.encode("test")
             self._embedding = api_embedding
             self._backend_name = f"api({model})"
             self._dim = dim
             logger.info(f"Embedding API backend ready: {model} (dim={dim})")
         except Exception as e:
-            logger.warning(f"Embedding API init failed: {e}, using mock fallback")
-            self._embedding = MockEmbedding(dim=self._dim)
-            self._backend_name = "mock"
+            logger.error(f"Embedding API init failed: {e}; embedding 不可用")
+            self._embedding = None
+            self._backend_name = "unconfigured"
 
-    def get_embedding(self) -> BaseEmbedding:
+    def _ensure_backend(self):
+        if self._embedding is None:
+            raise RuntimeError(
+                "Embedding 后端未配置：请设置 EMBEDDING_API_BASE/EMBEDDING_API_KEY/EMBEDDING_MODEL"
+            )
+
+    def get_embedding(self) -> Optional[BaseEmbedding]:
         return self._embedding
 
     @property
@@ -307,21 +233,18 @@ class EmbeddingService:
 
     @property
     def dim(self) -> int:
+        self._ensure_backend()
         return self._embedding.dim
 
     def encode(self, text: str) -> List[float]:
+        self._ensure_backend()
         return self._embedding.encode(text)
 
     def encode_batch(self, texts: List[str]) -> List[List[float]]:
+        self._ensure_backend()
         return self._embedding.encode_batch(texts)
 
     def switch_backend(self, backend: str) -> bool:
-        if backend == "mock":
-            self._embedding = MockEmbedding(dim=self._dim)
-            self._backend_name = "mock"
-            logger.info("Switched to mock embedding backend")
-            return True
-
         if backend == "api":
             self._try_init_api_backend()
             return self._backend_name.startswith("api")
@@ -332,8 +255,8 @@ class EmbeddingService:
     def health_check(self) -> Dict[str, Any]:
         return {
             "backend": self._backend_name,
-            "dim": self._embedding.dim,
-            "available": self._embedding.is_available(),
+            "dim": self._dim if self._embedding is None else self._embedding.dim,
+            "available": self._embedding is not None and self._embedding.is_available(),
         }
 
 

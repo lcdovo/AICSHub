@@ -311,10 +311,50 @@ class AgentGraph:
             if not state.human_reason:
                 state.human_reason = "用户请求转接人工客服"
 
+        # 意图序列分析：检测升级模式（如 query_order → refund → complaint）
+        intent_history = state.collected_info.get("intent_history", [])
+        if intent_history:
+            escalation = self._detect_intent_escalation(intent_history, intent_result.intent)
+            if escalation and not state.need_human:
+                state.need_human = True
+                state.human_reason = f"意图升级模式检测: {' -> '.join(escalation)}"
+
+        # 更新意图序列
+        updated_history = intent_history + [intent_result.intent]
+        state.collected_info["intent_history"] = updated_history[-10:]  # 保留最近10轮
+
         if intent_result.needs_clarification:
             return AgentNode.CLARIFICATION
 
         return AgentNode.ROUTE_DECISION
+
+    def _detect_intent_escalation(self, intent_history: List[str], current_intent: str) -> Optional[List[str]]:
+        """检测意图升级模式，返回完整升级路径（含当前意图），无升级返回 None。
+        升级路径定义：
+        - query_order → refund → complaint：查询订单后申请退款再投诉
+        - technical → refund → complaint：技术问题转退款再投诉
+        - query_order → human：查单后直接转人工
+        - refund → complaint：退款后投诉
+        - complaint → human：投诉后转人工
+        """
+        escalation_chains = [
+            (["query_order", "refund", "complaint"], "订单→退款→投诉"),
+            (["technical", "refund", "complaint"], "技术→退款→投诉"),
+            (["query_order", "human"], "订单→人工"),
+            (["refund", "complaint"], "退款→投诉"),
+            (["complaint", "human"], "投诉→人工"),
+        ]
+
+        recent = intent_history[-2:]
+        full_sequence = recent + [current_intent]
+
+        for chain, label in escalation_chains:
+            if len(full_sequence) >= len(chain):
+                tail = full_sequence[-len(chain):]
+                if tail == chain:
+                    return tail
+
+        return None
 
     def _route_by_intent(self, intent: str) -> str:
         intent_routes = {
@@ -740,7 +780,7 @@ class AgentGraph:
             "content": state.reply,
             "intent": state.detected_intent,
             "tool_calls": [tc.tool_name for tc in state.tool_calls],
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now().isoformat(timespec="milliseconds"),
         })
 
         return AgentNode.END

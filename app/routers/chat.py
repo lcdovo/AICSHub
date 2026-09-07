@@ -238,14 +238,18 @@ async def send_message(
     session.updated_at = datetime.utcnow()
     await db.commit()
 
-    # 使用 Agent 处理
-    agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message)
+    # 使用 Agent 处理（加分布式锁防止并发状态覆盖）
+    await session_manager.acquire_lock(session_id)
+    try:
+        agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message)
 
-    # 从会话管理器加载历史上下文
-    # State hydration already appends the current user message.
+        # 从会话管理器加载历史上下文
+        # State hydration already appends the current user message.
 
-    # 运行 Agent 状态机
-    agent_state = await chat_service.process(agent_state)
+        # 运行 Agent 状态机
+        agent_state = await chat_service.process(agent_state)
+    finally:
+        await session_manager.release_lock(session_id)
 
     # 保存 Agent 执行轨迹
     llm_governance = agent_state.collected_info.get("llm_governance", {})
@@ -526,7 +530,11 @@ async def websocket_chat_stream(websocket: WebSocket):
                 await db.commit()
                 session.message_count += 1
 
-                agent_state = await chat_service.hydrate_state(session_id, user_id, message)
+                await session_manager.acquire_lock(session_id)
+                try:
+                    agent_state = await chat_service.hydrate_state(session_id, user_id, message)
+                finally:
+                    await session_manager.release_lock(session_id)
 
                 structured_logger.log_agent(
                     trace_id=trace_id,

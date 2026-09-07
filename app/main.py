@@ -52,9 +52,9 @@ async def lifespan(app: FastAPI):
         }
 
     app.state.dependency_health["llm"] = {
-        "status": "degraded" if settings.MOCK_LLM_ENABLED else ("configured" if settings.LLM_API_KEY else "degraded"),
-        "backend": "mock" if settings.MOCK_LLM_ENABLED else (settings.LLM_MODEL if settings.LLM_API_KEY else "mock"),
-        "reason": "本地 Mock 模式，未连接外部 LLM" if settings.MOCK_LLM_ENABLED or not settings.LLM_API_KEY else None,
+        "status": "configured" if settings.LLM_API_KEY else "degraded",
+        "backend": settings.LLM_MODEL if settings.LLM_API_KEY else "unconfigured",
+        "reason": None if settings.LLM_API_KEY else "未配置 LLM_API_KEY，回复将降级为默认话术",
         "timeout_seconds": settings.HEALTHCHECK_TIMEOUT_SECONDS,
     }
     app.state.dependency_health["milvus"] = {
@@ -237,7 +237,7 @@ async def health_check():
     degraded = any(item.get("status") in {"degraded", "disabled", "optional"} for item in dependencies.values())
     return {
         "status": "healthy" if required_ok else "unhealthy",
-        "mode": "local" if settings.MOCK_LLM_ENABLED and not settings.USE_MILVUS else "integration",
+        "mode": "local" if not settings.LLM_API_KEY and not settings.USE_MILVUS else "integration",
         "degraded": degraded,
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,

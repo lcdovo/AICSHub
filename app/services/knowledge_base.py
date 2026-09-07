@@ -343,9 +343,9 @@ class KnowledgeBaseService:
 
         self._embedding_service = get_embedding_service(dim=settings.EMBEDDING_DIM)
         embedding_health = self._embedding_service.health_check()
-        if embedding_health.get("backend") == "mock":
+        if not embedding_health.get("available", False):
             self.degraded = True
-            self.degraded_reason = "embedding_mock"
+            self.degraded_reason = "embedding_unavailable"
 
         use_milvus = settings.USE_MILVUS
         if use_milvus:
@@ -741,7 +741,23 @@ class KnowledgeBaseService:
             return {**cached, "from_cache": True}
 
         started = time.perf_counter()
-        query_embedding = self._embedding_service.encode(query)
+        try:
+            query_embedding = self._embedding_service.encode(query)
+        except RuntimeError as e:
+            logger.error(f"Embedding 不可用，检索无法执行: {e}")
+            return {
+                "success": False,
+                "query": query,
+                "results": [],
+                "total_candidates": 0,
+                "search_strategy": "empty",
+                "from_cache": False,
+                "backend": self.backend,
+                "degraded": True,
+                "degraded_reason": "embedding_unavailable",
+                "error": str(e),
+                "latency_ms": round((time.perf_counter() - started) * 1000, 3),
+            }
 
         if self._vector_store:
             try:
