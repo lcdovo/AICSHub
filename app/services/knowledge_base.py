@@ -909,39 +909,50 @@ class KnowledgeBaseService:
         bm25_results: List[Dict[str, Any]],
         top_k: int,
     ) -> List[Dict[str, Any]]:
+        """使用 RRF（Reciprocal Rank Fusion）融合向量检索与 BM25 结果。
+
+        RRF 只依赖两路检索的排名而非原始分数，避免向量分（余弦相似度）
+        与 BM25 分（词频统计分）量纲不同导致的归一化失真，也无需手动调节
+        权重。公式：score(d) = Σ 1 / (k + rank_i(d))，k 取经验常数 60。
+        """
         if not bm25_results:
             return vector_results
         if not vector_results:
             return bm25_results
 
-        merged = {}
-        all_docs = vector_results + bm25_results
+        k = 60  # RRF 经验常数，对最终排序不敏感
+        merged: Dict[str, Dict[str, Any]] = {}
 
-        max_vector = max((r.get("vector_score", 0) for r in vector_results), default=1.0)
-        max_bm25 = max((r.get("bm25_score", 0) for r in bm25_results), default=1.0)
+        # 向量检索路：按排名累计 RRF 分，同时保留原始 vector_score 便于排查
+        for rank, doc in enumerate(vector_results):
+            doc_id = doc.get("id", "")
+            if doc_id not in merged:
+                merged[doc_id] = doc.copy()
+                merged[doc_id]["vector_score"] = doc.get("vector_score", 0.0)
+                merged[doc_id]["bm25_score"] = 0.0
+                merged[doc_id]["rrf_score"] = 0.0
+            merged[doc_id]["rrf_score"] += 1.0 / (k + rank + 1)
+            merged[doc_id]["vector_score"] = max(
+                merged[doc_id].get("vector_score", 0.0),
+                doc.get("vector_score", 0.0),
+            )
 
-        for doc in all_docs:
+        # BM25 检索路：按排名累计 RRF 分，同时保留原始 bm25_score 便于排查
+        for rank, doc in enumerate(bm25_results):
             doc_id = doc.get("id", "")
             if doc_id not in merged:
                 merged[doc_id] = doc.copy()
                 merged[doc_id]["vector_score"] = 0.0
-                merged[doc_id]["bm25_score"] = 0.0
+                merged[doc_id]["bm25_score"] = doc.get("bm25_score", 0.0)
+                merged[doc_id]["rrf_score"] = 0.0
+            merged[doc_id]["rrf_score"] += 1.0 / (k + rank + 1)
+            merged[doc_id]["bm25_score"] = max(
+                merged[doc_id].get("bm25_score", 0.0),
+                doc.get("bm25_score", 0.0),
+            )
 
-            if "vector_score" in doc:
-                normalized = doc.get("vector_score", 0) / max(max_vector, 0.001)
-                merged[doc_id]["vector_score"] = max(merged[doc_id].get("vector_score", 0), normalized)
-
-            if "bm25_score" in doc:
-                normalized = doc.get("bm25_score", 0) / max(max_bm25, 0.001)
-                merged[doc_id]["bm25_score"] = max(merged[doc_id].get("bm25_score", 0), normalized)
-
-        alpha = settings.RAG_VECTOR_WEIGHT
-        beta = 1.0 - alpha
-
-        for doc_id, doc in merged.items():
-            vec_s = doc.get("vector_score", 0)
-            bm_s = doc.get("bm25_score", 0)
-            doc["final_score"] = round(alpha * vec_s + beta * bm_s, 4)
+        for doc in merged.values():
+            doc["final_score"] = round(doc.pop("rrf_score"), 6)
 
         results = list(merged.values())
         results.sort(key=lambda x: x.get("final_score", 0), reverse=True)
