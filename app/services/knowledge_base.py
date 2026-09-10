@@ -741,24 +741,42 @@ class KnowledgeBaseService:
             return {**cached, "from_cache": True}
 
         started = time.perf_counter()
+        query_embedding = self._encode_query_embedding(query)
+        if query_embedding is None:
+            return self._embedding_failed_result(query, started)
+
+        # 同步路径：串行执行两路检索（语义等价于原实现）。
+        vector_results = self._retrieve_vector(query_embedding, query, top_k, similarity_threshold)
+        bm25_results = self._retrieve_bm25(query, top_k)
+        return self._compose_result(query, top_k, similarity_threshold, vector_results, bm25_results, started, cache_key)
+
+    def _encode_query_embedding(self, query: str) -> Optional[List[float]]:
+        """返回查询向量；embedding 不可用时返回 None。"""
         try:
-            query_embedding = self._embedding_service.encode(query)
+            return self._embedding_service.encode(query)
         except RuntimeError as e:
             logger.error(f"Embedding 不可用，检索无法执行: {e}")
-            return {
-                "success": False,
-                "query": query,
-                "results": [],
-                "total_candidates": 0,
-                "search_strategy": "empty",
-                "from_cache": False,
-                "backend": self.backend,
-                "degraded": True,
-                "degraded_reason": "embedding_unavailable",
-                "error": str(e),
-                "latency_ms": round((time.perf_counter() - started) * 1000, 3),
-            }
+            return None
 
+    def _embedding_failed_result(self, query: str, started: float) -> Dict[str, Any]:
+        return {
+            "success": False,
+            "query": query,
+            "results": [],
+            "total_candidates": 0,
+            "search_strategy": "empty",
+            "from_cache": False,
+            "backend": self.backend,
+            "degraded": True,
+            "degraded_reason": "embedding_unavailable",
+            "error": "embedding_unavailable",
+            "latency_ms": round((time.perf_counter() - started) * 1000, 3),
+        }
+
+    def _retrieve_vector(
+        self, query_embedding: List[float], query: str, top_k: int, similarity_threshold: float
+    ) -> List[Dict[str, Any]]:
+        """向量路：Milvus 优先，失败/不可用回退内存向量检索。"""
         if self._vector_store:
             try:
                 vector_results = self._vector_store.search(
@@ -773,9 +791,18 @@ class KnowledgeBaseService:
                 vector_results = self._memory_search(query_embedding, query, top_k, similarity_threshold)
         else:
             vector_results = self._memory_search(query_embedding, query, top_k, similarity_threshold)
+        return vector_results
 
-        bm25_results = self._bm25_search(self._expand_bm25_query(query), top_k)
+    def _retrieve_bm25(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """BM25 路：查询扩展后关键词检索。"""
+        return self._bm25_search(self._expand_bm25_query(query), top_k)
 
+    def _compose_result(
+        self, query: str, top_k: int, similarity_threshold: float,
+        vector_results: List[Dict[str, Any]], bm25_results: List[Dict[str, Any]],
+        started: float, cache_key: str,
+    ) -> Dict[str, Any]:
+        """RRF 融合 + 可选重排 + 组装结果并写缓存。"""
         merged = self._merge_results(vector_results, bm25_results, top_k)
 
         # RAG_USE_RERANKER 未开启时跳过重排，直接使用 RRF 融合结果。
@@ -832,9 +859,30 @@ class KnowledgeBaseService:
         top_k: int = None,
         similarity_threshold: float = None,
     ) -> Dict[str, Any]:
-        """Async facade that isolates sync SQLite/Milvus/embedding work."""
+        """异步检索：embedding 后向量与 BM25 两路并行，结果与同步 search 等价。"""
+        self.initialize()
+
+        top_k = top_k if top_k is not None else settings.RAG_TOP_K
+        similarity_threshold = similarity_threshold if similarity_threshold is not None else settings.RAG_SIMILARITY_THRESHOLD
+        top_k = max(1, min(int(top_k), 50))
+        similarity_threshold = max(0.0, min(float(similarity_threshold), 1.0))
+
+        cache_key = QueryCache.make_key(query, top_k, similarity_threshold)
+        cached = self._query_cache.get(cache_key)
+        if cached:
+            return {**cached, "from_cache": True}
+
+        started = time.perf_counter()
+        query_embedding = await asyncio.to_thread(self._encode_query_embedding, query)
+        if query_embedding is None:
+            return self._embedding_failed_result(query, started)
+
+        vector_task = asyncio.to_thread(self._retrieve_vector, query_embedding, query, top_k, similarity_threshold)
+        bm25_task = asyncio.to_thread(self._retrieve_bm25, query, top_k)
+        vector_results, bm25_results = await asyncio.gather(vector_task, bm25_task)
         return await asyncio.to_thread(
-            self.search, query, top_k, similarity_threshold
+            self._compose_result, query, top_k, similarity_threshold,
+            vector_results, bm25_results, started, cache_key,
         )
 
     async def async_add_document(self, *args, **kwargs) -> Dict[str, Any]:

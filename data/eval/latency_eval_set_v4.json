@@ -1,0 +1,22 @@
+[
+  {"intent": "query_order", "user_query": "ORD20260904 现在到哪了？", "latency_class": "tool", "note": "工具直查：运输中订单"},
+  {"intent": "query_order", "user_query": "ORD20260919 送到了吗", "latency_class": "tool", "note": "工具直查：已送达订单"},
+  {"intent": "query_order", "user_query": "帮我查个订单", "latency_class": "slot_filling", "note": "槽位补齐：缺订单号，话术早退不调 LLM"},
+  {"intent": "query_order", "user_query": "我的快递到哪了", "latency_class": "slot_filling", "note": "槽位补齐：无订单号"},
+  {"intent": "technical", "user_query": "智能手表怎么校准时间", "latency_class": "rag", "note": "RAG：命中 01 智能手表文档"},
+  {"intent": "technical", "user_query": "机械键盘怎么换轴", "latency_class": "rag", "note": "RAG：命中 03 机械键盘文档"},
+  {"intent": "technical", "user_query": "显示器怎么开启护眼模式", "latency_class": "rag", "note": "RAG：命中 04 显示器文档"},
+  {"intent": "promotion", "user_query": "现在有什么优惠活动吗", "latency_class": "rag", "note": "RAG：满减/新客文档"},
+  {"intent": "promotion", "user_query": "优惠券在哪里领", "latency_class": "rag", "note": "RAG：满减活动与优惠券规则"},
+  {"intent": "refund", "user_query": "退货需要保留原始包装吗", "latency_class": "rag_policy", "note": "政策咨询 RAG：退换货政策"},
+  {"intent": "refund", "user_query": "退款要多久到账", "latency_class": "rag_policy", "note": "政策咨询 RAG：退款时效"},
+  {"intent": "refund", "user_query": "对订单 ORD20260920 申请退款，商品破损", "latency_class": "tool_confirm", "note": "工具+确认：apply_refund 预览+interrupt"},
+  {"intent": "complaint", "user_query": "我要投诉物流太慢", "latency_class": "tool", "note": "投诉建工单工具+诉求覆盖"},
+  {"intent": "complaint", "user_query": "投诉之后多久会有反馈", "latency_class": "rag_policy", "note": "投诉政策咨询 RAG"},
+  {"intent": "human", "user_query": "转人工客服", "latency_class": "human", "note": "转人工早退，不调 LLM/检索"},
+  {"intent": "human", "user_query": "别让机器人答了，找真人来", "latency_class": "human", "note": "转人工早退"},
+  {"intent": "general", "user_query": "你好", "latency_class": "smalltalk", "note": "寒暄模板直达，不调 LLM"},
+  {"intent": "general", "user_query": "谢谢", "latency_class": "smalltalk", "note": "寒暄模板直达"},
+  {"intent": "general", "user_query": "你们周末上班吗", "latency_class": "rag", "note": "RAG：FAQ 客服时间"},
+  {"intent": "general", "user_query": "怎么联系你们官方", "latency_class": "rag", "note": "RAG：FAQ 联系入口"}
+]

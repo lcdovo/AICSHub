@@ -30,6 +30,11 @@ def _ensure_json_hint(system_prompt: str) -> str:
     return system_prompt + " 请以 JSON 格式输出结果。"
 
 
+# 解析型任务（意图兜底/查询改写/judge/摘要）使用低温，降低结构化输出抖动；
+# 客服回复生成保持较高温度（见 _get_chat_model 默认值）。
+ANALYTIC_TEMPERATURE = 0.1
+
+
 class LLMResponse(BaseModel):
     """Stable contract for model-generated customer-service responses.
 
@@ -236,7 +241,7 @@ class LLMService:
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
-                structured = self._get_chat_model(model).with_structured_output(IntentClassification)
+                structured = self._get_chat_model(model, temperature=ANALYTIC_TEMPERATURE).with_structured_output(IntentClassification)
                 result = await structured.ainvoke(messages)
                 parsed = result if isinstance(result, IntentClassification) else IntentClassification.model_validate(result)
                 self.circuit_breaker.record_success(model.name)
@@ -271,7 +276,7 @@ class LLMService:
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
-                structured_model = self._get_chat_model(model).with_structured_output(contract)
+                structured_model = self._get_chat_model(model, temperature=ANALYTIC_TEMPERATURE).with_structured_output(contract)
                 result = await structured_model.ainvoke(
                     messages,
                     config={"run_name": "llm_structured", "tags": tags or ["llm_structured"]},
@@ -364,7 +369,8 @@ class LLMService:
         message: str,
         context: Optional[list] = None,
     ) -> Tuple[str, str, int]:
-        messages = self._build_messages(message, context)
+        # 结构化输出路径：保留 JSON 提示（部分供应商 json_object 模式要求 messages 含 json 字样）。
+        messages = self._build_messages(message, context, force_json=True)
 
         chat_model = self._get_chat_model(model)
         structured_model = (
@@ -478,8 +484,18 @@ class LLMService:
         self.last_call_metadata["stream_provider"] = "none"
         self.last_call_metadata["structured_output"] = {"reply": "", "intent": intent, "confidence": 0.0}
 
-    def _build_messages(self, message: str, context: Optional[list] = None) -> list:
-        messages = [SystemMessage(content=_ensure_json_hint(self._get_system_prompt()))]
+    def _build_messages(self, message: str, context: Optional[list] = None, *, force_json: bool = False) -> list:
+        """构建模型消息。
+
+        force_json 仅用于结构化输出调用（非流式答复走 with_structured_output、
+        意图兜底、改写、judge、摘要等，需要 _ensure_json_hint 满足部分供应商
+        对 json_object 模式的"必须含 json 字样"要求）。纯文本流式路径不传，
+        避免模型真的把 {"response": ...} 当正文流出来。
+        """
+        system_prompt = self._get_system_prompt()
+        if force_json:
+            system_prompt = _ensure_json_hint(system_prompt)
+        messages = [SystemMessage(content=system_prompt)]
         if context:
             for item in self.redactor.sanitize_messages(context[-10:]):
                 messages.append(
@@ -490,9 +506,9 @@ class LLMService:
         messages.append(HumanMessage(content=self.redactor.redact(message)))
         return messages
 
-    def _get_chat_model(self, model: ModelConfig, streaming: bool = False) -> ChatOpenAI:
+    def _get_chat_model(self, model: ModelConfig, streaming: bool = False, temperature: float = 0.7) -> ChatOpenAI:
         """Create one LangChain ChatOpenAI instance per configured model."""
-        cache_key = f"{model.name}:{'stream' if streaming else 'invoke'}"
+        cache_key = f"{model.name}:{'stream' if streaming else 'invoke'}:{temperature}"
         cached = self._chat_models.get(cache_key)
         if cached is not None:
             return cached
@@ -501,7 +517,7 @@ class LLMService:
             model=model.model,
             api_key=model.api_key,
             base_url=model.api_base,
-            temperature=0.7,
+            temperature=temperature,
             timeout=self.TIMEOUT,
             max_retries=0,
             max_completion_tokens=min(settings.LLM_MAX_TOKENS, self.budget_manager.policy.max_tokens),
@@ -535,7 +551,8 @@ class LLMService:
 2. 准确理解用户意图，提供准确的答案
 3. 对于订单查询、退换货等操作，引导用户提供必要信息
 4. 当无法解决时，主动建议转接人工客服
-5. 回答要简洁明了，避免冗长"""
+5. 回答要简洁明了，避免冗长
+6. 直接输出给用户看的回复正文，不要输出 JSON、不要包含字段名或代码块"""
 
     def _record_stats(self, model_name: str, success: bool):
         stats = self.call_stats.setdefault(model_name, {"success": 0, "failure": 0, "total": 0})

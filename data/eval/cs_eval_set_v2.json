@@ -1,0 +1,142 @@
+[
+  {
+    "intent": "query_order",
+    "user_query": "ORD20260903 现在到哪了？",
+    "reference_reply": "订单 ORD20260903 已于下单后发出，承运方与运单号请以订单详情为准，当前正在运输中。",
+    "expected_facts": ["ORD20260903", "运输中"],
+    "evidence": "订单 ORD20260903 状态=已发货/运输中"
+  },
+  {
+    "intent": "query_order",
+    "user_query": "我的订单 ORD20260905 送到了吗",
+    "reference_reply": "订单 ORD20260905 已完成配送，物流显示已签收。",
+    "expected_facts": ["ORD20260905", "签收"],
+    "evidence": "订单 ORD20260905 状态=已送达，物流=已签收"
+  },
+  {
+    "intent": "query_order",
+    "user_query": "帮我取消订单 ORD20260901",
+    "reference_reply": "已为您取消订单 ORD20260901，订单状态更新为已取消。",
+    "expected_facts": ["ORD20260901", "取消"],
+    "evidence": "订单 ORD20260901 状态=待付款，支持取消"
+  },
+  {
+    "intent": "query_order",
+    "user_query": "订单 ORD20260907 为什么取消了",
+    "reference_reply": "订单 ORD20260907 当前状态为已取消，通常为超时未支付或主动取消，具体原因可查看订单详情。",
+    "expected_facts": ["ORD20260907", "取消"],
+    "evidence": "订单 ORD20260907 状态=已取消"
+  },
+  {
+    "intent": "refund",
+    "user_query": "我要对订单 ORD20260906 申请退款，商品破损",
+    "reference_reply": "已为订单 ORD20260906 提交退款申请，等待平台审核。",
+    "expected_facts": ["ORD20260906", "退款"],
+    "evidence": "退款单已创建：订单 ORD20260906，原因=商品破损"
+  },
+  {
+    "intent": "refund",
+    "user_query": "退货需要保留原始包装吗",
+    "reference_reply": "退货时建议保留商品原包装与配件，包装缺失可能影响退货审核，具体以退换货政策为准。",
+    "expected_facts": ["包装", "退货"],
+    "evidence": "退换货政策：退货需保持商品完好并附配件"
+  },
+  {
+    "intent": "refund",
+    "user_query": "退款什么时候能到账",
+    "reference_reply": "退款审核通过后原路返回：支付宝/微信即时到账，银行卡需 3-7 个工作日。",
+    "expected_facts": ["到账", "原路"],
+    "evidence": "退款政策：审核 1-3 个工作日，原路返回"
+  },
+  {
+    "intent": "refund",
+    "user_query": "换货和退货有什么区别",
+    "reference_reply": "换货是以同款或等值商品替换，退货是退回商品并退款，两者均在 7 天内支持无理由申请，具体以退换货政策为准。",
+    "expected_facts": ["换货", "退货"],
+    "evidence": "退换货政策：7 天内支持无理由退换货"
+  },
+  {
+    "intent": "complaint",
+    "user_query": "你们的快递太慢了，我要投诉",
+    "reference_reply": "非常抱歉给您带来不便，已为您创建投诉工单并标记为高优先级，会尽快处理并反馈。",
+    "expected_facts": ["投诉", "工单"],
+    "evidence": "投诉工单已创建：类别=物流服务投诉"
+  },
+  {
+    "intent": "complaint",
+    "user_query": "投诉之后多久会有反馈",
+    "reference_reply": "投诉提交后我们会在 24 小时内反馈处理进展，复杂问题会延长并主动同步。",
+    "expected_facts": ["24小时", "反馈"],
+    "evidence": "投诉建议处理流程：24 小时内反馈"
+  },
+  {
+    "intent": "complaint",
+    "user_query": "客服一直不回消息，我要举报",
+    "reference_reply": "非常抱歉，已为您记录举报诉求并转交专人处理，我们会对客服服务问题核实并反馈。",
+    "expected_facts": ["举报", "处理"],
+    "evidence": "投诉建议处理流程：客服服务投诉受理"
+  },
+  {
+    "intent": "technical",
+    "user_query": "智能手表怎么绑定手机",
+    "reference_reply": "在手机下载官方 App，开启蓝牙后按手表提示扫描配对即可完成绑定。",
+    "expected_facts": ["App", "蓝牙", "绑定"],
+    "evidence": "智能手表说明：App 扫码绑定，蓝牙配对"
+  },
+  {
+    "intent": "technical",
+    "user_query": "蓝牙耳机左右耳声音不一样怎么办",
+    "reference_reply": "请检查两耳音量平衡设置与耳塞佩戴位置，必要时重新配对；仍异常可联系售后检测。",
+    "expected_facts": ["左右耳", "配对"],
+    "evidence": "无线蓝牙耳机说明：左右耳音量/佩戴排查"
+  },
+  {
+    "intent": "technical",
+    "user_query": "27英寸显示器支持壁挂安装吗",
+    "reference_reply": "该显示器背面预留 VESA 壁挂孔位，支持标准壁挂支架安装，具体规格见产品说明书。",
+    "expected_facts": ["壁挂", "VESA"],
+    "evidence": "高清显示器说明：支持 VESA 壁挂安装"
+  },
+  {
+    "intent": "technical",
+    "user_query": "机械键盘按键失灵怎么处理",
+    "reference_reply": "可先重启设备并检查是否进水或异物，再尝试恢复出厂设置；仍失灵请联系售后保修。",
+    "expected_facts": ["恢复出厂", "售后"],
+    "evidence": "机械键盘说明：按键失灵排查与保修"
+  },
+  {
+    "intent": "promotion",
+    "user_query": "会员积分能抵现吗",
+    "reference_reply": "可以，会员积分按 100 积分=1 元在结算时抵扣现金，每笔订单抵扣比例以规则为准。",
+    "expected_facts": ["积分", "抵现"],
+    "evidence": "会员权益政策：积分抵现，100 积分=1 元"
+  },
+  {
+    "intent": "promotion",
+    "user_query": "现在买有满减活动吗",
+    "reference_reply": "目前有满 500 减 50 等活动，会员可叠加专属折扣，具体以活动页面为准。",
+    "expected_facts": ["满减", "活动"],
+    "evidence": "满减活动规则：满 500 减 50"
+  },
+  {
+    "intent": "human",
+    "user_query": "别让机器人答了，找真人来",
+    "reference_reply": "好的，正在为您转接人工客服，已同步本轮对话内容，请稍候。",
+    "expected_facts": ["转接", "人工"],
+    "evidence": ""
+  },
+  {
+    "intent": "general",
+    "user_query": "你们周末上班吗",
+    "reference_reply": "在线客服工作时间为每天 9:00-21:00，周末正常值班，其余时间可留言次日优先回复。",
+    "expected_facts": ["9:00", "21:00"],
+    "evidence": "客服工作时间：每日 9:00-21:00"
+  },
+  {
+    "intent": "general",
+    "user_query": "能给我介绍下你们公司吗",
+    "reference_reply": "我们提供智能硬件产品的销售与售后一站式服务，覆盖产品咨询、订单查询、退换货、发票、会员权益等。",
+    "expected_facts": ["产品", "售后"],
+    "evidence": "FAQ：业务范围覆盖产品销售与售后"
+  }
+]

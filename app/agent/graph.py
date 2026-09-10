@@ -14,6 +14,7 @@ import contextlib
 import contextvars
 import logging
 import random
+import re
 from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, TypedDict
 from datetime import datetime
 
@@ -74,6 +75,8 @@ class AgentGraph:
         # 进程重启后仍可按 thread_id 恢复中断状态；Redis 不可用时自动降级内存。
         self.checkpointer = RedisCheckpointSaver()
         self.langgraph = self._build_langgraph()
+        # RAG 回答缓存：同意图+同改写后查询在 TTL 内直接复用上次 LLM 回答（延迟优化）。
+        self._answer_cache: Dict[str, tuple] = {}
 
     class _GraphState(TypedDict):
         state: AgentState
@@ -456,10 +459,32 @@ class AgentGraph:
             if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
                 state.collected_info[key] = value
 
+        # 回答缓存早退（延迟优化）：RAG 类同查询在 TTL 内直接复用，跳过改写/检索/生成。
+        # 仅对不会触发业务工具的意图生效（refund/complaint 仅政策咨询可缓存），
+        # 寒暄模板不走缓存（已有更快的模板直达）。
+        cacheable_intent = (
+            state.detected_intent in (IntentType.TECHNICAL, IntentType.PROMOTION, IntentType.GENERAL)
+            or (state.detected_intent == IntentType.REFUND and self._is_refund_policy_inquiry(state.user_message, state.collected_info))
+            or (state.detected_intent == IntentType.COMPLAINT and self._is_complaint_policy_inquiry(state.user_message))
+        )
+        if cacheable_intent and not state.collected_info.get("smalltalk"):
+            cached_reply = self._answer_cache_get(f"{state.detected_intent}:{state.user_message}")
+            if cached_reply is not None:
+                state.reply = cached_reply
+                state.collected_info["answer_from_cache"] = True
+                state.route_reason = "answer_cache_hit"
+                return AgentNode.RESPONSE_GENERATION
+
         # 退款意图分流：政策咨询类（无订单号且询问流程/时效/规则）走 RAG，
         # 实际申请退款（有订单号+动作词）才走工具执行。
         if state.detected_intent == IntentType.REFUND and self._is_refund_policy_inquiry(state.user_message, state.collected_info):
             state.route_reason = "refund:policy_inquiry->rag"
+            return AgentNode.QUERY_REWRITE
+
+        # 投诉意图分流：政策咨询类（问流程/时效/材料/影响）走 RAG 回答，
+        # 明确提交投诉/举报（动作词）才走工具创建工单。
+        if state.detected_intent == IntentType.COMPLAINT and self._is_complaint_policy_inquiry(state.user_message):
+            state.route_reason = "complaint:policy_inquiry->rag"
             return AgentNode.QUERY_REWRITE
 
         missing = self._missing_slots_for_intent(state)
@@ -484,7 +509,7 @@ class AgentGraph:
 
     def _is_refund_policy_inquiry(self, message: str, collected: Dict[str, Any]) -> bool:
         """判断退款意图是否为政策咨询（应走 RAG）而非实际退款申请（应走工具）。"""
-        policy_keywords = ["流程", "几天", "多久", "怎么退", "如何退", "政策", "规则", "到账", "无理由", "质保期", "保修期", "售后", "换货流程", "退货流程", "运费谁出", "能退吗"]
+        policy_keywords = ["流程", "几天", "多久", "怎么退", "如何退", "政策", "规则", "到账", "无理由", "质保期", "保修期", "售后", "换货流程", "退货流程", "运费谁出", "能退吗", "包装", "保留", "区别", "换货", "条件", "要求", "什么样", "需要注意", "规定"]
         action_keywords = ["申请", "退钱", "帮我退", "给我退", "我要退", "直接退", "马上退", "退款成功"]
         has_policy_kw = any(kw in message for kw in policy_keywords)
         has_action_kw = any(kw in message for kw in action_keywords)
@@ -496,6 +521,15 @@ class AgentGraph:
         if any(kw in message for kw in ["能退吗", "可以退", "好退吗", "给退吗"]) and not has_order_id:
             return True
         return False
+
+    def _is_complaint_policy_inquiry(self, message: str) -> bool:
+        """判断投诉意图是否为政策咨询（问流程/时效/材料/影响，应走 RAG），
+        而非明确提交投诉/举报（应走工具创建工单）。"""
+        policy_keywords = ["多久", "几天", "流程", "怎么投诉", "如何投诉", "怎么提交", "在哪里投诉", "哪里投诉", "材料", "匿名", "影响", "反馈", "进度", "电话", "入口", "工单"]
+        action_keywords = ["我要投诉", "我要举报", "投诉你们", "举报你们", "投诉你", "举报你", "帮我投诉", "帮我举报", "提交投诉", "投诉一下", "举报一下", "投诉一个", "举报一个"]
+        has_policy = any(kw in message for kw in policy_keywords)
+        has_action = any(kw in message for kw in action_keywords)
+        return has_policy and not has_action
 
     def _missing_slots_for_intent(self, state: AgentState) -> List[str]:
         collected = state.collected_info
@@ -848,6 +882,28 @@ class AgentGraph:
         if state.collected_info.get("smalltalk") and not state.reply:
             state.reply = self._get_default_reply(IntentType.GENERAL, state.user_message)
 
+        # 回答缓存（RAG 类延迟优化）：同意图+同（改写后）查询在 TTL 内直接复用上次
+        # LLM 回答。业务工具类（查单/退款/建工单）不缓存（结果会变），
+        # 但 hybrid_search 只是检索记录而非业务副作用，允许命中缓存。
+        answer_cache_key = None
+        has_business_tool = any(tc.tool_name != "hybrid_search" for tc in state.tool_calls)
+        if not state.reply and not has_business_tool:
+            # 键用原始消息而非 rewritten_query：LLM 改写非确定性，
+            # 同一条用户消息每次改写可能不同，用改写结果做键将永不命中。
+            answer_cache_key = f"{state.detected_intent}:{state.user_message}"
+            cached_answer = self._answer_cache_get(answer_cache_key)
+            if cached_answer is not None:
+                state.reply = cached_answer
+                state.collected_info["answer_from_cache"] = True
+
+        # 工具类回复模板化（延迟优化）：工具成功且结果结构清晰时直接拼模板，
+        # 跳过 LLM 生成。query_order 用订单字段模板，create_ticket 用工具自带文案。
+        if not state.reply:
+            templated = self._try_templated_tool_reply(state)
+            if templated:
+                state.reply = templated
+                state.collected_info["reply_source"] = "tool_template"
+
         generated_by_llm = False
         if not state.reply:
             llm_reply = await self._generate_response_with_llm(state)
@@ -856,6 +912,8 @@ class AgentGraph:
                 generated_by_llm = True
             else:
                 state.reply = self._get_default_reply(state.detected_intent, state.user_message)
+            if generated_by_llm and answer_cache_key:
+                self._answer_cache_set(answer_cache_key, state.reply)
 
         # Validate the actual final text.  The old flow validated before this node,
         # so normal LLM output never went through fact/safety/completeness checks.
@@ -912,6 +970,21 @@ class AgentGraph:
                         "或回复“转人工”由客服协助确认。"
                     )
 
+        # 投诉/举报诉求覆盖兜底：质检要求回复必须有可感知的处理承诺
+        # （工单编号/处理时限/明确转人工），纯致歉或"承诺处理"会被判未解决。
+        if state.detected_intent == IntentType.COMPLAINT and state.reply:
+            has_commitment = any(
+                k in state.reply for k in ("工单", "编号", "转人工", "人工客服", "小时内", "工作日", "已记录", "尽快处理")
+            )
+            if not has_commitment:
+                ticket_id = str(state.collected_info.get("ticket_id") or "")
+                suffix = (
+                    f"已为您创建投诉工单（编号 {ticket_id}），我们将在 24 小时内反馈处理进展。"
+                    if ticket_id
+                    else "我们已记录您的诉求，将在 24 小时内反馈处理进展，如需加急可回复“转人工”。"
+                )
+                state.reply = state.reply.rstrip("。！！") + "。" + suffix
+
         # 槽位追问是流程提示，不是业务答案，不应因"信息尚未齐全"被判定为低质量并转人工。
         # 寒暄模板同样跳过校验：固定文案无业务语义，无需事实/完整性核查。
         if (generated_by_llm or not state.collected_info.get("validation")) and not state.missing_slots and not state.collected_info.get("rag_refused") and not state.collected_info.get("smalltalk"):
@@ -956,10 +1029,115 @@ class AgentGraph:
             return reply
         citations = []
         for item in results[:3]:
-            title = item.get("title", "未命名文档")
-            snippet = " ".join(str(item.get("content", "")).split())[:120]
-            citations.append(f"- {title}: {snippet}")
+            title, chapter, body = self._clean_chunk(
+                str(item.get("content", "")), str(item.get("title", ""))
+            )
+            label = f"{title}（{chapter}）" if chapter else (title or "知识库")
+            snippet = body[:120]
+            citations.append(f"- {label}：{snippet}")
         return reply + ("\n\n参考来源：\n" + "\n".join(citations) if citations else "")
+
+    @staticmethod
+    def _clean_chunk(content: str, fallback_title: str = "") -> tuple[str, str, str]:
+        """清洗检索片段：剥离"文档：/章节："元信息前缀与 markdown 标记。
+
+        返回 (文档标题, 章节, 清洗后的正文)。chunk 入库时由 _heading_prefix
+        加了"文档：xxx\n章节：xxx\n"前缀，且分块保留了原文的 markdown 标题
+        （## 四、常见使用问题），直接展示会暴露元信息与标记符号。
+        """
+        title, chapter, rest = fallback_title, "", (content or "")
+        match = re.match(r"^文档：(.*?)\n章节：(.*?)\n", rest)
+        if match:
+            title = (match.group(1).strip() or fallback_title)
+            chapter = match.group(2).strip()
+            rest = rest[match.end():]
+        # 去掉 markdown 标记：标题 #、粗体/斜体 *、行内码 `、引用 >、下划线 _
+        rest = re.sub(r"[#*`>_]", "", rest)
+        body = " ".join(rest.split())
+        return title, chapter, body
+
+    # ---------- 延迟优化：回答缓存与工具模板 ----------
+    _ANSWER_CACHE_TTL = 120.0
+    _ANSWER_CACHE_MAX = 500
+
+    def _answer_cache_get(self, key: str) -> Optional[str]:
+        entry = self._answer_cache.get(key)
+        if not entry:
+            return None
+        reply, ts = entry
+        if time.time() - ts > self._ANSWER_CACHE_TTL:
+            self._answer_cache.pop(key, None)
+            return None
+        return reply
+
+    def _answer_cache_set(self, key: str, reply: str):
+        if len(self._answer_cache) >= self._ANSWER_CACHE_MAX:
+            # 简单容量控制：清掉最旧一半，避免进程内缓存无限增长。
+            oldest_keys = sorted(self._answer_cache, key=lambda k: self._answer_cache[k][1])[
+                : len(self._answer_cache) // 2
+            ]
+            for k in oldest_keys:
+                self._answer_cache.pop(k, None)
+        self._answer_cache[key] = (reply, time.time())
+
+    def _try_templated_tool_reply(self, state: AgentState) -> Optional[str]:
+        """工具成功后用模板拼接回复，跳过 LLM 生成（延迟优化）。"""
+        if not state.tool_calls:
+            return None
+        last_call = state.tool_calls[-1]
+        if not last_call.success:
+            return None
+        data = (last_call.result or {}).get("data")
+        intent = state.detected_intent
+
+        if intent == IntentType.QUERY_ORDER and last_call.tool_name == "query_order" and isinstance(data, dict):
+            # 仅对"查状态/物流"类问题用模板；取消/原因/改地址等需要解释性回答，
+            # 交回 LLM 生成，避免模板只回显状态而丢失对动作诉求的处理。
+            non_template_markers = ("取消", "为什么", "怎么回事", "咋回事", "拦截", "改地址", "退回", "退款", "退货", "怎么改", "能退")
+            if any(k in state.user_message for k in non_template_markers):
+                return None
+            return self._build_order_reply_template(data)
+
+        if intent == IntentType.COMPLAINT and last_call.tool_name == "create_ticket" and isinstance(data, dict):
+            message = str(data.get("message") or "").strip()
+            if message:
+                return message
+
+        return None
+
+    @staticmethod
+    def _build_order_reply_template(data: Dict[str, Any]) -> str:
+        """根据 query_order 工具结果拼出可直接回复的模板文案。"""
+        order_id = str(data.get("order_id") or "")
+        status = str(data.get("status") or "")
+        shipping = data.get("shipping") or {}
+        if isinstance(shipping, str):
+            try:
+                shipping = json.loads(shipping)
+            except (TypeError, json.JSONDecodeError):
+                shipping = {}
+        carrier = str(shipping.get("carrier") or "")
+        tracking = str(shipping.get("tracking_no") or shipping.get("tracking") or "")
+        eta = str(shipping.get("eta") or shipping.get("expected_delivery") or "")
+        amount = data.get("total_amount")
+        amount_text = f"总金额 {amount:.2f} 元" if isinstance(amount, (int, float)) else ""
+        items = data.get("items") or []
+        product = ""
+        if isinstance(items, list) and items and isinstance(items[0], dict):
+            product = str(items[0].get("name") or items[0].get("product_name") or "")
+
+        parts = [f"您的订单 {order_id}", f"当前状态：{status}"]
+        if carrier:
+            parts.append(f"承运方：{carrier}")
+        if tracking:
+            parts.append(f"运单号：{tracking}")
+        if eta:
+            parts.append(f"预计送达：{eta}")
+        if product:
+            parts.append(f"商品：{product}")
+        if amount_text:
+            parts.append(amount_text)
+        return "，".join(parts) + "。"
 
     _TOOL_ANSWER_INTENTS = {
         IntentType.QUERY_ORDER,
@@ -1076,6 +1254,29 @@ class AgentGraph:
             if mem_parts:
                 parts.append("【用户画像】" + "；".join(mem_parts))
 
+        # 注入已收集槽位（订单号/工单号等）：工具仅返回 success 无 data 时，
+        # 模型仍能依据槽位在回复中点明具体单号/金额，避免含糊的"操作成功"。
+        _slot_labels = {
+            "order_id": "订单号",
+            "ticket_id": "工单号",
+            "tracking_number": "运单号",
+            "refund_reason": "退款原因",
+            "complaint_type": "投诉类型",
+            "refund_preview": "退款预览",
+        }
+        slot_parts = []
+        for key, label in _slot_labels.items():
+            value = state.collected_info.get(key)
+            if value is None or value == "" or value == [] or value == {}:
+                continue
+            if isinstance(value, (dict, list)):
+                text = json.dumps(value, ensure_ascii=False)[:200]
+            else:
+                text = str(value)[:120]
+            slot_parts.append(f"{label}：{text}")
+        if slot_parts:
+            parts.append("【已收集信息】" + "；".join(slot_parts))
+
         successful_tools = [tc for tc in state.tool_calls if tc.success]
         if successful_tools:
             parts.append("【工具执行结果】")
@@ -1118,7 +1319,11 @@ class AgentGraph:
                 score = result.get("final_score", result.get("hybrid_score", 0))
                 parts.append(f"  {i}. 【{title}】({category}, 相关度:{score:.0%})")
                 if content:
-                    parts.append(f"     {content[:300]}")
+                    clean_title, chapter, body = self._clean_chunk(str(content), title)
+                    if chapter:
+                        parts.append(f"     章节：{chapter}")
+                    if body:
+                        parts.append(f"     {body[:300]}")
 
         parts.append("")
         parts.append("请根据以上信息，用自然、专业、简洁的中文回复用户。回复要点：")

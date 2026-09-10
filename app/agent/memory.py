@@ -21,10 +21,25 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
+from pydantic import BaseModel, Field
+
 from app.agent.state import AgentState
 from app.utils.database import get_redis
 
 logger = logging.getLogger(__name__)
+
+SUMMARY_SYSTEM_PROMPT = (
+    "你是客服对话摘要助手。将一段客服对话压缩为 200 字以内的简洁摘要，"
+    "保留：1. 用户核心诉求与意图；2. 关键实体（订单号、金额等）；"
+    "3. 已提供的解决方案或结论；4. 未解决的问题。"
+    "只依据对话内容提炼，不臆造、不补充未提及的信息。"
+)
+
+
+class _SummaryResult(BaseModel):
+    """对话摘要输出契约。"""
+
+    summary_text: str = Field(default="", description="200 字以内的对话摘要")
 
 SESSION_TTL_SECONDS = 86400
 MAX_MESSAGES_BEFORE_COMPRESSION = 40
@@ -268,24 +283,17 @@ class SessionManager:
 
             dialog_text = "\n".join(dialog_parts[-20:])  # 最多取20条避免过长
 
-            prompt = (
-                "请将以下客服对话压缩为简洁摘要（200字以内），保留关键信息：\n"
-                "1. 用户的核心诉求和意图\n"
-                "2. 涉及的实体（订单号、金额等）\n"
-                "3. 已提供的解决方案或结论\n"
-                "4. 未解决的问题\n\n"
-                f"对话内容：\n{dialog_text}"
+            # 走独立摘要 system prompt + 结构化契约，避免复用"客服答复"链路
+            # （原实现调用 chat()，模型以客服身份执行摘要任务且输出被硬塞进 reply）。
+            result = await llm_service.run_structured(
+                SUMMARY_SYSTEM_PROMPT,
+                dialog_text,
+                _SummaryResult,
+                tags=["conversation_summary"],
             )
-
-            # 使用 LLM 的 chat 方法生成摘要
-            reply, _, _ = await llm_service.chat(
-                user_id=0,
-                session_id="summary_generation",
-                message=prompt,
-            )
-
-            if reply and len(reply) > 10:
-                return reply[:SUMMARY_MAX_LENGTH]
+            summary = result.summary_text.strip() if result else ""
+            if summary and len(summary) > 10:
+                return summary[:SUMMARY_MAX_LENGTH]
         except Exception as e:
             logger.warning(f"LLM 生成摘要失败，降级到规则摘要: {e}")
 

@@ -210,11 +210,22 @@ def summarize(samples: List[E2ESample], llm_was_available: bool) -> Dict[str, An
         (s.resolve_source, s.reason[:24]) for s in samples if not s.resolved
     )
     latencies = [s.latency_ms for s in samples if s.latency_ms > 0]
+
+    # 按意图聚合解决率，用于定位"哪个意图链路最弱"。
+    per_intent: Dict[str, Dict[str, Any]] = {}
+    for s in samples:
+        bucket = per_intent.setdefault(s.intent or "unknown", {"total": 0, "resolved": 0, "unresolved": 0})
+        bucket["total"] += 1
+        bucket["resolved" if s.resolved else "unresolved"] += 1
+    for bucket in per_intent.values():
+        bucket["rate"] = round(bucket["resolved"] / max(bucket["total"], 1), 4)
+
     return {
         "total": len(samples),
         "resolved": resolved,
         "resolution_rate": round(resolved / max(len(samples), 1), 4),
         "resolve_source_dist": dict(reason_dist),
+        "per_intent": per_intent,
         "unresolved_reasons": {
             f"{src}:{reason}": cnt for (src, reason), cnt in fail_reasons.most_common(8)
         },
@@ -299,6 +310,13 @@ def format_report_md(
         lines.append(f"| {k} | {v} |")
     if not summary["unresolved_reasons"]:
         lines.append("| （无） | 0 |")
+    lines.append("")
+
+    lines.append("## 按意图解决率")
+    lines.append("| intent | resolved | total | rate |")
+    lines.append("|---|---|---|---|")
+    for intent, m in sorted(summary["per_intent"].items()):
+        lines.append(f"| {intent} | {m['resolved']} | {m['total']} | {m['rate']:.2%} |")
     lines.append("")
 
     lines.append("## 逐条明细")
