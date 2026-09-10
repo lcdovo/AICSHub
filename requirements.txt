@@ -29,9 +29,14 @@ langchain==1.3.15
 langchain-core==1.5.4
 langgraph==1.2.11
 langchain-openai==1.5.0
+langfuse>=3.8.0  # LLM 可观测性平台（LangChain v1 CallbackHandler 集成），默认关闭
 
 # Vector Database
 pymilvus==2.5.6
 
 # Utils
 python-dateutil==2.9.0.post0
+
+# Testing (dev only, not required at runtime)
+pytest==8.3.3
+pytest-asyncio==0.24.0

@@ -310,20 +310,20 @@ async def send_message(
         user_query=chat_data.message, response=agent_state.reply or "", categories=[],
         processed=False,
     ))
-    get_tracer()._metrics.record_intent(agent_state.detected_intent, agent_state.intent_confidence)
-    get_tracer()._metrics.record_evaluation(evaluation.overall_score, evaluation.is_low_score)
+    get_tracer().record_intent(agent_state.detected_intent, agent_state.intent_confidence)
+    get_tracer().record_evaluation(evaluation.overall_score, evaluation.is_low_score)
     for tool_call in agent_state.tool_calls:
-        get_tracer()._metrics.record_tool_call(tool_call.tool_name, tool_call.success, getattr(tool_call, "execution_time_ms", 0))
+        get_tracer().record_tool_call(tool_call.tool_name, tool_call.success, getattr(tool_call, "execution_time_ms", 0))
         if tool_call.tool_name == "hybrid_search" and isinstance(tool_call.result, dict):
             rag_meta = tool_call.result.get("meta", {})
-            get_tracer()._metrics.record_rag(
+            get_tracer().record_rag(
                 latency_ms=tool_call.result.get("execution_time_ms", 0),
                 empty=not bool(tool_call.result.get("results")),
                 backend=rag_meta.get("backend", "memory"),
                 degraded=bool(rag_meta.get("degraded", False)),
             )
     if agent_state.need_human:
-        get_tracer()._metrics.record_handoff()
+        get_tracer().record_handoff()
     get_low_score_pool().add_sample(
         sample_id=str(assistant_message.id), session_id=session_id,
         user_query=chat_data.message, response=agent_state.reply or "",
@@ -565,7 +565,7 @@ async def websocket_chat_stream(websocket: WebSocket):
                     db, session, agent_state, message, trace_id
                 )
 
-                get_tracer()._metrics.record_response(agent_state.execution_time_ms, True)
+                get_tracer().record_response(agent_state.execution_time_ms, True)
 
                 await websocket.send_json({
                     "type": "stream_end",

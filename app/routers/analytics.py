@@ -6,7 +6,7 @@ from fastapi.responses import PlainTextResponse
 from typing import Optional
 from datetime import datetime, timedelta
 
-from app.utils.tracking import get_tracer, alert_manager
+from app.utils.tracking import get_tracer, alert_manager, build_alert_input
 from app.services.evaluation import get_answer_evaluator, get_low_score_pool, get_ab_test_framework
 from app.models.models import User
 from app.security import require_admin
@@ -29,7 +29,7 @@ def _group_evaluations(rows, field: str) -> dict:
 @router.get("/metrics/prometheus", response_class=PlainTextResponse)
 async def get_prometheus_metrics(_: User = Depends(require_admin)):
     """输出无用户/消息等敏感标签的结构化 Prometheus 指标。"""
-    return get_tracer()._metrics.to_prometheus()
+    return get_tracer().to_prometheus()
 
 
 @router.get("/traces/{trace_id}")
@@ -46,7 +46,7 @@ async def get_system_metrics(_: User = Depends(require_admin)):
     tracer = get_tracer()
     metrics = tracer.get_metrics()
 
-    alerts = alert_manager.check_alerts(metrics)
+    alerts = alert_manager.check_alerts(build_alert_input(metrics))
     active_alerts = alert_manager.get_active_alerts()
 
     return {

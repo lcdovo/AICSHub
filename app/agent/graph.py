@@ -8,6 +8,7 @@ import json
 import asyncio
 import contextvars
 import logging
+import random
 from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, TypedDict
 from datetime import datetime
 
@@ -29,6 +30,7 @@ from app.agent.validation_llm import LLMRAGJudge
 from app.services.user_memory import get_user_memory_service
 from app.services.llm_service import LLMService
 from app.config.config import settings
+from app.utils.langfuse_tracing import get_langfuse_handler
 
 logger = logging.getLogger(__name__)
 _stream_event_queue: contextvars.ContextVar[Optional[asyncio.Queue]] = contextvars.ContextVar(
@@ -78,6 +80,19 @@ class AgentGraph:
                     route_targets,
                 )
         return workflow.compile(checkpointer=self.checkpointer)
+
+    def _with_langfuse(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """按请求粒度注入 Langfuse 观测 handler（可配置开关 + 采样率）。
+
+        关闭（默认）、未命中采样或 handler 初始化失败时返回原 config，
+        保证外部观测平台不可用绝不影响主链路。
+        """
+        if not settings.LANGFUSE_ENABLED or random.random() >= settings.LANGFUSE_SAMPLING_RATE:
+            return config
+        handler = get_langfuse_handler()
+        if handler is None:
+            return config
+        return {**config, "callbacks": [handler]}
 
     def _make_langgraph_node(self, node_name: str):
         async def invoke(payload: "AgentGraph._GraphState") -> Dict[str, Any]:
@@ -132,7 +147,9 @@ class AgentGraph:
             try:
                 async for update in self.langgraph.astream(
                     {"state": state, "next_node": state.current_node, "regeneration_count": 0},
-                    config={"recursion_limit": 50, "configurable": {"thread_id": state.session_id}},
+                    config=self._with_langfuse(
+                        {"recursion_limit": 50, "configurable": {"thread_id": state.session_id}}
+                    ),
                     stream_mode="updates",
                 ):
                     if update:
@@ -230,7 +247,9 @@ class AgentGraph:
         start_time = time.time()
         result = await self.langgraph.ainvoke(
             {"state": state, "next_node": state.current_node, "regeneration_count": 0},
-            config={"recursion_limit": 50, "configurable": {"thread_id": state.session_id}},
+            config=self._with_langfuse(
+                {"recursion_limit": 50, "configurable": {"thread_id": state.session_id}}
+            ),
         )
         state = result.get("state", state)
         if result.get("__interrupt__"):
@@ -247,7 +266,9 @@ class AgentGraph:
         try:
             result = await self.langgraph.ainvoke(
                 Command(resume=decision),
-                config={"recursion_limit": 50, "configurable": {"thread_id": session_id}},
+                config=self._with_langfuse(
+                    {"recursion_limit": 50, "configurable": {"thread_id": session_id}}
+                ),
             )
         except Exception:
             # A process restart may lose the in-memory checkpoint.  Redis-backed
@@ -994,105 +1015,6 @@ class AgentGraph:
                     "content": msg.get("content", ""),
                 })
         return context
-
-    def _generate_response(self, state: AgentState) -> str:
-        intent = state.detected_intent
-        collected = state.collected_info
-        tool_results = [tc for tc in state.tool_calls if tc.success]
-
-        if tool_results:
-            last_result = tool_results[-1]
-            result_data = last_result.result if isinstance(last_result.result, dict) else {}
-
-            if intent == IntentType.QUERY_ORDER:
-                order_data = result_data.get("data", {}) if result_data else {}
-                if order_data and isinstance(order_data, dict):
-                    shipping = order_data.get("shipping", {})
-                    status_text = order_data.get("status", "未知")
-                    shipping_text = (
-                        f"{shipping.get('carrier', '')} - {shipping.get('tracking_no', '')}"
-                        if shipping
-                        else "暂无物流信息"
-                    )
-                    delivery_status = shipping.get("status", "待发货") if shipping else "待发货"
-                    amount = order_data.get("total_amount", 0)
-
-                    refund_info = ""
-                    if order_data.get("can_refund"):
-                        deadline = order_data.get("refund_deadline", "")
-                        if deadline:
-                            refund_info = f"\n退换货截止日期：{deadline[:10]}"
-
-                    return (
-                        f"您的订单 {order_data.get('order_id', '')} 当前状态：{status_text}\n"
-                        f"物流信息：{shipping_text}\n"
-                        f"配送状态：{delivery_status}\n"
-                        f"订单金额：¥{amount:.2f}"
-                        f"{refund_info}"
-                    )
-
-            elif intent == IntentType.REFUND:
-                refund_data = result_data.get("data", {}) if result_data else {}
-                if refund_data and isinstance(refund_data, dict):
-                    steps = refund_data.get("next_steps", [])
-                    refund_id = refund_data.get("refund_id", "")[:8]
-                    refund_type_label = refund_data.get("type_label", "退款")
-                    amount = refund_data.get("amount", 0)
-
-                    steps_text = "\n".join(f"• {step}" for step in steps[:3])
-
-                    return (
-                        f"{refund_type_label}申请已提交（退款单号：{refund_id}...）\n"
-                        f"退款金额：¥{amount:.2f}\n"
-                        f"接下来的步骤：\n{steps_text}"
-                    )
-
-            elif intent == IntentType.COMPLAINT:
-                ticket_data = result_data.get("data", {}) if result_data else {}
-                if ticket_data and isinstance(ticket_data, dict):
-                    ticket_id = ticket_data.get("ticket_id", "")[:8]
-                    sla_deadline = ticket_data.get("sla_deadline", "")[:10]
-                    assignee = ticket_data.get("assignee", "")
-
-                    return (
-                        f"您的投诉工单已创建（工单号：{ticket_id}...）\n"
-                        f"处理专员：{assignee}\n"
-                        f"我们将在 {sla_deadline} 前处理您的问题，请保持电话畅通。"
-                    )
-
-            if result_data and result_data.get("success"):
-                data = result_data.get("data")
-                if isinstance(data, dict):
-                    msg = data.get("message", "已完成")
-                    return f"操作成功：{msg}"
-                elif isinstance(data, list) and data:
-                    if isinstance(data[0], dict):
-                        title = data[0].get("title", "")
-                        content = data[0].get("content", "")[:150]
-                        category = data[0].get("category", "")
-                        return f"已找到 {len(data)} 条相关信息（分类：{category}）：\n\n【{title}】\n{content}"
-                    return f"已找到 {len(data)} 条相关信息"
-                return "操作成功"
-
-        kb_results = collected.get("kb_results", [])
-        if kb_results:
-            best_match = kb_results[0] if kb_results else {}
-            title = best_match.get("title", "")
-            content = best_match.get("content", "")
-            category = best_match.get("category", "")
-            score = best_match.get("final_score", best_match.get("hybrid_score", 0))
-
-            response_parts = []
-            if title:
-                response_parts.append(f"【{title}】")
-            if content:
-                response_parts.append(content)
-            if category:
-                response_parts.append(f"\n（分类：{category}，相关度：{score:.0%}）")
-
-            return "\n".join(response_parts)
-
-        return self._get_default_reply(intent, state.user_message)
 
     def _get_default_reply(self, intent: str, message: str) -> str:
         if intent == IntentType.GENERAL:

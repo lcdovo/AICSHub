@@ -118,10 +118,10 @@ class ChatService:
         ))
 
         tracer = get_tracer()
-        tracer._metrics.record_intent(state.detected_intent, state.intent_confidence)
-        tracer._metrics.record_evaluation(evaluation.overall_score, evaluation.is_low_score)
+        tracer.record_intent(state.detected_intent, state.intent_confidence)
+        tracer.record_evaluation(evaluation.overall_score, evaluation.is_low_score)
         if state.need_human:
-            tracer._metrics.record_handoff()
+            tracer.record_handoff()
         if evaluation.is_low_score:
             get_low_score_pool().add_sample(
                 sample_id=str(assistant_message.id),
@@ -133,10 +133,10 @@ class ChatService:
                 metadata={"trace_id": trace_id},
             )
         for tool_call in state.tool_calls:
-            tracer._metrics.record_tool_call(tool_call.tool_name, tool_call.success)
+            tracer.record_tool_call(tool_call.tool_name, tool_call.success)
             if tool_call.tool_name == "hybrid_search" and isinstance(tool_call.result, dict):
                 meta = tool_call.result.get("meta", {})
-                tracer._metrics.record_rag(
+                tracer.record_rag(
                     latency_ms=tool_call.result.get("execution_time_ms", 0),
                     empty=not bool(tool_call.result.get("results")),
                     backend=meta.get("backend", "memory"),

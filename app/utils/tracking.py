@@ -10,7 +10,8 @@ import json
 import logging
 from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime
-from contextlib import asynccontextmanager
+
+from app.services.llm_governance import SensitiveDataRedactor
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +85,6 @@ class Tracer:
             return
         self._initialized = True
         self._active_traces: Dict[str, List[TraceSpan]] = {}
-        self._trace_buffer: List[Dict[str, Any]] = []
-        self._max_buffer_size = 1000
         self._metrics = MetricsCollector()
 
     def start_trace(self, trace_id: Optional[str] = None) -> str:
@@ -114,27 +113,40 @@ class Tracer:
         return [s.to_dict() for s in spans]
 
     def _record_span(self, span: TraceSpan):
-        span_dict = span.to_dict()
-        self._trace_buffer.append(span_dict)
-
-        if len(self._trace_buffer) >= self._max_buffer_size:
-            self._flush_buffer()
-
+        # span 明细由 chat_service 统一落库 agent_traces 表；内存只保留聚合指标，
+        # 不再维护"攒满即丢"的中间 buffer，避免与 DB 双轨并存。
         self._metrics.record_span(span)
-
-    def _flush_buffer(self):
-        if self._trace_buffer:
-            logger.debug(f"Flushing {len(self._trace_buffer)} trace spans")
-            self._trace_buffer = []
 
     def get_metrics(self) -> Dict[str, Any]:
         return self._metrics.get_all_metrics()
 
-    def get_trace_spans(self, trace_id: str) -> List[Dict[str, Any]]:
-        """按请求 Trace ID 返回已缓冲和活动中的跨度。"""
-        active = [span.to_dict() for span in self._active_traces.get(trace_id, [])]
-        buffered = [span for span in self._trace_buffer if span.get("trace_id") == trace_id]
-        return buffered + active
+    # ---- 公开指标记录入口（转发 MetricsCollector，避免外部访问私有 _metrics）----
+    def record_intent(self, intent: str, confidence: float):
+        self._metrics.record_intent(intent, confidence)
+
+    def record_tool_call(self, tool_name: str, success: bool, duration_ms: int = 0):
+        self._metrics.record_tool_call(tool_name, success, duration_ms)
+
+    def record_rag(self, **kwargs):
+        self._metrics.record_rag(**kwargs)
+
+    def record_handoff(self):
+        self._metrics.record_handoff()
+
+    def record_evaluation(self, score: float, low_score: bool = False):
+        self._metrics.record_evaluation(score, low_score)
+
+    def record_response(self, response_time_ms: int, is_successful: bool = True):
+        self._metrics.record_response(response_time_ms, is_successful)
+
+    def record_error(self, error_type: str, error_message: str = ""):
+        self._metrics.record_error(error_type, error_message)
+
+    def record_csat(self, score: int):
+        self._metrics.record_csat(score)
+
+    def to_prometheus(self) -> str:
+        return self._metrics.to_prometheus()
 
     def reset_metrics(self):
         self._metrics.reset()
@@ -360,41 +372,19 @@ def get_tracer() -> Tracer:
     return tracer
 
 
-class TraceContext:
-    """追踪上下文管理器"""
-
-    def __init__(self, span_name: str, trace_id: Optional[str] = None):
-        self.span_name = span_name
-        self.trace_id = trace_id or str(uuid.uuid4())
-        self.span: Optional[TraceSpan] = None
-
-    async def __aenter__(self):
-        self.span = tracer.start_span(self.trace_id, self.span_name)
-        return self.span
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if exc_type:
-            tracer.end_span(self.span, status="error", error_message=str(exc_val))
-        else:
-            tracer.end_span(self.span)
-
-
-@asynccontextmanager
-async def trace_context(span_name: str, trace_id: Optional[str] = None):
-    span = tracer.start_span(trace_id or str(uuid.uuid4()), span_name)
-    try:
-        yield span
-        tracer.end_span(span)
-    except Exception as e:
-        tracer.end_span(span, status="error", error_message=str(e))
-        raise
-
-
 class StructuredLogger:
     """结构化日志"""
 
     def __init__(self, name: str = "app"):
         self.logger = logging.getLogger(name)
+        self._redactor = SensitiveDataRedactor()
+
+    def _clean(self, **kwargs) -> dict:
+        """日志落地前对字符串值做敏感信息脱敏。"""
+        return {
+            key: self._redactor.redact(str(value)) if isinstance(value, str) else value
+            for key, value in kwargs.items()
+        }
 
     def log_request(self, trace_id: str, method: str, path: str, **kwargs):
         self.logger.info(
@@ -403,7 +393,7 @@ class StructuredLogger:
                 "trace_id": trace_id,
                 "method": method,
                 "path": path,
-                **kwargs,
+                **self._clean(**kwargs),
             })
         )
 
@@ -414,7 +404,7 @@ class StructuredLogger:
                 "trace_id": trace_id,
                 "status_code": status_code,
                 "duration_ms": duration_ms,
-                **kwargs,
+                **self._clean(**kwargs),
             })
         )
 
@@ -425,7 +415,7 @@ class StructuredLogger:
                 "trace_id": trace_id,
                 "node": node,
                 "intent": intent,
-                **kwargs,
+                **self._clean(**kwargs),
             })
         )
 
@@ -438,7 +428,7 @@ class StructuredLogger:
                 "trace_id": trace_id,
                 "tool_name": tool_name,
                 "success": success,
-                **kwargs,
+                **self._clean(**kwargs),
             })
         )
 
@@ -448,8 +438,8 @@ class StructuredLogger:
                 "type": "error",
                 "trace_id": trace_id,
                 "error_type": error_type,
-                "error_message": error_message,
-                **kwargs,
+                "error_message": self._redactor.redact(error_message or ""),
+                **self._clean(**kwargs),
             })
         )
 
@@ -578,3 +568,21 @@ class AlertManager:
 
 
 alert_manager = AlertManager()
+
+
+def build_alert_input(metrics: Dict[str, Any]) -> Dict[str, Any]:
+    """将 MetricsCollector 输出的指标映射为 AlertManager 规则期望的字段。
+
+    MetricsCollector 输出 success_rate/response_time/evaluation 等形态，
+    而告警规则读取 error_rate/avg_response_time/intent_accuracy；若不在此映射，
+    后三个规则会因字段缺失而永不触发。
+    """
+    rt = metrics.get("response_time", {})
+    evaluation = metrics.get("evaluation", {})
+    eval_total = max(int(evaluation.get("total", 0)), 1)
+    return {
+        "error_rate": max(0.0, 100.0 - float(metrics.get("success_rate", 100))),
+        "handoff_rate": float(metrics.get("handoff_rate", 0)),
+        "avg_response_time": float(rt.get("avg_ms", 0)),
+        "intent_accuracy": round(100.0 - int(evaluation.get("low_score", 0)) / eval_total * 100, 2),
+    }

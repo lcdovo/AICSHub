@@ -213,38 +213,6 @@ class ToolPolicy:
         return True, None
 
 
-class GovernanceBudgetExceeded(RuntimeError):
-    """Raised by strict integrations that choose to reject instead of degrade."""
-
-
-class LLMGovernance:
-    """Convenience facade for external integrations.
-
-    LLMService uses the lower-level components so it can preserve its historical
-    tuple return type; new callers can use this facade for explicit preflight/record.
-    """
-
-    def __init__(self, *, registry: ArtifactRegistry | None = None, budget: BudgetManager | None = None) -> None:
-        self.registry = registry or build_default_registry()
-        self.budget = budget or BudgetManager()
-        self.redactor = SensitiveDataRedactor()
-        self.injection = PromptInjectionScanner()
-
-    def preflight(self, user_id: int | str, text: str, output_tokens: int | None = None) -> dict[str, Any]:
-        patterns = self.injection.scan(text)
-        decision = self.budget.check(user_id, max(1, len(text) // 4), output_tokens)
-        result = {"allowed": not patterns and decision.allowed, "reason": ("prompt_injection" if patterns else decision.reason), "injection_patterns": patterns, "budget": decision}
-        return result
-
-    def record(self, user_id: int | str, input_tokens: int, output_tokens: int) -> dict[str, Any]:
-        cost = self.budget.estimator.estimate(input_tokens, output_tokens)
-        self.budget.consume(user_id, input_tokens + output_tokens, cost)
-        return {"tokens": input_tokens + output_tokens, "estimated_cost_usd": cost, "cost_basis": "configured_token_rates_estimate"}
-
-    def fallback(self, reason: str) -> dict[str, str]:
-        return {"route": "rule_fallback", "degraded": "true", "reason": reason}
-
-
 def build_default_registry(prompt_version: str = "v1", model_version: str = "gpt-4o-mini", schema_version: str = "response.v1", route_version: str = "rules-first.v1") -> ArtifactRegistry:
     registry = ArtifactRegistry()
     registry.register(VersionedArtifact("prompt", "customer_service", prompt_version, metadata={"safety": "code-enforced"}), activate=True)

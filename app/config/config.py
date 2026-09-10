@@ -61,6 +61,17 @@ class Settings(BaseSettings):
     LLM_OUTPUT_PRICE_PER_1K_USD: float = Field(default=0.00060, ge=0)
     LLM_GRAY_ROLLOUT_PERCENT: int = Field(default=100, ge=0, le=100)
 
+    # ---- LLM 可观测性（Langfuse，外部平台，默认关闭）----
+    # 通过 LangGraph CallbackHandler 上报完整执行轨迹，为自研 tracking 的补充观测。
+    # 需同时配置 public/secret key，且 LANGFUSE_ENABLED=true 才会上报；云端或自托管均支持。
+    LANGFUSE_ENABLED: bool = Field(default=False)
+    LANGFUSE_PUBLIC_KEY: str = Field(default="")
+    LANGFUSE_SECRET_KEY: str = Field(default="")
+    # 自托管地址示例 http://localhost:3000；留空使用 Langfuse Cloud 默认地址。
+    LANGFUSE_HOST: str = Field(default="")
+    # 采样率 0.0-1.0：1.0 全量上报；高并发可调低以控制外部平台成本。
+    LANGFUSE_SAMPLING_RATE: float = Field(default=1.0, ge=0.0, le=1.0)
+
     # ---- LLM 参与决策增强（Phase 3+）----
     # 规则改写未命中时，是否尝试 LLM 做多轮语义改写以增强 RAG 召回。
     LLM_QUERY_REWRITE_ENABLED: bool = Field(default=True)

@@ -25,3 +25,10 @@ data/
 
 # 临时文件
 *.tmp
+_grep_trace_tmp.py
+
+# IDE 内部文件
+.trae/
+
+# 数据导入标记
+.seed_done

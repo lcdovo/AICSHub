@@ -16,6 +16,7 @@ from app.utils.database import engine, get_redis
 from sqlalchemy import text
 from app.services.llm_service import LLMService
 from app.utils.tracking import get_tracer, structured_logger, generate_trace_id
+from app.utils.langfuse_tracing import shutdown_langfuse
 from app.security import require_admin
 from app.routers.users import router as users_router
 from app.routers.sessions import router as sessions_router
@@ -70,6 +71,7 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down...")
+    shutdown_langfuse()
     await llm_service.close()
     await close_redis()
     logger.info("Shutdown complete")
@@ -128,10 +130,10 @@ async def tracing_middleware(request: Request, call_next):
         )
 
         if response.status_code < 400:
-            tracer._metrics.record_response(duration_ms, True)
+            tracer.record_response(duration_ms, True)
         else:
-            tracer._metrics.record_response(duration_ms, False)
-            tracer._metrics.record_error("http_error", f"Status: {response.status_code}")
+            tracer.record_response(duration_ms, False)
+            tracer.record_error("http_error", f"Status: {response.status_code}")
 
         return response
     except Exception as exc:
@@ -248,7 +250,7 @@ async def health_check():
 @app.get("/metrics", response_class=PlainTextResponse)
 async def prometheus_metrics(_: object = Depends(require_admin)):
     """受管理员保护的 Prometheus 指标出口。"""
-    return get_tracer()._metrics.to_prometheus()
+    return get_tracer().to_prometheus()
 
 
 @app.exception_handler(Exception)

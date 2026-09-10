@@ -7,7 +7,10 @@ param(
 )
 
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+# 用 Continue 而非 Stop：docker 会把构建/进度信息写到 stderr，
+# Stop 模式下 PowerShell 5.1 会把任何原生 stderr 当致命错误中断脚本。
+# 脚本对每个原生命令都显式检查 $LASTEXITCODE，错误处理不受影响。
+$ErrorActionPreference = "Continue"
 $Root = Split-Path -Parent $PSScriptRoot
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -57,7 +60,9 @@ try {
         if (-not (Test-Path $seedMark)) {
             Write-Host "灌入演示数据（订单 + 知识库）…"
             docker compose exec app python scripts/seed_ecommerce_orders.py
+            if ($LASTEXITCODE -ne 0) { Write-Warning "订单演示数据导入失败（退出码 $LASTEXITCODE），服务仍已启动。" }
             docker compose exec app python scripts/import_rag_documents.py --clear
+            if ($LASTEXITCODE -ne 0) { Write-Warning "知识库演示数据导入失败（退出码 $LASTEXITCODE），服务仍已启动。" }
             New-Item -ItemType File -Path $seedMark -Force | Out-Null
         } else {
             Write-Host "演示数据已初始化（跳过，如需重灌请删除 $seedMark）。" -ForegroundColor DarkGray
@@ -67,11 +72,18 @@ try {
     Pop-Location
 }
 
+# 端口显示：优先 .env 的 APP_PORT（compose 实际映射），避免 -Port 参数与实际不一致
+$appPort = $Port
+$portLine = Select-String -Path $envFile -Pattern "^APP_PORT=" -ErrorAction SilentlyContinue
+if ($portLine) {
+    $appPort = $portLine.Line.Split("=", 2)[1].Trim()
+}
+
 Write-Host ""
 docker compose ps
 Write-Host ""
 Write-Host "启动完成：" -ForegroundColor Green
-Write-Host "  应用首页     http://localhost:$Port/"
-Write-Host "  健康检查     http://localhost:$Port/health"
-Write-Host "  OpenAPI 文档 http://localhost:$Port/docs"
+Write-Host "  应用首页     http://localhost:$appPort/"
+Write-Host "  健康检查     http://localhost:$appPort/health"
+Write-Host "  OpenAPI 文档 http://localhost:$appPort/docs"
 Write-Host "停止服务请运行 scripts\stop.ps1" -ForegroundColor Yellow

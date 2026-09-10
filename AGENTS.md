@@ -1,49 +1,31 @@
-# 项目协作规范
+# Repository Guidelines
 
-## 项目概览
+## Project Structure & Module Organization
 
-这是一个基于 FastAPI 的企业智能客服与工单自动处理系统。后端代码位于 `app/`，静态页面位于 `static/`，数据导入和维护脚本位于 `scripts/`。系统支持使用 SQLite 进行本地开发，也支持通过环境变量连接 MySQL、Redis 和 Milvus 等外部服务。
+The FastAPI backend is in `app/`: agent orchestration and tools in `app/agent/`, HTTP endpoints in `app/routers/`, business logic in `app/services/`, persistence in `app/models/` and `app/repositories/`, and Pydantic schemas in `app/schemas/`. Migrations are under `alembic/`. The React + Vite + Tailwind client is in `frontend/src/`; production assets go to `static/`. Operational scripts are in `scripts/`, and technical notes are in `docs/`.
 
-## 开发约定
+## Build, Test, and Development Commands
 
-- 使用 Python 3.11 或更高版本；依赖版本以 `requirements.txt` 为准。
-- 新增或修改 Python 代码时遵循现有模块划分：Agent 逻辑放在 `app/agent/`，HTTP 路由放在 `app/routers/`，业务服务放在 `app/services/`，数据模型和校验模型分别放在 `app/models/` 与 `app/schemas/`。
-- API 输入和输出优先使用 Pydantic 模型校验，数据库访问通过现有的异步 SQLAlchemy 工具完成。
-- 保持异步调用链完整；不要在异步路由或服务中加入会阻塞事件循环的同步网络或数据库操作。
-- 配置通过 `.env` 或 `.env.example` 管理。不要把 API 密钥、数据库密码、生产凭据或其他敏感信息提交到版本库。
-- 用户可见文本和新增文档使用中文；代码中的变量名、函数名、接口路径和已有领域术语保持项目现有命名风格。
-- 所有文本文件使用 UTF-8 编码并保留 LF 或项目原有换行格式，避免引入乱码或无关的全文件重排。
+- `python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt` - create the Python 3.11+ environment.
+- `Copy-Item .env.example .env` - create local configuration; fill in credentials before starting services.
+- `python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` - run the API locally.
+- `python -m compileall app scripts` - perform the required Python syntax check.
+- `cd frontend; npm run dev` - run Vite with API proxying; `npm run build` type-checks and writes to `static/`.
+- `cd frontend; npm test` - run Vitest (add focused tests for client behavior).
+- `./scripts/start.ps1` / `./scripts/stop.ps1` - start or stop Docker. Use `-NoMigrate`, `-SkipSeed`, or `-Data` deliberately; run `docker compose run --rm app alembic upgrade head` for migrations.
 
-## Agent 与检索逻辑
+## Coding Style & Naming Conventions
 
-- 修改 Agent 状态、节点或路由时，同时检查 `app/agent/state.py`、`app/agent/graph.py`、`app/agent/intent.py` 和 `app/agent/validation.py` 之间的数据契约。
-- 工具调用应沿用现有的重试、超时、错误追踪和人工转接机制，不要绕过统一封装直接调用外部服务。
-- 修改 RAG 检索、知识库或 Embedding 逻辑时，保留 Milvus 不可用时的内存降级路径，并验证 BM25、向量检索和重排结果的兼容性。
-- 不要在日志中输出完整用户隐私、令牌或密钥；新增日志应包含必要的上下文和可关联的追踪信息。
+Use 4-space indentation and type hints in Python; keep async routes and services non-blocking. Place code in the matching existing module. Use `snake_case` for Python, `camelCase` for TypeScript, and `PascalCase` for React components. Keep TypeScript strict and avoid unrelated reformatting.
 
-## 验证与运行
+## Testing Guidelines
 
-提交前至少执行一次语法检查：
+There is no checked-in Python test suite. Run `compileall`, exercise changed API paths through `/health` or `/docs`, and add regression tests for new behavior. Frontend tests use Vitest and should be named `*.test.ts`/`*.test.tsx`; run `npm test` and `npm run build` before review.
 
-```powershell
-python -m compileall app scripts
-```
+## Commit & Pull Request Guidelines
 
-本地开发可先复制 `.env.example` 为 `.env`，然后使用：
+Recent commits use short summaries with prefixes such as `fix:`, `chore:`, or `refactor(rag):`; Chinese summaries are also used. Keep commits focused. Pull requests should explain behavior/configuration changes, link issues, list verification commands, and include screenshots or API examples when useful. Call out migrations, seed data, and external services.
 
-```powershell
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+## Security & Configuration
 
-启动后检查 `http://localhost:8000/health` 和 `http://localhost:8000/docs`。如果改动涉及 Agent、数据库、检索或路由，应补充针对改动路径的手工验证，并在交付说明中注明已执行的检查及任何环境限制。
-
-## 变更边界
-
-- 只修改完成当前任务所需的文件；保留工作区中与当前任务无关的既有改动、删除和未跟踪文件。
-- 不要提交生成的数据库、缓存、日志、`__pycache__` 或临时测试产物。
-- 修改接口时同步更新相关页面、示例配置或 README 中受影响的说明；除非任务明确要求，不进行无关的重构或格式化。
-
-## 提交与测试要求
-
-- 每次改动完成后，都必须创建一个对应的 Git commit，以便后续追踪和回滚。
-- 每次改动后，都必须编写或更新相关测试，并在交付给用户前，确保所有测试和验证全部通过。
+Never commit `.env`, secrets, tokens, database passwords, generated databases, logs, or build output. Start from `.env.example`; production requires a strong `AUTH_SECRET_KEY`, explicit CORS origins, and non-demo credentials. Do not log full user data or credentials, and retain the existing degraded paths when Redis, Milvus, or LLM services are unavailable.
