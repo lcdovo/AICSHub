@@ -1,8 +1,9 @@
 ﻿# 一键启动：docker compose 拉起完整依赖栈与应用。
-# 用法： .\scripts\start.ps1 [-NoMigrate] [-SkipSeed]
+# 用法： .\scripts\start.ps1 [-NoMigrate] [-SkipSeed] [-Langfuse]
 param(
     [switch]$NoMigrate,   # 跳过 alembic 迁移
     [switch]$SkipSeed,    # 跳过灌入演示数据
+    [switch]$Langfuse,    # 同时拉起自托管 Langfuse 观测栈（docker-compose.langfuse.yml）
     [int]$Port = 8000
 )
 
@@ -40,11 +41,20 @@ foreach ($p in $placeholders) {
     }
 }
 
-# 3. 启动依赖与应用
+# 3. 启动依赖与应用（可选叠加 Langfuse 自托管观测栈）
 Write-Host "[3/4] docker compose up -d --build …"
 Push-Location $Root
 try {
-    docker compose up -d --build
+    if ($Langfuse) {
+        $composeFile = Join-Path $Root "docker-compose.langfuse.yml"
+        if (-not (Test-Path $composeFile)) {
+            throw "未找到 $composeFile，-Langfuse 需要仓库内的可选编排文件。"
+        }
+        Write-Host "  -Langfuse 已开启：叠加自托管 Langfuse（http://localhost:3000）" -ForegroundColor Cyan
+        docker compose -f docker-compose.yml -f $composeFile up -d --build
+    } else {
+        docker compose up -d --build
+    }
     if ($LASTEXITCODE -ne 0) { throw "docker compose up 失败（退出码 $LASTEXITCODE）" }
 
     # 4. 可选：数据库迁移
@@ -86,4 +96,7 @@ Write-Host "启动完成：" -ForegroundColor Green
 Write-Host "  应用首页     http://localhost:$appPort/"
 Write-Host "  健康检查     http://localhost:$appPort/health"
 Write-Host "  OpenAPI 文档 http://localhost:$appPort/docs"
+if ($Langfuse) {
+    Write-Host "  Langfuse 观测 http://localhost:3000" -ForegroundColor Green
+}
 Write-Host "停止服务请运行 scripts\stop.ps1" -ForegroundColor Yellow

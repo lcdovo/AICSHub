@@ -1,11 +1,16 @@
 """
-状态机 Agent 编排 - Phase 3 增强版
-实现类似 LangGraph 的节点式 Agent 编排
-支持条件分支、工具调用、状态追踪、混合检索、结果校验
+Agent 编排 - 基于官方 LangGraph 状态机的 13 节点业务编排（Phase 3 增强版）
+
+图的骨架（StateGraph / Command / interrupt / checkpointer）由官方 LangGraph 提供；
+本模块自研的部分是节点的业务编排逻辑：意图识别、槽位补齐、查询改写、混合检索、
+工具执行与人工确认、结果校验、响应生成与人工转接等。
+
+支持条件分支、工具调用、状态追踪、混合检索、结果校验。
 """
 import time
 import json
 import asyncio
+import contextlib
 import contextvars
 import logging
 import random
@@ -15,10 +20,10 @@ from datetime import datetime
 from langchain_core.runnables import RunnableLambda
 from langgraph.graph import END as LANGGRAPH_END
 from langgraph.graph import StateGraph
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command, interrupt
 
 from app.agent.state import AgentState, AgentNode, IntentType
+from app.agent.redis_checkpoint import RedisCheckpointSaver
 from app.agent.intent import EnhancedIntentRecognizer
 from app.agent.tools import ToolExecutionResult
 from app.agent.langchain_tools import get_langchain_tool
@@ -37,10 +42,21 @@ _stream_event_queue: contextvars.ContextVar[Optional[asyncio.Queue]] = contextva
     "agent_stream_event_queue", default=None
 )
 
+# 高频寒暄语分组词表：问候 / 感谢 / 告别。
+# general 意图命中的消息直接走固定模板回复，不调 LLM、不进 RAG 检索。
+# 注意：不收录"好的/嗯"等短应答，保持现有澄清行为。
+_SMALLTALK_PATTERNS = {
+    "greeting": ["你好", "您好", "hi", "hello", "在吗", "在不在", "哈喽", "嗨", "早上好", "中午好", "下午好", "晚上好", "hey"],
+    "thanks": ["谢谢", "感谢", "多谢", "thanks", "thank"],
+    "farewell": ["再见", "拜拜", "bye", "回见"],
+}
+
 
 class AgentGraph:
     """Agent 状态机 - 核心编排器 (Phase 3)"""
 
+    # 融合后 final_score 的最低锚定分（区别于 settings.RAG_SIMILARITY_THRESHOLD
+    # 的原始向量分阈值，两者口径不同，不能互相替换）。
     RAG_MIN_SCORE = 0.35
 
     def __init__(self):
@@ -54,7 +70,9 @@ class AgentGraph:
         self.nodes: Dict[str, Callable] = {}
         self._register_nodes()
         self.llm_runnable = RunnableLambda(self._invoke_llm_service)
-        self.checkpointer = InMemorySaver()
+        # 退款确认 interrupt/多轮恢复的 checkpoint 持久化到 Redis：
+        # 进程重启后仍可按 thread_id 恢复中断状态；Redis 不可用时自动降级内存。
+        self.checkpointer = RedisCheckpointSaver()
         self.langgraph = self._build_langgraph()
 
     class _GraphState(TypedDict):
@@ -136,9 +154,11 @@ class AgentGraph:
         start_time = time.time()
         previous_tool_count = len(state.tool_calls)
         initial_node = state.current_node
-        # 保持既有 WebSocket 协议：首事件仍为入口节点，同时附带流式能力标记。
+        # 保持既有 WebSocket 协议：首事件仍为入口节点。流式事实：
+        # 节点级快照来自 LangGraph updates 模式；逐 token 文本由
+        # response_generation 节点经 _stream_event_queue 直接推送。
         yield {"type": "node_start", "node": initial_node, "timestamp": datetime.now().isoformat()}
-        yield {"type": "stream_mode", "mode": "graph_updates", "token_stream": "langchain", "timestamp": datetime.now().isoformat()}
+        yield {"type": "stream_mode", "mode": "updates", "token_stream": "langchain", "timestamp": datetime.now().isoformat()}
         first_update = True
         token_index = 0
         event_queue: asyncio.Queue = asyncio.Queue()
@@ -165,6 +185,12 @@ class AgentGraph:
           graph_done = False
           while not graph_done:
             kind, payload = await event_queue.get()
+            if kind == "token_reset":
+                # 回答被二次生成（校验重试）/LLM judge 拒答/附加引用改写时，
+                # 新一轮 token 属于改写后的最终稿：让前端清空上一轮再重打，
+                # 避免出现两版草稿文本拼接。
+                yield {"type": "token_reset", "timestamp": datetime.now().isoformat()}
+                continue
             if kind == "token":
                 content = str(payload or "")
                 if content:
@@ -223,16 +249,13 @@ class AgentGraph:
                    "duration_ms": trace.get("duration_ms", 0),
                    "next_node": payload.get("next_node"), "timestamp": datetime.now().isoformat()}
 
-            if False and node_name == AgentNode.RESPONSE_GENERATION and state.reply:
-                # Mock/非 streaming 供应商只能提供可观测的模拟切片，明确标记模式。
-                chunk_size = max(1, len(state.reply) // 8)
-                for index in range(0, len(state.reply), chunk_size):
-                    yield {"type": "token", "content": state.reply[index:index + chunk_size],
-                           "index": index, "simulated": True, "timestamp": datetime.now().isoformat()}
-
         finally:
             _stream_event_queue.reset(queue_token)
-            await producer
+            # 客户端断开（async generator 被 aclose）或异常退出时，
+            # 取消 producer 任务，终止仍在进行的 LLM 生成，避免空烧调用。
+            producer.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await producer
 
         state.execution_time_ms = int((time.time() - start_time) * 1000)
         state.response_ready = True
@@ -274,6 +297,12 @@ class AgentGraph:
             # A process restart may lose the in-memory checkpoint.  Redis-backed
             # AgentState can still safely resume because the confirmation flag is
             # explicit and the refund tool remains idempotent.
+            logger.warning(
+                "LangGraph resume 失败，降级为重新执行（多为进程重启丢失内存 checkpoint）: "
+                "session_id=%s decision=%s",
+                session_id, decision,
+                exc_info=True,
+            )
             state.user_message = str(decision)
             state.collected_info["confirm_refund"] = decision is True or str(decision).strip() in {"确认", "同意", "确定", "提交", "是的", "可以", "true", "1"}
             state.collected_info.pop("graph_interrupt", None)
@@ -316,7 +345,19 @@ class AgentGraph:
         # 规则优先、LLM 兜底：仅对低置信度输入（<0.4 或需澄清）调用模型二次确认，
         # 关键意图仍由确定性规则主导，避免模型误判导致越权或误操作。
         state.collected_info["intent_source"] = "rules"
-        if intent_result.confidence < 0.4 or intent_result.needs_clarification:
+
+        # 寒暄拦截优先于澄清与 LLM 兜底：高频寒暄语（你好/谢谢/再见等）已由
+        # 规则模板覆盖，强制解除 ≤5 字触发的澄清标记，并且不再调用分类模型二次确认，
+        # 由路由直接送入响应生成节点返回固定文案（每轮重算布尔值，防止跨轮泄漏）。
+        is_smalltalk = (
+            intent_result.intent == IntentType.GENERAL
+            and self._is_smalltalk(state.user_message)
+        )
+        state.collected_info["smalltalk"] = is_smalltalk
+        if is_smalltalk:
+            intent_result.needs_clarification = False
+
+        if (intent_result.confidence < 0.4 or intent_result.needs_clarification) and not is_smalltalk:
             refined = await self.llm_service.classify_intent(
                 state.user_message, context=state.messages[-6:]
             )
@@ -413,6 +454,16 @@ class AgentGraph:
             state.route_reason = f"missing_slots:{','.join(missing)}"
             return AgentNode.SLOT_FILLING
 
+        # general 兜底意图三级链路：寒暄命中的走模板直达响应生成（不检索），
+        # 其余泛问复用 technical/promotion 的改写→RAG 检索路径，由检索节点
+        # 在无证据时兜底输出"建议转人工"话术。
+        if state.detected_intent == IntentType.GENERAL:
+            if state.collected_info.get("smalltalk"):
+                state.route_reason = "general:smalltalk->template"
+                return AgentNode.RESPONSE_GENERATION
+            state.route_reason = "general:rag_fallback"
+            return AgentNode.QUERY_REWRITE
+
         next_node = self._route_by_intent(state.detected_intent)
         state.route_reason = f"intent:{state.detected_intent}->{next_node}"
         return next_node
@@ -494,7 +545,7 @@ class AgentGraph:
 
     async def _node_rag_retrieval(self, state: AgentState) -> str:
         query = state.rewritten_query or state.user_message
-        top_k = 3
+        top_k = settings.RAG_TOP_K
 
         # The chat path and the admin knowledge APIs must share one source of truth.
         # KnowledgeBaseService loads published documents from SQLite/Milvus and keeps
@@ -772,6 +823,11 @@ class AgentGraph:
             except Exception:
                 state.collected_info["user_memory"] = {"memory_source": "degraded"}
 
+        # 寒暄命中：直接返回固定模板文案，跳过 LLM 生成、LLM judge 与启发式校验
+        # （寒暄话术无业务语义，不应被当作低质量回答触发转人工）。
+        if state.collected_info.get("smalltalk") and not state.reply:
+            state.reply = self._get_default_reply(IntentType.GENERAL, state.user_message)
+
         generated_by_llm = False
         if not state.reply:
             llm_reply = await self._generate_response_with_llm(state)
@@ -806,7 +862,8 @@ class AgentGraph:
                     )
 
         # 槽位追问是流程提示，不是业务答案，不应因"信息尚未齐全"被判定为低质量并转人工。
-        if (generated_by_llm or not state.collected_info.get("validation")) and not state.missing_slots and not state.collected_info.get("rag_refused"):
+        # 寒暄模板同样跳过校验：固定文案无业务语义，无需事实/完整性核查。
+        if (generated_by_llm or not state.collected_info.get("validation")) and not state.missing_slots and not state.collected_info.get("rag_refused") and not state.collected_info.get("smalltalk"):
             validation = self.validator.validate(
                 response=state.reply,
                 user_query=state.user_message,
@@ -890,6 +947,9 @@ class AgentGraph:
             }
             stream_queue = _stream_event_queue.get()
             if stream_queue is not None:
+                # 新一轮生成开始：先让前端清空上一轮已显示的草稿，
+                # token_reset 与 done.reply 整体替换一起保证最终稿一致性。
+                await stream_queue.put(("token_reset", None))
                 chunks = []
                 async for chunk in self.llm_service.stream_chat(**payload):
                     chunks.append(chunk)
@@ -1016,13 +1076,27 @@ class AgentGraph:
                 })
         return context
 
+    @staticmethod
+    def _is_smalltalk(message: str) -> bool:
+        """判断消息是否为高频寒暄语（问候/感谢/告别）。命中则走固定模板，不调 LLM。"""
+        if not message:
+            return False
+        msg = message.strip().lower()
+        return any(
+            keyword in msg
+            for group in _SMALLTALK_PATTERNS.values()
+            for keyword in group
+        )
+
     def _get_default_reply(self, intent: str, message: str) -> str:
         if intent == IntentType.GENERAL:
             msg = (message or "").strip().lower()
-            if any(g in msg for g in ["你好", "您好", "hi", "hello", "在吗", "在不在", "哈喽", "嗨"]):
+            if any(g in msg for g in _SMALLTALK_PATTERNS["greeting"]):
                 return "您好，请问有什么可以帮您？"
-            if any(t in msg for t in ["谢谢", "感谢", "多谢", "thanks", "thank"]):
+            if any(t in msg for t in _SMALLTALK_PATTERNS["thanks"]):
                 return "不客气，还有其他可以帮您的吗？"
+            if any(f in msg for f in _SMALLTALK_PATTERNS["farewell"]):
+                return "再见，祝您生活愉快，有需要随时找我。"
             return "我可以帮助您查询订单、处理退换货、解答产品问题等。请问有什么可以帮您的？"
         default_replies = {
             IntentType.QUERY_ORDER: "请提供您的订单号，我可以帮您查询最新的订单状态和物流信息。",

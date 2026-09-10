@@ -53,7 +53,7 @@ export const api = {
   rebuildIndex: () => apiFetch('/api/v1/knowledge/rebuild-index', { method: 'POST' }),
   searchKnowledge: (query: string) => apiFetch<{ results: { id: string; title: string; content: string; final_score?: number }[] }>('/api/v1/knowledge/search', { method: 'POST', body: JSON.stringify({ query, top_k: 5, similarity_threshold: 0.3 }) }),
   metrics: () => apiFetch<{ metrics: Record<string, any>; alerts: any[] }>('/api/v1/analytics/metrics'),
-  summary: () => apiFetch<Record<string, any>>('/api/v1/analytics/metrics/summary?hours=24'),
+  summary: () => apiFetch<Record<string, any>>('/api/v1/analytics/metrics/summary'),
   feedback: (payload: Record<string, unknown>) => apiFetch('/api/v1/feedback/submit', { method: 'POST', body: JSON.stringify(payload) }),
   users: () => apiFetch<User[]>('/api/v1/users/?page=1&page_size=100'),
   createUser: (payload: Record<string, unknown>) => apiFetch<User>('/api/v1/users/', { method: 'POST', body: JSON.stringify(payload) }),

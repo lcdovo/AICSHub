@@ -144,13 +144,17 @@ services:
       COLLECTION_NAME: ${COLLECTION_NAME:-customer_service_knowledge}
       RAG_TOP_K: ${RAG_TOP_K:-5}
       RAG_SIMILARITY_THRESHOLD: ${RAG_SIMILARITY_THRESHOLD:-0.2}
-      RAG_BM25_WEIGHT: ${RAG_BM25_WEIGHT:-0.65}
-      RAG_VECTOR_WEIGHT: ${RAG_VECTOR_WEIGHT:-0.35}
       RAG_USE_RERANKER: ${RAG_USE_RERANKER:-true}
-      RAG_SEARCH_TOP_K_MULTIPLIER: ${RAG_SEARCH_TOP_K_MULTIPLIER:-3}
       CHUNK_SIZE: ${CHUNK_SIZE:-500}
       CHUNK_OVERLAP: ${CHUNK_OVERLAP:-50}
       CHUNK_SPLIT_PATTERN: ${CHUNK_SPLIT_PATTERN:-heading}
+      # Langfuse 外部观测（可选）：默认关闭，随 docker-compose.langfuse.yml 一起启用。
+      # 容器内通过服务名 langfuse 访问自托管实例；本地非 Docker 运行使用 .env 的 LANGFUSE_HOST。
+      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: http://langfuse:3000
+      LANGFUSE_SAMPLING_RATE: ${LANGFUSE_SAMPLING_RATE:-1.0}
     ports:
       - "${APP_PORT:-8000}:8000"
     depends_on:

@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, model_validator
 
 
@@ -97,10 +97,9 @@ class Settings(BaseSettings):
     COLLECTION_NAME: str = Field(default="customer_service_knowledge")
     RAG_TOP_K: int = Field(default=5)
     RAG_SIMILARITY_THRESHOLD: float = Field(default=0.2)
-    RAG_BM25_WEIGHT: float = Field(default=0.65)
-    RAG_VECTOR_WEIGHT: float = Field(default=0.35)
+    # 检索融合已改为 RRF（Rank 融合，不依赖权重），历史上的
+    # RAG_BM25_WEIGHT / RAG_VECTOR_WEIGHT / RAG_SEARCH_TOP_K_MULTIPLIER 已移除。
     RAG_USE_RERANKER: bool = Field(default=True)
-    RAG_SEARCH_TOP_K_MULTIPLIER: int = Field(default=3)
 
     # 文档分块配置
     CHUNK_SIZE: int = Field(default=500)
@@ -124,6 +123,67 @@ class Settings(BaseSettings):
         """将逗号分隔的白名单转换为 FastAPI 可用格式。"""
         return [origin.strip() for origin in self.CORS_ALLOW_ORIGINS.split(",") if origin.strip()]
 
+    @model_validator(mode="before")
+    @classmethod
+    def validate_cross_field_sanity(cls, values):
+        """跨字段启动校验：配置自相矛盾时在进程启动即失败，而不是运行时静默失效。
+
+        before 模式在字段解析前执行，需要容忍环境变量的字符串原始值。
+        """
+        def _to_int(v, name):
+            if v is None or v == "":
+                return None
+            try:
+                return int(v)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"环境变量 {name}={v!r} 不是有效整数，请在 .env 中检查"
+                )
+
+        def _to_float(v, name):
+            if v is None or v == "":
+                return None
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"环境变量 {name}={v!r} 不是有效数字，请在 .env 中检查"
+                )
+
+        # 服务端口必须落在合法区间，避免拼接出畸形连接串。
+        for port_name in ("MYSQL_PORT", "REDIS_PORT", "MILVUS_PORT"):
+            port = _to_int(values.get(port_name), port_name)
+            if port is not None and not 1 <= port <= 65535:
+                raise ValueError(f"环境变量 {port_name}={port} 必须在 1-65535 之间")
+
+        chunk_size = _to_int(values.get("CHUNK_SIZE"), "CHUNK_SIZE")
+        chunk_overlap = _to_int(values.get("CHUNK_OVERLAP"), "CHUNK_OVERLAP")
+        if chunk_size is not None and chunk_overlap is not None and chunk_overlap >= chunk_size:
+            raise ValueError(
+                f"环境变量 CHUNK_OVERLAP={chunk_overlap} 必须小于 CHUNK_SIZE={chunk_size}"
+            )
+
+        max_tokens = _to_int(values.get("LLM_MAX_TOKENS"), "LLM_MAX_TOKENS")
+        daily_budget = _to_int(values.get("LLM_DAILY_USER_TOKEN_BUDGET"), "LLM_DAILY_USER_TOKEN_BUDGET")
+        if max_tokens is not None and daily_budget is not None and max_tokens > daily_budget:
+            raise ValueError(
+                f"环境变量 LLM_MAX_TOKENS={max_tokens} 不能大于单用户日预算 "
+                f"LLM_DAILY_USER_TOKEN_BUDGET={daily_budget}"
+            )
+
+        sim_threshold = _to_float(values.get("RAG_SIMILARITY_THRESHOLD"), "RAG_SIMILARITY_THRESHOLD")
+        if sim_threshold is not None and not 0.0 <= sim_threshold <= 1.0:
+            raise ValueError(
+                f"环境变量 RAG_SIMILARITY_THRESHOLD={sim_threshold} 必须在 0-1 之间"
+            )
+
+        embedding_dim = _to_int(values.get("EMBEDDING_DIM"), "EMBEDDING_DIM")
+        if embedding_dim is not None and not 1 <= embedding_dim <= 8192:
+            raise ValueError(
+                f"环境变量 EMBEDDING_DIM={embedding_dim} 必须在 1-8192 之间"
+            )
+        return values
+
     @model_validator(mode="after")
     def validate_production_security(self):
         if self.ENVIRONMENT.lower() == "production":
@@ -135,11 +195,12 @@ class Settings(BaseSettings):
                 raise ValueError("生产模式禁止使用通配 CORS 来源")
         return self
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
         # 同一份 .env 同时供 Compose 和应用使用；忽略仅由 Compose 消费的额外变量。
-        extra = "ignore"
+        extra="ignore",
+    )
 
 
 settings = Settings()

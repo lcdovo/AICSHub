@@ -1,0 +1,107 @@
+[
+  {
+    "intent": "query_order",
+    "user_query": "订单 ORD20260801 现在到哪了？",
+    "reference_reply": "您的订单 ORD20260801 已于 2026-08-13 发货，承运方为顺丰快递，运单号 SF1234567890，当前状态为运输中，预计 2026-08-17 送达。",
+    "expected_facts": ["ORD20260801", "顺丰", "运输中"],
+    "evidence": "订单 ORD20260801 状态=已发货，承运商=顺丰快递，运单号=SF1234567890，预计送达=2026-08-17"
+  },
+  {
+    "intent": "query_order",
+    "user_query": "查一下 ORD20260802 签收了没",
+    "reference_reply": "订单 ORD20260802 已完成，物流显示已签收（京东物流，运单号 JD9876543210）。",
+    "expected_facts": ["ORD20260802", "已签收"],
+    "evidence": "订单 ORD20260802 状态=已完成，承运商=京东物流，运单号=JD9876543210，物流=已签收"
+  },
+  {
+    "intent": "query_order",
+    "user_query": "帮我查个订单",
+    "reference_reply": "请提供您的订单号，我可以帮您查询最新的订单状态和物流信息。",
+    "expected_facts": ["订单号"],
+    "evidence": ""
+  },
+  {
+    "intent": "refund",
+    "user_query": "签收后 7 天内可以无理由退货吗？",
+    "reference_reply": "可以。自签收之日起 7 天内支持无理由退货，商品需保持完好、不影响二次销售，退货运费由买家承担，质量问题除外。",
+    "expected_facts": ["7天", "无理由", "完好"],
+    "evidence": "退换货政策：自签收后 7 天内可无理由退货，商品需保持完好。运费：非质量问题由买家承担，质量问题由卖家承担。"
+  },
+  {
+    "intent": "refund",
+    "user_query": "申请对订单 ORD20260801 退款，原因是商品破损",
+    "reference_reply": "已为订单 ORD20260801 提交退款申请（类型：仅退款，原因：商品破损），退款单号 R12345678，等待平台审核 1-3 个工作日。",
+    "expected_facts": ["ORD20260801", "R12345678", "审核"],
+    "evidence": "退款单 R12345678 已创建：订单 ORD20260801，金额 299，状态=审核中"
+  },
+  {
+    "intent": "refund",
+    "user_query": "退款要多久到账？",
+    "reference_reply": "提交退款申请后 1-3 个工作日审核，审核通过后原路返回；支付宝/微信即时到账，银行卡需 3-7 个工作日。",
+    "expected_facts": ["1-3", "原路返回"],
+    "evidence": "退款政策：审核 1-3 个工作日；支付宝/微信即时到账，银行卡 3-7 个工作日。"
+  },
+  {
+    "intent": "complaint",
+    "user_query": "我收到的货是坏的，你们家客服太差了，我要投诉！",
+    "reference_reply": "非常抱歉给您带来不好的体验。已为您创建投诉工单（编号 T20260910001，高优先级），我们会尽快处理并在 24 小时内答复。",
+    "expected_facts": ["工单", "T20260910001"],
+    "evidence": "投诉工单 T20260910001 已创建：类别=投诉建议，优先级=high"
+  },
+  {
+    "intent": "technical",
+    "user_query": "设备怎么连接不上 Wi-Fi？",
+    "reference_reply": "请检查以下步骤：1) 确认设备与路由器距离在有效范围内；2) 尝试重启设备和路由器；3) 确认输入的 Wi-Fi 密码正确。若仍无法连接，请回复“转人工”联系我们协助排查。",
+    "expected_facts": ["Wi-Fi", "重启", "密码"],
+    "evidence": "常见问题：Wi-Fi 连接异常排查——检查距离、重启设备与路由器、核对密码。"
+  },
+  {
+    "intent": "technical",
+    "user_query": "怎么开增值税专用发票？",
+    "reference_reply": "结算时选择发票类型为“增值税专用发票”，填写企业抬头与税号后提交即可；发票开具后可在订单详情中查看。",
+    "expected_facts": ["增值税专用发票", "税号"],
+    "evidence": "发票说明：结算时选择电子普通发票或增值税专用发票，填写抬头信息后提交。"
+  },
+  {
+    "intent": "promotion",
+    "user_query": "现在有什么优惠活动吗？",
+    "reference_reply": "目前官网有“新客首单立减 20 元”和“满 500 减 50”活动，会员还可叠加专属折扣，具体以活动页面为准。",
+    "expected_facts": ["首单", "满减"],
+    "evidence": "活动中心：新客首单立减 20 元；满 500 减 50；会员专属折扣。"
+  },
+  {
+    "intent": "promotion",
+    "user_query": "积分怎么用？",
+    "reference_reply": "100 积分 = 1 元，结算时可抵扣现金，每笔订单最多抵扣 50%。",
+    "expected_facts": ["100积分", "50%"],
+    "evidence": "积分规则：100 积分=1 元，结算时可抵扣，每笔订单最多抵扣 50%。"
+  },
+  {
+    "intent": "human",
+    "user_query": "我要转人工客服",
+    "reference_reply": "正在为您转接人工客服，请稍候，已为您同步本次会话上下文。",
+    "expected_facts": ["转接", "人工"],
+    "evidence": ""
+  },
+  {
+    "intent": "general",
+    "user_query": "你好",
+    "reference_reply": "您好，请问有什么可以帮您？",
+    "expected_facts": [],
+    "evidence": ""
+  },
+  {
+    "intent": "general",
+    "user_query": "谢谢",
+    "reference_reply": "不客气，还有其他可以帮您的吗？",
+    "expected_facts": [],
+    "evidence": ""
+  },
+  {
+    "intent": "general",
+    "user_query": "你们的客服几点下班？",
+    "reference_reply": "在线客服工作时间为每天 9:00-21:00，人工坐席在此时间段内值班；其余时间可留言，我们将在次日优先回复。",
+    "expected_facts": ["9:00", "21:00"],
+    "evidence": "客服工作时间：每日 9:00-21:00。"
+  }
+]

@@ -778,7 +778,12 @@ class KnowledgeBaseService:
 
         merged = self._merge_results(vector_results, bm25_results, top_k)
 
-        reranked = self._rerank_results(query, merged, top_k)
+        # RAG_USE_RERANKER 未开启时跳过重排，直接使用 RRF 融合结果。
+        reranked = (
+            self._rerank_results(query, merged, top_k)
+            if settings.RAG_USE_RERANKER
+            else merged
+        )
 
         strategy = "hybrid" if (vector_results and bm25_results) else (
             "vector" if vector_results else "memory"

@@ -552,13 +552,19 @@ async def websocket_chat_stream(websocket: WebSocket):
                 })
 
                 full_reply = ""
-                async for event in chat_service.process_stream(agent_state):
-                    if event["type"] == "token":
-                        full_reply += event["content"]
-                    elif event["type"] == "done":
-                        full_reply = event.get("reply", full_reply)
+                stream_agen = chat_service.process_stream(agent_state)
+                try:
+                    async for event in stream_agen:
+                        if event["type"] == "token":
+                            full_reply += event["content"]
+                        elif event["type"] == "done":
+                            full_reply = event.get("reply", full_reply)
 
-                    await websocket.send_json(event)
+                        await websocket.send_json(event)
+                finally:
+                    # 断开/异常时显式关闭生成器，触发 run_stream 取消 producer，
+                    # 终止仍在进行的 LLM 生成，避免空烧调用与多余日志。
+                    await stream_agen.aclose()
 
                 agent_state.reply = agent_state.reply or full_reply
                 assistant_message, stream_evaluation = await chat_service.persist_result(

@@ -43,7 +43,12 @@ def get_langfuse_handler() -> Optional[Any]:
         if _handler is not None:
             return _handler
         try:
-            from langfuse.callback import CallbackHandler
+            # langfuse v4 起 LangChain 回调移入 langfuse.langchain；
+            # v3.x 仍在 langfuse.callback，按版本回退保证 requirements 的 >=3.8.0 都能用。
+            try:
+                from langfuse.langchain import CallbackHandler
+            except ImportError:
+                from langfuse.callback import CallbackHandler
 
             # CallbackHandler 优先从环境变量读取密钥与地址；这里透传 settings 值，
             # 保证与 .env / 配置文件来源一致，且不依赖 SDK 内部参数名差异。

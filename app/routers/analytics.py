@@ -61,11 +61,12 @@ async def get_system_metrics(_: User = Depends(require_admin)):
 
 
 @router.get("/metrics/summary")
-async def get_metrics_summary(
-    hours: int = Query(default=1, ge=1, le=168, description="统计小时数"),
-    _: User = Depends(require_admin),
-):
-    """获取指标摘要"""
+async def get_metrics_summary(_: User = Depends(require_admin)):
+    """获取指标摘要。
+
+    注意：MetricsCollector 为进程级聚合计数器/分位统计，不保留按小时的
+    采样明细，因此不再提供 hours 参数（此前参数仅回显不生效，已移除）。
+    """
     tracer = get_tracer()
     metrics = tracer.get_metrics()
 
@@ -73,7 +74,6 @@ async def get_metrics_summary(
     tool_stats = metrics.get("tool_statistics", {})
 
     summary = {
-        "period_hours": hours,
         "total_requests": metrics.get("counters", {}).get("response.total", 0),
         "success_rate": metrics.get("success_rate", 0),
         "avg_response_time_ms": response_time.get("avg_ms", 0),

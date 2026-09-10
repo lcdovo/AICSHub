@@ -1,6 +1,6 @@
 # AI Customer
 
-企业级智能客服与工单自动处理系统。基于 FastAPI 自研 LangGraph 风格的 Agent 状态机，覆盖意图识别、RAG 检索、Function Calling 工具调用、人机协同、可观测性与 LLM 治理的完整闭环，重点展示单体应用内的模型编排与业务落地能力。
+企业级智能客服与工单自动处理系统。基于 FastAPI + 官方 LangGraph 状态机，图形骨架由 LangGraph 提供，自研 13 节点业务编排（意图识别、RAG 检索、Function Calling 工具调用、人机协同、可观测性与 LLM 治理），覆盖完整闭环，重点展示单体应用内的模型编排与业务落地能力。
 
 ## 核心链路
 
@@ -45,7 +45,6 @@ app/
 │   ├── intent.py       # 规则 + LLM 兜底意图识别
 │   ├── tools.py        # 8 个业务工具与重试/熔断基类
 │   ├── langchain_tools.py  # StructuredTool 适配
-│   ├── retrieval.py    # BM25 检索器
 │   ├── query_rewrite.py    # 保守的上下文问题改写
 │   ├── validation.py   # 事实/安全/完整性三层校验
 │   └── memory.py       # Redis 会话状态与上下文压缩

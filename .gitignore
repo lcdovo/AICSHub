@@ -20,8 +20,13 @@ build/
 *.db
 *.sqlite
 
-# Docker 本地数据卷
-data/
+# Docker 本地数据卷（eval 评估数据集例外，需入库）
+data/*
+!data/eval/
+!data/eval/*.json
+
+# 评估报告生成目录
+reports/
 
 # 临时文件
 *.tmp
