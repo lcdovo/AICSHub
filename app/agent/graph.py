@@ -357,7 +357,21 @@ class AgentGraph:
         if is_smalltalk:
             intent_result.needs_clarification = False
 
-        if (intent_result.confidence < 0.4 or intent_result.needs_clarification) and not is_smalltalk:
+        # ⑤ 分层阈值 + ④ 澄清态续答：仅当规则判定"需要 LLM 复审"时才调用模型兜底。
+        #  - 规则已明显自信（top1 领先 top2 ≥0.5 且置信度达标）→ 直接信任规则；
+        #  - 上一轮已处于澄清态（state.needs_clarification=True）→ 本轮用户补充
+        #    信息（订单号/短答复）时由 CLARIFICATION/槽位节点接着走，不再调 LLM 兜底，
+        #    避免多轮追问重复耗一次模型调用。
+        is_continuation_reply = (
+            state.needs_clarification
+            and len(state.user_message.strip()) <= 20
+            and intent_result.needs_clarification is False
+        )
+        if (
+            intent_result.needs_llm_fallback
+            and not is_smalltalk
+            and not is_continuation_reply
+        ):
             refined = await self.llm_service.classify_intent(
                 state.user_message, context=state.messages[-6:]
             )
@@ -503,6 +517,12 @@ class AgentGraph:
         labels = [prompts.get(slot, slot) for slot in state.missing_slots]
         if state.detected_intent == IntentType.REFUND:
             state.reply = f"为了处理退款申请，请补充：{'、'.join(labels)}。"
+        elif state.detected_intent == IntentType.QUERY_ORDER:
+            # 缺订单号时不只索要参数，同时给出查找路径，避免客服"只问不改"。
+            state.reply = (
+                "为了查询您的订单，请提供订单号（订单 ORD 开头的编号）。"
+                "您可以在 App/官网“我的订单”页面或下单短信中查看。"
+            )
         else:
             state.reply = f"为了查询订单，请提供：{'、'.join(labels)}。"
         return AgentNode.RESPONSE_GENERATION
@@ -844,13 +864,44 @@ class AgentGraph:
 
         # LLM-as-judge 防幻觉：对 RAG 生成回答做证据一致性核查，
         # 无法锚定证据时选择"无据不答"，而非让模型为生成而编造（本文改进第 2 项）。
+        # 二合一方案（改进第 6 项）：生成调用的结构化输出已内联自检结论（grounded /
+        # fact_score / refuse_recommended），优先复用，不再额外串行调用独立 judge；
+        # 仅当（a）该条生成未携带内联自检（如流式/降级路径），或（b）内联自检本身
+        # 建议拒答/低分（"自己查自己"独立性弱，用独立 judge 复核关键结论）——这两种
+        # 偶发场景才触发一次独立 judge，从而把 RAG 链路的 LLM 调用从 2 次降到 1 次。
         if generated_by_llm and self._rag_judge_applicable(state):
-            judgement = await self.llm_judge.judge(
-                response=state.reply,
-                user_query=state.user_message,
-                kb_context=state.collected_info.get("kb_results", []),
-                tool_evidence=self._tool_evidence_text(state),
-            )
+            inline_check = state.collected_info.get("inline_self_check")
+            judgement = None
+            if inline_check is None:
+                judgement = await self.llm_judge.judge(
+                    response=state.reply,
+                    user_query=state.user_message,
+                    kb_context=state.collected_info.get("kb_results", []),
+                    tool_evidence=self._tool_evidence_text(state),
+                )
+            else:
+                judgement = dict(inline_check)
+                refusal_risk = (
+                    judgement.get("refuse_recommended")
+                    or judgement.get("fact_score", 1.0) < self.llm_judge.DEFAULT_THRESHOLD
+                )
+                if refusal_risk:
+                    verified = await self.llm_judge.judge(
+                        response=state.reply,
+                        user_query=state.user_message,
+                        kb_context=state.collected_info.get("kb_results", []),
+                        tool_evidence=self._tool_evidence_text(state),
+                    )
+                    if verified is not None:
+                        verdict = {
+                            "grounded": bool(verified.get("grounded", True)),
+                            "fact_score": round(float(verified.get("fact_score", 0.0)), 2),
+                            "has_unsupported_claim": bool(verified.get("has_unsupported_claim", False)),
+                            "refuse_recommended": bool(verified.get("refuse_recommended", False)),
+                            "reason": str(verified.get("reason", ""))[:80],
+                            "source": "independent_fallback",
+                        }
+                        judgement = verdict
             if judgement:
                 state.collected_info["llm_judge"] = judgement
                 if judgement.get("refuse_recommended"):
@@ -965,6 +1016,20 @@ class AgentGraph:
             # 治理元数据只包含摘要、版本和预算结果，不保存发送给模型的敏感原文。
             state.collected_info["llm_governance"] = self.llm_service.get_last_call_metadata()
 
+            # 二合一：生成调用的结构化输出（LLMResponse 契约）已内联自检字段。
+            # 非流式结构化路径会拿到完整自检结论，存到 state 供响应节点复用，
+            # 从而省掉独立的 LLM judge 调用；流式路径没有结构化字段则走独立 judge 兜底。
+            structured_meta = (state.collected_info.get("llm_governance") or {}).get("structured_output") or {}
+            if isinstance(structured_meta, dict) and {"grounded", "fact_score", "refuse_recommended"} <= set(structured_meta):
+                state.collected_info["inline_self_check"] = {
+                    "grounded": bool(structured_meta.get("grounded", True)),
+                    "fact_score": round(float(structured_meta.get("fact_score", 0.5)), 2),
+                    "has_unsupported_claim": bool(structured_meta.get("has_unsupported_claim", False)),
+                    "refuse_recommended": bool(structured_meta.get("refuse_recommended", False)),
+                    "reason": str(structured_meta.get("reason", ""))[:80],
+                    "source": "inline",
+                }
+
             if state.detected_intent not in (IntentType.HUMAN, IntentType.COMPLAINT, IntentType.QUERY_ORDER, IntentType.REFUND):
                 state.detected_intent = intent
 
@@ -1062,6 +1127,9 @@ class AgentGraph:
         parts.append("3. 如果有知识库内容，基于检索内容给出准确回答")
         parts.append("4. 保持友好专业的语气，适当引导下一步操作")
         parts.append("5. 回复控制在 200 字以内")
+        if kb_results:
+            parts.append("6. 仅根据【知识库检索结果】作答：每条关键论断都应有检索片段作为依据；"
+                         "若证据不足，grounded 设为 false、refuse_recommended 设为 true，不要臆造。")
 
         return "\n".join(parts)
 

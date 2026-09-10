@@ -20,10 +20,14 @@ class ConservativeQueryRewriter:
     """仅在当前问题明显依赖上文时，把上文拼入检索查询。"""
 
     _REFERENCE_TERMS = (
-        "这个", "那个", "这款", "那款", "它", "该产品", "该商品", "上述", "前面"
+        "这个", "那个", "这款", "那款", "它", "该产品", "该商品", "上述", "前面",
+        "这些", "那些",
     )
-    _FOLLOW_UP_TERMS = (
-        "然后", "那", "另外", "还", "仍然", "还是", "多久", "可以吗", "能吗", "呢", "吗"
+    # 追问连接词：出现在句首且句子较短（≤14 字）时视为承接上一轮话题。
+    _HEAD_FOLLOW_TERMS = ("那", "然后", "接着", "另外", "还", "而且")
+    # 裸疑问短句（≤6 字）含以下疑问词/语气词时视为依赖上文的对象省略。
+    _SHORT_QUESTION_HINTS = (
+        "呢", "吗", "多久", "怎样", "怎么", "多少", "哪个", "哪些", "谁", "如何", "咋"
     )
     _ORDER_ID_PATTERN = re.compile(r"\bORD\d{6,}\b", re.IGNORECASE)
 
@@ -41,14 +45,20 @@ class ConservativeQueryRewriter:
         if not previous:
             return QueryRewriteResult(original, original, False, "no_previous_user_query", 1.0)
 
-        compact = original.replace(" ", "")
+        # 先剥掉标点再匹配：避免"价格呢？""大概多久？"因句尾标点导致 endswith 失配。
+        compact = re.sub(r"[？?!！。，,、～~·:：]+", "", original.replace(" ", ""))
         has_reference = any(term in compact for term in self._REFERENCE_TERMS)
-        has_follow_up = any(
-            compact.startswith(term) or compact.endswith(term)
-            for term in self._FOLLOW_UP_TERMS
+        # 句首追问连接词（"那""还""然后"）且整体不长 → 承接上文
+        is_head_follow = (
+            len(compact) <= 14
+            and any(compact.startswith(term) for term in self._HEAD_FOLLOW_TERMS)
         )
-        is_short = len(compact) <= 20
-        if not (has_reference or (is_short and has_follow_up)):
+        # 裸疑问短句（如"价格呢""运费谁出""哪个更好用"）→ 主题词省略，依赖上文
+        is_short_question = (
+            len(compact) <= 6
+            and any(hint in compact for hint in self._SHORT_QUESTION_HINTS)
+        )
+        if not (has_reference or is_head_follow or is_short_question):
             return QueryRewriteResult(original, original, False, "self_contained_query", 0.9)
 
         info = collected_info or {}

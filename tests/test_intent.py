@@ -65,3 +65,33 @@ def test_full_policy_context_not_negated():
     """否定词"不要"不能误伤"要不要"场景里的正向词"""
     result = recognizer.recognize("要不要退款优惠？")
     assert result.intent in ("refund", "promotion")
+
+
+def test_high_confidence_skips_llm_fallback():
+    """⑤ 分层阈值：规则已明显自信（top1 领先 + 高置信）→ 不需要 LLM 兜底"""
+    for msg in ("我要退款，商品破损", "订单 ORD123456 现在到哪了？", "转人工", "能退吗"):
+        result = recognizer.recognize(msg)
+        assert result.needs_llm_fallback is False, msg
+
+
+def test_low_confidence_keeps_llm_fallback():
+    """⑤ 分层阈值：低置信或意图模糊 → 保留 LLM 兜底机会"""
+    result = recognizer.recognize("退")
+    assert result.needs_llm_fallback is True
+    result = recognizer.recognize("坑爹啊")
+    assert result.needs_llm_fallback is True
+
+
+def test_general_never_triggers_llm_fallback():
+    """⑤ general（无领域词）不走 LLM 兜底，由澄清/模板/检索接管"""
+    result = recognizer.recognize("嗯")
+    assert result.intent == "general"
+    assert result.needs_llm_fallback is False
+
+
+def test_continuation_relaxed_threshold():
+    """③ 放宽延续：len<20 且 conf<0.4 的追问直接沿用上一意图"""
+    for msg in ("大概什么时候能到", "那现在呢"):
+        result = recognizer.recognize(msg, context=[{"role": "user", "content": "帮我查个订单"}], history_intent="query_order")
+        assert result.intent == "query_order", msg
+        assert result.needs_llm_fallback is False, msg

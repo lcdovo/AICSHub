@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 # 报告评估使用的视口集合（search 取 max(视口集合) 结果，再按 k 切分）。
-RANK_KS = (1, 3, 5)
+RANK_KS = (1, 2, 3, 5)
 
 
 @dataclass
@@ -177,8 +177,8 @@ def format_report_md(
     lines.append("")
 
     lines.append("## 逐条明细")
-    header = "| query | ground_truth | rank | recall@1 | recall@3 | recall@5 | MRR | top_result | latency_ms |"
-    separator = "|---|---|---|---|---|---|---|---|---|---|"
+    header = "| query | ground_truth | rank | " + " | ".join(f"recall@{k}" for k in RANK_KS) + " | MRR | top_result | latency_ms |"
+    separator = "|---|---|---|---" + "|---" * len(RANK_KS) + "|---|---|---|"
     if with_answer_quality:
         header += " answer_score |"
         separator += "---|"
@@ -189,13 +189,13 @@ def format_report_md(
             ev.query[:40],
             ",".join(ev.ground_truth),
             str(rank),
-            "1" if 0 < rank <= 1 else "0",
-            "1" if 0 < rank <= 3 else "0",
-            "1" if 0 < rank <= 5 else "0",
+        ]
+        cells.extend("1" if 0 < rank <= k else "0" for k in RANK_KS)
+        cells.extend([
             f"{1.0 / rank:.3f}" if rank else "0.000",
             ev.top_result[:28],
             f"{ev.latency_ms:.1f}",
-        ]
+        ])
         if with_answer_quality:
             cells.append(str(ev.answer_score if ev.answer_score is not None else "-"))
         lines.append("| " + " | ".join(cells) + " |")

@@ -194,3 +194,22 @@ def test_smalltalk_reply_uses_template_without_llm(monkeypatch):
 def test_default_reply_general_farewell_template():
     graph = _make_graph()
     assert graph._get_default_reply(IntentType.GENERAL, "再见") == "再见，祝您生活愉快，有需要随时找我。"
+
+
+def test_slot_filling_order_guidance_not_bare_request():
+    """缺订单号时给出查找指引话术，而非单句索要参数。"""
+    graph = _make_graph()
+    state = _state_with_intent(IntentType.QUERY_ORDER)
+    state.missing_slots = ["order_id"]
+    assert asyncio.run(graph._node_slot_filling(state)) == AgentNode.RESPONSE_GENERATION
+    assert "我的订单" in state.reply
+    assert "ORD" in state.reply
+
+
+def test_slot_filling_refund_keeps_argument_labels():
+    """退款槽位提示保留补齐参数格式。"""
+    graph = _make_graph()
+    state = _state_with_intent(IntentType.REFUND)
+    state.missing_slots = ["order_id", "reason"]
+    assert asyncio.run(graph._node_slot_filling(state)) == AgentNode.RESPONSE_GENERATION
+    assert "请补充" in state.reply

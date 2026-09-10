@@ -1,0 +1,62 @@
+[
+  {
+    "intent": "query_order",
+    "user_query": "订单 ORD20260910 现在到哪了？",
+    "latency_class": "tool",
+    "note": "工具直查：命中 shipped 订单，走 query_order 工具（含重试链路）"
+  },
+  {
+    "intent": "query_order",
+    "user_query": "帮我查一下我刚下的订单",
+    "latency_class": "slot_filling",
+    "note": "槽位补齐：缺订单号，话术早退，不调 LLM/检索/工具"
+  },
+  {
+    "intent": "technical",
+    "user_query": "机械键盘的轴体这么换？",
+    "latency_class": "rag",
+    "note": "RAG 检索：命中 03-机械键盘产品文档，改写+检索+judge 校验"
+  },
+  {
+    "intent": "promotion",
+    "user_query": "满减活动和优惠券能叠加使用吗",
+    "latency_class": "rag",
+    "note": "RAG 检索：命中 14-满减活动与优惠券使用规则"
+  },
+  {
+    "intent": "refund",
+    "user_query": "签收后 7 天内可以无理由退货吗",
+    "latency_class": "rag_policy",
+    "note": "RAG 政策咨询：命中 05-7天无理由退换货政策，退款意图分流（无订单号/动作词）"
+  },
+  {
+    "intent": "refund",
+    "user_query": "对订单 ORD20260905 申请退款，商品有质量问题",
+    "latency_class": "tool_confirm",
+    "note": "工具+确认：apply_refund 先出预览，interrupt 等用户确认"
+  },
+  {
+    "intent": "complaint",
+    "user_query": "物流一直拖延不派送，我要投诉！",
+    "latency_class": "tool",
+    "note": "工具建单：create_ticket 高优先级工单"
+  },
+  {
+    "intent": "human",
+    "user_query": "别啰嗦了，转人工处理",
+    "latency_class": "handoff",
+    "note": "转人工：human_handoff 直达，含 escalate_to_human 工具"
+  },
+  {
+    "intent": "general",
+    "user_query": "hello",
+    "latency_class": "smalltalk",
+    "note": "寒暄早退：模板直答，不调 LLM/检索/工具"
+  },
+  {
+    "intent": "general",
+    "user_query": "你们的客服工作时间是几点到几点",
+    "latency_class": "rag_small",
+    "note": "RAG 检索：general 兜底走 RAG，命中 FAQ 服务时间"
+  }
+]

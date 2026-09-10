@@ -53,7 +53,15 @@ class LLMQueryRewriter:
         if rule.applied:
             return rule
 
-        # 规则分支未改写（自我含查询）：仅在开关开启且 LLM 真实可用时尝试语义改写。
+        # 规则已明确判定"问题自包含、无需改写"：直接短路返回，不再调 LLM 复审。
+        # 这类查询（如"机械键盘的轴体怎么换"）字面完整可独立检索，LLM 复审
+        # 大概率也返回不改写，只为它串行多花 5~9s 纯属浪费。
+        if rule.reason == "self_contained_query":
+            return rule
+
+        # 走到这里 = 规则无法给出改写（主要是没有上轮上下文可供拼接，
+        # 但问题又可能语义不完整，如单轮省略主语的追问），此兜底场景量极少，
+        # 才交给 LLM 语义补全。
         enable_llm = (
             bool(getattr(settings, "LLM_QUERY_REWRITE_ENABLED", False))
             and self.llm_service is not None

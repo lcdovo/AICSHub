@@ -15,39 +15,42 @@ class IntentResult:
     confidence: float
     needs_clarification: bool = False
     sub_intent: Optional[str] = None
+    # ⑤ 分层阈值：规则对当前消息是否足够自信。False 时上层可跳过 LLM 兜底复审，
+    # 避免"top1 已明显领先"的低置信样本再白耗一次模型调用。
+    needs_llm_fallback: bool = False
 
 
 # 意图关键词映射 - 带有权重的关键词
 INTENT_PATTERNS = {
     "query_order": {
-        "high": ["订单号", "物流", "快递", "发货", "运单号", "配送", "咋样了", "到哪了", "到哪一步", "签收了没", "什么情况", "查一下", "查件"],
-        "medium": ["订单", "查询", "跟踪", "到哪", "状态", "单号", "发货没", "发货了吗", "到哪里", "走到哪"],
+        "high": ["订单号", "物流", "快递", "发货", "运单号", "配送", "咋样了", "到哪了", "到哪一步", "签收了没", "什么情况", "查一下", "查件", "派送", "催发货"],
+        "medium": ["订单", "查询", "跟踪", "到哪", "状态", "单号", "发货没", "发货了吗", "到哪里", "走到哪", "进度", "快递柜", "取件", "什么时候到", "多久到", "没收到", "还没发", "一直没更新", "送到", "送达", "几点到", "揽收", "出库", "签收", "丢失", "能到", "货发"],
         "low": ["我的单", "查"],
     },
     "refund": {
         "high": ["退款", "退货", "退换", "退钱", "要钱", "退单", "怎么退", "如何退", "退款流程", "退货流程", "换货流程", "能退吗", "可以退", "退了吧", "给我退", "帮我退", "我要退", "不要了", "想退", "换新的"],
-        "medium": ["售后", "拒收", "不想要", "不合适", "质量问题", "到账", "无理由", "换个", "换一个", "换颜色"],
+        "medium": ["售后", "拒收", "不想要", "不合适", "质量问题", "到账", "无理由", "换个", "换一个", "换颜色", "退货运费", "运费谁出", "退款单号", "退货地址", "退款金额", "退款申请", "差价", "保价", "价格保护", "退不了", "退回"],
         "low": ["退", "换", "不满意"],
     },
     "technical": {
-        "high": ["怎么用", "如何", "安装", "设置", "配置", "教程", "连接不上", "没有画面", "支付失败", "开不了机", "连不上", "灯不亮", "花屏", "黑屏", "充不进电", "掉线", "搜不到", "密码忘了", "怎么连", "重复扣款", "多扣了", "付了两次", "怎么开发票", "怎么开票", "链接"],
-        "medium": ["问题", "报错", "故障", "坏了", "不工作", "没反应", "配对", "断连", "兼容", "发票", "分期", "扣款", "密码", "企业采购", "批量采购", "采购流程", "重置", "省电", "以旧换新", "回收", "采购", "支持", "批量", "多台", "团购", "想买", "对公", "解绑", "同步", "一起管理"],
-        "low": ["使用", "操作", "功能", "支持哪些设备", "怎么弄", "咋用", "公司买", "买几台", "买多少"],
+        "high": ["怎么用", "如何", "安装", "设置", "配置", "教程", "连接不上", "没有画面", "支付失败", "开不了机", "连不上", "灯不亮", "花屏", "黑屏", "充不进电", "掉线", "搜不到", "密码忘了", "怎么连", "重复扣款", "多扣了", "付了两次", "怎么开发票", "怎么开票", "链接", "闪退"],
+        "medium": ["问题", "报错", "故障", "坏了", "不工作", "没反应", "配对", "断连", "兼容", "发票", "分期", "扣款", "密码", "企业采购", "批量采购", "采购流程", "重置", "省电", "以旧换新", "回收", "采购", "支持", "批量", "多台", "团购", "想买", "对公", "解绑", "同步", "一起管理", "投屏", "恢复出厂", "定时开关机", "语音控制", "使用说明", "操作说明", "绑定", "注销", "备份", "更新", "卡死", "自动关机", "屏幕", "内存", "相机", "验证码", "登录", "导入", "清理", "打不开", "失败", "碎", "电池", "一起用"],
+        "low": ["使用", "操作", "功能", "支持哪些设备", "怎么弄", "咋用", "公司买", "买几台", "买多少", "转圈"],
     },
     "promotion": {
         "high": ["优惠", "活动", "折扣", "券", "促销", "便宜", "减", "会员", "vip", "首单", "打折", "积分", "团购", "大促"],
-        "medium": ["满减", "赠品", "礼包", "新人", "特价", "限时", "满就送", "最近有什么"],
+        "medium": ["满减", "赠品", "礼包", "新人", "特价", "限时", "满就送", "最近有什么", "优惠码", "抵现", "秒杀", "福利", "新客", "包邮", "返现", "买二送一", "双十一", "618", "老带新"],
         "low": ["划算", "实惠", "性价比"],
     },
     "human": {
         "high": ["人工", "客服", "转人工", "找客服", "真人", "在线客服", "机器人", "领导"],
-        "medium": ["投诉到", "找你们领导", "我要见人", "别跟机器人", "真人客服"],
+        "medium": ["投诉到", "找你们领导", "我要见人", "别跟机器人", "真人客服", "经理", "主管", "负责人", "座席", "上级"],
         "low": ["help"],
     },
     "complaint": {
         "high": ["投诉", "差评", "举报", "骗", "气愤", "垃圾", "骗子", "气死", "火大", "态度", "恶劣", "破玩意", "什么玩意", "再也不来", "失望透顶", "垃圾玩意", "再也不会", "打不通", "坑惨", "真服了", "太气人", "不回消息", "拖延"],
-        "medium": ["不满", "生气", "失望", "太烂", "太差", "太差了", "破", "坑爹", "拖着"],
-        "low": ["不好", "差", "糟糕"],
+        "medium": ["不满", "生气", "失望", "太烂", "太差", "太差了", "破", "坑爹", "拖着", "坑", "不行", "敷衍", "不负责", "上当", "再也不", "效率低", "效率太低", "无语", "不讲信用"],
+        "low": ["不好", "差", "糟糕", "太次", "烂"],
     },
 }
 
@@ -80,41 +83,69 @@ class EnhancedIntentRecognizer:
         """
         # 第一层：关键词匹配（否定词已在 _keyword_scores 中逐词处理）
         scores = self._keyword_scores(message)
+        top_margin = 0.0  # top1 与 top2 的得分差，用于分层阈值（默认 0 → 需 LLM）
+        keyword_result: Optional[IntentResult] = None
 
         # 选出得分最高的意图
         if scores:
+            sorted_positive = sorted((s for s in scores.values() if s > 0), reverse=True)
+            # top1 与 top2 的得分差：仅一个正分意图时视为"明显领先"（top_margin=top1），
+            # 无正分归 general 且置 0（需 LLM 兜底）。
+            if len(sorted_positive) >= 2:
+                top_margin = sorted_positive[0] - sorted_positive[1]
+            elif len(sorted_positive) == 1:
+                top_margin = sorted_positive[0]
             best_intent = max(scores, key=scores.get)
             max_score = scores[best_intent]
             if max_score <= 0:
                 keyword_result = IntentResult(intent="general", confidence=0.0)
             else:
                 confidence = min(max_score / 4.0, 1.0)
-                # 如果有两个意图得分接近，降低置信度
-                positive_scores = [s for s in scores.values() if s > 0]
-                if len(positive_scores) > 1:
-                    sorted_scores = sorted(positive_scores, reverse=True)
-                    if sorted_scores[0] - sorted_scores[1] < 0.5:
-                        confidence *= 0.7
+                # 如果有两个意图得分接近，降低置信度（沿用原行为，避免易混淆被误判）。
+                if len(sorted_positive) > 1 and sorted_positive[0] - sorted_positive[1] < 0.5:
+                    confidence *= 0.7
                 keyword_result = IntentResult(
                     intent=best_intent,
                     confidence=round(confidence, 2),
                 )
         else:
             keyword_result = IntentResult(intent="general", confidence=0.0)
-
-        # 第三层：上下文推断
         if context and keyword_result.confidence < 0.3:
             context_intent = self._context_inference(context, message)
             if context_intent:
                 keyword_result.intent = context_intent
                 keyword_result.confidence = 0.5
+                top_margin = 100.0  # 上下文推断已定意图，视为高置信，不再触发 LLM
 
-        # 第四层：延续性判断
+        # 第四层：延续性判断（③ 放宽：从「len<15 且 conf<0.2」放宽为「len<20 且 conf<0.4」，
+        # 让"那…""大概多久"等更多追问直接沿用上一意图，而不是掉进澄清/LLM 兜底）
         if history_intent and self._is_continuation(message):
-            # 如果消息很短且是追问，保持上一个意图
-            if len(message) < 15 and keyword_result.confidence < 0.2:
+            if len(message) < 20 and keyword_result.confidence < 0.4:
                 keyword_result.intent = history_intent
                 keyword_result.confidence = 0.6
+                top_margin = 100.0  # 延续已定意图，视为高置信
+
+        # ⑤ 分层阈值：是否值得 LLM 兜底复审
+        #  - general（无领域词）→ 不走 LLM，由澄清/模板/检索接管；
+        #  - 有正分且 top1 领先 top2 ≥0.5 且置信度达标 → 规则已明显自信，不调 LLM；
+        #  - 其余低置信意图 → 保留 LLM 兜底机会，由上层决定是否触发。
+        keyword_result.needs_llm_fallback = (
+            keyword_result.intent != "general"
+            and not (
+                top_margin >= 0.5
+                and keyword_result.confidence >= 0.3
+            )
+        )
+        # ⑥ 假 general 兜底：规则未命中领域词但含明确疑问句式时，仍开放 LLM 复审，
+        # 避免"怎么绑定银行卡/账号怎么注销"等泛化请求被 general 吞掉、
+        # 连 LLM 二次确认的机会都没有。
+        # 仅对 ≥4 字消息生效，避免"咋/多少"等超短疑问也白耗一次模型调用。
+        if (
+            keyword_result.intent == "general"
+            and self._is_question_style(message)
+            and len(message.strip()) >= 4
+        ):
+            keyword_result.needs_llm_fallback = True
 
         # 判断是否需要澄清
         # 情况1: 低置信度且有明确意图 → 需要澄清
@@ -162,6 +193,14 @@ class EnhancedIntentRecognizer:
         if closing_request:
             return {}
 
+        # “这个问题我自己查/我回头再查”等自助解决、收尾语不是技术问题，应归 general。
+        self_service_request = re.match(
+            r"^这个?问题.{0,6}(?:自己|我来|我查|查查|回头|再说|百度|搜索)",
+            message_lower.strip(),
+        )
+        if self_service_request:
+            return {}
+
         for intent, levels in self.patterns.items():
             score = 0.0
 
@@ -177,11 +216,34 @@ class EnhancedIntentRecognizer:
 
             # 低权重关键词
             for keyword in levels.get("low", []):
+                # 单字"退"仅在与 钱/款/货/单/换 组合时才算退款语义，
+                # 避免"闪退/退休/后退"等非退款词被误判为 refund。
+                if keyword == "退" and not re.search(r"退[钱款货单换]", message):
+                    continue
+                # "差价"中的"差"不是负面情绪，避免"退差价"被误判为 complaint。
+                if keyword == "差" and "差价" in message:
+                    continue
                 if keyword.lower() in message_lower and not self._is_keyword_negated(message, keyword):
                     score += 0.3
 
             if score > 0:
                 scores[intent] = scores.get(intent, 0.0) + score
+
+        # 售后/质量问题 + 负面情绪词 → 投诉倾向加权：
+        # "你们这售后真糟糕/这质量真不行"等虽含售后/质量（refund 词），
+        # 但用户是在抱怨而非申请退款，叠加负面情绪后应归 complaint。
+        # 注意仅对"情绪词"生效，纯陈述（如"有质量问题要退货"）不触发。
+        if any(kw in message_lower for kw in ("售后", "质量问题")):
+            negative_sentiment = ("糟糕", "太差", "很差", "太烂", "不满", "敷衍", "不行", "垃圾", "差评", "气死", "失望", "坑", "烂", "无语", "火大")
+            if any(w in message_lower for w in negative_sentiment):
+                scores["complaint"] = scores.get("complaint", 0.0) + 2.0
+
+        # ⑦ complaint 强情绪词加权：complaint 在 INTENT_PATTERNS 中排最后，
+        # 与发货/退货/物流/客服等高分业务词打平时永远输给 dict 顺序靠前的意图。
+        # 命中强情绪词（非"投诉/差评"等动作词，避免压过转人工）即补权，让投诉意图胜出。
+        strong_emotion = ("气死", "太气人", "垃圾", "骗子", "真服了", "坑惨", "火大", "气愤", "失望", "敷衍", "打不通", "上当", "坑爹", "骗", "生气", "不满", "无语", "不讲信用")
+        if any(w in message_lower for w in strong_emotion):
+            scores["complaint"] = scores.get("complaint", 0.0) + 2.0
 
         # 明确转人工（转人工/找客服/真人）优先于退款等业务动作，
         # 避免「转人工处理退款」被 refund 高分压过。
@@ -197,22 +259,23 @@ class EnhancedIntentRecognizer:
             if scores.get("query_order", 0) > 0:
                 scores["query_order"] = min(scores["query_order"], 1.0)
 
-        # 时间询问词（几点/下班/上班/什么时候）不是转人工诉求：
-        # 「你们的客服几点下班」只是问服务时间，不应被判为 human。
-        # 仅当消息不含强转人工词（人工/真人/转/领导）时降权，避免
-        # 「人工客服几点上班」等真实转人工场景被误伤。
-        if scores.get("human", 0) > 0 and self._is_service_time_query(message):
+        # 服务时间/联系方式问询（几点/下班/热线/电话/号码）不是转人工诉求：
+        # 「你们的客服几点下班」「客服热线怎么打」「客服电话打不通」只是
+        # 问信息或吐槽，不应被判为 human。
+        # 仅当消息不含强转人工词（人工/真人/转/领导/接人/找客服/在线客服）时降权，
+        # 避免「人工客服几点上班」「在线客服在吗」等真实转人工场景被误伤。
+        if scores.get("human", 0) > 0 and self._is_service_info_query(message):
             scores["human"] = max(scores["human"] - 2.0, 0.0)
 
         return scores
 
-    def _is_service_time_query(self, message: str) -> bool:
-        """判断消息是否为服务时间询问且不含强转人工词。"""
-        time_words = ("几点", "下班", "上班", "什么时候", "时间")
-        strong_human = ("人工", "真人", "转", "领导", "接人")
-        has_time = any(kw in message for kw in time_words)
+    def _is_service_info_query(self, message: str) -> bool:
+        """判断消息是否为服务时间/联系方式问询且不含强转人工诉求。"""
+        info_words = ("几点", "下班", "上班", "什么时候", "时间", "热线", "电话", "号码", "邮箱")
+        strong_human = ("人工", "真人", "转", "领导", "接人", "找客服", "在线客服")
+        has_info = any(kw in message for kw in info_words)
         has_strong = any(kw in message for kw in strong_human)
-        return has_time and not has_strong
+        return has_info and not has_strong
 
     def _is_keyword_negated(self, message: str, keyword: str) -> bool:
         """判断某个关键词在消息中是否被否定词修饰。
@@ -287,6 +350,14 @@ class EnhancedIntentRecognizer:
                     return "refund"
 
         return None
+
+    def _is_question_style(self, message: str) -> bool:
+        """判断消息是否含明确疑问句式（假 general 的 LLM 复审开关）。
+
+        仅匹配强疑问标记，避免"在吗/有人吗"等纯寒暄也触发模型调用。
+        """
+        question_markers = ("怎么", "如何", "为什么", "为啥", "怎样", "咋", "能不能", "能否", "什么", "哪个", "哪里", "多少", "几点")
+        return any(m in message for m in question_markers)
 
     def _is_continuation(self, message: str) -> bool:
         """判断是否为延续性追问"""

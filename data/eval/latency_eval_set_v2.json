@@ -1,0 +1,62 @@
+[
+  {
+    "intent": "query_order",
+    "user_query": "订单 ORD20260801 现在到哪了？",
+    "latency_class": "tool",
+    "note": "工具执行：有订单号直查"
+  },
+  {
+    "intent": "refund",
+    "user_query": "申请对订单 ORD20260801 退款，原因是商品破损",
+    "latency_class": "tool_confirm",
+    "note": "工具+确认交互：退款申请"
+  },
+  {
+    "intent": "technical",
+    "user_query": "怎么开增值税专用发票？",
+    "latency_class": "rag",
+    "note": "RAG：发票文档"
+  },
+  {
+    "intent": "promotion",
+    "user_query": "会员和VIP都有哪些权益",
+    "latency_class": "rag",
+    "note": "RAG：会员政策（本条曾达 48.9s）"
+  },
+  {
+    "intent": "technical",
+    "user_query": "蓝牙耳机怎么配对手机",
+    "latency_class": "rag",
+    "note": "RAG：产品文档"
+  },
+  {
+    "intent": "refund",
+    "user_query": "退货的运费谁出？",
+    "latency_class": "rag_policy",
+    "note": "RAG：政策咨询分流"
+  },
+  {
+    "intent": "complaint",
+    "user_query": "怎么提交投诉建议",
+    "latency_class": "tool",
+    "note": "工具：投诉工单流程"
+  },
+  {
+    "intent": "general",
+    "user_query": "你们的业务范围是什么",
+    "latency_class": "rag",
+    "note": "RAG：FAQ 文档"
+  },
+  {
+    "intent": "general",
+    "user_query": "客服几点下班啊",
+    "latency_class": "rag_small",
+    "note": "RAG：FAQ 服务时间"
+  },
+  {
+    "intent": "technical",
+    "user_query": "设备一直连不上蓝牙，重启也没用",
+    "latency_class": "rag_multi",
+    "note": "RAG：复杂故障（同义改写触发）"
+  }
+]

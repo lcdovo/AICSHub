@@ -18,8 +18,25 @@ from app.services.llm_governance import BudgetManager, BudgetPolicy, CostEstimat
 logger = logging.getLogger(__name__)
 
 
+def _ensure_json_hint(system_prompt: str) -> str:
+    """保证 system prompt 含 "json" 字样。
+
+    部分供应商（如 dashscope 的 qwen3.x-flash 等非推理模型）在使用
+    ``response_format=json_object`` 时要求 messages 里必须出现 "json"
+    字样，否则返回 400。统一在此补充，对各模型均无副作用。
+    """
+    if "json" in system_prompt.lower():
+        return system_prompt
+    return system_prompt + " 请以 JSON 格式输出结果。"
+
+
 class LLMResponse(BaseModel):
-    """Stable contract for model-generated customer-service responses."""
+    """Stable contract for model-generated customer-service responses.
+
+    自检字段（grounded/fact_score/has_unsupported_claim/refuse_recommended）为
+    "生成+自检"二合一方案的输出契约：RAG 场景下一次调用同时产出回答与自检结论，
+    替代原先独立的 LLM judge 调用；非 RAG 场景这些字段保持默认值，不影响行为。
+    """
 
     reply: str = Field(default="", description="给用户的中文回复")
     intent: Literal[
@@ -30,6 +47,11 @@ class LLMResponse(BaseModel):
     citations: List[str] = Field(default_factory=list)
     need_human: bool = False
     next_action: Optional[str] = None
+    # ---- 二合一自检字段（随生成一次返回）----
+    grounded: bool = Field(default=True, description="回答关键论断是否都有检索证据支撑")
+    fact_score: float = Field(default=1.0, ge=0.0, le=1.0, description="综合可信度 0-1")
+    has_unsupported_claim: bool = Field(default=False, description="是否存在证据之外的臆造信息")
+    refuse_recommended: bool = Field(default=False, description="是否建议采用'无据不答'拒答话术")
 
 
 class IntentClassification(BaseModel):
@@ -202,7 +224,7 @@ class LLMService:
             return None
 
         messages = [
-            SystemMessage(content=(
+            SystemMessage(content=_ensure_json_hint(
                 "你是客服意图分类器。只输出结构化结果。"
                 "意图只能是 query_order、refund、complaint、technical、"
                 "promotion、human、general。置信度范围为 0 到 1；"
@@ -242,7 +264,7 @@ class LLMService:
             return None
 
         messages = [
-            SystemMessage(content=system_prompt),
+            SystemMessage(content=_ensure_json_hint(system_prompt)),
             HumanMessage(content=self.redactor.redact(user_text)),
         ]
         for model in self.models:
@@ -457,7 +479,7 @@ class LLMService:
         self.last_call_metadata["structured_output"] = {"reply": "", "intent": intent, "confidence": 0.0}
 
     def _build_messages(self, message: str, context: Optional[list] = None) -> list:
-        messages = [SystemMessage(content=self._get_system_prompt())]
+        messages = [SystemMessage(content=_ensure_json_hint(self._get_system_prompt()))]
         if context:
             for item in self.redactor.sanitize_messages(context[-10:]):
                 messages.append(

@@ -1,0 +1,62 @@
+[
+  {
+    "intent": "query_order",
+    "user_query": "订单 ORD20260801 现在到哪了？",
+    "latency_class": "tool",
+    "note": "工具执行：订单号直查，含工具重试链路"
+  },
+  {
+    "intent": "refund",
+    "user_query": "申请对订单 ORD20260801 退款，原因是商品破损",
+    "latency_class": "tool",
+    "note": "工具执行：退款申请 + 确认交互"
+  },
+  {
+    "intent": "query_order",
+    "user_query": "帮我查个订单",
+    "latency_class": "slot_filling",
+    "note": "槽位补齐：缺订单号，纯话术早退不含检索"
+  },
+  {
+    "intent": "technical",
+    "user_query": "怎么开增值税专用发票？",
+    "latency_class": "rag",
+    "note": "RAG 检索：改写 + 检索 + judge 校验"
+  },
+  {
+    "intent": "promotion",
+    "user_query": "会员和VIP都有哪些权益",
+    "latency_class": "rag",
+    "note": "RAG 检索：会员政策"
+  },
+  {
+    "intent": "refund",
+    "user_query": "退货的运费谁出？",
+    "latency_class": "rag",
+    "note": "RAG 检索：政策咨询，分流到 RAG"
+  },
+  {
+    "intent": "technical",
+    "user_query": "蓝牙耳机怎么配对手机",
+    "latency_class": "rag",
+    "note": "RAG 检索：产品文档"
+  },
+  {
+    "intent": "general",
+    "user_query": "你好",
+    "latency_class": "smalltalk",
+    "note": "寒暄早退：模板直答，不调 LLM/检索"
+  },
+  {
+    "intent": "human",
+    "user_query": "我要转人工客服",
+    "latency_class": "handoff",
+    "note": "转人工：human_handoff 直达"
+  },
+  {
+    "intent": "general",
+    "user_query": "你们的业务范围是什么",
+    "latency_class": "rag",
+    "note": "RAG 检索：FAQ 文档"
+  }
+]

@@ -4,6 +4,7 @@
 1. 自包含问题不改写（直接返回原句）
 2. 含指代/短追问（"这个""那""然后呢"）补上前一轮问题上下文
 3. 从之前轮次提取订单号拼到当前问题
+4. LLM 组合改写器：规则判定"自包含"时短路，不再触发 LLM 复审；规则无法改写（无上轮上下文）时保留 LLM 兜底
 """
 from app.agent.query_rewrite import ConservativeQueryRewriter
 
@@ -76,3 +77,81 @@ def test_cut_at_300_chars():
     result = rewriter.rewrite(curr, messages)
     assert result.applied
     assert len(result.rewritten_query) <= 300
+
+
+def _messages(current: str, prev: str = "我想给蓝牙耳机申请退货退款"):
+    return [{"role": "user", "content": prev}, {"role": "user", "content": current}]
+
+
+def test_punctuated_short_follow_up():
+    """带标点的裸短问（价格呢？）应触发拼接（去标点后判 short_follow_up）"""
+    result = rewriter.rewrite("价格呢？", messages=_messages("价格呢？"))
+    assert result.applied
+    assert "蓝牙耳机" in result.rewritten_query
+
+
+def test_bare_noun_follow_up():
+    """光杆名词追问（运费谁出？/售后呢？）依赖上文，应触发拼接"""
+    for q in ("运费谁出？", "售后呢？", "哪个更好用", "大概多久？", "怎么操作呀"):
+        result = rewriter.rewrite(q, messages=_messages(q))
+        assert result.applied, q
+        assert "蓝牙耳机" in result.rewritten_query, q
+
+
+def test_full_question_not_rewritten():
+    """完整问句不应被误判为短追问拼接上文（避免污染 RAG 检索）"""
+    for q in ("满减活动和优惠券能叠加使用吗", "签收后7天内可以无理由退货吗", "可以退到余额里吗"):
+        result = rewriter.rewrite(q, messages=_messages(q))
+        assert not result.applied, q
+        assert result.reason == "self_contained_query", q
+
+
+def _make_llm_rewriter(fake_llm):
+    """构造 LLMQueryRewriter，用 fake LLM 校验"是否被调用"。"""
+    from app.agent.query_rewrite_llm import LLMQueryRewriter
+
+    return LLMQueryRewriter(llm_service=fake_llm)
+
+
+class _SpyLLM:
+    """记录 run_structured 是否被调用，模拟可用但不产出改写。"""
+
+    def __init__(self):
+        self.calls = 0
+
+    def is_available(self):
+        return True
+
+    async def run_structured(self, *args, **kwargs):
+        self.calls += 1
+        return None
+
+
+def test_self_contained_skips_llm():
+    """规则判定自包含（无需改写）→ 短路，不再触发 LLM 复审。"""
+    spy = _SpyLLM()
+    rewriter_llm = _make_llm_rewriter(spy)
+    result = __import__("asyncio").run(
+        rewriter_llm.rewrite(
+            "退货政策是什么",
+            messages=[
+                {"role": "user", "content": "你好"},
+                {"role": "user", "content": "退货政策是什么"},
+            ],
+        )
+    )
+    assert not result.applied
+    assert result.reason == "self_contained_query"
+    assert spy.calls == 0, "自包含改写不应触发 LLM 调用"
+
+
+def test_no_previous_context_calls_llm():
+    """规则无法改写（无上轮上下文可拼接）→ 保留 LLM 语义补全兜底。"""
+    spy = _SpyLLM()
+    rewriter_llm = _make_llm_rewriter(spy)
+    result = __import__("asyncio").run(
+        rewriter_llm.rewrite("那现在到哪了呢", messages=[])
+    )
+    assert not result.applied
+    assert result.reason == "no_previous_user_query"
+    assert spy.calls == 1, "规则无法改写时应保留 LLM 兜底调用"

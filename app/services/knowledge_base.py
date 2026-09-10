@@ -763,7 +763,7 @@ class KnowledgeBaseService:
             try:
                 vector_results = self._vector_store.search(
                     query_embedding=query_embedding,
-                    top_k=top_k * 2,
+                    top_k=top_k * 4,
                     score_threshold=similarity_threshold,
                 )
                 if not vector_results:
@@ -906,7 +906,7 @@ class KnowledgeBaseService:
                 })
 
         results.sort(key=lambda x: x.get("bm25_score", 0), reverse=True)
-        return results[:top_k * 2]
+        return results[:top_k * 4]
 
     def _merge_results(
         self,
@@ -961,7 +961,9 @@ class KnowledgeBaseService:
 
         results = list(merged.values())
         results.sort(key=lambda x: x.get("final_score", 0), reverse=True)
-        return results[:top_k * 2]
+        # 候选池保留 4 倍 top_k，给重排器留足提升空间：正确答案若只排在
+        # 候选 11-20 位（对 top_k=5），此前在 2 倍截断时被直接丢弃导致漏检。
+        return results[:top_k * 4]
 
     def _memory_search(
         self,
@@ -992,7 +994,7 @@ class KnowledgeBaseService:
                     })
 
         results.sort(key=lambda x: x["vector_score"], reverse=True)
-        return results[:top_k * 2]
+        return results[:top_k * 4]
 
     def _rerank_results(
         self,
@@ -1068,7 +1070,7 @@ class KnowledgeBaseService:
                         score += 0.5
 
             # 领域加权：退款/退换货问题偏向售后政策，优惠问题偏向会员与满减文档。
-            if any(term in query_lower for term in ("退款", "退货", "退换", "退费")):
+            if any(term in query_lower for term in ("退款", "退货", "退换", "退费", "售后")):
                 if any(term in f"{title} {content} {cat}" for term in ("退换货", "质保", "售后")):
                     score += 0.1
             if any(term in query_lower for term in ("优惠", "满减", "折扣", "优惠券", "赠品", "礼包")):
@@ -1078,6 +1080,41 @@ class KnowledgeBaseService:
             if any(term in query_lower for term in ("下班", "几点", "营业时间", "地址", "在哪", "电话", "联系方式", "工作时间", "上班")):
                 if str(cat).lower() == "faq" or "faq" in title:
                     score += 0.2
+
+            # 领域消歧加权：订单/下单/售后/支付等高频词跨文档互相抢占时，
+            # 按查询主题给目标文档统一补权；命中多类时多类同时补权，
+            # 只在两文档分差小于补权差时翻转，不破坏既有正确排序。
+            domain_boosts = [
+                # (查询触发词, 目标文档特征词, 补权)
+                (("下单", "购物车", "提交订单"), ("购物下单", "购物车", "结算"), 0.15),
+                (("订单状态", "取消", "历史订单", "已付款", "待付款", "拦截", "签收", "派送中", "物流轨迹", "订单号"), ("订单查询", "物流追踪", "订单状态"), 0.2),
+                (("售后", "工单", "审核"), ("售后", "工单"), 0.15),
+                (("扣款", "货到付款", "境外卡", "信用卡", "支付密码", "微信支付", "未扣款"), ("支付", "扣款", "付款"), 0.2),
+                (("投诉", "举报", "意见", "反馈"), ("投诉", "意见", "举报"), 0.15),
+                (("维修", "保修", "质保", "过保"), ("质保", "维修", "保修"), 0.2),
+                (("新客", "新人", "首单", "新用户"), ("新用户", "首单"), 0.2),
+                (("隐私", "数据", "共享", "公开", "收集", "删除", "记录"), ("隐私", "数据"), 0.2),
+                (("账号", "密码", "登录", "验证码", "掉线", "两步验证"), ("账号", "密码", "验证码"), 0.2),
+                (("官方", "官网", "联系", "App", "商店", "几点", "工作时间", "常见问题", "最常问"), ("FAQ", "faq"), 0.2),
+                (("企业", "采购", "对公", "赊账", "合同"), ("企业采购", "批量定制"), 0.25),
+                (("优惠券", "满减", "折扣", "领取"), ("满减", "优惠券", "促销"), 0.15),
+                (("会员", "积分", "VIP"), ("会员", "VIP"), 0.15),
+                (("分期", "免息", "征信", "还款"), ("分期", "信贷"), 0.15),
+                (("礼品卡", "储值卡", "余额"), ("礼品卡", "储值卡"), 0.15),
+                (("物流", "配送", "运费", "时效", "偏远", "加急"), ("物流", "配送"), 0.15),
+                (("以旧换新", "回收", "旧机"), ("以旧换新", "回收"), 0.15),
+                (("兼容", "适配", "安卓", "苹果", "iOS", "平板", "品牌", "系统"), ("兼容", "适配"), 0.15),
+                (("发票", "税号", "开票", "抬头"), ("发票", "税号"), 0.15),
+                (("退款", "退货", "无理由", "退换"), ("退换货", "无理由"), 0.15),
+                (("手表",), ("智能手表",), 0.15),
+                (("耳机",), ("蓝牙耳机",), 0.15),
+                (("键盘",), ("机械键盘",), 0.15),
+                (("显示器", "屏幕"), ("显示器",), 0.15),
+            ]
+            for triggers, markers, boost in domain_boosts:
+                if any(t in query_lower for t in triggers):
+                    if any(m in f"{title} {content} {cat}" for m in markers):
+                        score += boost
 
             if len(content) > 50:
                 score += 0.02
