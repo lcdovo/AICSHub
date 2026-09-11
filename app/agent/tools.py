@@ -205,13 +205,11 @@ class QueryOrderTool(BaseTool):
         if not isinstance(user_id, int) or isinstance(user_id, bool) or user_id <= 0:
             return {"success": False, "error": "无权访问该订单", "error_type": "permission"}
 
-        # Prefer the persisted order projection.  This keeps the tool useful in
-        # the HTTP app and in direct unit tests without requiring another service.
-        from app.utils.database import async_session, engine
-        from app.models.models import Base, Order
+        # Prefer the persisted order projection. Schema 由启动期 init_database()/Alembic
+        # 统一保证，工具执行路径不再重复执行 DDL。
+        from app.utils.database import async_session
+        from app.models.models import Order
         from sqlalchemy import select
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
         async with async_session() as session:
             # 在数据库层同时限定订单号和当前用户，防止仅凭他人订单号读取详情。
             order_row = await session.scalar(
@@ -320,13 +318,11 @@ class ApplyRefundTool(BaseTool):
         if refund_type not in ["refund", "return", "exchange"]:
             return {"success": False, "error": f"无效的退换货类型: {refund_type}", "hint": "支持的类型：refund(仅退款)、return(退货退款)、exchange(换货)"}
 
-        # 校验订单是否存在且属于当前用户、状态可退
-        from app.utils.database import async_session, engine
-        from app.models.models import Base, Order
+        # 校验订单是否存在且属于当前用户、状态可退（schema 由启动期初始化，此处不执行 DDL）
+        from app.utils.database import async_session
+        from app.models.models import Order
         from sqlalchemy import select
         try:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
             async with async_session() as session:
                 order_row = await session.scalar(
                     select(Order).where(Order.order_id == order_id, Order.user_id == user_id)

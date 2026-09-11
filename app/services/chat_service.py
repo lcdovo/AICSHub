@@ -170,6 +170,8 @@ class ChatService:
         await db.commit()
         await db.refresh(assistant_message)
         await session_manager.save_state(state)
+        # 长对话上下文压缩：消息数或 Token 估算超阈值时触发（LLM 摘要，降级规则摘要）。
+        await session_manager.maybe_compress(state.session_id)
         # 如果有摘要，更新意图序列到摘要并持久化
         summary = await session_manager.get_summary(state.session_id)
         if summary:

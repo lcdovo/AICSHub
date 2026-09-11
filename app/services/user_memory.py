@@ -1,8 +1,10 @@
 """长期记忆 / 用户画像服务。
 
-聚合 SQLite 中的会话数据与用户标签，形成跨会话的用户画像；在基于当前问题时，
-优先用向量召回用户相关历史，Embedding/数据库不可用时逐级退化为关键词召回与空画像，
-保证离线环境确定可运行。配套的 ``GetUserHistoryTool`` 已接入本服务。
+聚合当前关系库（MySQL/SQLite 双支持）中的会话数据与用户标签，形成跨会话的
+用户画像；在基于当前问题时，优先用向量召回用户相关历史，Embedding/数据库不可用时
+逐级退化为关键词召回与空画像，保证离线环境确定可运行。
+配套的 ``GetUserHistoryTool`` 已接入本服务。表结构由启动期 init_database()/Alembic
+统一保证，本服务不在请求路径重复执行 DDL。
 """
 import logging
 import math
@@ -52,11 +54,9 @@ class UserMemoryService:
     async def _load_profile(self, profile: Dict[str, Any], user_id: int) -> None:
         from sqlalchemy import func, select
 
-        from app.utils.database import async_session, engine
-        from app.models.models import Base, Session, Ticket, User
+        from app.utils.database import async_session
+        from app.models.models import User, Session, Ticket
 
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
         async with async_session() as session:
             user = await session.get(User, user_id)
             if user is not None:
@@ -79,11 +79,9 @@ class UserMemoryService:
     ) -> List[Dict[str, Any]]:
         from sqlalchemy import select
 
-        from app.utils.database import async_session, engine
-        from app.models.models import Base, Message, Session
+        from app.utils.database import async_session
+        from app.models.models import Message, Session
 
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
         async with async_session() as session:
             stmt = (
                 select(Message, Session)

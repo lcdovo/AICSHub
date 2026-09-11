@@ -5,6 +5,11 @@ LangGraph 骨架由官方提供，本模块自研的是"用项目现有 Redis �
 存储"，并沿袭项目的降级约定：Redis 不可用时自动回退到内存 InMemorySaver，
 保证外部存储不可用绝不影响主链路。
 
+职责边界：本类只负责 LangGraph 的执行 checkpoint（interrupt 恢复用）；
+多轮会话上下文（messages/摘要/分布式锁）由 app/agent/memory.py 的
+SessionManager 负责（key 前缀 session:*）。两者 key 空间已隔离（本类 agent_ckpt:* +
+最新指针），互不干扰，进程重启可分别恢复。
+
 存储布局（prefix 默认 agent_ckpt）：
 - agent_ckpt:thread:{thread_id}:{checkpoint_ns}:{checkpoint_id}  <- checkpoint+metadata hash
 - agent_ckpt:writes:{thread_id}:{checkpoint_ns}:{checkpoint_id} <- pending writes hash

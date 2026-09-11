@@ -16,7 +16,6 @@ from app.agent.memory import session_manager
 from app.utils.tracking import structured_logger, generate_trace_id, get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, decode_token
 from app.config.config import settings
-from app.services.evaluation import get_answer_evaluator, get_low_score_pool
 from app.services.chat_service import chat_service
 
 router = APIRouter(prefix="/api/v1/chat", tags=["对话管理"])
@@ -251,107 +250,24 @@ async def send_message(
     finally:
         await session_manager.release_lock(session_id)
 
-    # 保存 Agent 执行轨迹
-    llm_governance = agent_state.collected_info.get("llm_governance", {})
-    if agent_state.trace:
-        for i, trace_entry in enumerate(agent_state.trace):
-            span_id = str(uuid.uuid4())
-            agent_trace = AgentTrace(
-                # trace_id 保持历史唯一约束；request_trace_id 是一次请求复用的规范 Trace ID。
-                trace_id=f"{request_trace_id}:{span_id}",
-                request_trace_id=request_trace_id,
-                span_id=span_id,
-                session_id=session_id,
-                intent=agent_state.detected_intent,
-                node_name=trace_entry.get("node", "unknown"),
-                node_order=i,
-                input_data=trace_entry.get("input"),
-                output_data=trace_entry.get("output"),
-                duration_ms=trace_entry.get("duration_ms", 0),
-                token_usage={"total_tokens": agent_state.total_tokens},
-                model_name=llm_governance.get("model", "mock"),
-                prompt_version=llm_governance.get("prompt_version", settings.LLM_PROMPT_VERSION),
-                schema_version=llm_governance.get("schema_version", settings.LLM_SCHEMA_VERSION),
-                route_version=llm_governance.get("route_version", settings.LLM_ROUTE_VERSION),
-                success=True,
-            )
-            db.add(agent_trace)
-
-    # 保存助手回复
-    response_time_ms = agent_state.execution_time_ms
-    assistant_message = Message(
-        session_id=session_id,
-        role=MessageRole.ASSISTANT,
-        content=agent_state.reply,
-        token_count=agent_state.total_tokens,
-        response_time_ms=response_time_ms,
-        tool_calls=[{"name": tc.tool_name, "success": tc.success} for tc in agent_state.tool_calls],
+    # 持久化助手回复、评测与执行轨迹：与 WebSocket 入口共用同一实现，
+    # 避免 HTTP / WS 两条持久化链路的行为漂移（EvaluationResult / AgentTrace /
+    # tracer 指标 / low_score_pool / save_state 均在该方法内完成）。
+    assistant_message, _evaluation = await chat_service.persist_result(
+        db, session, agent_state, chat_data.message, request_trace_id
     )
-    db.add(assistant_message)
-    await db.flush()
-
-    # 评测结果与对话在同一事务中落库，避免只存在进程内存。
-    evaluation = get_answer_evaluator().evaluate(
-        response=agent_state.reply or "", user_query=chat_data.message,
-        tool_results=[{"success": tc.success, "data": tc.result} for tc in agent_state.tool_calls],
-        response_time_ms=response_time_ms,
-    )
-    get_answer_evaluator().add_feedback_sample({
-        "sample_id": str(assistant_message.id), "trace_id": request_trace_id,
-        "query": chat_data.message, "response": agent_state.reply or "", "score": evaluation.to_dict(),
-    })
-    db.add(EvaluationResult(
-        session_id=session_id, sample_id=str(assistant_message.id), trace_id=request_trace_id, intent=agent_state.detected_intent,
-        accuracy_score=round(evaluation.accuracy_score), completeness_score=round(evaluation.completeness_score),
-        safety_score=round(evaluation.safety_score), overall_score=round(evaluation.overall_score),
-        is_low_score=evaluation.is_low_score, failure_reason=evaluation.failure_reason,
-        evaluator="heuristic", model_name=llm_governance.get("model", "heuristic"), prompt_version=llm_governance.get("prompt_version", settings.LLM_PROMPT_VERSION), schema_version=llm_governance.get("schema_version", settings.LLM_SCHEMA_VERSION), route_version=llm_governance.get("route_version", settings.LLM_ROUTE_VERSION),
-        latency_ms=response_time_ms, token_usage={"total_tokens": agent_state.total_tokens},
-        user_query=chat_data.message, response=agent_state.reply or "", categories=[],
-        processed=False,
-    ))
-    get_tracer().record_intent(agent_state.detected_intent, agent_state.intent_confidence)
-    get_tracer().record_evaluation(evaluation.overall_score, evaluation.is_low_score)
-    for tool_call in agent_state.tool_calls:
-        get_tracer().record_tool_call(tool_call.tool_name, tool_call.success, getattr(tool_call, "execution_time_ms", 0))
-        if tool_call.tool_name == "hybrid_search" and isinstance(tool_call.result, dict):
-            rag_meta = tool_call.result.get("meta", {})
-            get_tracer().record_rag(
-                latency_ms=tool_call.result.get("execution_time_ms", 0),
-                empty=not bool(tool_call.result.get("results")),
-                backend=rag_meta.get("backend", "memory"),
-                degraded=bool(rag_meta.get("degraded", False)),
-            )
-    if agent_state.need_human:
-        get_tracer().record_handoff()
-    get_low_score_pool().add_sample(
-        sample_id=str(assistant_message.id), session_id=session_id,
-        user_query=chat_data.message, response=agent_state.reply or "",
-        score=evaluation.overall_score, failure_reason=evaluation.failure_reason,
-        metadata={"trace_id": request_trace_id},
-    ) if evaluation.is_low_score else None
-
-    session.message_count += 1
-    session.last_intent = agent_state.detected_intent
-    session.updated_at = datetime.utcnow()
-
-    await db.commit()
-    await db.refresh(assistant_message)
 
     if session.message_count >= 10:
         recent = (await db.execute(select(Message).where(Message.session_id == session_id).order_by(Message.id.desc()).limit(12))).scalars().all()
         session.summary = _build_rule_summary(list(reversed(recent)), agent_state.detected_intent)
         await db.commit()
 
-    # 更新会话管理器状态
-    await session_manager.save_state(agent_state)
-
     return ChatResponse(
         message_id=assistant_message.id,
         session_id=session_id,
         reply=agent_state.reply,
         intent=agent_state.detected_intent,
-        response_time_ms=response_time_ms,
+        response_time_ms=agent_state.execution_time_ms,
         trace_id=request_trace_id,
     )
 

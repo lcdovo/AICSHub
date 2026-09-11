@@ -4,10 +4,15 @@
 支持会话中断恢复、多设备同步、上下文压缩、智能摘要
 Redis 不可用时降级为内存存储
 
+职责边界：本管理器只负责多轮会话上下文（messages/摘要/分布式锁，key 前缀
+session:*）；LangGraph interrupt 的执行 checkpoint 由 redis_checkpoint.py 的
+RedisCheckpointSaver 负责（key 前缀 agent_ckpt:*）。两者 key 空间隔离，
+各自的降级策略互相独立。
+
 优化项：
 - 摘要对象持久化到 Redis（进程重启不丢失）
-- get_messages 增加数据库回退（保证最终一致性）
-- Token 数动态触发压缩（避免长对话 OOM）
+- get_state 内置内存缓存（进程内复用）
+- Token 数动态触发压缩（避免长对话 OOM）：由 ChatService 每轮调用 maybe_compress
 - LLM 生成对话摘要（提升压缩后上下文质量）
 - 分布式锁防止并发状态覆盖
 - 压缩时保留槽位快照（长对话槽位不丢失）
@@ -15,10 +20,8 @@ Redis 不可用时降级为内存存储
 import asyncio
 import json
 import re
-import time
-import uuid
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -139,36 +142,6 @@ class SessionManager:
         except Exception as e:
             logger.warning(f"释放会话锁失败: {e}")
 
-    async def create_session(
-        self, user_id: int, session_id: Optional[str] = None
-    ) -> str:
-        if not session_id:
-            session_id = str(uuid.uuid4())
-
-        state = AgentState(
-            session_id=session_id,
-            user_id=user_id,
-            user_message="",
-        )
-
-        self._state_cache[session_id] = state
-
-        if await self._is_redis_available():
-            try:
-                redis = await get_redis()
-                await redis.setex(
-                    f"session:{session_id}",
-                    SESSION_TTL_SECONDS,
-                    json.dumps(self._serialize_state(state)),
-                )
-                user_sessions_key = f"user_sessions:{user_id}"
-                await redis.sadd(user_sessions_key, session_id)
-                await redis.expire(user_sessions_key, SESSION_TTL_SECONDS)
-            except Exception as e:
-                logger.warning(f"Redis 存储失败: {e}")
-
-        return session_id
-
     async def get_state(self, session_id: str) -> Optional[AgentState]:
         if session_id in self._state_cache:
             return self._state_cache[session_id]
@@ -200,34 +173,40 @@ class SessionManager:
             except Exception as e:
                 logger.warning(f"Redis 保存失败: {e}")
 
-    async def append_message(self, session_id: str, message: Dict[str, Any]):
+    async def maybe_compress(self, session_id: str) -> bool:
+        """检查并按需压缩超长会话上下文，防止 messages 无限膨胀。
+
+        由 ChatService 在每轮持久化后调用。触发条件 = 消息数或 Token 估算超阈值；
+        压缩核心保留最近 MIN_MESSAGES_AFTER_COMPRESSION 条，其余由 LLM 摘要
+        （不可用降级规则摘要）概括，并把关键槽位快照到摘要实体，最后持久化。
+        返回是否触发了压缩。
+        """
         state = await self.get_state(session_id)
-        if not state:
-            return
+        if not state or not self._should_compress(state.messages):
+            return False
 
-        state.messages.append(message)
+        compressed = await self._compress_context(state)
+        if not compressed:
+            return False
 
-        if self._should_compress(state.messages):
-            compressed = await self._compress_context(state)
-            if compressed:
-                summary = self._summarize_messages(state.messages[:-MIN_MESSAGES_AFTER_COMPRESSION])
-                self._summaries[session_id] = summary
-                state.conversation_summary = summary.summary_text
-                # 摘要持久化到 Redis，进程重启后不丢失
-                await self._save_summary_to_redis(session_id, summary)
-                # 压缩时保留槽位快照
-                self._snapshot_collected_info(state, summary)
-
+        summary = self._summarize_messages(state.messages[:-MIN_MESSAGES_AFTER_COMPRESSION])
+        self._summaries[session_id] = summary
+        state.conversation_summary = summary.summary_text
+        # 摘要持久化到 Redis，进程重启后不丢失
+        await self._save_summary_to_redis(session_id, summary)
+        # 压缩时保留槽位快照
+        self._snapshot_collected_info(state, summary)
         await self.save_state(state)
+        return True
 
     def _should_compress(self, messages: List[Dict[str, Any]]) -> bool:
-        """判断是否需要压缩：消息数或 Token 估算超过阈值时触发。"""
-        if len(messages) <= MAX_MESSAGES_BEFORE_COMPRESSION:
+        """判断是否需要压缩：消息数或 Token 估算超阈值即触发（先到者优先）。
+
+        仅当消息数超过保留下限时才考虑压缩，避免刚压缩完又立刻触发。
+        """
+        if len(messages) <= MIN_MESSAGES_AFTER_COMPRESSION:
             return False
-        # 消息数超阈值直接压缩
-        if len(messages) > MAX_MESSAGES_BEFORE_COMPRESSION:
-            return True
-        return False
+        return len(messages) > MAX_MESSAGES_BEFORE_COMPRESSION or self._needs_token_compression(messages)
 
     def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
         """粗略估算消息列表的 token 数：中文约1.5 token/字，英文约1 token/词。"""
@@ -391,41 +370,6 @@ class SessionManager:
         except Exception as e:
             logger.warning(f"Redis 保存摘要失败: {e}")
 
-    async def get_messages(
-        self, session_id: str, limit: int = 50
-    ) -> List[Dict[str, Any]]:
-        """获取会话消息，Redis/内存未命中时从数据库回退。"""
-        state = await self.get_state(session_id)
-        if state and state.messages:
-            return state.messages[-limit:]
-
-        # 数据库回退：保证最终一致性
-        try:
-            from app.utils.database import async_session
-            from app.models.models import Message
-            from sqlalchemy import select
-
-            async with async_session() as db:
-                rows = await db.execute(
-                    select(Message)
-                    .where(Message.session_id == session_id)
-                    .order_by(Message.created_at)
-                    .limit(limit)
-                )
-                messages = []
-                for row in rows.scalars():
-                    messages.append({
-                        "role": row.role.value if hasattr(row.role, 'value') else str(row.role),
-                        "content": row.content,
-                        "timestamp": row.created_at.isoformat() if row.created_at else "",
-                    })
-                if messages:
-                    logger.info(f"从数据库回退加载 {len(messages)} 条消息: {session_id}")
-                return messages
-        except Exception as e:
-            logger.warning(f"数据库回退读取消息失败: {e}")
-            return []
-
     async def get_summary(self, session_id: str) -> Optional[ConversationSummary]:
         """获取摘要：内存缓存 → Redis → state.conversation_summary。"""
         # 1. 内存缓存
@@ -453,71 +397,6 @@ class SessionManager:
             return summary
 
         return None
-
-    async def close_session(self, session_id: str):
-        state = await self.get_state(session_id)
-        if state:
-            state.current_node = "end"
-            await self.save_state(state)
-
-        if await self._is_redis_available():
-            try:
-                redis = await get_redis()
-                await redis.delete(f"session:{session_id}")
-                await redis.delete(f"session_summary:{session_id}")
-            except Exception as e:
-                logger.warning(f"Redis 删除失败: {e}")
-
-        if session_id in self._state_cache:
-            del self._state_cache[session_id]
-        if session_id in self._summaries:
-            del self._summaries[session_id]
-
-    async def get_user_sessions(
-        self, user_id: int, limit: int = 10
-    ) -> List[str]:
-        if await self._is_redis_available():
-            try:
-                redis = await get_redis()
-                user_sessions_key = f"user_sessions:{user_id}"
-                session_ids = await redis.smembers(user_sessions_key)
-
-                active_sessions = []
-                for sid in session_ids:
-                    state = await self.get_state(sid)
-                    if state and state.current_node != "end":
-                        active_sessions.append(sid)
-                return active_sessions[:limit]
-            except Exception as e:
-                logger.warning(f"Redis 读取用户会话失败: {e}")
-
-        return [
-            sid
-            for sid, state in self._state_cache.items()
-            if state.user_id == user_id and state.current_node != "end"
-        ][:limit]
-
-    def get_session_stats(self, session_id: str) -> Dict[str, Any]:
-        state = self._state_cache.get(session_id)
-        if not state:
-            return {"exists": False}
-
-        summary = self._summaries.get(session_id)
-
-        return {
-            "exists": True,
-            "message_count": len(state.messages),
-            "has_summary": state.conversation_summary is not None,
-            "summary_preview": (
-                state.conversation_summary[:100]
-                if state.conversation_summary
-                else ""
-            ),
-            "current_intent": state.detected_intent,
-            "last_node": state.current_node,
-            "summaries_count": len(self._summaries),
-            "total_cached_sessions": len(self._state_cache),
-        }
 
     def _serialize_state(self, state: AgentState) -> Dict[str, Any]:
         return {

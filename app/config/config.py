@@ -44,8 +44,6 @@ class Settings(BaseSettings):
     LLM_API_BASE: str = Field(default="http://localhost:8001")
     LLM_API_KEY: str = Field(default="")
     LLM_MODEL: str = Field(default="gpt-4o-mini")
-    # Agent 规划默认关闭；开启后由上层接入受控的结构化规划器。
-    LLM_PLANNING_ENABLED: bool = Field(default=False)
     LLM_REQUEST_TIMEOUT_SECONDS: float = Field(default=30.0, gt=0)
     LLM_MAX_TOKENS: int = Field(default=1024, ge=64, le=8192)
     LLM_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
@@ -59,7 +57,6 @@ class Settings(BaseSettings):
     LLM_DAILY_USER_COST_USD: float = Field(default=5.0, ge=0)
     LLM_INPUT_PRICE_PER_1K_USD: float = Field(default=0.00015, ge=0)
     LLM_OUTPUT_PRICE_PER_1K_USD: float = Field(default=0.00060, ge=0)
-    LLM_GRAY_ROLLOUT_PERCENT: int = Field(default=100, ge=0, le=100)
 
     # ---- LLM 可观测性（Langfuse，外部平台，默认关闭）----
     # 通过 LangGraph CallbackHandler 上报完整执行轨迹，为自研 tracking 的补充观测。

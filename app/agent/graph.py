@@ -81,7 +81,6 @@ class AgentGraph:
     class _GraphState(TypedDict):
         state: AgentState
         next_node: str
-        regeneration_count: int
 
     def _build_langgraph(self):
         """Compile the existing node workflow as a LangGraph state machine."""
@@ -121,7 +120,6 @@ class AgentGraph:
             state.current_node = node_name
             node_start = time.time()
             next_node = await self.nodes[node_name](state)
-            regeneration_count = payload.get("regeneration_count", 0)
             state.add_trace(
                 node_name=node_name,
                 input_data={"message": state.user_message, "intent": state.detected_intent},
@@ -130,7 +128,7 @@ class AgentGraph:
             )
             if next_node == AgentNode.END:
                 state.current_node = AgentNode.END
-            return {"state": state, "next_node": next_node, "regeneration_count": regeneration_count}
+            return {"state": state, "next_node": next_node}
         return invoke
 
     def _register_nodes(self):
@@ -169,7 +167,7 @@ class AgentGraph:
         async def produce_updates():
             try:
                 async for update in self.langgraph.astream(
-                    {"state": state, "next_node": state.current_node, "regeneration_count": 0},
+                    {"state": state, "next_node": state.current_node},
                     config=self._with_langfuse(
                         {"recursion_limit": 50, "configurable": {"thread_id": state.session_id}}
                     ),
@@ -272,7 +270,7 @@ class AgentGraph:
         """Run the compiled LangGraph while preserving the public API."""
         start_time = time.time()
         result = await self.langgraph.ainvoke(
-            {"state": state, "next_node": state.current_node, "regeneration_count": 0},
+            {"state": state, "next_node": state.current_node},
             config=self._with_langfuse(
                 {"recursion_limit": 50, "configurable": {"thread_id": state.session_id}}
             ),
@@ -1186,10 +1184,11 @@ class AgentGraph:
                 reply = "".join(chunks)
                 metadata = self.llm_service.get_last_call_metadata()
                 structured = metadata.get("structured_output", {})
-                intent = structured.get("intent") or self.llm_service.detect_intent(prompt)
                 token_count = int(metadata.get("tokens", max(1, len(reply) // 4)))
             else:
-                reply, intent, token_count = await self.llm_runnable.ainvoke(payload)
+                # chat() 返回的 intent 仅供日志/元数据展示；路由意图唯一由
+                # intent.py 规则 + classify_intent 兜底决定，不再回写 state。
+                reply, _model_intent, token_count = await self.llm_runnable.ainvoke(payload)
             state.total_tokens = token_count
             # 治理元数据只包含摘要、版本和预算结果，不保存发送给模型的敏感原文。
             state.collected_info["llm_governance"] = self.llm_service.get_last_call_metadata()
@@ -1207,9 +1206,6 @@ class AgentGraph:
                     "reason": str(structured_meta.get("reason", ""))[:80],
                     "source": "inline",
                 }
-
-            if state.detected_intent not in (IntentType.HUMAN, IntentType.COMPLAINT, IntentType.QUERY_ORDER, IntentType.REFUND):
-                state.detected_intent = intent
 
             logger.info(
                 f"LLM 响应生成成功: intent={state.detected_intent}, tokens={token_count}, "

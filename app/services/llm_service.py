@@ -41,6 +41,7 @@ class LLMResponse(BaseModel):
     自检字段（grounded/fact_score/has_unsupported_claim/refuse_recommended）为
     "生成+自检"二合一方案的输出契约：RAG 场景下一次调用同时产出回答与自检结论，
     替代原先独立的 LLM judge 调用；非 RAG 场景这些字段保持默认值，不影响行为。
+    intent/confidence/citations 为结构化输出附带元数据，不参与下游路由决策。
     """
 
     reply: str = Field(default="", description="给用户的中文回复")
@@ -51,7 +52,6 @@ class LLMResponse(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     citations: List[str] = Field(default_factory=list)
     need_human: bool = False
-    next_action: Optional[str] = None
     # ---- 二合一自检字段（随生成一次返回）----
     grounded: bool = Field(default=True, description="回答关键论断是否都有检索证据支撑")
     fact_score: float = Field(default=1.0, ge=0.0, le=1.0, description="综合可信度 0-1")
@@ -69,6 +69,9 @@ class IntentClassification(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     need_clarification: bool = False
 
+# 仅用于元数据/日志展示的粗粒度意图关键词。意图判定的唯一权威入口是
+# app/agent/intent.py 的规则识别 + classify_intent 低置信兜底；此处不再参与
+# 任何路由 / 覆写逻辑，避免与规则词表出现两套口径。
 INTENT_KEYWORDS = {
     "query_order": ["订单", "物流", "发货", "快递", "查询", "单号"],
     "refund": ["退款", "退货", "退换", "售后", "拒收"],
@@ -96,10 +99,8 @@ class ModelConfig:
         self.api_key = api_key
         self.model = model
         self.is_local = is_local
+        # 熔断状态统一由 CircuitBreaker 对象按模型名维护，不在 ModelConfig 内重复记录。
         self.priority = priority
-        self.failure_count = 0
-        self.last_failure_time: float = 0
-        self.circuit_open: bool = False
 
 
 class CircuitBreaker:
@@ -154,7 +155,6 @@ class LLMService:
         self.MAX_RETRIES = settings.LLM_MAX_RETRIES
         self.TIMEOUT = settings.LLM_REQUEST_TIMEOUT_SECONDS
         self.models: List[ModelConfig] = []
-        self.current_model_index: int = 0
         self.circuit_breaker = CircuitBreaker()
         self._chat_models: Dict[str, ChatOpenAI] = {}
         self.call_stats: Dict[str, Dict[str, int]] = {}
@@ -400,7 +400,6 @@ class LLMService:
                 "confidence": 0.0,
                 "citations": [],
                 "need_human": False,
-                "next_action": None,
             }
         token_count = self._message_token_count(response, fallback=len(message))
 
@@ -561,26 +560,3 @@ class LLMService:
             stats["success"] += 1
         else:
             stats["failure"] += 1
-
-    def get_stats(self) -> Dict[str, Any]:
-        return {
-            "models": [
-                {
-                    "name": m.name,
-                    "is_local": m.is_local,
-                    "failure_count": m.failure_count,
-                    "circuit_open": self.circuit_breaker.states.get(m.name, {}).get("open", False),
-                    "stats": self.call_stats.get(m.name, {"success": 0, "failure": 0, "total": 0}),
-                }
-                for m in self.models
-            ],
-            "current_model": self.current_model_index,
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    def reset_circuit(self, model_name: Optional[str] = None):
-        if model_name:
-            self.circuit_breaker.reset(model_name)
-        else:
-            for m in self.models:
-                self.circuit_breaker.reset(m.name)
