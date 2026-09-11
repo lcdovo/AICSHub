@@ -105,7 +105,21 @@ class APIEmbedding(BaseEmbedding):
 
         return [r if r is not None else [0.0] * self.dim for r in results]
 
+    # DashScope 等兼容接口单次 embedding 请求的输入条数上限（实测 >20 返回 400）。
+    API_BATCH_LIMIT = 20
+
     def _call_api(self, texts: List[str]) -> List[List[float]]:
+        """调用 Embedding API；大批量按 API_BATCH_LIMIT 分批后合并结果。"""
+        vectors: List[List[float]] = []
+        for batch in self._iter_batches(texts):
+            vectors.extend(self._call_api_once(batch))
+        return vectors
+
+    def _iter_batches(self, texts: List[str]) -> List[List[str]]:
+        limit = self.API_BATCH_LIMIT
+        return [texts[i : i + limit] for i in range(0, len(texts), limit)]
+
+    def _call_api_once(self, texts: List[str]) -> List[List[float]]:
         last_error = None
 
         for attempt in range(self.max_retries + 1):
@@ -151,7 +165,6 @@ class APIEmbedding(BaseEmbedding):
                 logger.warning(f"Embedding API error (attempt {attempt + 1}): {e}")
                 time.sleep(1 * (attempt + 1))
 
-        logger.error(f"Embedding API failed after {self.max_retries + 1} attempts: {last_error}")
         raise RuntimeError(f"Embedding API error: {last_error}")
 
     @staticmethod

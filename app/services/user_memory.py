@@ -77,7 +77,14 @@ class UserMemoryService:
     async def _load_history(
         self, user_id: int, session_id: str
     ) -> List[Dict[str, Any]]:
-        from sqlalchemy import select
+        """取该用户最近的历史消息（优先当前会话，倒序取最近 60 条）。
+
+        原实现对 user 全量历史按 created_at **正序** limit 100，拉的是最早的
+        消息；既不是"最近上下文"，embedding 候选还必然超限。这里改为
+        created_at desc + id desc（时间戳可能相同，用 id 打平）取最近消息，
+        控制 embedding 召回候选规模。
+        """
+        from sqlalchemy import desc, select
 
         from app.utils.database import async_session
         from app.models.models import Message, Session
@@ -87,22 +94,28 @@ class UserMemoryService:
                 select(Message, Session)
                 .join(Session, Message.session_id == Session.id)
                 .where(Session.user_id == user_id)
-                .order_by(Message.created_at.asc())
-                .limit(100)
+                .order_by(desc(Message.created_at), desc(Message.id))
+                .limit(60)
             )
             rows = await session.execute(stmt)
             history = []
-            for message, _sess in rows:
+            for message, sess in rows:
                 if message.role.value not in ("user", "assistant"):
                     continue
                 history.append({
                     "session_id": message.session_id,
+                    "current": message.session_id == session_id,
                     "role": message.role.value,
                     "content": message.content,
                     "timestamp": message.created_at.isoformat()
                     if message.created_at else "",
                 })
+            # 翻成时间正序，向量召回/关键词排序内部再按相关性重新评分。
+            history.reverse()
             return history
+
+    # 向量候选经关键词粗筛后的上限，控制在单次 embedding batch 内。
+    _EMBED_CANDIDATE_LIMIT = 20
 
     async def _recall(
         self, query: str, history: List[Dict[str, Any]]
@@ -116,18 +129,30 @@ class UserMemoryService:
             svc = get_embedding_service()
             embedding = svc.get_embedding()
             if embedding is not None:
+                # 先做关键词粗筛（当前会话 > 跨会话，含 query 词越多的越靠前），
+                # 只对 top 候选做向量编码——一次性 batch，避免 60 条历史拆多次 API。
+                query_units = [u for u in query if u.strip() and not u.isspace()]
+                scored_candidates = sorted(
+                    history,
+                    key=lambda h: (
+                        h.get("current", False),
+                        sum(1 for u in query_units if u in h.get("content", "")),
+                    ),
+                    reverse=True,
+                )[: self._EMBED_CANDIDATE_LIMIT]
+
                 q = await svc.async_encode(query)
-                vecs = await svc.async_encode_batch([h["content"] for h in history])
-                scored = sorted(
-                    range(len(history)),
+                vecs = await svc.async_encode_batch([h["content"] for h in scored_candidates])
+                ranked = sorted(
+                    range(len(scored_candidates)),
                     key=lambda i: self._cosine(q, vecs[i]),
                     reverse=True,
                 )
-                top = scored[: self.max_items]
+                top = ranked[: self.max_items]
                 return [
                     {
-                        "content": history[i]["content"],
-                        "role": history[i]["role"],
+                        "content": scored_candidates[i]["content"],
+                        "role": scored_candidates[i]["role"],
                         "semantic": round(self._cosine(q, vecs[i]), 3),
                     }
                     for i in top

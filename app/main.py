@@ -269,10 +269,12 @@ async def global_exception_handler(request, exc):
 if __name__ == "__main__":
     import uvicorn
 
+    # DEBUG（--reload）模式下必须单 worker；生产按 WORKERS 多进程扩容，
+    # 各 worker 无状态（会话/锁/checkpoint 均在 Redis），天然支持横扩。
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.DEBUG,
-        workers=1,
+        workers=1 if settings.DEBUG else settings.WORKERS,
     )

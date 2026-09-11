@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     HOST: str = Field(default="0.0.0.0")
     PORT: int = Field(default=8000)
+    # 生产部署时用多 worker 支撑并发（进程无状态，状态在 Redis）；DEBUG 下强制单进程。
+    WORKERS: int = Field(default=1, ge=1, le=32)
 
     MYSQL_HOST: str = Field(default="localhost")
     MYSQL_PORT: int = Field(default=3306)
@@ -47,6 +49,9 @@ class Settings(BaseSettings):
     LLM_REQUEST_TIMEOUT_SECONDS: float = Field(default=30.0, gt=0)
     LLM_MAX_TOKENS: int = Field(default=1024, ge=64, le=8192)
     LLM_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
+    # 全局并发闸门：限制同一进程内同时进行的 LLM 调用数，防止多 worker 汇聚
+    # 后打爆外部供应商的 RPM/TPM 配额（429）与连接池。
+    LLM_MAX_CONCURRENCY: int = Field(default=8, ge=1, le=128)
     # LLM governance: limits are deliberately conservative in local/demo mode.
     LLM_PROMPT_VERSION: str = Field(default="v1", min_length=1, max_length=50)
     LLM_MODEL_VERSION: str = Field(default="gpt-4o-mini", min_length=1, max_length=100)

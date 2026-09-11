@@ -37,6 +37,7 @@ from app.services.user_memory import get_user_memory_service
 from app.services.llm_service import LLMService
 from app.config.config import settings
 from app.utils.langfuse_tracing import get_langfuse_handler
+from app.utils.redis_cache import RedisObjectCache
 
 logger = logging.getLogger(__name__)
 _stream_event_queue: contextvars.ContextVar[Optional[asyncio.Queue]] = contextvars.ContextVar(
@@ -76,7 +77,10 @@ class AgentGraph:
         self.checkpointer = RedisCheckpointSaver()
         self.langgraph = self._build_langgraph()
         # RAG 回答缓存：同意图+同改写后查询在 TTL 内直接复用上次 LLM 回答（延迟优化）。
-        self._answer_cache: Dict[str, tuple] = {}
+        # Redis 优先（多 worker 共享）+ 内存降级，见 RedisObjectCache。
+        self._answer_cache = RedisObjectCache(
+            prefix="answer:", default_ttl=self._ANSWER_CACHE_TTL, max_local=self._ANSWER_CACHE_MAX
+        )
 
     class _GraphState(TypedDict):
         state: AgentState
@@ -466,7 +470,7 @@ class AgentGraph:
             or (state.detected_intent == IntentType.COMPLAINT and self._is_complaint_policy_inquiry(state.user_message))
         )
         if cacheable_intent and not state.collected_info.get("smalltalk"):
-            cached_reply = self._answer_cache_get(f"{state.detected_intent}:{state.user_message}")
+            cached_reply = await self._answer_cache_get(f"{state.detected_intent}:{state.user_message}")
             if cached_reply is not None:
                 state.reply = cached_reply
                 state.collected_info["answer_from_cache"] = True
@@ -507,7 +511,7 @@ class AgentGraph:
 
     def _is_refund_policy_inquiry(self, message: str, collected: Dict[str, Any]) -> bool:
         """判断退款意图是否为政策咨询（应走 RAG）而非实际退款申请（应走工具）。"""
-        policy_keywords = ["流程", "几天", "多久", "怎么退", "如何退", "政策", "规则", "到账", "无理由", "质保期", "保修期", "售后", "换货流程", "退货流程", "运费谁出", "能退吗", "包装", "保留", "区别", "换货", "条件", "要求", "什么样", "需要注意", "规定"]
+        policy_keywords = ["流程", "几天", "多久", "怎么退", "如何退", "政策", "规则", "到账", "无理由", "质保期", "保修期", "售后", "换货流程", "退货流程", "运费谁出", "能退吗", "包装", "保留", "区别", "换货", "条件", "要求", "什么样", "需要注意", "规定", "原路", "返回", "从哪里退", "退到", "退款方式", "几天能到", "什么时候到"]
         action_keywords = ["申请", "退钱", "帮我退", "给我退", "我要退", "直接退", "马上退", "退款成功"]
         has_policy_kw = any(kw in message for kw in policy_keywords)
         has_action_kw = any(kw in message for kw in action_keywords)
@@ -864,17 +868,6 @@ class AgentGraph:
         if state.need_human and not state.reply:
             state.reply = f"非常抱歉，正在为您转接人工客服。{state.human_reason or ''}"
 
-        # 注入跨会话用户画像，使 LLM 能结合用户历史作答（本文改进第 5 项）。
-        if settings.USER_MEMORY_ENABLED and not state.collected_info.get("user_memory"):
-            try:
-                state.collected_info["user_memory"] = await get_user_memory_service().get_user_profile(
-                    user_id=state.user_id,
-                    query=state.user_message,
-                    session_id=state.session_id,
-                )
-            except Exception:
-                state.collected_info["user_memory"] = {"memory_source": "degraded"}
-
         # 寒暄命中：直接返回固定模板文案，跳过 LLM 生成、LLM judge 与启发式校验
         # （寒暄话术无业务语义，不应被当作低质量回答触发转人工）。
         if state.collected_info.get("smalltalk") and not state.reply:
@@ -889,7 +882,7 @@ class AgentGraph:
             # 键用原始消息而非 rewritten_query：LLM 改写非确定性，
             # 同一条用户消息每次改写可能不同，用改写结果做键将永不命中。
             answer_cache_key = f"{state.detected_intent}:{state.user_message}"
-            cached_answer = self._answer_cache_get(answer_cache_key)
+            cached_answer = await self._answer_cache_get(answer_cache_key)
             if cached_answer is not None:
                 state.reply = cached_answer
                 state.collected_info["answer_from_cache"] = True
@@ -904,6 +897,18 @@ class AgentGraph:
 
         generated_by_llm = False
         if not state.reply:
+            # 注入跨会话用户画像，使 LLM 能结合用户历史作答（本文改进第 5 项）。
+            # 延迟优化：仅在确认需要 LLM 生成时加载，寒暄/工具模板/回答缓存等
+            # 早退路径不再白做一次 user_memory 的 DB+embedding 调用。
+            if settings.USER_MEMORY_ENABLED and not state.collected_info.get("user_memory"):
+                try:
+                    state.collected_info["user_memory"] = await get_user_memory_service().get_user_profile(
+                        user_id=state.user_id,
+                        query=state.user_message,
+                        session_id=state.session_id,
+                    )
+                except Exception:
+                    state.collected_info["user_memory"] = {"memory_source": "degraded"}
             llm_reply = await self._generate_response_with_llm(state)
             if llm_reply:
                 state.reply = llm_reply
@@ -911,7 +916,7 @@ class AgentGraph:
             else:
                 state.reply = self._get_default_reply(state.detected_intent, state.user_message)
             if generated_by_llm and answer_cache_key:
-                self._answer_cache_set(answer_cache_key, state.reply)
+                await self._answer_cache_set(answer_cache_key, state.reply)
 
         # Validate the actual final text.  The old flow validated before this node,
         # so normal LLM output never went through fact/safety/completeness checks.
@@ -1058,25 +1063,14 @@ class AgentGraph:
     _ANSWER_CACHE_TTL = 120.0
     _ANSWER_CACHE_MAX = 500
 
-    def _answer_cache_get(self, key: str) -> Optional[str]:
-        entry = self._answer_cache.get(key)
-        if not entry:
-            return None
-        reply, ts = entry
-        if time.time() - ts > self._ANSWER_CACHE_TTL:
-            self._answer_cache.pop(key, None)
-            return None
-        return reply
+    async def _answer_cache_get(self, key: str) -> Optional[str]:
+        """Redis 优先、内存降级的答案缓存读取（多 worker 共享）。"""
+        value = await self._answer_cache.aget(key)
+        return value if isinstance(value, str) else None
 
-    def _answer_cache_set(self, key: str, reply: str):
-        if len(self._answer_cache) >= self._ANSWER_CACHE_MAX:
-            # 简单容量控制：清掉最旧一半，避免进程内缓存无限增长。
-            oldest_keys = sorted(self._answer_cache, key=lambda k: self._answer_cache[k][1])[
-                : len(self._answer_cache) // 2
-            ]
-            for k in oldest_keys:
-                self._answer_cache.pop(k, None)
-        self._answer_cache[key] = (reply, time.time())
+    async def _answer_cache_set(self, key: str, reply: str):
+        """写答案缓存：Redis + 本地内存双写，失败自动降级。"""
+        await self._answer_cache.aset(key, reply, ttl=self._ANSWER_CACHE_TTL)
 
     def _try_templated_tool_reply(self, state: AgentState) -> Optional[str]:
         """工具成功后用模板拼接回复，跳过 LLM 生成（延迟优化）。"""
@@ -1395,6 +1389,17 @@ class AgentGraph:
             state.reply = result.get("data", {}).get("message", "正在为您转接人工客服...")
         else:
             state.reply = "正在为您转接人工客服，请稍候..."
+
+        # 诉求覆盖兜底（对齐投诉兜底）：转人工回复必须包含明确"转接人工客服"
+        # 字样与等待时间提示。escalate 的 urgent 文案（"客服主管将立即为您处理"）
+        # 缺少转接语义会被质检判定为"未转接"。
+        if state.reply and not any(
+            k in state.reply for k in ("转接人工", "转人工", "转接人工客服", "人工客服正在")
+        ):
+            state.reply = (
+                "已为您转接人工客服，预计等待3-5分钟，请保持在线；"
+                "您的问题已同步给人工座席，感谢您的耐心等待。"
+            )
 
         return AgentNode.RESPONSE_GENERATION
 

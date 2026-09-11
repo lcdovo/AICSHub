@@ -164,6 +164,9 @@ class LLMService:
         self.tool_policy = ToolPolicy()
         self.budget_manager = BudgetManager(BudgetPolicy(max_tokens=settings.LLM_MAX_TOKENS, max_cost_usd=settings.LLM_MAX_COST_USD, user_daily_tokens=settings.LLM_DAILY_USER_TOKEN_BUDGET, user_daily_cost_usd=settings.LLM_DAILY_USER_COST_USD, max_latency_seconds=settings.LLM_REQUEST_TIMEOUT_SECONDS), CostEstimator(settings.LLM_INPUT_PRICE_PER_1K_USD, settings.LLM_OUTPUT_PRICE_PER_1K_USD))
         self.last_call_metadata: Dict[str, Any] = {}
+        # 全局并发闸门：限制同一进程内同时进行的 LLM 调用数（asyncio.Semaphore），
+        # 防止多 worker 汇聚后打爆外部供应商 RPM/TPM 配额（429）与连接池。
+        self._semaphore = asyncio.Semaphore(max(1, settings.LLM_MAX_CONCURRENCY))
 
         self._init_models()
 
@@ -237,18 +240,21 @@ class LLMService:
             )),
             HumanMessage(content=self.redactor.redact(message)),
         ]
-        for model in self.models:
+        for attempt, model in enumerate(self.models):
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
                 structured = self._get_chat_model(model, temperature=ANALYTIC_TEMPERATURE).with_structured_output(IntentClassification)
-                result = await structured.ainvoke(messages)
+                async with self._semaphore:
+                    result = await structured.ainvoke(messages)
                 parsed = result if isinstance(result, IntentClassification) else IntentClassification.model_validate(result)
                 self.circuit_breaker.record_success(model.name)
                 return parsed.model_dump()
             except Exception as exc:
                 self.circuit_breaker.record_failure(model.name)
                 logger.warning("意图分类模型调用失败: %s", exc)
+                # 指数退避后再尝试下一模型，避免瞬时故障时蜂拥重试。
+                await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
         return None
 
     async def run_structured(
@@ -272,21 +278,23 @@ class LLMService:
             SystemMessage(content=_ensure_json_hint(system_prompt)),
             HumanMessage(content=self.redactor.redact(user_text)),
         ]
-        for model in self.models:
+        for attempt, model in enumerate(self.models):
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
                 structured_model = self._get_chat_model(model, temperature=ANALYTIC_TEMPERATURE).with_structured_output(contract)
-                result = await structured_model.ainvoke(
-                    messages,
-                    config={"run_name": "llm_structured", "tags": tags or ["llm_structured"]},
-                )
+                async with self._semaphore:
+                    result = await structured_model.ainvoke(
+                        messages,
+                        config={"run_name": "llm_structured", "tags": tags or ["llm_structured"]},
+                    )
                 parsed = result if isinstance(result, contract) else contract.model_validate(result)
                 self.circuit_breaker.record_success(model.name)
                 return parsed
             except Exception as exc:
                 self.circuit_breaker.record_failure(model.name)
                 logger.warning("结构化 LLM 调用失败 (%s): %s", getattr(contract, "__name__", "contract"), exc)
+                await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
         return None
 
     async def chat(
@@ -345,6 +353,8 @@ class LLMService:
 
                 if attempt < len(self.models) - 1:
                     logger.info("降级到下一个模型")
+                    # 指数退避后再降级，避免瞬时故障时对下一模型蜂拥重试。
+                    await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
                     continue
 
         # 所有模型均不可用：返回空回复，由上层降级到默认话术。
@@ -378,14 +388,16 @@ class LLMService:
             if hasattr(chat_model, "with_structured_output")
             else chat_model
         )
-        response = await structured_model.ainvoke(
-            messages,
-            config={
-                "run_name": "customer_service_chat",
-                "tags": ["customer-service", model.name],
-                "metadata": {"user_id": user_id, "session_id": session_id},
-            },
-        )
+        response = None
+        async with self._semaphore:
+            response = await structured_model.ainvoke(
+                messages,
+                config={
+                    "run_name": "customer_service_chat",
+                    "tags": ["customer-service", model.name],
+                    "metadata": {"user_id": user_id, "session_id": session_id},
+                },
+            )
 
         if isinstance(response, LLMResponse):
             reply = response.reply
@@ -448,24 +460,25 @@ class LLMService:
             return
 
         messages = self._build_messages(message, context)
-        for model in self.models:
+        for attempt, model in enumerate(self.models):
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
                 chat_model = self._get_chat_model(model, streaming=True)
                 chunks: list[str] = []
-                async for chunk in chat_model.astream(
-                    messages,
-                    config={
-                        "run_name": "customer_service_chat_stream",
-                        "tags": ["customer-service", "stream", model.name],
-                        "metadata": {"user_id": user_id, "session_id": session_id},
-                    },
-                ):
-                    text = self._message_content(chunk)
-                    if text:
-                        chunks.append(text)
-                        yield text
+                async with self._semaphore:
+                    async for chunk in chat_model.astream(
+                        messages,
+                        config={
+                            "run_name": "customer_service_chat_stream",
+                            "tags": ["customer-service", "stream", model.name],
+                            "metadata": {"user_id": user_id, "session_id": session_id},
+                        },
+                    ):
+                        text = self._message_content(chunk)
+                        if text:
+                            chunks.append(text)
+                            yield text
                 reply = "".join(chunks)
                 self.circuit_breaker.record_success(model.name)
                 self._record_stats(model.name, True)
@@ -477,6 +490,8 @@ class LLMService:
                 logger.warning("模型流式调用失败: %s", exc)
                 self.circuit_breaker.record_failure(model.name)
                 self._record_stats(model.name, False)
+                # 指数退避后再尝试下一模型，避免瞬时故障时蜂拥重试。
+                await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
 
         # 所有模型均不可用：不输出内容，由上层降级到默认话术。
         self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")

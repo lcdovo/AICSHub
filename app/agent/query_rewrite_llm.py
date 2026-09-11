@@ -53,10 +53,14 @@ class LLMQueryRewriter:
         if rule.applied:
             return rule
 
-        # 规则已明确判定"问题自包含、无需改写"：直接短路返回，不再调 LLM 复审。
-        # 这类查询（如"机械键盘的轴体怎么换"）字面完整可独立检索，LLM 复审
-        # 大概率也返回不改写，只为它串行多花 5~9s 纯属浪费。
-        if rule.reason == "self_contained_query":
+        # 规则已明确判定"无需改写"：直接短路返回，不再调 LLM 复审。
+        # ① self_contained_query：问题字面完整可独立检索（如"机械键盘的轴体
+        #    怎么换"），LLM 复审大概率也返回不改写，只为它串行多花 1~3s 浪费。
+        # ② no_previous_user_query：messages 里找不到上一条 user 消息，属单轮
+        #    首问（无上文可拼）。而 LLM 复审调用也只收到当前 original、拿不到
+        #    历史上下文，同样无法补全，纯属浪费——评测实测此类首问在
+        #    query_rewrite 节点白耗时 1~3.4s。
+        if rule.reason in ("self_contained_query", "no_previous_user_query"):
             return rule
 
         # 走到这里 = 规则无法给出改写（主要是没有上轮上下文可供拼接，

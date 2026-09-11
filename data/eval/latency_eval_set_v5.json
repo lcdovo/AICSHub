@@ -1,0 +1,22 @@
+[
+  {"intent": "query_order", "user_query": "帮我查一下 ORD20260904 的物流", "latency_class": "tool", "note": "工具直查：运输中订单"},
+  {"intent": "query_order", "user_query": "ORD20260905 签收了吗", "latency_class": "tool", "note": "工具直查：已送达订单"},
+  {"intent": "query_order", "user_query": "我想看看我的订单到哪儿了", "latency_class": "slot_filling", "note": "槽位补齐：缺订单号"},
+  {"intent": "query_order", "user_query": "我的包裹现在怎么样了", "latency_class": "slot_filling", "note": "槽位补齐：无订单号"},
+  {"intent": "technical", "user_query": "智能手表怎么连接手机 App", "latency_class": "rag", "note": "RAG：01 智能手表文档"},
+  {"intent": "technical", "user_query": "蓝牙耳机左右耳声音不一样怎么办", "latency_class": "rag", "note": "RAG：02 蓝牙耳机文档"},
+  {"intent": "technical", "user_query": "27 英寸显示器支持壁挂安装吗", "latency_class": "rag", "note": "RAG：04 显示器文档"},
+  {"intent": "promotion", "user_query": "会员积分能抵现吗", "latency_class": "rag", "note": "RAG：13 会员权益文档"},
+  {"intent": "promotion", "user_query": "现在买有满减活动吗", "latency_class": "rag", "note": "RAG：14 满减活动文档"},
+  {"intent": "refund", "user_query": "换货和退货有什么区别", "latency_class": "rag_policy", "note": "政策咨询 RAG：05 退换货政策"},
+  {"intent": "refund", "user_query": "退款是原路返回吗", "latency_class": "rag_policy", "note": "政策咨询 RAG：05 退款时效"},
+  {"intent": "refund", "user_query": "对订单 ORD20260906 申请退款，商品破损", "latency_class": "tool_confirm", "note": "工具+确认：apply_refund 预览+interrupt"},
+  {"intent": "complaint", "user_query": "客服一直不回消息，我要举报", "latency_class": "tool", "note": "投诉建工单工具+诉求覆盖"},
+  {"intent": "complaint", "user_query": "投诉提交后多久会反馈", "latency_class": "rag_policy", "note": "投诉政策咨询 RAG：07"},
+  {"intent": "human", "user_query": "人工客服", "latency_class": "human", "note": "转人工早退，不调 LLM/检索"},
+  {"intent": "human", "user_query": "我要找真人客服", "latency_class": "human", "note": "转人工早退"},
+  {"intent": "general", "user_query": "在吗", "latency_class": "smalltalk", "note": "寒暄模板直达，不调 LLM"},
+  {"intent": "general", "user_query": "好的，谢谢你了", "latency_class": "smalltalk", "note": "寒暄模板直达"},
+  {"intent": "general", "user_query": "你们几点下班", "latency_class": "rag", "note": "RAG：FAQ 客服时间"},
+  {"intent": "general", "user_query": "能给我介绍下你们公司吗", "latency_class": "rag", "note": "RAG：FAQ 业务范围"}
+]

@@ -88,6 +88,8 @@ services:
     build:
       context: .
     image: ai-customer:latest
+    # 多 worker 支撑并发：进程无状态（会话/锁/checkpoint 在 Redis），按 APP_WORKERS 横向扩容。
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${APP_WORKERS:-1}
     environment:
       APP_NAME: ${APP_NAME:-智能客服系统}
       APP_VERSION: ${APP_VERSION:-1.1.0}
@@ -130,6 +132,7 @@ services:
       LLM_REQUEST_TIMEOUT_SECONDS: ${LLM_REQUEST_TIMEOUT_SECONDS:-30}
       LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-1024}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
+      LLM_MAX_CONCURRENCY: ${LLM_MAX_CONCURRENCY:-8}
       LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-v1}
       LLM_MODEL_VERSION: ${LLM_MODEL_VERSION:-gpt-4o-mini}
       LLM_SCHEMA_VERSION: ${LLM_SCHEMA_VERSION:-response.v1}

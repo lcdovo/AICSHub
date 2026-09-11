@@ -50,6 +50,42 @@ class QueryCache:
             del self._cache[oldest]
         self._cache[key] = (value, time.time())
 
+    async def aget(self, key: str) -> Optional[Any]:
+        """异步读取：Redis 共享缓存优先（多 worker 共享，避免重复 embedding），
+        Redis 不可用或未命中时回退本地内存。"""
+        redis = await self._async_redis()
+        if redis is not None:
+            try:
+                raw = await redis.get(f"kb_cache:{key}")
+                if raw is not None:
+                    return json.loads(raw)
+            except Exception:
+                pass
+        return self.get(key)
+
+    async def aset(self, key: str, value: Any) -> None:
+        """异步写入：本地内存始终维护（同步 search 复用），并尽力写 Redis 共享一份。"""
+        self.set(key, value)
+        redis = await self._async_redis()
+        if redis is not None:
+            try:
+                await redis.setex(
+                    f"kb_cache:{key}",
+                    self._ttl,
+                    json.dumps(value, ensure_ascii=False, default=str),
+                )
+            except Exception:
+                pass
+
+    @staticmethod
+    async def _async_redis():
+        from app.utils.database import get_redis
+
+        try:
+            return await get_redis()
+        except Exception:
+            return None
+
     def clear(self):
         self._cache.clear()
 
@@ -868,7 +904,7 @@ class KnowledgeBaseService:
         similarity_threshold = max(0.0, min(float(similarity_threshold), 1.0))
 
         cache_key = QueryCache.make_key(query, top_k, similarity_threshold)
-        cached = self._query_cache.get(cache_key)
+        cached = await self._query_cache.aget(cache_key)
         if cached:
             return {**cached, "from_cache": True}
 
@@ -880,10 +916,14 @@ class KnowledgeBaseService:
         vector_task = asyncio.to_thread(self._retrieve_vector, query_embedding, query, top_k, similarity_threshold)
         bm25_task = asyncio.to_thread(self._retrieve_bm25, query, top_k)
         vector_results, bm25_results = await asyncio.gather(vector_task, bm25_task)
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             self._compose_result, query, top_k, similarity_threshold,
             vector_results, bm25_results, started, cache_key,
         )
+        # 写 Redis 共享缓存（_compose_result 已同步写入本地内存，双端保持一致），
+        # 让多 worker 复用本次 embedding/检索结果。
+        await self._query_cache.aset(cache_key, result)
+        return result
 
     async def async_add_document(self, *args, **kwargs) -> Dict[str, Any]:
         return await asyncio.to_thread(self.add_document, *args, **kwargs)
