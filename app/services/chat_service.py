@@ -28,28 +28,18 @@ class ChatService:
         self.agent_graph = agent_graph
 
     async def hydrate_state(self, session_id: str, user_id: int, message: str) -> AgentState:
-        state = AgentState(session_id=session_id, user_id=user_id, user_message=message)
         saved = await session_manager.get_state(session_id)
+        source = saved or AgentState(session_id=session_id, user_id=user_id, user_message="")
+        state = source.for_next_turn(user_id, message)
         if saved:
-            state.messages = saved.messages
-            state.collected_info = saved.collected_info
-            state.detected_intent = saved.detected_intent
-            state.intent_confidence = saved.intent_confidence
-            state.pending_confirmations = saved.pending_confirmations
-            state.conversation_summary = saved.conversation_summary
-            # 从摘要中恢复意图序列，用于检测意图升级模式
             summary = await session_manager.get_summary(session_id)
-            if summary and summary.intent_history:
-                state.collected_info["intent_history"] = summary.intent_history
-        # 认证入口传入的用户与当前会话才是可信身份，不能沿用缓存状态中的值。
-        state.collected_info["user_id"] = user_id
-        state.collected_info["session_id"] = session_id
-        state.messages.append({"role": "user", "content": message, "timestamp": datetime.now().isoformat(timespec="milliseconds")})
+            if summary and summary.intent_history and not state.collected_info.get("intent_history"):
+                state.collected_info["intent_history"] = list(summary.intent_history)
         return state
 
     async def process(self, state: AgentState) -> AgentState:
-        if state.collected_info.get("graph_interrupt"):
-            return await self.agent_graph.resume(state.session_id, state, state.user_message)
+        # Both transports start from the clean turn state. An unfinished preview is
+        # re-evaluated by confirmation_node; never resurrect a previous turn's draft.
         return await self.agent_graph.run(state)
 
     async def process_stream(self, state: AgentState):
@@ -67,6 +57,11 @@ class ChatService:
         assistant_message: Optional[Message] = None,
     ) -> tuple[Message, Any]:
         """Persist the assistant result and common evaluation/trace records."""
+        # An interrupt returns its preview before response_generation can append it.
+        # Keep the persisted transcript and next-turn history consistent.
+        if not state.messages or state.messages[-1].get("role") != "assistant" or state.messages[-1].get("content") != state.reply:
+            state.messages.append({"role": "assistant", "content": state.reply,
+                                   "timestamp": datetime.now().isoformat(timespec="milliseconds")})
         if assistant_message is None:
             assistant_message = Message(
                 session_id=session.id,

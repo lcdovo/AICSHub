@@ -53,7 +53,8 @@ _orig_encode = kb_mod.KnowledgeBaseService._encode_query_embedding
 _orig_vector = kb_mod.KnowledgeBaseService._retrieve_vector
 _orig_bm25 = kb_mod.KnowledgeBaseService._retrieve_bm25
 _orig_merge = kb_mod.KnowledgeBaseService._merge_results
-_orig_rerank = kb_mod.KnowledgeBaseService._rerank_results
+_orig_rerank = kb_mod.KnowledgeBaseService._rerank
+_orig_reorder_dispatch = kb_mod.KnowledgeBaseService._heuristic_rescore
 
 def wrap(name):
     def deco(fn):
@@ -69,7 +70,10 @@ kb_mod.KnowledgeBaseService._encode_query_embedding = wrap("1.embedding")(_orig_
 kb_mod.KnowledgeBaseService._retrieve_vector = wrap("2.vector_milvus")(_orig_vector)
 kb_mod.KnowledgeBaseService._retrieve_bm25 = wrap("3.bm25")(_orig_bm25)
 kb_mod.KnowledgeBaseService._merge_results = wrap("4.rrf_merge")(_orig_merge)
-kb_mod.KnowledgeBaseService._rerank_results = wrap("5.rerank")(_orig_rerank)
+# 重排分发（模型 reranker：外部→本地，失败回退启发式）
+kb_mod.KnowledgeBaseService._rerank = wrap("5.rerank")(_orig_rerank)
+# 启发式重排仅在模型不可用/失败时被调用，作为回退路径单独计时
+kb_mod.KnowledgeBaseService._heuristic_rescore = wrap("5.heuristic_rescore.fallback")(_orig_reorder_dispatch)
 
 # embedding 调用内部（跑在 to_thread，无妨）
 _orig_call = APIEmbedding._call_api

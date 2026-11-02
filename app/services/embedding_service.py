@@ -43,6 +43,8 @@ class APIEmbedding(BaseEmbedding):
         dim: int = 1024,
         timeout: float = 30.0,
         max_retries: int = 2,
+        query_instruction: str = "",
+        batch_size: int = 20,
     ):
         self.api_base = api_base.rstrip("/")
         self.api_key = api_key
@@ -51,8 +53,20 @@ class APIEmbedding(BaseEmbedding):
         self.name = f"api({model})"
         self.timeout = timeout
         self.max_retries = max_retries
+        # 兼容 DashScope 等外接 API 的单次输入条数上限（实测 >20 返回 400）；
+        # 本地 Ollama 无此限制，可通过 EMBEDDING_BATCH_SIZE 调大以降低往返次数。
+        self.batch_size = batch_size
+        # 查询侧指令前缀（Qwen3-Embedding 等指令感知模型）：encode_query 使用，
+        # 文档入库侧 encode 不加，避免两侧向量空间不一致。
+        self.query_instruction = query_instruction
         self._client: Optional[httpx.Client] = None
         self._text_cache: Dict[str, List[float]] = {}
+
+    def encode_query(self, text: str) -> List[float]:
+        """查询侧编码：自动拼查询指令前缀后走 encode（缓存 key 天然区分）。"""
+        if self.query_instruction:
+            text = f"{self.query_instruction}{text}"
+        return self.encode(text)
 
     def is_available(self) -> bool:
         if not self.api_key:
@@ -105,18 +119,15 @@ class APIEmbedding(BaseEmbedding):
 
         return [r if r is not None else [0.0] * self.dim for r in results]
 
-    # DashScope 等兼容接口单次 embedding 请求的输入条数上限（实测 >20 返回 400）。
-    API_BATCH_LIMIT = 20
-
     def _call_api(self, texts: List[str]) -> List[List[float]]:
-        """调用 Embedding API；大批量按 API_BATCH_LIMIT 分批后合并结果。"""
+        """调用 Embedding API；大批量按 self.batch_size 分批后合并结果。"""
         vectors: List[List[float]] = []
         for batch in self._iter_batches(texts):
             vectors.extend(self._call_api_once(batch))
         return vectors
 
     def _iter_batches(self, texts: List[str]) -> List[List[str]]:
-        limit = self.API_BATCH_LIMIT
+        limit = max(1, self.batch_size)
         return [texts[i : i + limit] for i in range(0, len(texts), limit)]
 
     def _call_api_once(self, texts: List[str]) -> List[List[float]]:
@@ -220,6 +231,8 @@ class EmbeddingService:
                 api_key=api_key,
                 model=model,
                 dim=dim,
+                query_instruction=settings.EMBEDDING_QUERY_INSTRUCTION or "",
+                batch_size=int(settings.EMBEDDING_BATCH_SIZE or 20),
             )
             api_embedding.encode("test")
             self._embedding = api_embedding
@@ -252,6 +265,15 @@ class EmbeddingService:
     def encode(self, text: str) -> List[float]:
         self._ensure_backend()
         return self._embedding.encode(text)
+
+    def encode_query(self, text: str) -> List[float]:
+        """查询侧编码（带指令前缀，用于检索），文档入库侧请用 encode。"""
+        self._ensure_backend()
+        return self._embedding.encode_query(text)
+
+    async def async_encode_query(self, text: str) -> List[float]:
+        """Async facade for query-side embedding generation."""
+        return await asyncio.to_thread(self.encode_query, text)
 
     def encode_batch(self, texts: List[str]) -> List[List[float]]:
         self._ensure_backend()

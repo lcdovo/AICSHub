@@ -6,7 +6,7 @@
 
 发送到外部模型前调用 `SensitiveDataRedactor.redact`/`sanitize_messages`，会移除密码、Bearer/JWT Token、手机号、邮箱和带标签的完整地址。`PromptInjectionScanner` 检测到“忽略之前指令”、系统 Prompt 泄露和越权角色等请求时，应直接走规则或 Mock 降级，不执行工具副作用。
 
-`BudgetManager.check` 同时检查单次 Token/费用预算和用户当日累计预算；不允许的决策包含明确原因。调用成功后用 `consume` 累计 Token 和估算费用；不可用、注入或超预算时由 LLMService 记录可解释的降级 route。预算存储目前为进程内实现，仅适用于本地 profile，生产环境需替换为 Redis/数据库共享存储。
+`BudgetManager.check`/`acheck` 同时检查单次 Token/费用预算和用户当日累计预算；不允许的决策包含明确原因。调用成功后用 `consume`/`aconsume` 累计 Token 和估算费用；不可用、注入或超预算时由 LLMService 记录可解释的降级 route。预算存储为 Redis 优先（hash key `budget:{user}:{day}`，多 worker 共享日累计），Redis 不可用时自动降级进程内 dict（单 worker 语义不变）。
 
 回归测试：
 
@@ -20,5 +20,5 @@ pytest tests/test_llm_governance.py
 `ToolPolicy` 只允许白名单工具。`LLMService.get_last_call_metadata()` 返回不含原文的
 版本、路由、token、估算费用、耗时和降级原因；规则、Mock、外部供应商路径均使用同一格式。
 预算单价来自 `LLM_INPUT_PRICE_PER_1K_USD`/`LLM_OUTPUT_PRICE_PER_1K_USD`，成本明确标记为
-`configured_token_rates_estimate`，不冒充供应商账单。生产部署应将预算计数从进程内替换为
-Redis 或数据库，并继续由代码执行 RBAC、资源归属、订单/退款资格、状态流转和最终副作用确认。
+`configured_token_rates_estimate`，不冒充供应商账单。生产部署继续由代码执行 RBAC、
+资源归属、订单/退款资格、状态流转和最终副作用确认。

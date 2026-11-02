@@ -1,6 +1,6 @@
 # Web Framework
 fastapi==0.141.1
-uvicorn[standard]==0.30.6
+uvicorn[standard]>=0.31.1
 python-multipart==0.0.32
 
 # Database
@@ -14,7 +14,7 @@ cryptography==50.0.1
 redis==5.2.0
 
 # Data Validation
-pydantic==2.9.2
+pydantic>=2.11.0,<3.0
 pydantic-settings==2.5.2
 
 # Environment
@@ -26,10 +26,19 @@ PyJWT==2.13.0
 # LLM
 httpx==0.27.2
 langchain==1.3.15
-langchain-core==1.5.4
+langchain-core>=1.5.4,<2.0
 langgraph==1.2.11
 langchain-openai==1.5.0
 langfuse>=3.8.0  # LLM 可观测性平台（LangChain v1 CallbackHandler 集成），默认关闭
+
+# MCP 工具协议（Agent 工具接入 MCP：FastMCP server + in-process/stdio client）
+mcp>=1.8
+fastmcp>=2.10
+
+# OpenTelemetry（可观测：sdk-only 默认，配置 OTEL_EXPORTER_OTLP_ENDPOINT 后导出）
+opentelemetry-api>=1.30
+opentelemetry-sdk>=1.30
+opentelemetry-exporter-otlp-proto-http>=1.30
 
 # Vector Database
 pymilvus==2.5.6

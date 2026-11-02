@@ -12,7 +12,7 @@ from app.models.models import (
 )
 from app.schemas.schemas import ChatRequest, ChatResponse, APIResponse
 from app.agent.graph import AgentGraph
-from app.agent.memory import session_manager
+from app.agent.memory import session_manager, SessionBusyError, SessionLeaseError
 from app.utils.tracking import structured_logger, generate_trace_id, get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, decode_token
 from app.config.config import settings
@@ -226,41 +226,32 @@ async def send_message(
         db.add(session)
         await db.commit()
 
-    # 保存用户消息
-    user_message = Message(
-        session_id=session_id,
-        role=MessageRole.USER,
-        content=chat_data.message,
-    )
-    db.add(user_message)
-    session.message_count += 1
-    session.updated_at = datetime.utcnow()
+    # End the pre-lock read transaction so refresh sees the previous turn's commit.
     await db.commit()
-
-    # 使用 Agent 处理（加分布式锁防止并发状态覆盖）
-    await session_manager.acquire_lock(session_id)
     try:
-        agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message)
-
-        # 从会话管理器加载历史上下文
-        # State hydration already appends the current user message.
-
-        # 运行 Agent 状态机
-        agent_state = await chat_service.process(agent_state)
-    finally:
-        await session_manager.release_lock(session_id)
-
-    # 持久化助手回复、评测与执行轨迹：与 WebSocket 入口共用同一实现，
-    # 避免 HTTP / WS 两条持久化链路的行为漂移（EvaluationResult / AgentTrace /
-    # tracer 指标 / low_score_pool / save_state 均在该方法内完成）。
-    assistant_message, _evaluation = await chat_service.persist_result(
-        db, session, agent_state, chat_data.message, request_trace_id
-    )
-
-    if session.message_count >= 10:
-        recent = (await db.execute(select(Message).where(Message.session_id == session_id).order_by(Message.id.desc()).limit(12))).scalars().all()
-        session.summary = _build_rule_summary(list(reversed(recent)), agent_state.detected_intent)
-        await db.commit()
+        async with session_manager.session_lock(session_id) as assert_owner:
+            await db.refresh(session)
+            if session.status == SessionStatus.CLOSED:
+                raise HTTPException(status_code=400, detail="会话已关闭")
+            db.add(Message(session_id=session_id, role=MessageRole.USER, content=chat_data.message))
+            session.message_count += 1
+            session.updated_at = datetime.utcnow()
+            await db.commit()
+            await assert_owner()
+            agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message)
+            agent_state = await chat_service.process(agent_state)
+            await assert_owner()
+            assistant_message, _evaluation = await chat_service.persist_result(
+                db, session, agent_state, chat_data.message, request_trace_id,
+            )
+            if session.message_count >= 10:
+                recent = (await db.execute(select(Message).where(Message.session_id == session_id).order_by(Message.id.desc()).limit(12))).scalars().all()
+                session.summary = _build_rule_summary(list(reversed(recent)), agent_state.detected_intent)
+                await db.commit()
+    except SessionBusyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except SessionLeaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return ChatResponse(
         message_id=assistant_message.id,
@@ -429,80 +420,90 @@ async def websocket_chat_stream(websocket: WebSocket):
                     elif session.user_id != authenticated_user_id:
                         await websocket.send_json({"type": "error", "code": 403, "message": "无权访问该会话", "timestamp": datetime.now().isoformat()})
                         continue
-                    elif session.status == SessionStatus.CLOSED:
-                        session.status = SessionStatus.ACTIVE
-                        session.closed_at = None
                 else:
                     session_id = str(uuid.uuid4())
                     session = Session(id=session_id, user_id=user_id, status=SessionStatus.ACTIVE)
                     db.add(session)
 
-                user_message = Message(
-                    session_id=session_id,
-                    role=MessageRole.USER,
-                    content=message,
-                )
-                db.add(user_message)
                 await db.commit()
-                session.message_count += 1
-
-                await session_manager.acquire_lock(session_id)
                 try:
-                    agent_state = await chat_service.hydrate_state(session_id, user_id, message)
-                finally:
-                    await session_manager.release_lock(session_id)
+                    async with session_manager.session_lock(session_id) as assert_owner:
+                        await db.refresh(session)
+                        if session.status == SessionStatus.CLOSED:
+                            session.status = SessionStatus.ACTIVE
+                            session.closed_at = None
+                        user_message = Message(
+                            session_id=session_id,
+                            role=MessageRole.USER,
+                            content=message,
+                        )
+                        db.add(user_message)
+                        session.message_count += 1
+                        await db.commit()
 
-                structured_logger.log_agent(
-                    trace_id=trace_id,
-                    node="stream",
-                    intent="stream_start",
-                    session_id=session_id,
-                    detail=f"user_id={user_id}, message={message[:50]}",
-                )
+                        await assert_owner()
+                        agent_state = await chat_service.hydrate_state(session_id, user_id, message)
 
-                await websocket.send_json({
-                    "type": "stream_start",
-                    "session_id": session_id,
-                    "trace_id": trace_id,
-                    "timestamp": datetime.now().isoformat(),
-                })
+                        structured_logger.log_agent(
+                            trace_id=trace_id,
+                            node="stream",
+                            intent="stream_start",
+                            session_id=session_id,
+                            detail=f"user_id={user_id}, message={message[:50]}",
+                        )
 
-                full_reply = ""
-                stream_agen = chat_service.process_stream(agent_state)
-                try:
-                    async for event in stream_agen:
-                        if event["type"] == "token":
-                            full_reply += event["content"]
-                        elif event["type"] == "done":
-                            full_reply = event.get("reply", full_reply)
+                        await websocket.send_json({
+                            "type": "stream_start",
+                            "session_id": session_id,
+                            "trace_id": trace_id,
+                            "timestamp": datetime.now().isoformat(),
+                        })
 
-                        await websocket.send_json(event)
-                finally:
-                    # 断开/异常时显式关闭生成器，触发 run_stream 取消 producer，
-                    # 终止仍在进行的 LLM 生成，避免空烧调用与多余日志。
-                    await stream_agen.aclose()
+                        full_reply = ""
+                        stream_agen = chat_service.process_stream(agent_state)
+                        try:
+                            async for event in stream_agen:
+                                if event["type"] == "token":
+                                    full_reply += event["content"]
+                                elif event["type"] == "done":
+                                    full_reply = event.get("reply", full_reply)
 
-                agent_state.reply = agent_state.reply or full_reply
-                assistant_message, stream_evaluation = await chat_service.persist_result(
-                    db, session, agent_state, message, trace_id
-                )
+                                await websocket.send_json(event)
+                        finally:
+                            # 断开/异常时显式关闭生成器，触发 run_stream 取消 producer，
+                            # 终止仍在进行的 LLM 生成，避免空烧调用与多余日志。
+                            await stream_agen.aclose()
 
-                get_tracer().record_response(agent_state.execution_time_ms, True)
+                        agent_state.reply = agent_state.reply or full_reply
+                        await assert_owner()
+                        assistant_message, stream_evaluation = await chat_service.persist_result(
+                            db, session, agent_state, message, trace_id
+                        )
 
-                await websocket.send_json({
-                    "type": "stream_end",
-                    "message_id": assistant_message.id,
-                    "session_id": session_id,
-                    "timestamp": datetime.now().isoformat(),
-                })
+                        get_tracer().record_response(agent_state.execution_time_ms, True)
 
-                structured_logger.log_agent(
-                    trace_id=trace_id,
-                    node="stream",
-                    intent="stream_end",
-                    session_id=session_id,
-                    detail=f"intent={agent_state.detected_intent}, time={agent_state.execution_time_ms}ms",
-                )
+                        await websocket.send_json({
+                            "type": "stream_end",
+                            "message_id": assistant_message.id,
+                            "session_id": session_id,
+                            "timestamp": datetime.now().isoformat(),
+                        })
+
+                        structured_logger.log_agent(
+                            trace_id=trace_id,
+                            node="stream",
+                            intent="stream_end",
+                            session_id=session_id,
+                            detail=f"intent={agent_state.detected_intent}, time={agent_state.execution_time_ms}ms",
+                        )
+
+                except (SessionBusyError, SessionLeaseError) as exc:
+                    await db.rollback()
+                    await websocket.send_json({
+                        "type": "error", "code": 409 if isinstance(exc, SessionBusyError) else 503,
+                        "message": str(exc), "timestamp": datetime.now().isoformat(),
+                    })
+                    continue
 
     except WebSocketDisconnect:
         structured_logger.log_agent(

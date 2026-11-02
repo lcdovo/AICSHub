@@ -1,9 +1,17 @@
 """Langfuse 外部观测接入（可选，默认关闭）。
 
-与自研 tracking（Tracer / MetricsCollector / AlertManager）互补：
-- 自研：业务指标、P0-P2 告警、span 落库 agent_traces、Prometheus 出口；
-- Langfuse：通过 LangGraph CallbackHandler 记录每次请求的完整执行轨迹、
-  token 成本与 prompt 版本，用于生产环境的回放与调试。
+与自研 tracking（Tracer / MetricsCollector / AlertManager）职责分层
+（P1 落地结论，agent_traces 保留不删）：
+
+- MetricsCollector（自研，常开）：业务指标（意图分布/RAG/工具/模型 token/
+  p50-p95/转人工率/CSAT/评测）与 P0-P2 分级告警，Prometheus 出口；
+  这部分是差异化价值，不迁移到 Langfuse。
+- agent_traces 落库表（自研，常开）：每轮 span 明细入 ``agent_traces``，
+  支撑 admin 面板 ``/api/v1/analytics/traces/{trace_id}`` 详情页（按
+  trace_id/request_trace_id 双索引查询），不依赖外部服务。
+- Langfuse（外部，opt-in 自托管，按会话采样）：经 LangGraph
+  CallbackHandler 记录完整执行轨迹、token 成本与 prompt 版本，用于生产
+  回放与跨请求调试；默认关闭，是落在上述两层之上的增强，不替换它们。
 
 接入原则：
 - LANGFUSE_ENABLED=false 或缺少密钥时零成本（懒加载，不提前 import langfuse）；

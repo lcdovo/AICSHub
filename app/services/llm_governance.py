@@ -6,12 +6,15 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -100,6 +103,20 @@ class CostEstimator:
 
 
 class BudgetManager:
+    """用户日预算闸门。
+
+    存储后端：Redis 优先（hash key ``budget:{user_id}:{day}``，字段 tokens/cost，
+    多 worker 共享同一份日累计），Redis 不可用时降级进程内 dict（单 worker 语义
+    不变）。同步 ``check``/``consume`` 走进程内路径，供测试与离线场景使用；
+    请求热路径（LLMService.chat / stream_chat）使用 ``acheck``/``aconsume``。
+    注意：预算基于估算 token，是软闸门而非账单系统，check 与 consume 之间的
+    读改写竞态允许微小超额。
+    """
+
+    REDIS_PREFIX = "budget"
+    # 48h 滑动过期：日桶由 key 内日期保证，TTL 只负责清理不再活跃的 key。
+    REDIS_TTL_SECONDS = 172800
+
     def __init__(self, policy: BudgetPolicy | None = None, estimator: CostEstimator | None = None) -> None:
         self.policy = policy or BudgetPolicy()
         self.estimator = estimator or CostEstimator()
@@ -110,7 +127,20 @@ class BudgetManager:
     def _day() -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    def check(self, user_id: int | str, input_tokens: int, requested_output_tokens: int | None = None) -> BudgetDecision:
+    def _redis_key(self, user_id: int | str) -> str:
+        return f"{self.REDIS_PREFIX}:{user_id}:{self._day()}"
+
+    @staticmethod
+    async def _get_redis():
+        from app.utils.database import get_redis
+
+        try:
+            return await get_redis()
+        except Exception:
+            return None
+
+    def _check_request_limits(self, input_tokens: int, requested_output_tokens: int | None) -> BudgetDecision | None:
+        """单次请求级限额检查；通过返回 None，超限返回拒绝决策。"""
         requested = max(0, requested_output_tokens if requested_output_tokens is not None else self.policy.max_tokens)
         estimated = max(0, int(input_tokens)) + requested
         cost = self.estimator.estimate(input_tokens, requested)
@@ -118,13 +148,47 @@ class BudgetManager:
             return BudgetDecision(False, "request_output_token_budget_exceeded", estimated, cost)
         if cost > self.policy.max_cost_usd:
             return BudgetDecision(False, "request_cost_budget_exceeded", estimated, cost)
+        return None
+
+    def _check_daily(self, tokens_used: float, cost_used: float, estimated: int, cost: float) -> BudgetDecision:
+        if tokens_used + estimated > self.policy.user_daily_tokens:
+            return BudgetDecision(False, "user_daily_token_budget_exceeded", estimated, cost)
+        if cost_used + cost > self.policy.user_daily_cost_usd:
+            return BudgetDecision(False, "user_daily_cost_budget_exceeded", estimated, cost)
+        return BudgetDecision(True, estimated_tokens=estimated, estimated_cost_usd=cost)
+
+    def _estimate(self, input_tokens: int, requested_output_tokens: int | None) -> tuple[int, float]:
+        """与 _check_request_limits 同口径的估算值（检查通过后复用）。"""
+        requested = max(0, requested_output_tokens if requested_output_tokens is not None else self.policy.max_tokens)
+        estimated = max(0, int(input_tokens)) + requested
+        return estimated, self.estimator.estimate(input_tokens, requested)
+
+    def check(self, user_id: int | str, input_tokens: int, requested_output_tokens: int | None = None) -> BudgetDecision:
+        """进程内同步检查（测试/离线路径）。"""
+        denied = self._check_request_limits(input_tokens, requested_output_tokens)
+        if denied is not None:
+            return denied
+        estimated, cost = self._estimate(input_tokens, requested_output_tokens)
         with self._lock:
             usage = self._usage.get((str(user_id), self._day()), {"tokens": 0, "cost": 0.0})
-            if usage["tokens"] + estimated > self.policy.user_daily_tokens:
-                return BudgetDecision(False, "user_daily_token_budget_exceeded", estimated, cost)
-            if usage["cost"] + cost > self.policy.user_daily_cost_usd:
-                return BudgetDecision(False, "user_daily_cost_budget_exceeded", estimated, cost)
-        return BudgetDecision(True, estimated_tokens=estimated, estimated_cost_usd=cost)
+        return self._check_daily(usage["tokens"], usage["cost"], estimated, cost)
+
+    async def acheck(self, user_id: int | str, input_tokens: int, requested_output_tokens: int | None = None) -> BudgetDecision:
+        """请求热路径检查：Redis 共享日累计优先，失败降级进程内。"""
+        denied = self._check_request_limits(input_tokens, requested_output_tokens)
+        if denied is not None:
+            return denied
+        estimated, cost = self._estimate(input_tokens, requested_output_tokens)
+        redis = await self._get_redis()
+        if redis is not None:
+            try:
+                raw = await redis.hgetall(self._redis_key(user_id))
+                tokens_used = int((raw or {}).get("tokens", 0) or 0)
+                cost_used = float((raw or {}).get("cost", 0.0) or 0.0)
+                return self._check_daily(tokens_used, cost_used, estimated, cost)
+            except Exception as exc:
+                logger.warning("预算 Redis 读取失败，降级进程内: %s", exc)
+        return self.check(user_id, input_tokens, requested_output_tokens)
 
     def consume(self, user_id: int | str, tokens: int, cost_usd: float) -> None:
         key = (str(user_id), self._day())
@@ -132,6 +196,22 @@ class BudgetManager:
             usage = self._usage.setdefault(key, {"tokens": 0, "cost": 0.0})
             usage["tokens"] += max(0, int(tokens))
             usage["cost"] += max(0.0, float(cost_usd))
+
+    async def aconsume(self, user_id: int | str, tokens: int, cost_usd: float) -> None:
+        """请求热路径累计：Redis 多 worker 共享优先，失败降级进程内。"""
+        redis = await self._get_redis()
+        if redis is not None:
+            try:
+                key = self._redis_key(user_id)
+                pipe = redis.pipeline()
+                pipe.hincrby(key, "tokens", max(0, int(tokens)))
+                pipe.hincrbyfloat(key, "cost", max(0.0, float(cost_usd)))
+                pipe.expire(key, self.REDIS_TTL_SECONDS)
+                await pipe.execute()
+                return
+            except Exception as exc:
+                logger.warning("预算 Redis 写入失败，降级进程内: %s", exc)
+        self.consume(user_id, tokens, cost_usd)
 
     def usage(self, user_id: int | str) -> dict[str, float | str]:
         with self._lock:
@@ -223,18 +303,9 @@ def build_default_registry(prompt_version: str = "v1", model_version: str = "gpt
 
 
 def stable_gray_assignment(key: str, percentage: int) -> bool:
-    """稳定灰度：同一用户在版本切换前后不会随机漂移。"""
+    """稳定灰度：同一用户在版本切换前后不会随机漂移。
+
+    当前消费方：graph.py 的 Langfuse 会话粒度采样（同会话轨迹完整）。
+    """
     bucket = int(hashlib.sha256(str(key).encode()).hexdigest()[:8], 16) % 100
     return bucket < max(0, min(100, int(percentage)))
-
-
-def validate_structured_output(payload: Any, schema: Mapping[str, Any]) -> tuple[bool, list[str]]:
-    """Minimal, dependency-free schema guard for model JSON responses."""
-    errors: list[str] = []
-    if schema.get("type") == "object" and not isinstance(payload, Mapping):
-        errors.append("output_not_object")
-        return False, errors
-    for field_name in schema.get("required", []):
-        if not isinstance(payload, Mapping) or field_name not in payload:
-            errors.append(f"missing:{field_name}")
-    return not errors, errors

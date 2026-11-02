@@ -3,6 +3,8 @@ Agent 状态定义 - 定义 Agent 在执行过程中需要追踪的所有状态
 """
 from typing import Any, List, Dict, Optional, Literal
 from pydantic import BaseModel, Field
+from copy import deepcopy
+from datetime import datetime
 
 
 class ToolCall(BaseModel):
@@ -57,6 +59,25 @@ class AgentState(BaseModel):
     # 用户情绪
     user_emotion: str = "neutral"  # neutral, positive, negative, angry
     
+    def for_next_turn(self, user_id: int, message: str) -> "AgentState":
+        """Copy conversation facts and unfinished actions; reset every turn artifact."""
+        persistent_keys = {"order_id", "tracking_number", "ticket_id", "intent_history"}
+        if self.missing_slots or self.pending_confirmations:
+            persistent_keys.update({"reason", "refund_type", "refund_preview"})
+        state = AgentState(
+            session_id=self.session_id, user_id=user_id, user_message=message,
+            messages=deepcopy(self.messages), conversation_summary=self.conversation_summary,
+            detected_intent=self.detected_intent, intent_confidence=self.intent_confidence,
+            needs_clarification=self.needs_clarification,
+            pending_confirmations=list(self.pending_confirmations),
+            collected_info={key: deepcopy(value) for key, value in self.collected_info.items()
+                            if key in persistent_keys},
+        )
+        state.collected_info.update({"user_id": user_id, "session_id": self.session_id})
+        state.messages.append({"role": "user", "content": message,
+                               "timestamp": datetime.now().isoformat(timespec="milliseconds")})
+        return state
+
     def add_trace(self, node_name: str, input_data: Any = None, output_data: Any = None, duration_ms: int = 0):
         """添加执行轨迹"""
         self.trace.append({
@@ -94,8 +115,7 @@ class IntentType:
     TECHNICAL = "technical"
     PROMOTION = "promotion"
     HUMAN = "human"
-    GENERAL = "general"
-    UNKNOWN = "unknown"
+    GENERAL = "general"  # 兜底意图：无明确领域时由 general 承接
 
 
 # Agent 节点名称

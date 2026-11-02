@@ -55,8 +55,12 @@ def load_eval_set(path: Path) -> List[Dict[str, Any]]:
     return dataset
 
 
-def evaluate_dataset(dataset: List[Dict[str, Any]], limit: int) -> List[IntentEval]:
-    """逐条调用线上同一条规则识别链路。"""
+def evaluate_dataset(dataset: List[Dict[str, Any]], limit: int, llm_primary: bool = False) -> List[IntentEval]:
+    """逐条调用线上同一条规则识别链路。
+
+    llm_primary 与生产入口（app/agent/nodes/intent_node.py）保持同源：
+    默认读 config 开关，保证评测口径与线上一致；仅当配置缺失时回退 False（规则优先）。
+    """
     from app.agent.intent import EnhancedIntentRecognizer
 
     recognizer = EnhancedIntentRecognizer()
@@ -69,6 +73,7 @@ def evaluate_dataset(dataset: List[Dict[str, Any]], limit: int) -> List[IntentEv
             message=message,
             context=context if isinstance(context, list) else None,
             history_intent=history_intent if isinstance(history_intent, str) and history_intent else None,
+            llm_primary=llm_primary,
         )
         predicted = result.intent if result.intent else "general"
         expected = str(item["expected_intent"]).strip()
@@ -121,7 +126,7 @@ def summarize(results: List[IntentEval]) -> Dict[str, Any]:
 
     clarification_needed = sum(1 for r in results if r.needs_clarification)
     clarification_hits = sum(
-        1 for r in results if r.needs_clarification and r.expected in ("unknown", "general")
+        1 for r in results if r.needs_clarification and r.expected in ("general",)
     )
 
     return {
@@ -160,7 +165,7 @@ def _build_optimization_advice(results: List[IntentEval]) -> List[str]:
     if low / total > 0.3:
         advice.append(
             f"置信度<0.4 占比 {low}/{total}，过低消息多落 CLARIFICATION：可放宽过短消息澄清条件，"
-            "或为 general/unknown 增加context 推断兜底。"
+            "或为 general 增加 context 推断兜底。"
         )
     if summary["need_clarification_rate"] > 0.4:
         advice.append(
@@ -248,6 +253,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--data", default="data/eval/intent_eval_set.json", help="评测数据集 JSON 路径")
     parser.add_argument("--limit", type=int, default=0, help="仅评估前 N 条（0 表示全部）")
     parser.add_argument("--report-dir", default="reports", help="报告输出目录")
+    parser.add_argument("--llm-primary", action="store_true", default=False,
+                        help="按 LLM 主判分层阈值评测（默认假，走规则优先口径）；不传则读 LLM_INTENT_PRIMARY 配置")
     args = parser.parse_args(argv)
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -258,7 +265,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         data_path = repo_root / data_path
 
     dataset = load_eval_set(data_path)
-    results = evaluate_dataset(dataset, args.limit)
+
+    # 评测口径与生产保持一致：默认读 config 开关（与 intent_node.py 同源），
+    # --llm-primary 显式指定时覆盖（用于对比两种分层策略的差异）。
+    if args.llm_primary:
+        llm_primary_value = True
+    else:
+        try:
+            from app.config.config import settings
+            llm_primary_value = bool(settings.LLM_INTENT_PRIMARY)
+        except Exception:
+            llm_primary_value = False
+    results = evaluate_dataset(dataset, args.limit, llm_primary=llm_primary_value)
     summary = summarize(results)
 
     report = format_report_md(

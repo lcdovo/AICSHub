@@ -1,7 +1,7 @@
 # 直接依赖约束（由 requirements.txt 维护；用于审查和可复现构建）。
 # CI 会在干净 Python 3.11 环境中按此约束解析间接依赖。
 fastapi==0.141.1
-uvicorn==0.30.6
+uvicorn>=0.31.1
 python-multipart==0.0.32
 SQLAlchemy==2.0.35
 alembic==1.14.0
@@ -9,7 +9,7 @@ aiomysql==0.3.2
 PyMySQL==1.1.1
 cryptography==50.0.1
 redis==5.2.0
-pydantic==2.9.2
+pydantic>=2.11.0,<3.0
 pydantic-settings==2.5.2
 python-dotenv==1.2.3
 PyJWT==2.13.0

@@ -3,6 +3,15 @@
 1. TraceID 全链路贯穿
 2. 指标采集与统计
 3. 结构化日志
+
+可观测性职责分层（P1 结论，三者并存、各司其职）：
+- 本模块 MetricsCollector / AlertManager：自研业务指标与 P0-P2 分级告警，
+  区别于通用 APM，是差异化价值所在，始终开启；
+- agent_traces 落库表：每轮 span 明细由 chat_service 统一落库，供 admin
+  面板 /api/v1/analytics/traces/{trace_id} 详情页查询（无外部依赖）；
+- Langfuse（opt-in 自托管）：完整执行轨迹回放与调试，落在前两层之上，
+  默认关闭，不替代自研落库与指标。
+导出 metrics/prometheus 时仅取聚合指标，span 明细不在内存长期驻留。
 """
 import time
 import uuid
@@ -17,7 +26,12 @@ logger = logging.getLogger(__name__)
 
 
 class TraceSpan:
-    """追踪跨度"""
+    """追踪跨度
+
+    持有可选的内嵌 OTel span（``_otel``）：start/end 时同步创建/结束，
+    属性与事件透传，使 span 同时满足自研指标体系与 OTel 语义约定；
+    to_dict 输出保持原契约不变。
+    """
 
     def __init__(
         self,
@@ -36,9 +50,15 @@ class TraceSpan:
         self.events: List[Dict[str, Any]] = []
         self.status = "ok"
         self.error_message = None
+        self._otel: Any = None
 
     def set_attribute(self, key: str, value: Any):
         self.attributes[key] = value
+        if self._otel is not None:
+            try:
+                self._otel.set_attribute(key, value)
+            except Exception:
+                pass
 
     def add_event(self, name: str, attributes: Optional[Dict[str, Any]] = None):
         self.events.append({
@@ -46,12 +66,25 @@ class TraceSpan:
             "timestamp": time.time(),
             "attributes": attributes or {},
         })
+        if self._otel is not None:
+            try:
+                self._otel.add_event(name, attributes or {})
+            except Exception:
+                pass
 
     def end(self, status: str = "ok", error_message: Optional[str] = None):
         self.end_time = time.time()
         self.duration_ms = int((self.end_time - self.start_time) * 1000)
         self.status = status
         self.error_message = error_message
+        # 内嵌 OTel span 收尾，保持两端生命周期一致。
+        if self._otel is not None:
+            try:
+                from app.utils.otel import end_span
+
+                end_span(self._otel, status=status, error_message=error_message)
+            except Exception:
+                pass
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -99,7 +132,20 @@ class Tracer:
         span_name: str,
         parent_span_id: Optional[str] = None,
     ) -> TraceSpan:
+        # 镜像到 OpenTelemetry：span 名与属性沿用 OTel 规范，便于导出到任意后端。
+        otel_span = None
+        try:
+            from opentelemetry.trace import SpanKind
+
+            from app.utils.otel import get_tracer_provider, start_span as otel_start_span
+
+            get_tracer_provider()  # 确保 provider 初始化
+            otel_span = otel_start_span(span_name, kind=SpanKind.INTERNAL)
+        except Exception:
+            otel_span = None
+
         span = TraceSpan(trace_id, span_name, parent_span_id)
+        span._otel = otel_span
         if trace_id in self._active_traces:
             self._active_traces[trace_id].append(span)
         return span
@@ -130,6 +176,9 @@ class Tracer:
     def record_rag(self, **kwargs):
         self._metrics.record_rag(**kwargs)
 
+    def record_memory(self, **kwargs):
+        self._metrics.record_memory(**kwargs)
+
     def record_handoff(self):
         self._metrics.record_handoff()
 
@@ -157,8 +206,6 @@ class MetricsCollector:
 
     def __init__(self):
         self._counters: Dict[str, int] = {}
-        self._timers: Dict[str, List[int]] = {}
-        self._gauges: Dict[str, float] = {}
         self._intent_counts: Dict[str, int] = {}
         self._tool_counts: Dict[str, Dict[str, int]] = {}
         self._response_times: List[int] = []
@@ -168,18 +215,11 @@ class MetricsCollector:
     def increment_counter(self, name: str, value: int = 1):
         self._counters[name] = self._counters.get(name, 0) + value
 
-    def record_time(self, name: str, duration_ms: int):
-        if name not in self._timers:
-            self._timers[name] = []
-        self._timers[name].append(duration_ms)
-
     def record_span(self, span: TraceSpan):
-        self.increment_counter(f"span.{span.span_name}.count")
-        self.record_time(f"span.{span.span_name}.duration", span.duration_ms)
-
-        if span.status != "ok":
-            self.increment_counter(f"span.{span.span_name}.errors")
-
+        """span 落库/观测由 agent_traces 表 + OTel + Langfuse 统一承担，
+        内存指标只保留业务口径聚合（意图分布/工具成败/整体响应延迟），
+        不再重复累积 span 级 count/duration 链路指标。
+        """
         if span.span_name == "intent_recognition":
             intent = span.attributes.get("intent", "unknown")
             self._intent_counts[intent] = self._intent_counts.get(intent, 0) + 1
@@ -225,7 +265,6 @@ class MetricsCollector:
 
     def record_rag(self, *, latency_ms: int = 0, empty: bool = False, backend: str = "unknown", degraded: bool = False):
         self.increment_counter("rag.total")
-        self.record_time("rag.search.duration", latency_ms)
         self.increment_counter(f"rag.backend.{backend}")
         if empty:
             self.increment_counter("rag.empty")
@@ -237,7 +276,13 @@ class MetricsCollector:
         self.increment_counter(f"model.{model}.total")
         self.increment_counter("model.success" if success else "model.failure")
         self.increment_counter("model.tokens", max(0, int(tokens or 0)))
-        self.record_time("model.duration", latency_ms)
+
+    def record_memory(self, *, source: str = "unknown", recalled_count: int = 0, backend: str = "unknown"):
+        self.increment_counter("memory.recall.total")
+        self.increment_counter(f"memory.source.{source}")
+        self.increment_counter(f"memory.backend.{backend}")
+        if recalled_count <= 0:
+            self.increment_counter("memory.recall.empty")
 
     def record_handoff(self):
         self.increment_counter("handoff.total")
@@ -257,21 +302,6 @@ class MetricsCollector:
 
     def get_counter(self, name: str) -> int:
         return self._counters.get(name, 0)
-
-    def get_timer_stats(self, name: str) -> Dict[str, Any]:
-        times = self._timers.get(name, [])
-        if not times:
-            return {"count": 0, "avg_ms": 0, "p50_ms": 0, "p95_ms": 0, "max_ms": 0}
-
-        sorted_times = sorted(times)
-        count = len(sorted_times)
-        return {
-            "count": count,
-            "avg_ms": sum(sorted_times) / count,
-            "p50_ms": sorted_times[count // 2],
-            "p95_ms": sorted_times[int(count * 0.95)],
-            "max_ms": sorted_times[-1],
-        }
 
     def get_all_metrics(self) -> Dict[str, Any]:
         response_time_stats = self._compute_response_time_stats()
@@ -313,6 +343,11 @@ class MetricsCollector:
                 "tokens": self.get_counter("model.tokens"),
             },
             "handoff_rate": round(self.get_counter("handoff.total") / max(self.get_counter("response.total"), 1) * 100, 2),
+            "memory": {
+                "total": self.get_counter("memory.recall.total"),
+                "empty": self.get_counter("memory.recall.empty"),
+                "empty_rate": round(self.get_counter("memory.recall.empty") / max(self.get_counter("memory.recall.total"), 1) * 100, 2),
+            },
             "evaluation": {"total": self.get_counter("evaluation.total"), "low_score": self.get_counter("evaluation.low_score")},
             "csat": {"count": len(self._csat_scores), "avg_score": round(sum(self._csat_scores) / len(self._csat_scores), 2) if self._csat_scores else 0},
         }
@@ -356,8 +391,6 @@ class MetricsCollector:
 
     def reset(self):
         self._counters.clear()
-        self._timers.clear()
-        self._gauges.clear()
         self._intent_counts.clear()
         self._tool_counts.clear()
         self._response_times.clear()

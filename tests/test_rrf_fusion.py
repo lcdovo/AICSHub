@@ -67,5 +67,5 @@ def test_top_k_limit_applies():
         {"id": f"b{i}", "title": f"B{i}", "bm25_score": 9.0} for i in range(10)
     ]
     merged = svc._merge_results(vector, bm25, 5)
-    # 返回 top_k * 2 = 10 条
-    assert len(merged) == 10
+    # 候选池保留 top_k * 4 = 20 条（给重排器留足提升空间，见 _merge_results 注释）
+    assert len(merged) == 20

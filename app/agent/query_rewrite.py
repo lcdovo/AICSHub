@@ -14,6 +14,7 @@ class QueryRewriteResult:
     applied: bool
     reason: str = ""
     confidence: float = 0.0
+    simple: bool = False  # 规则拼接已足够（简单指代），无需 LLM 语义补全
 
 
 class ConservativeQueryRewriter:
@@ -39,11 +40,11 @@ class ConservativeQueryRewriter:
     ) -> QueryRewriteResult:
         original = " ".join(str(query or "").split())
         if not original:
-            return QueryRewriteResult(original, original, False, "empty_query", 1.0)
+            return QueryRewriteResult(original, original, False, "empty_query", 1.0, True)
 
         previous = self._previous_user_message(original, messages or [])
         if not previous:
-            return QueryRewriteResult(original, original, False, "no_previous_user_query", 1.0)
+            return QueryRewriteResult(original, original, False, "no_previous_user_query", 1.0, True)
 
         # 先剥掉标点再匹配：避免"价格呢？""大概多久？"因句尾标点导致 endswith 失配。
         compact = re.sub(r"[？?!！。，,、～~·:：]+", "", original.replace(" ", ""))
@@ -59,7 +60,7 @@ class ConservativeQueryRewriter:
             and any(hint in compact for hint in self._SHORT_QUESTION_HINTS)
         )
         if not (has_reference or is_head_follow or is_short_question):
-            return QueryRewriteResult(original, original, False, "self_contained_query", 0.9)
+            return QueryRewriteResult(original, original, False, "self_contained_query", 0.9, True)
 
         info = collected_info or {}
         order_id = str(info.get("order_id") or "").strip()
@@ -75,7 +76,15 @@ class ConservativeQueryRewriter:
 
         reason = "reference_with_context" if has_reference else "short_follow_up"
         confidence = 0.92 if has_reference else 0.78
-        return QueryRewriteResult(original, rewritten, True, reason, confidence)
+        # 简单指代判定：追问短（≤10 字）+ 上文短（≤80 字）+ 至多一个指代词，
+        # 此时规则拼接足够、质量不输 LLM 补全，可零延迟短路；否则交由 LLM
+        # 从更长/更复杂的上下文中提取主题做语义补全。
+        simple = (
+            len(compact) <= 10
+            and len(previous) <= 80
+            and sum(1 for term in self._REFERENCE_TERMS if term in compact) <= 1
+        )
+        return QueryRewriteResult(original, rewritten, True, reason, confidence, simple)
 
     @staticmethod
     def _previous_user_message(

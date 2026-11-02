@@ -3,6 +3,8 @@ LLM 服务 - Phase 3 增强版
 支持多模型切换、降级策略、重试机制、调用统计
 """
 import asyncio
+from contextvars import ContextVar
+from copy import deepcopy
 import time
 import logging
 from typing import Optional, Tuple, List, Dict, Any, Literal
@@ -13,6 +15,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.config.config import settings
+from app.agent.intent import EnhancedIntentRecognizer
 from app.services.llm_governance import BudgetManager, BudgetPolicy, CostEstimator, SensitiveDataRedactor, PromptInjectionScanner, ToolPolicy, build_default_registry
 
 logger = logging.getLogger(__name__)
@@ -33,14 +36,16 @@ def _ensure_json_hint(system_prompt: str) -> str:
 # 解析型任务（意图兜底/查询改写/judge/摘要）使用低温，降低结构化输出抖动；
 # 客服回复生成保持较高温度（见 _get_chat_model 默认值）。
 ANALYTIC_TEMPERATURE = 0.1
+# 解析型任务（意图/改写/judge）只输出小结构体，压低 output token 避免超过
+# 受限模型（qwen-flash 等）的单次 output 上限，也防本地 --max-model-len 不够。
+ANALYTIC_MAX_TOKENS = 256
 
 
 class LLMResponse(BaseModel):
     """Stable contract for model-generated customer-service responses.
 
-    自检字段（grounded/fact_score/has_unsupported_claim/refuse_recommended）为
-    "生成+自检"二合一方案的输出契约：RAG 场景下一次调用同时产出回答与自检结论，
-    替代原先独立的 LLM judge 调用；非 RAG 场景这些字段保持默认值，不影响行为。
+    自检字段为兼容现有供应商保留的辅助元数据，不作为独立证据校验的替代。
+    RAG 回答由响应节点统一检查；生成模型的自检不决定是否发布或缓存。
     intent/confidence/citations 为结构化输出附带元数据，不参与下游路由决策。
     """
 
@@ -69,18 +74,6 @@ class IntentClassification(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     need_clarification: bool = False
 
-# 仅用于元数据/日志展示的粗粒度意图关键词。意图判定的唯一权威入口是
-# app/agent/intent.py 的规则识别 + classify_intent 低置信兜底；此处不再参与
-# 任何路由 / 覆写逻辑，避免与规则词表出现两套口径。
-INTENT_KEYWORDS = {
-    "query_order": ["订单", "物流", "发货", "快递", "查询", "单号"],
-    "refund": ["退款", "退货", "退换", "售后", "拒收"],
-    "complaint": ["投诉", "差评", "不满", "气愤", "骗子"],
-    "technical": ["怎么用", "如何", "设置", "安装", "教程", "问题", "报错"],
-    "promotion": ["优惠", "活动", "折扣", "券", "促销", "便宜"],
-    "human": ["人工", "客服", "转人工", "找客服"],
-}
-
 
 class ModelConfig:
     """模型配置"""
@@ -93,6 +86,8 @@ class ModelConfig:
         model: str = "",
         is_local: bool = False,
         priority: int = 0,
+        thinking_mode: Literal["", "enabled", "disabled"] = "",
+        structured_output_method: Literal["json_schema", "function_calling"] = "json_schema",
     ):
         self.name = name
         self.api_base = api_base
@@ -101,6 +96,8 @@ class ModelConfig:
         self.is_local = is_local
         # 熔断状态统一由 CircuitBreaker 对象按模型名维护，不在 ModelConfig 内重复记录。
         self.priority = priority
+        self.thinking_mode = thinking_mode
+        self.structured_output_method = structured_output_method
 
 
 class CircuitBreaker:
@@ -155,6 +152,7 @@ class LLMService:
         self.MAX_RETRIES = settings.LLM_MAX_RETRIES
         self.TIMEOUT = settings.LLM_REQUEST_TIMEOUT_SECONDS
         self.models: List[ModelConfig] = []
+        self.local_model: Optional[ModelConfig] = None
         self.circuit_breaker = CircuitBreaker()
         self._chat_models: Dict[str, ChatOpenAI] = {}
         self.call_stats: Dict[str, Dict[str, int]] = {}
@@ -163,12 +161,24 @@ class LLMService:
         self.injection_scanner = PromptInjectionScanner()
         self.tool_policy = ToolPolicy()
         self.budget_manager = BudgetManager(BudgetPolicy(max_tokens=settings.LLM_MAX_TOKENS, max_cost_usd=settings.LLM_MAX_COST_USD, user_daily_tokens=settings.LLM_DAILY_USER_TOKEN_BUDGET, user_daily_cost_usd=settings.LLM_DAILY_USER_COST_USD, max_latency_seconds=settings.LLM_REQUEST_TIMEOUT_SECONDS), CostEstimator(settings.LLM_INPUT_PRICE_PER_1K_USD, settings.LLM_OUTPUT_PRICE_PER_1K_USD))
-        self.last_call_metadata: Dict[str, Any] = {}
+        self._call_metadata: ContextVar[Optional[Dict[str, Any]]] = ContextVar("llm_call_metadata", default=None)
         # 全局并发闸门：限制同一进程内同时进行的 LLM 调用数（asyncio.Semaphore），
         # 防止多 worker 汇聚后打爆外部供应商 RPM/TPM 配额（429）与连接池。
         self._semaphore = asyncio.Semaphore(max(1, settings.LLM_MAX_CONCURRENCY))
 
         self._init_models()
+
+    @property
+    def last_call_metadata(self) -> Dict[str, Any]:
+        metadata = self._call_metadata.get()
+        if metadata is None:
+            metadata = {}
+            self._call_metadata.set(metadata)
+        return metadata
+
+    @last_call_metadata.setter
+    def last_call_metadata(self, value: Dict[str, Any]) -> None:
+        self._call_metadata.set(deepcopy(value))
 
     def _init_models(self):
         primary = ModelConfig(
@@ -178,45 +188,87 @@ class LLMService:
             model=settings.LLM_MODEL,
             is_local=False,
             priority=0,
+            thinking_mode=settings.LLM_THINKING_MODE,
+            structured_output_method=settings.LLM_STRUCTURED_OUTPUT_METHOD,
         )
         self.models.append(primary)
 
-        if hasattr(settings, "LLM_BACKUP_BASE") and settings.LLM_BACKUP_BASE:
+        # 备用模型必须同时指定 base 与 model 才启用（避免只配了地址却默认
+        # 落到 gpt-4o-mini 造成误用）；任一为空则主模型单点，故障时整体降级。
+        if (
+            getattr(settings, "LLM_BACKUP_BASE", "")
+            and getattr(settings, "LLM_BACKUP_MODEL", "")
+        ):
             backup = ModelConfig(
                 name="backup",
                 api_base=settings.LLM_BACKUP_BASE,
                 api_key=getattr(settings, "LLM_BACKUP_KEY", ""),
-                model=getattr(settings, "LLM_BACKUP_MODEL", "gpt-4o-mini"),
+                model=settings.LLM_BACKUP_MODEL,
                 is_local=False,
                 priority=1,
             )
             self.models.append(backup)
 
+        # 解析型任务本地模型（意图识别 + 问题重写专用）：base+model 同时配置才启用。
+        # 只参与 classify_intent / run_structured(prefer_local=True) 的本地优先链，
+        # 不进生成链 self.models（回复生成与 judge 仍走主链外接）。
+        # 本地推理服务（vLLM/Ollama）不校验 key，api_key 用占位符占位。
+        if (
+            getattr(settings, "LLM_LOCAL_BASE", "")
+            and getattr(settings, "LLM_LOCAL_MODEL", "")
+        ):
+            self.local_model = ModelConfig(
+                name="local",
+                api_base=settings.LLM_LOCAL_BASE,
+                api_key=getattr(settings, "LLM_LOCAL_KEY", "") or "local",
+                model=settings.LLM_LOCAL_MODEL,
+                is_local=True,
+                priority=0,
+            )
+
+    def _analytic_models(self, prefer_local: bool = False) -> List[ModelConfig]:
+        """解析型任务（意图识别/查询改写）的模型链。
+
+        prefer_local=True 且已配置本地模型时，返回 [local, *主链]（本地优先、
+        主链兜底）；否则仅主链。judge 等走 run_structured 默认不传 prefer_local，
+        保持主链外接。
+        """
+        if prefer_local and self.local_model is not None:
+            return [self.local_model, *self.models]
+        return list(self.models)
+
     async def close(self):
         self._chat_models.clear()
 
     def detect_intent(self, message: str) -> str:
-        message_lower = message.lower()
-        scores = {}
-        for intent, keywords in INTENT_KEYWORDS.items():
-            score = sum(1 for kw in keywords if kw.lower() in message_lower)
-            if score > 0:
-                scores[intent] = score
+        """粗粒度意图标注（仅用于元数据/日志展示，不参与路由决策）。
 
-        if scores:
-            return max(scores, key=scores.get)
-        return "general"
+        统一复用 app/agent/intent.py 的权威规则识别器，与主链路口径一致，
+        避免维护两套词表导致漂移。返回意图失败时兜底 general。
+        """
+        try:
+            return EnhancedIntentRecognizer().recognize(message).intent
+        except Exception:
+            logger.warning("detect_intent 复用规则识别失败，兜底 general", exc_info=True)
+            return "general"
 
     def is_available(self) -> bool:
-        """Whether at least one model has a real credential and is usable.
+        """Whether at least one model is usable for the current task.
 
         Used by intent/rewrite/judge enhancements to decide whether LLM
         participation is possible; callers fall back to rules when absent.
+        主链（外接）需真实 key；本地模型不校验 key，base+model 配置齐即视为可用。
         """
-        return any(
+        main_available = any(
             bool(m.api_key) and m.api_key != "your-api-key-here"
             for m in self.models
         )
+        local_available = (
+            self.local_model is not None
+            and bool(self.local_model.api_base)
+            and bool(self.local_model.model)
+        )
+        return main_available or local_available
 
     async def classify_intent(
         self, message: str, context: Optional[list] = None
@@ -240,11 +292,13 @@ class LLMService:
             )),
             HumanMessage(content=self.redactor.redact(message)),
         ]
-        for attempt, model in enumerate(self.models):
+        for attempt, model in enumerate(self._analytic_models(prefer_local=True)):
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
-                structured = self._get_chat_model(model, temperature=ANALYTIC_TEMPERATURE).with_structured_output(IntentClassification)
+                structured = self._with_structured_output(self._get_chat_model(
+                    model, temperature=ANALYTIC_TEMPERATURE, max_tokens=ANALYTIC_MAX_TOKENS
+                ), IntentClassification, model)
                 async with self._semaphore:
                     result = await structured.ainvoke(messages)
                 parsed = result if isinstance(result, IntentClassification) else IntentClassification.model_validate(result)
@@ -264,12 +318,16 @@ class LLMService:
         contract: type[BaseModel],
         *,
         tags: Optional[list[str]] = None,
+        prefer_local: bool = False,
     ) -> Optional[BaseModel]:
         """Run one structured (JSON-schema) completion against the active models.
 
         Shared by the LLM query rewriter and the RAG judge so both reuse the plain
         degradation chain (real credential -> circuit breaker -> None).  Callers
         decide what to do when ``None`` is returned.
+
+        prefer_local=True（查询改写）时本地模型优先、主链兜底；默认（judge 等）
+        仅走主链外接。
         """
         if not self.is_available():
             return None
@@ -278,11 +336,13 @@ class LLMService:
             SystemMessage(content=_ensure_json_hint(system_prompt)),
             HumanMessage(content=self.redactor.redact(user_text)),
         ]
-        for attempt, model in enumerate(self.models):
+        for attempt, model in enumerate(self._analytic_models(prefer_local=prefer_local)):
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
-                structured_model = self._get_chat_model(model, temperature=ANALYTIC_TEMPERATURE).with_structured_output(contract)
+                structured_model = self._with_structured_output(self._get_chat_model(
+                    model, temperature=ANALYTIC_TEMPERATURE, max_tokens=ANALYTIC_MAX_TOKENS
+                ), contract, model)
                 async with self._semaphore:
                     result = await structured_model.ainvoke(
                         messages,
@@ -308,7 +368,7 @@ class LLMService:
         intent = self.detect_intent(message)
         injection_patterns = self.injection_scanner.scan(message)
         input_tokens = max(1, len(message) // 4)
-        budget = self.budget_manager.check(user_id, input_tokens, settings.LLM_MAX_TOKENS)
+        budget = await self.budget_manager.acheck(user_id, input_tokens, settings.LLM_MAX_TOKENS)
         self.last_call_metadata = {
             "prompt_version": self.registry.get("prompt").version,
             "model_version": self.registry.get("model").version,
@@ -326,7 +386,7 @@ class LLMService:
             reason = "prompt_injection" if injection_patterns else budget.reason
             reply = "抱歉，我不能执行修改系统规则、泄露凭据或绕过权限的请求。请描述具体的业务问题。" if injection_patterns else "当前模型预算已用尽，我将使用规则模式继续为您服务。"
             tokens = max(1, len(reply) // 4)
-            self._record_call_metadata(user_id, "rule_fallback", tokens, started, degraded=True, reason=reason)
+            await self._record_call_metadata(user_id, "rule_fallback", tokens, started, degraded=True, reason=reason)
             return reply, intent, tokens
 
         for attempt in range(len(self.models)):
@@ -343,7 +403,7 @@ class LLMService:
                     )
                     self.circuit_breaker.record_success(model.name)
                     self._record_stats(model.name, True)
-                    self._record_call_metadata(user_id, model.name, token_count, started)
+                    await self._record_call_metadata(user_id, model.name, token_count, started)
                     return reply, model_intent or intent, token_count
 
             except Exception as e:
@@ -358,18 +418,18 @@ class LLMService:
                     continue
 
         # 所有模型均不可用：返回空回复，由上层降级到默认话术。
-        self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")
+        await self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")
         return "", intent, 0
 
-    def _record_call_metadata(self, user_id: int, model_name: str, tokens: int, started: float, *, degraded: bool = False, reason: str | None = None) -> None:
+    async def _record_call_metadata(self, user_id: int, model_name: str, tokens: int, started: float, *, degraded: bool = False, reason: str | None = None) -> None:
         input_tokens = max(1, len(self.last_call_metadata.get("input_summary", "")) // 4)
         cost = self.budget_manager.estimator.estimate(input_tokens, tokens)
-        self.budget_manager.consume(user_id, tokens, cost)
+        await self.budget_manager.aconsume(user_id, tokens, cost)
         route = "rule_fallback" if model_name == "rule_fallback" else "external"
         self.last_call_metadata.update({"model": model_name, "route": route, "tokens": max(0, int(tokens)), "cost_usd": cost, "latency_ms": int((time.perf_counter() - started) * 1000), "degraded": degraded, "degraded_reason": reason})
 
     def get_last_call_metadata(self) -> Dict[str, Any]:
-        return dict(self.last_call_metadata)
+        return deepcopy(self.last_call_metadata)
 
     async def _call_model_api(
         self,
@@ -384,7 +444,7 @@ class LLMService:
 
         chat_model = self._get_chat_model(model)
         structured_model = (
-            chat_model.with_structured_output(LLMResponse)
+            self._with_structured_output(chat_model, LLMResponse, model)
             if hasattr(chat_model, "with_structured_output")
             else chat_model
         )
@@ -429,7 +489,7 @@ class LLMService:
         intent = self.detect_intent(message)
         injection_patterns = self.injection_scanner.scan(message)
         input_tokens = max(1, len(message) // 4)
-        budget = self.budget_manager.check(user_id, input_tokens, settings.LLM_MAX_TOKENS)
+        budget = await self.budget_manager.acheck(user_id, input_tokens, settings.LLM_MAX_TOKENS)
         self.last_call_metadata = {
             "prompt_version": self.registry.get("prompt").version,
             "model_version": self.registry.get("model").version,
@@ -454,7 +514,7 @@ class LLMService:
             for index in range(0, len(reply), 24):
                 await asyncio.sleep(0)
                 yield reply[index:index + 24]
-            self._record_call_metadata(user_id, "rule_fallback", len(reply) // 4, started, degraded=True, reason=reason)
+            await self._record_call_metadata(user_id, "rule_fallback", len(reply) // 4, started, degraded=True, reason=reason)
             self.last_call_metadata["stream_provider"] = "rule_fallback"
             self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
             return
@@ -482,7 +542,7 @@ class LLMService:
                 reply = "".join(chunks)
                 self.circuit_breaker.record_success(model.name)
                 self._record_stats(model.name, True)
-                self._record_call_metadata(user_id, model.name, max(1, len(reply) // 4), started)
+                await self._record_call_metadata(user_id, model.name, max(1, len(reply) // 4), started)
                 self.last_call_metadata["stream_provider"] = "langchain"
                 self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
                 return
@@ -494,7 +554,7 @@ class LLMService:
                 await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
 
         # 所有模型均不可用：不输出内容，由上层降级到默认话术。
-        self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")
+        await self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")
         self.last_call_metadata["stream_provider"] = "none"
         self.last_call_metadata["structured_output"] = {"reply": "", "intent": intent, "confidence": 0.0}
 
@@ -520,22 +580,37 @@ class LLMService:
         messages.append(HumanMessage(content=self.redactor.redact(message)))
         return messages
 
-    def _get_chat_model(self, model: ModelConfig, streaming: bool = False, temperature: float = 0.7) -> ChatOpenAI:
+    @staticmethod
+    def _with_structured_output(chat_model: ChatOpenAI, contract: type[BaseModel], model: ModelConfig):
+        if model.structured_output_method == "function_calling":
+            return chat_model.with_structured_output(contract, method="function_calling")
+        return chat_model.with_structured_output(contract)
+
+    def _get_chat_model(
+        self,
+        model: ModelConfig,
+        streaming: bool = False,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+    ) -> ChatOpenAI:
         """Create one LangChain ChatOpenAI instance per configured model."""
-        cache_key = f"{model.name}:{'stream' if streaming else 'invoke'}:{temperature}"
+        limit = min(settings.LLM_MAX_TOKENS, self.budget_manager.policy.max_tokens)
+        max_tokens = max_tokens or limit
+        cache_key = f"{model.name}:{model.thinking_mode}:{'stream' if streaming else 'invoke'}:{temperature}:{max_tokens}"
         cached = self._chat_models.get(cache_key)
         if cached is not None:
             return cached
 
         chat_model = ChatOpenAI(
             model=model.model,
-            api_key=model.api_key,
+            api_key=model.api_key or "local",
             base_url=model.api_base,
             temperature=temperature,
             timeout=self.TIMEOUT,
             max_retries=0,
-            max_completion_tokens=min(settings.LLM_MAX_TOKENS, self.budget_manager.policy.max_tokens),
+            max_completion_tokens=max_tokens,
             streaming=streaming,
+            extra_body={"thinking": {"type": model.thinking_mode}} if model.thinking_mode else None,
         )
         self._chat_models[cache_key] = chat_model
         return chat_model

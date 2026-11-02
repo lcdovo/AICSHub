@@ -1,10 +1,14 @@
-﻿# 一键启动：docker compose 拉起完整依赖栈与应用。
-# 用法： .\scripts\start.ps1 [-NoMigrate] [-SkipSeed] [-Langfuse]
+﻿# 一键启动：docker compose 拉起完整依赖栈与应用（可选栈用 profiles 按需启用）。
+# 用法： .\scripts\start.ps1 [-NoMigrate] [-SkipSeed] [-Langfuse] [-Reranker] [-LocalEmbedding] [-LocalModels] [-All]
 param(
     [switch]$NoMigrate,   # 跳过 alembic 迁移
     [switch]$SkipSeed,    # 跳过灌入演示数据
-    [switch]$Langfuse,    # 同时拉起自托管 Langfuse 观测栈（docker-compose.langfuse.yml）
-    [int]$Port = 8000
+    [switch]$Langfuse,    # 同时启用 Langfuse 观测栈（profile: langfuse）
+    [switch]$Reranker,    # 同时启用本地 bge-reranker-large（profile: reranker）
+    [switch]$LocalEmbedding, # 仅启用本地 Embedding，不启动本地 Qwen LLM
+    [switch]$LocalModels, # 同时启用本地 vLLM/Ollama 推理栈（profile: local-models）
+    [switch]$All,         # 等价于 -Langfuse -Reranker -LocalModels
+    [int]$Port = 8100
 )
 
 Set-StrictMode -Version Latest
@@ -41,20 +45,31 @@ foreach ($p in $placeholders) {
     }
 }
 
-# 3. 启动依赖与应用（可选叠加 Langfuse 自托管观测栈）
+# 3. 启动依赖与应用（可选 profiles：Langfuse 观测 / 本地 Reranker / 本地模型）
 Write-Host "[3/4] docker compose up -d --build …"
 Push-Location $Root
 try {
-    if ($Langfuse) {
-        $composeFile = Join-Path $Root "docker-compose.langfuse.yml"
-        if (-not (Test-Path $composeFile)) {
-            throw "未找到 $composeFile，-Langfuse 需要仓库内的可选编排文件。"
-        }
-        Write-Host "  -Langfuse 已开启：叠加自托管 Langfuse（http://localhost:3000）" -ForegroundColor Cyan
-        docker compose -f docker-compose.yml -f $composeFile up -d --build
-    } else {
-        docker compose up -d --build
+    $profiles = @()
+    if ($Langfuse -or $All) {
+        $profiles += "langfuse"
+        Write-Host "  profile[langfuse] 已开启：自托管 Langfuse 观测（http://localhost:3000）" -ForegroundColor Cyan
     }
+    if ($Reranker -or $All) {
+        $profiles += "reranker"
+        Write-Host "  profile[reranker] 已开启：本地 bge-reranker-large（http://localhost:7997，首次启动需下载约 1.3GB 权重）" -ForegroundColor Cyan
+    }
+    if ($LocalModels -or $All) {
+        $profiles += "local-models"
+        Write-Host "  profile[local-models] 已开启：本地 vLLM 推理栈（Qwen3-4B AWQ → http://localhost:8011，Qwen3-Embedding-0.6B → http://localhost:8012，需 NVIDIA GPU + WSL2/Docker GPU）" -ForegroundColor Cyan
+    } elseif ($LocalEmbedding) {
+        $profiles += "local-embedding"
+        Write-Host "  profile[local-embedding] 已开启：仅启动本地 Embedding，本地 Qwen LLM 保持关闭。" -ForegroundColor Cyan
+    }
+    $composeArgs = @()
+    foreach ($p in $profiles) {
+        $composeArgs += @("--profile", $p)
+    }
+    docker compose @composeArgs up -d --build
     if ($LASTEXITCODE -ne 0) { throw "docker compose up 失败（退出码 $LASTEXITCODE）" }
 
     # 4. 可选：数据库迁移
@@ -96,7 +111,16 @@ Write-Host "启动完成：" -ForegroundColor Green
 Write-Host "  应用首页     http://localhost:$appPort/"
 Write-Host "  健康检查     http://localhost:$appPort/health"
 Write-Host "  OpenAPI 文档 http://localhost:$appPort/docs"
-if ($Langfuse) {
+if ($Langfuse -or $All) {
     Write-Host "  Langfuse 观测 http://localhost:3000" -ForegroundColor Green
+}
+if ($Reranker -or $All) {
+    Write-Host "  Reranker(bge-reranker-large) http://localhost:7997（.env 配 RERANKER_LOCAL_BASE=http://reranker:7997 启用）" -ForegroundColor Green
+}
+if ($LocalModels -or $All) {
+    Write-Host "  本地 LLM(Qwen3-4B AWQ) http://localhost:8011/v1（.env 配 LLM_LOCAL_BASE=http://llm-local:8001/v1，LLM_LOCAL_MODEL=qwen3-4b-awq 启用意图/重写）" -ForegroundColor Green
+}
+if ($LocalEmbedding -or $LocalModels -or $All) {
+    Write-Host "  本地 Embedding(Qwen3-Embedding-0.6B) http://localhost:8012/v1（.env 配 EMBEDDING_API_BASE=http://embedding-local:11434/v1 启用向量化）" -ForegroundColor Green
 }
 Write-Host "停止服务请运行 scripts\stop.ps1" -ForegroundColor Yellow

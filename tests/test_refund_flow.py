@@ -1,9 +1,10 @@
 """退款确认链路测试：预览阶段不执行工具，明确确认后才调用 apply_refund。
 
 通过 object.__new__ 构造 AgentGraph（绕过 __init__ 的 LLM/存储依赖），
-并 monkeypatch 模块级 get_langchain_tool，保证测试不依赖外部服务。
+并替换 MCP invoke_tool 边界，保证测试不依赖外部服务。
 """
 from app.agent.graph import AgentGraph
+from app.agent.tools import ToolExecutionResult
 from app.agent.state import AgentState, IntentType, AgentNode
 
 
@@ -39,7 +40,9 @@ def _refund_state(message: str, confirm_refund: bool = False) -> AgentState:
 
 
 async def test_refund_preview_requires_confirmation(monkeypatch):
-    monkeypatch.setattr("app.agent.graph.get_langchain_tool", lambda name: FakeTool())
+    async def invoke(name, **args):
+        return ToolExecutionResult(**await FakeTool().ainvoke(args))
+    monkeypatch.setattr("app.agent.nodes.tool_node.invoke_tool", invoke)
     graph = _make_graph()
     state = _refund_state("ORD123456 我要退款，商品破损")
 
@@ -52,7 +55,9 @@ async def test_refund_preview_requires_confirmation(monkeypatch):
 
 
 async def test_refund_confirmed_executes_tool(monkeypatch):
-    monkeypatch.setattr("app.agent.graph.get_langchain_tool", lambda name: FakeTool())
+    async def invoke(name, **args):
+        return ToolExecutionResult(**await FakeTool().ainvoke(args))
+    monkeypatch.setattr("app.agent.nodes.tool_node.invoke_tool", invoke)
     graph = _make_graph()
     state = _refund_state("确认", confirm_refund=True)
 
@@ -76,7 +81,9 @@ async def test_refund_tool_failure_routes_to_human_after_retries(monkeypatch):
                 "retry_count": 3,
             }
 
-    monkeypatch.setattr("app.agent.graph.get_langchain_tool", lambda name: FailingTool())
+    async def invoke(name, **args):
+        return ToolExecutionResult(**await FailingTool().ainvoke(args))
+    monkeypatch.setattr("app.agent.nodes.tool_node.invoke_tool", invoke)
     graph = _make_graph()
     state = _refund_state("确认", confirm_refund=True)
 

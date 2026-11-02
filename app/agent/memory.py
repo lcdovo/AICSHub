@@ -18,8 +18,12 @@ RedisCheckpointSaver 负责（key 前缀 agent_ckpt:*）。两者 key 空间隔�
 - 压缩时保留槽位快照（长对话槽位不丢失）
 """
 import asyncio
+import contextlib
+import uuid
+from contextlib import asynccontextmanager
 import json
 import re
+import time
 import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime
@@ -50,12 +54,25 @@ MIN_MESSAGES_AFTER_COMPRESSION = 10
 SUMMARY_MAX_LENGTH = 500
 # Token 估算阈值：超过此值也触发压缩（与消息数取先到者）
 TOKEN_COMPRESSION_THRESHOLD = 3000
-# 分布式锁超时
-LOCK_TIMEOUT_SECONDS = 30
+# 分布式锁超时：需大于单轮最长执行（长 LLM/流式回答可能超过 30s），
+# 避免执行期间锁提前过期导致另一 worker 读旧状态覆盖本次写入。
+LOCK_TIMEOUT_SECONDS = 90
 # 锁重试间隔
 LOCK_RETRY_INTERVAL = 0.5
 # 锁最大重试次数
 LOCK_MAX_RETRIES = 60
+
+
+class SessionBusyError(RuntimeError):
+    """A session already has an active turn."""
+
+
+class SessionLeaseError(RuntimeError):
+    """Shared session ownership could not be established or was lost."""
+
+
+_RELEASE_LOCK = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end"
+_RENEW_LOCK = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('expire', KEYS[1], ARGV[2]) else return 0 end"
 
 
 class ConversationSummary:
@@ -95,9 +112,10 @@ class SessionManager:
     """会话状态管理器 - Phase 3 增强版"""
 
     def __init__(self):
-        self._state_cache: Dict[str, AgentState] = {}
+        self._state_cache: Dict[str, Any] = {}  # session_id -> (AgentState, cached_at)
         self._redis_available: Optional[bool] = None
         self._summaries: Dict[str, ConversationSummary] = {}
+        self._turn_locks: Dict[str, Any] = {}
 
     async def _is_redis_available(self) -> bool:
         if self._redis_available is not None:
@@ -116,51 +134,113 @@ class SessionManager:
             self._redis_available = False
             return False
 
-    async def acquire_lock(self, session_id: str) -> bool:
-        """获取会话级分布式锁，防止并发请求状态覆盖。"""
-        if not await self._is_redis_available():
-            return True  # Redis 不可用时不加锁，直接放行
+    @asynccontextmanager
+    async def session_lock(self, session_id: str):
+        """Serialize hydration, execution and persistence, with owned Redis leases.
 
-        redis = await get_redis()
-        lock_key = f"session_lock:{session_id}"
-        for _ in range(LOCK_MAX_RETRIES):
-            acquired = await redis.set(lock_key, "1", nx=True, ex=LOCK_TIMEOUT_SECONDS)
-            if acquired:
-                return True
-            await asyncio.sleep(LOCK_RETRY_INTERVAL)
-
-        logger.warning(f"获取会话锁超时: {session_id}")
-        return False
-
-    async def release_lock(self, session_id: str):
-        """释放会话级分布式锁。"""
-        if not await self._is_redis_available():
-            return
+        Local serialization remains available without Redis. A shared lease failure
+        after acquisition cancels the turn instead of allowing a stale state write.
+        """
+        entry = self._turn_locks.setdefault(session_id, {"lock": asyncio.Lock(), "users": 0})
+        entry["users"] += 1
+        local_acquired = False
+        redis = None
+        token = uuid.uuid4().hex
+        key = f"session_lock:{session_id}"
+        shared_acquired = False
+        renewer = None
+        lease_lost = False
+        owner = asyncio.current_task()
         try:
-            redis = await get_redis()
-            await redis.delete(f"session_lock:{session_id}")
-        except Exception as e:
-            logger.warning(f"释放会话锁失败: {e}")
+            try:
+                await asyncio.wait_for(entry["lock"].acquire(), timeout=LOCK_MAX_RETRIES * LOCK_RETRY_INTERVAL)
+                local_acquired = True
+            except asyncio.TimeoutError as exc:
+                raise SessionBusyError("当前会话正在处理其他消息，请稍后重试") from exc
+            if await self._is_redis_available():
+                redis = await get_redis()
+                try:
+                    for _ in range(LOCK_MAX_RETRIES):
+                        if await redis.set(key, token, nx=True, ex=LOCK_TIMEOUT_SECONDS):
+                            shared_acquired = True
+                            break
+                        await asyncio.sleep(LOCK_RETRY_INTERVAL)
+                except Exception as exc:
+                    raise SessionLeaseError("会话锁服务暂时不可用，请稍后重试") from exc
+                if not shared_acquired:
+                    raise SessionBusyError("当前会话正在处理其他消息，请稍后重试")
+
+                async def renew():
+                    nonlocal lease_lost
+                    while True:
+                        await asyncio.sleep(LOCK_TIMEOUT_SECONDS / 3)
+                        try:
+                            renewed = await redis.eval(_RENEW_LOCK, 1, key, token, LOCK_TIMEOUT_SECONDS)
+                            if renewed:
+                                continue
+                        except Exception:
+                            pass
+                        lease_lost = True
+                        owner.cancel()
+                        return
+
+                renewer = asyncio.create_task(renew())
+
+            async def assert_owner():
+                if not shared_acquired:
+                    return
+                try:
+                    owned = await redis.get(key) == token
+                except Exception as exc:
+                    raise SessionLeaseError("无法确认会话锁所有权，请重试") from exc
+                if not owned:
+                    raise SessionLeaseError("会话锁已失效，本轮处理中止，请重试")
+
+            try:
+                yield assert_owner
+            except asyncio.CancelledError:
+                if lease_lost:
+                    raise SessionLeaseError("会话锁已失效，本轮处理中止，请重试") from None
+                raise
+        finally:
+            if renewer is not None:
+                renewer.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await renewer
+            if shared_acquired:
+                try:
+                    await redis.eval(_RELEASE_LOCK, 1, key, token)
+                except Exception:
+                    logger.warning("会话锁释放失败，将等待租约到期")
+            if local_acquired:
+                entry["lock"].release()
+            entry["users"] -= 1
+            if not entry["users"]:
+                self._turn_locks.pop(session_id, None)
 
     async def get_state(self, session_id: str) -> Optional[AgentState]:
-        if session_id in self._state_cache:
-            return self._state_cache[session_id]
-
+        # Redis is authoritative while available: a local hit may predate a turn
+        # completed by another worker, even immediately after acquiring its lock.
         if await self._is_redis_available():
             try:
                 redis = await get_redis()
                 data = await redis.get(f"session:{session_id}")
                 if data:
                     state = self._deserialize_state(json.loads(data))
-                    self._state_cache[session_id] = state
+                    self._state_cache[session_id] = (state.model_copy(deep=True), time.time())
                     return state
-            except Exception as e:
-                logger.warning(f"Redis 读取失败: {e}")
-
+                self._state_cache.pop(session_id, None)
+                return None
+            except Exception as exc:
+                raise SessionLeaseError("无法读取共享会话状态，请稍后重试") from exc
+        cached = self._state_cache.get(session_id)
+        if cached and time.time() - cached[1] < SESSION_TTL_SECONDS:
+            return cached[0].model_copy(deep=True)
+        self._state_cache.pop(session_id, None)
         return None
 
     async def save_state(self, state: AgentState):
-        self._state_cache[state.session_id] = state
+        self._state_cache[state.session_id] = (state.model_copy(deep=True), time.time())
 
         if await self._is_redis_available():
             try:
@@ -171,7 +251,7 @@ class SessionManager:
                     json.dumps(self._serialize_state(state)),
                 )
             except Exception as e:
-                logger.warning(f"Redis 保存失败: {e}")
+                raise SessionLeaseError("无法保存共享会话状态，请重试") from e
 
     async def maybe_compress(self, session_id: str) -> bool:
         """检查并按需压缩超长会话上下文，防止 messages 无限膨胀。
@@ -412,6 +492,8 @@ class SessionManager:
             "messages": state.messages,
             "collected_info": state.collected_info,
             "pending_confirmations": state.pending_confirmations,
+            "missing_slots": state.missing_slots,
+            "needs_clarification": state.needs_clarification,
             "reply": state.reply,
             "need_human": state.need_human,
             "user_emotion": state.user_emotion,
@@ -434,6 +516,8 @@ class SessionManager:
             messages=data.get("messages", []),
             collected_info=data.get("collected_info", {}),
             pending_confirmations=data.get("pending_confirmations", []),
+            missing_slots=data.get("missing_slots", []),
+            needs_clarification=data.get("needs_clarification", False),
             reply=data.get("reply", ""),
             need_human=data.get("need_human", False),
             user_emotion=data.get("user_emotion", "neutral"),

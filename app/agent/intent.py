@@ -55,9 +55,38 @@ INTENT_PATTERNS = {
 }
 
 # 意图否定词（出现在有争议的关键词附近时降低权重）
-# 注意：移除单字"不"，避免误伤"不合适/不想要/不工作"等正向词；
-# 仅保留明确的否定短语，且只在紧邻关键词时生效。
+# 注意：单字"不"默认不进此表——"怎么还不发货/还没发货"是催单正向表达，
+# 全局启用会误伤；仅在硬性判定（_is_hard_override 走 include_not=True）时才
+# 启用单字"不"，配合「否定词+已知正向词」保护（不合适→词表命中→不算否定）。
 NEGATION_WORDS = ["不是", "不要", "并非", "无需", "不用", "没有"]
+
+# ---- 词表单一来源：以下常量是规则引擎的唯一权威词表，_keyword_scores 的加权、
+# _is_hard_override 的硬性判定、落地3 的泛化兜底都从这里读取，禁止在方法体内
+# 再内联一份重复元组（曾发生过 complaint 加权词与硬性词各自维护导致漂移）。
+STRONG_EMOTION_WORDS = (
+    "气死", "太气人", "垃圾", "骗子", "真服了", "坑惨", "火大", "气愤",
+    "失望", "敷衍", "打不通", "上当", "坑爹", "骗", "生气", "不满", "无语", "不讲信用",
+)
+# 售后/质量问题场景的负面评价词。注意：与 STRONG_EMOTION_WORDS 重叠的词
+# （垃圾/气死/失望/火大/敷衍/不满/无语）不在此重复计分，统一由
+# STRONG_EMOTION_WORDS 加权，避免同一情绪词被两条规则各 +2.0 造成投诉得分虚高。
+QUALITY_NEGATIVE_WORDS = (
+    "糟糕", "太差", "很差", "太烂", "不行", "差评", "坑", "烂",
+)
+# LLM 主判路径下由规则直接拍板的硬性优先意图词（确定性场景不交 LLM 判定）。
+HARD_OVERRIDE_WORDS = {
+    "human": ("转人工", "找客服", "真人", "人工客服", "在线客服", "人工", "经理", "主管", "负责人", "座席", "上级", "领导"),
+    "complaint": ("投诉", "差评", "举报", "骗", "气愤", "垃圾", "骗子", "气死", "火大", "态度", "恶劣", "破玩意", "什么玩意", "再也不来", "失望透顶", "垃圾玩意", "再也不会", "打不通", "坑惨", "真服了", "太气人", "不回消息", "拖延"),
+    "refund": ("退款", "退货", "退换", "退钱", "要钱", "退单", "给我退", "帮我退", "我要退", "不要了", "想退", "换新的"),
+}
+# 短词被子串包含导致的误伤排除（"人工"误杀"人工智能"等）：
+# 命中长词时，对应的短关键词不算命中。词表单一来源，与上面常量同文件维护。
+KEYWORD_POLLUTION = {
+    "人工": ("人工智能",),
+}
+# 置信度换算分母：得分达到约 2 个核心词（2.0×2）或 4 个常见词（1.0×4）即顶格 1.0，
+# 高于该分统一截断。独立成常量，避免词表权重调整后置信度整体失真。
+CONFIDENCE_SCORE_DIVISOR = 4.0
 
 
 class EnhancedIntentRecognizer:
@@ -71,6 +100,7 @@ class EnhancedIntentRecognizer:
         message: str,
         context: Optional[List[Dict[str, Any]]] = None,
         history_intent: Optional[str] = None,
+        llm_primary: bool = False,
     ) -> IntentResult:
         """
         识别意图
@@ -78,6 +108,9 @@ class EnhancedIntentRecognizer:
             message: 用户消息
             context: 上下文对话历史
             history_intent: 上一轮识别的意图
+            llm_primary: True 时 LLM 为主判路径，规则仅保留硬性优先意图
+                （转人工/投诉强情绪/退款动作/订单号识别）；False 时规则优先、
+                LLM 仅低置信兜底（旧行为）。
         Returns:
             IntentResult 包含意图、置信度、是否需要澄清
         """
@@ -100,7 +133,7 @@ class EnhancedIntentRecognizer:
             if max_score <= 0:
                 keyword_result = IntentResult(intent="general", confidence=0.0)
             else:
-                confidence = min(max_score / 4.0, 1.0)
+                confidence = min(max_score / CONFIDENCE_SCORE_DIVISOR, 1.0)
                 # 如果有两个意图得分接近，降低置信度（沿用原行为，避免易混淆被误判）。
                 if len(sorted_positive) > 1 and sorted_positive[0] - sorted_positive[1] < 0.5:
                     confidence *= 0.7
@@ -125,29 +158,9 @@ class EnhancedIntentRecognizer:
                 keyword_result.confidence = 0.6
                 top_margin = 100.0  # 延续已定意图，视为高置信
 
-        # ⑤ 分层阈值：是否值得 LLM 兜底复审
-        #  - general（无领域词）→ 不走 LLM，由澄清/模板/检索接管；
-        #  - 有正分且 top1 领先 top2 ≥0.5 且置信度达标 → 规则已明显自信，不调 LLM；
-        #  - 其余低置信意图 → 保留 LLM 兜底机会，由上层决定是否触发。
-        keyword_result.needs_llm_fallback = (
-            keyword_result.intent != "general"
-            and not (
-                top_margin >= 0.5
-                and keyword_result.confidence >= 0.3
-            )
-        )
-        # ⑥ 假 general 兜底：规则未命中领域词但含明确疑问句式时，仍开放 LLM 复审，
-        # 避免"怎么绑定银行卡/账号怎么注销"等泛化请求被 general 吞掉、
-        # 连 LLM 二次确认的机会都没有。
-        # 仅对 ≥4 字消息生效，避免"咋/多少"等超短疑问也白耗一次模型调用。
-        if (
-            keyword_result.intent == "general"
-            and self._is_question_style(message)
-            and len(message.strip()) >= 4
-        ):
-            keyword_result.needs_llm_fallback = True
-
-        # 判断是否需要澄清
+        # 判断是否需要澄清（前置：供第⑤层"过短消息免调 LLM"复用。
+        # 原实现在函数末尾才赋值，导致 LLM 主判路径里的 needs_clarification 恒为
+        # False、"短消息先澄清不空耗模型调用"的保护从未生效过）
         # 情况1: 低置信度且有明确意图 → 需要澄清
         # 情况2: 意图为general且消息过短 → 需要澄清(用户可能只说了"嗯"、"好的"等)
         keyword_result.needs_clarification = (
@@ -155,7 +168,78 @@ class EnhancedIntentRecognizer:
             or (keyword_result.intent == "general" and len(message.strip()) <= 5)
         )
 
+        # ⑤ 分层阈值：是否值得 LLM 决策（主判或兜底）
+        if llm_primary:
+            # LLM 主判路径：除硬性优先意图外一律交 LLM（语义泛化），
+            # 规则仅保留确定性场景（转人工/投诉强情绪/退款动作/订单号）的拍板权。
+            hard_override = self._is_hard_override(message, keyword_result, scores) if scores else False
+            # 落地1：规则高自信（top1 明显领先且置信度达标）同样免调 LLM——
+            # 规则已足够确定时再调一次分类模型只有延迟代价、无准确增益。
+            high_confidence_override = (
+                keyword_result.confidence >= 0.75
+                and top_margin >= 0.5
+            )
+            keyword_result.needs_llm_fallback = not (hard_override or high_confidence_override)
+            # 过短消息（≤5 字）无信息量，先直接澄清而不是空耗一次分类调用。
+            if keyword_result.needs_clarification and len(message.strip()) <= 5:
+                keyword_result.needs_llm_fallback = False
+        else:
+            # 旧行为：规则优先，仅低置信保留 LLM 兜底机会（可回退保持老口径）。
+            keyword_result.needs_llm_fallback = (
+                keyword_result.intent != "general"
+                and not (
+                    top_margin >= 0.5
+                    and keyword_result.confidence >= 0.3
+                )
+            )
+            # ⑥ 假 general 兜底（落地3 扩展）：规则未命中领域词但含明确疑问句式，
+            # 或无正分但有语义重量的实质消息（≥6 字），都开放 LLM 复审，
+            # 避免"那东西到现在都没动静"这类陈述句泛化表达连 LLM 二次确认的机会都没有。
+            #  - 疑问句式 ≥4 字（原行为，覆盖"怎么绑定银行卡/账号怎么注销"）；
+            #  - 落地3：非模板、无正分（scores 为空）且 ≥6 字 → 同样开放。
+            # 寒暄由 graph 节点层 _is_smalltalk 拦截后才调 classify_intent，
+            # 不在此处重复判断，避免两套寒暄词表漂移。
+            if (
+                keyword_result.intent == "general"
+                and not self._is_non_domain_template(message)
+                and (
+                    (self._is_question_style(message) and len(message.strip()) >= 4)
+                    or (not scores and len(message.strip()) >= 6)
+                )
+            ):
+                keyword_result.needs_llm_fallback = True
+
         return keyword_result
+
+    def _is_non_domain_template(self, message: str) -> bool:
+        """判断消息是否命中无领域信息的通用模板（应归 general 并直接澄清，
+        不开放 LLM 复审，也不参与关键词加权）。
+        模板正则收敛为单一出处，_keyword_scores 与假 general 兜底共用。
+        """
+        message_lower = message.lower().strip()
+
+        # “有个问题/帮个忙”等没有领域信息，应该澄清而不是误判为技术或订单。
+        if re.fullmatch(
+            r"(?:我)?(?:有个?|有一个)?问题[，, ]*(?:能)?(?:帮忙|帮个忙|帮)?(?:吗|么|呀)?[？?]?",
+            message_lower,
+        ):
+            return True
+
+        # “有问题我再问你”等收尾寒暄不是技术问题，应归 general。
+        if re.match(
+            r"^有.{0,3}问题.{0,4}(?:再|还|回头|以后).{0,3}(?:问|联系|找你|麻烦)",
+            message_lower,
+        ):
+            return True
+
+        # “这个问题我自己查/我回头再查”等自助解决、收尾语不是技术问题，应归 general。
+        if re.match(
+            r"^这个?问题.{0,6}(?:自己|我来|我查|查查|回头|再说|百度|搜索)",
+            message_lower,
+        ):
+            return True
+
+        return False
 
     def _keyword_scores(self, message: str) -> Dict[str, float]:
         """关键词匹配，返回各意图得分"""
@@ -177,28 +261,8 @@ class EnhancedIntentRecognizer:
         if (has_order_id or has_tracking_no) and not has_refund_action:
             scores["query_order"] = 2.0
 
-        # “有个问题/帮个忙”等没有领域信息，应该澄清而不是误判为技术或订单。
-        generic_request = re.fullmatch(
-            r"(?:我)?(?:有个?|有一个)?问题[，, ]*(?:能)?(?:帮忙|帮个忙|帮)?(?:吗|么|呀)?[？?]?",
-            message_lower.strip(),
-        )
-        if generic_request:
-            return {}
-
-        # “有问题我再问你”等收尾寒暄不是技术问题，应归 general。
-        closing_request = re.match(
-            r"^有.{0,3}问题.{0,4}(?:再|还|回头|以后).{0,3}(?:问|联系|找你|麻烦)",
-            message_lower.strip(),
-        )
-        if closing_request:
-            return {}
-
-        # “这个问题我自己查/我回头再查”等自助解决、收尾语不是技术问题，应归 general。
-        self_service_request = re.match(
-            r"^这个?问题.{0,6}(?:自己|我来|我查|查查|回头|再说|百度|搜索)",
-            message_lower.strip(),
-        )
-        if self_service_request:
+        # 无领域信息模板（有个问题/收尾语/自助解决）直接归 general，不再加权。
+        if self._is_non_domain_template(message):
             return {}
 
         for intent, levels in self.patterns.items():
@@ -206,12 +270,12 @@ class EnhancedIntentRecognizer:
 
             # 高权重关键词
             for keyword in levels.get("high", []):
-                if keyword.lower() in message_lower and not self._is_keyword_negated(message, keyword):
+                if self._kw_hit(message_lower, keyword) and not self._is_keyword_negated(message, keyword):
                     score += 2.0
 
             # 中权重关键词
             for keyword in levels.get("medium", []):
-                if keyword.lower() in message_lower and not self._is_keyword_negated(message, keyword):
+                if self._kw_hit(message_lower, keyword) and not self._is_keyword_negated(message, keyword):
                     score += 1.0
 
             # 低权重关键词
@@ -223,7 +287,7 @@ class EnhancedIntentRecognizer:
                 # "差价"中的"差"不是负面情绪，避免"退差价"被误判为 complaint。
                 if keyword == "差" and "差价" in message:
                     continue
-                if keyword.lower() in message_lower and not self._is_keyword_negated(message, keyword):
+                if self._kw_hit(message_lower, keyword) and not self._is_keyword_negated(message, keyword):
                     score += 0.3
 
             if score > 0:
@@ -234,15 +298,13 @@ class EnhancedIntentRecognizer:
         # 但用户是在抱怨而非申请退款，叠加负面情绪后应归 complaint。
         # 注意仅对"情绪词"生效，纯陈述（如"有质量问题要退货"）不触发。
         if any(kw in message_lower for kw in ("售后", "质量问题")):
-            negative_sentiment = ("糟糕", "太差", "很差", "太烂", "不满", "敷衍", "不行", "垃圾", "差评", "气死", "失望", "坑", "烂", "无语", "火大")
-            if any(w in message_lower for w in negative_sentiment):
+            if any(w in message_lower for w in QUALITY_NEGATIVE_WORDS):
                 scores["complaint"] = scores.get("complaint", 0.0) + 2.0
 
         # ⑦ complaint 强情绪词加权：complaint 在 INTENT_PATTERNS 中排最后，
         # 与发货/退货/物流/客服等高分业务词打平时永远输给 dict 顺序靠前的意图。
         # 命中强情绪词（非"投诉/差评"等动作词，避免压过转人工）即补权，让投诉意图胜出。
-        strong_emotion = ("气死", "太气人", "垃圾", "骗子", "真服了", "坑惨", "火大", "气愤", "失望", "敷衍", "打不通", "上当", "坑爹", "骗", "生气", "不满", "无语", "不讲信用")
-        if any(w in message_lower for w in strong_emotion):
+        if any(w in message_lower for w in STRONG_EMOTION_WORDS):
             scores["complaint"] = scores.get("complaint", 0.0) + 2.0
 
         # 明确转人工（转人工/找客服/真人）优先于退款等业务动作，
@@ -269,6 +331,35 @@ class EnhancedIntentRecognizer:
 
         return scores
 
+    # LLM 主判路径下仍由规则拍板的硬性优先意图：这些场景确定性高，
+    # 不交 LLM 判定，避免模型误判导致越权操作或漏接人工。
+
+    def _is_hard_override(self, message: str, result: IntentResult, scores: Dict[str, float]) -> bool:
+        """判断当前消息是否属于规则硬性优先意图（命中则跳过 LLM 主判）。
+
+        仅在规则已把该意图判为 top1 时生效，避免"我没说要投诉"这类被
+        规则低分误带的场景也绕过 LLM 复核。
+        """
+        # 落地2：硬性判定必须建立在规则确实给了该意图正分（top1 候选）的基础上，
+        # 否则"客服？人工？"这类得分全 0 的消息不会因碰巧含硬性词的子串就绕过 LLM。
+        if scores.get(result.intent, 0.0) <= 0:
+            return False
+        # 落地2：硬性词命中同样走否定检测与污染排除，「我不投诉了/不是要退款」不再
+        # 被硬性拍板，而交由规则/LLM 继续判（否则模型永远没有纠错机会）。
+        # include_not=True：硬性词表里的"投诉/退款"后跟单字"不"即为否定，
+        # 而"怎么还不发货"的"不"修饰的是"还"、非业务词，不受影响。
+        message_lower = message.lower()
+        for kw in HARD_OVERRIDE_WORDS.get(result.intent, ()):
+            if self._kw_hit(message_lower, kw) and not self._is_keyword_negated(message, kw, include_not=True):
+                return True
+        # 订单号/快递单号 → 订单查询（规则在 _keyword_scores 中已加权到 query_order）
+        if result.intent == "query_order" and (
+            re.search(r"(?:ORD|ord)[-_a-zA-Z0-9]*\d{4,}", message)
+            or re.search(r"(?:SF|JD|YT|ZTO|STO|YD|EMS|sf|jd|yt|zto|sto|yd|ems)[-_a-zA-Z0-9]*\d{4,}", message)
+        ):
+            return True
+        return False
+
     def _is_service_info_query(self, message: str) -> bool:
         """判断消息是否为服务时间/联系方式问询且不含强转人工诉求。"""
         info_words = ("几点", "下班", "上班", "什么时候", "时间", "热线", "电话", "号码", "邮箱")
@@ -277,10 +368,25 @@ class EnhancedIntentRecognizer:
         has_strong = any(kw in message for kw in strong_human)
         return has_info and not has_strong
 
-    def _is_keyword_negated(self, message: str, keyword: str) -> bool:
+    def _kw_hit(self, message_lower: str, keyword: str) -> bool:
+        """判断关键词是否真实命中（排除短词被长词子串包含的误伤）。
+        message_lower 为小写后的消息，keyword 为原始词表（内部统一转小写）。
+        """
+        keyword_lower = keyword.lower()
+        if keyword_lower not in message_lower:
+            return False
+        # 命中污染长词时，短关键词不计命中（如"人工智能"压制"人工"）。
+        for polluter in KEYWORD_POLLUTION.get(keyword, ()):
+            if polluter.lower() in message_lower:
+                return False
+        return True
+
+    def _is_keyword_negated(self, message: str, keyword: str, include_not: bool = False) -> bool:
         """判断某个关键词在消息中是否被否定词修饰。
         否定词紧邻关键词（或仅隔助词/代词）时才生效，
-        避免"我不要了退钱"中"不要"误伤"退钱"。"""
+        避免"我不要了退钱"中"不要"误伤"退钱"。
+        include_not=True 时额外启用单字"不"（仅硬性判定使用），
+        由「否定词+已知正向词」保护规避"不合适/不想要"误伤。"""
         idx = message.find(keyword)
         if idx <= 0:
             return False
@@ -296,7 +402,7 @@ class EnhancedIntentRecognizer:
                 longer_idx = message.find(longer)
                 # 确保当前关键词的出现位置在更长关键词内部
                 if longer_idx <= idx < longer_idx + len(longer):
-                    if self._is_keyword_negated(message, longer):
+                    if self._is_keyword_negated(message, longer, include_not=include_not):
                         return True
 
         # 助词/代词：否定词与关键词之间仅隔这些字时，仍视为否定修饰
@@ -307,10 +413,12 @@ class EnhancedIntentRecognizer:
             for level_words in levels.values():
                 all_known_keywords.update(level_words)
 
+        nega_words = NEGATION_WORDS + (["不"] if include_not else [])
+
         # 检查关键词前 6 个字符窗口（允许否定词与关键词间隔多个助词）
         window = message[max(0, idx - 6):idx]
         window_start = max(0, idx - 6)
-        for neg in NEGATION_WORDS:
+        for neg in nega_words:
             neg_pos = window.rfind(neg)
             if neg_pos < 0:
                 continue
@@ -362,9 +470,9 @@ class EnhancedIntentRecognizer:
     def _is_continuation(self, message: str) -> bool:
         """判断是否为延续性追问"""
         continuation_patterns = [
-            r"^[好的嗯哦啊哦好的]",
+            r"^[好嗯哦啊]",
             r"^(那|然后|接着|还有)",
-            r"^(好|行|可以|明白|知道了)",
+            r"^(好的?|行(?:吧|的)?|可以(?:的)?|明白(?:了)?|知道了)",
             r"^(谢谢|感谢|多谢)",
             r"^\d+$",  # 纯数字，可能是在提供订单号
             r"^(对|是|没错|正确)",

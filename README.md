@@ -17,7 +17,7 @@
 → 流式输出(REST 分片 / WebSocket graph_updates)
 ```
 
-7 类核心意图 + 1 个 `unknown` 兜底：`query_order`、`refund`、`complaint`、`technical`、`promotion`、`human`、`general`。退款意图内部进一步分流：政策咨询走 RAG，实际申请走工具并经 `confirmation` 节点二次确认。
+7 类核心意图 + 1 个 `general` 兜底：`query_order`、`refund`、`complaint`、`technical`、`promotion`、`human`、`general`。退款意图内部进一步分流：政策咨询走 RAG，实际申请走工具并经 `confirmation` 节点二次确认。
 
 ## 当前实现重点
 
@@ -80,14 +80,14 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 # 按需修改 .env：DATABASE_URL_OVERRIDE 指向本地 SQLite，或配置 MySQL/Redis/Milvus
 
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
 ```
 
 启动后检查：
 
-- 应用首页：<http://localhost:8000/>
-- 健康检查：<http://localhost:8000/health>
-- OpenAPI 文档：<http://localhost:8000/docs>
+- 应用首页：<http://localhost:8100/>
+- 健康检查：<http://localhost:8100/health>
+- OpenAPI 文档：<http://localhost:8100/docs>
 
 提交前执行语法检查：
 
@@ -97,7 +97,11 @@ python -m compileall app scripts
 
 ## Docker 部署
 
-项目只提供一套 Docker 部署：完整依赖栈，包括 MySQL、Redis、Milvus、etcd、MinIO 和应用服务。Compose 配置位于 [docker-compose.yml](docker-compose.yml)，不使用 profiles。
+主栈包括 MySQL、Redis、Milvus、etcd、MinIO 和应用服务。Compose 配置位于 [docker-compose.yml](docker-compose.yml)，本地模型和 Langfuse 使用可选 profiles。
+
+LLM 配置模板使用 UINO 的 `deepseek-flash`，接口为 `https://token.uino.com/v1`，设置 `LLM_THINKING_MODE=disabled` 关闭思考模式，`LLM_STRUCTURED_OUTPUT_METHOD=function_calling` 适配结构化输出；密钥只填写到本地 `.env`。`LLM_LOCAL_BASE` 和 `LLM_LOCAL_MODEL` 默认留空，意图识别、问题改写和回答生成共用主模型（意图与改写保留现有规则优先策略）。Embedding 和 Reranker 使用各自的配置。
+
+双击 `start.bat` 启动主栈、本地 Embedding 和 Reranker，默认不启动本地 Qwen LLM。需要本地 Qwen 时显式使用 `scripts\start.ps1 -LocalModels`，或 `docker compose --profile local-llm up -d llm-local`；如需应用调用它，再设置 `LLM_LOCAL_BASE` 和 `LLM_LOCAL_MODEL`。
 
 ### 1. 准备环境变量
 
@@ -122,7 +126,7 @@ docker compose logs -f app
 docker compose run --rm app alembic upgrade head
 ```
 
-应用地址：<http://localhost:8000/>，OpenAPI 文档：<http://localhost:8000/docs>，健康检查：<http://localhost:8000/health>。
+应用地址：<http://localhost:8100/>，OpenAPI 文档：<http://localhost:8100/docs>，健康检查：<http://localhost:8100/health>。
 
 ### 3. 灌入测试数据
 

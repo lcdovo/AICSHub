@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 VECTOR_FIELD = "embedding"
 PRIMARY_FIELD = "id"
+FULLTEXT_FIELD = "content"
+FULLTEXT_INDEX_NAME = "content_fulltext"
 
 
 def _get_default_collection_name() -> str:
@@ -33,6 +35,7 @@ class MilvusClient:
         self._connected = False
         self._collection = None
         self._client = None
+        self._fulltext_ok: Optional[bool] = None
 
     @property
     def is_connected(self) -> bool:
@@ -53,6 +56,7 @@ class MilvusClient:
                 self._create_collection()
             else:
                 self._load_collection()
+                self._ensure_fulltext_index()
 
             self._connected = True
             logger.info(f"Connected to Milvus at {self.host}:{self.port}, collection: {self.collection_name}")
@@ -101,7 +105,45 @@ class MilvusClient:
         self._collection.create_index(field_name=VECTOR_FIELD, index_params=index_params)
 
         self._collection.load()
+        # Milvus 2.5 原生 BM25 全文索引：混合检索（dense+fulltext）的关键前提。
+        # 单独 try/except，实现/analyzer 不可用不影响向量索引可用性。
+        try:
+            self._collection.create_index(
+                field_name=FULLTEXT_FIELD,
+                index_name=FULLTEXT_INDEX_NAME,
+                index_params=self._fulltext_index_params(),
+            )
+            logger.info(f"Created FULLTEXT(BM25) index on {FULLTEXT_FIELD}: {self.collection_name}")
+        except Exception as exc:
+            logger.warning(f"Failed to create FULLTEXT index, BM25 route unavailable: {exc}")
         logger.info(f"Created collection: {self.collection_name} (dim={self.dim})")
+
+    @staticmethod
+    def _fulltext_index_params() -> Dict[str, Any]:
+        """BM25 全文索引参数；中文场景优先 jieba analyzer，服务端不可用时回退 standard。"""
+        return {
+            "index_type": "FULLTEXT",
+            "metric_type": "BM25",
+            "params": {
+                "enable_analyzer": True,
+                "analyzer_params": {"type": "standard", "stop_words": ["的", "了", "吗", "呢", "啊"]},
+            },
+        }
+
+    def _ensure_fulltext_index(self):
+        """为既有 collection 补齐 FULLTEXT 索引（幂等），使原生 BM25 检索可用。"""
+        try:
+            names = {str(idx.index_name) for idx in self._collection.indexes}
+            if FULLTEXT_INDEX_NAME in names:
+                return
+            self._collection.create_index(
+                field_name=FULLTEXT_FIELD,
+                index_name=FULLTEXT_INDEX_NAME,
+                index_params=self._fulltext_index_params(),
+            )
+            logger.info(f"Ensured FULLTEXT(BM25) index on {FULLTEXT_FIELD}: {self.collection_name}")
+        except Exception as exc:
+            logger.warning(f"Failed to ensure FULLTEXT index, BM25 route unavailable: {exc}")
 
     def _load_collection(self):
         from pymilvus import Collection
@@ -214,31 +256,83 @@ class MilvusClient:
             logger.error(f"Milvus search error: {e}")
             return []
 
-    def query_all(self, limit: int = 5000) -> List[Dict[str, Any]]:
-        """加载全部文档数据（用于BM25索引等）"""
+    def _fulltext_available(self) -> bool:
+        """FULLTEXT 索引是否可用（连接期探测一次并缓存，避免每查一次索引列表）。"""
+        if self._fulltext_ok is None:
+            try:
+                names = {str(idx.index_name) for idx in self._collection.indexes}
+                self._fulltext_ok = FULLTEXT_INDEX_NAME in names
+            except Exception:
+                return False
+        return self._fulltext_ok
+
+    def hybrid_search(
+        self,
+        query_embedding: List[float],
+        query_text: str,
+        top_k: int = 5,
+        candidate_multiplier: int = 4,
+    ) -> List[Dict[str, Any]]:
+        """Dense 向量 + BM25 全文的混合检索，服务器端 RRF 融合（k=60）。
+
+        取代应用层自写 BM25 打分与 RRF 合并：索引与评分都在 Milvus 内部完成，
+        消除进程内全量语料驻留与多副本索引不一致问题。
+        """
         if not self._connected:
-            return []
+            raise RuntimeError("Milvus not connected")
         self._ensure_collection()
+
+        dense_limit = max(top_k * candidate_multiplier, 16)
+        from pymilvus import AnnSearchRequest, RRFRanker
+
+        reqs: List[Any] = [
+            AnnSearchRequest(
+                data=[query_embedding],
+                anns_field=VECTOR_FIELD,
+                param={"metric_type": "COSINE", "params": {"ef": 64}},
+                limit=dense_limit,
+            ),
+        ]
+        if self._fulltext_available():
+            reqs.append(AnnSearchRequest(
+                data=[query_text],
+                anns_field=FULLTEXT_FIELD,
+                param={"metric_type": "BM25"},
+                limit=dense_limit,
+            ))
+
         try:
-            results = self._collection.query(
-                expr="",
-                output_fields=[PRIMARY_FIELD, "title", "content", "category", "keywords", "source"],
-                limit=limit,
+            hits = self._collection.hybrid_search(
+                reqs=reqs,
+                rerank=RRFRanker(k=60),
+                limit=dense_limit,
+                output_fields=["title", "content", "category", "keywords", "source", "updated_at"],
             )
-            docs = []
-            for row in results:
-                docs.append({
-                    "id": row.get(PRIMARY_FIELD, ""),
-                    "title": row.get("title", ""),
-                    "content": row.get("content", ""),
-                    "category": row.get("category", ""),
-                    "keywords": row.get("keywords", ""),
-                    "source": row.get("source", ""),
-                })
-            return docs
+            docs, seen = [], set()
+            for row in hits:
+                for hit in row:
+                    entity = hit.entity
+                    doc_id = getattr(entity, PRIMARY_FIELD, hit.id)
+                    if doc_id in seen:
+                        continue
+                    seen.add(doc_id)
+                    docs.append({
+                        "id": doc_id,
+                        "title": getattr(entity, "title", ""),
+                        "content": getattr(entity, "content", ""),
+                        "category": getattr(entity, "category", ""),
+                        "keywords": getattr(entity, "keywords", ""),
+                        "source": getattr(entity, "source", ""),
+                        "updated_at": getattr(entity, "updated_at", ""),
+                        "score": float(hit.score),
+                        "vector_score": 0.0,
+                        "bm25_score": 0.0,
+                        "final_score": round(float(hit.score), 6),
+                    })
+            return docs[: top_k * candidate_multiplier]
         except Exception as e:
-            logger.error(f"Milvus query_all error: {e}")
-            return []
+            logger.error(f"Milvus hybrid search error: {e}")
+            raise
 
     def count(self) -> int:
         try:
@@ -270,6 +364,7 @@ class MilvusClient:
             utility.drop_collection(self.collection_name)
             self._collection = None
             self._connected = False
+            self._fulltext_ok = None
             logger.info(f"Dropped collection: {self.collection_name}")
         except Exception as e:
             logger.error(f"Failed to drop collection: {e}")

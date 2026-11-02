@@ -68,10 +68,21 @@ async def lifespan(app: FastAPI):
         "status": "optional", "backend": "redis", "reason": "Redis 为可选依赖，失败时使用进程内存降级"
     }
 
+    # OpenTelemetry：配置 OTEL_EXPORTER_OTLP_ENDPOINT 后启用 OTLP 导出，否则 sdk-only。
+    try:
+        from app.utils.otel import enable_otlp_export
+
+        enable_otlp_export()
+    except Exception:
+        pass
+
     yield
 
     logger.info("Shutting down...")
     shutdown_langfuse()
+    from app.agent.mcp_client import shutdown_mcp_client
+
+    await shutdown_mcp_client()
     await llm_service.close()
     await close_redis()
     logger.info("Shutdown complete")

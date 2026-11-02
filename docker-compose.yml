@@ -1,3 +1,14 @@
+# AI Customer 全栈单一编排文件：主栈（mysql/redis/etcd/minio/milvus/app）默认启动，
+# 可选栈用 compose profiles 按需启用：
+#   docker compose up -d                                      # 仅主栈
+#   docker compose --profile langfuse up -d                   # 主栈 + Langfuse 观测
+#   docker compose --profile reranker up -d                   # 主栈 + 本地 reranker(bge-reranker-large)
+#   docker compose --profile local-models up -d               # 主栈 + 本地 LLM/Embedding(vLLM/Ollama)
+#   docker compose --profile local-embedding up -d            # 主栈 + 本地 Embedding，不启动本地 LLM
+#   docker compose --profile langfuse,reranker,local-models up -d   # 全量
+# 或直接运行 scripts\start.ps1 [-Langfuse] [-Reranker] [-LocalModels]（等价全开：start.ps1 -All）。
+# 同一网络内服务名互通，应用侧地址配置见 .env（LLM_LOCAL_BASE/EMBEDDING_API_BASE/RERANKER_LOCAL_BASE）。
+
 name: ai-customer
 
 services:
@@ -22,7 +33,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -115,11 +126,22 @@ services:
       LLM_API_BASE: ${LLM_API_BASE:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_THINKING_MODE: ${LLM_THINKING_MODE:-}
+      LLM_STRUCTURED_OUTPUT_METHOD: ${LLM_STRUCTURED_OUTPUT_METHOD:-json_schema}
+      LLM_BACKUP_BASE: ${LLM_BACKUP_BASE:-}
+      LLM_BACKUP_KEY: ${LLM_BACKUP_KEY:-}
+      LLM_BACKUP_MODEL: ${LLM_BACKUP_MODEL:-}
+      # 解析型任务本地模型（意图识别+问题重写，vLLM）：base+model 配置齐才启用。
+      LLM_LOCAL_BASE: ${LLM_LOCAL_BASE:-}
+      LLM_LOCAL_KEY: ${LLM_LOCAL_KEY:-}
+      LLM_LOCAL_MODEL: ${LLM_LOCAL_MODEL:-}
       EMBEDDING_API_BASE: ${EMBEDDING_API_BASE:-}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
       EMBEDDING_DIM: ${EMBEDDING_DIM:-1024}
-      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-20}
+      EMBEDDING_QUERY_INSTRUCTION: ${EMBEDDING_QUERY_INSTRUCTION:-}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:8100,http://127.0.0.1:8100}
       AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:?AUTH_SECRET_KEY must be set}
       AUTH_DEMO_ACCOUNTS_ENABLED: ${AUTH_DEMO_ACCOUNTS_ENABLED:-false}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
@@ -146,18 +168,24 @@ services:
       RAG_TOP_K: ${RAG_TOP_K:-5}
       RAG_SIMILARITY_THRESHOLD: ${RAG_SIMILARITY_THRESHOLD:-0.2}
       RAG_USE_RERANKER: ${RAG_USE_RERANKER:-true}
+      RERANKER_API_BASE: ${RERANKER_API_BASE:-}
+      RERANKER_API_KEY: ${RERANKER_API_KEY:-}
+      RERANKER_MODEL: ${RERANKER_MODEL:-}
+      RERANKER_API_STYLE: ${RERANKER_API_STYLE:-openai}
+      RERANKER_TIMEOUT_SECONDS: ${RERANKER_TIMEOUT_SECONDS:-3}
+      RERANKER_LOCAL_BASE: ${RERANKER_LOCAL_BASE:-}
+      RERANKER_LOCAL_MODEL: ${RERANKER_LOCAL_MODEL:-BAAI/bge-reranker-large}
       CHUNK_SIZE: ${CHUNK_SIZE:-500}
       CHUNK_OVERLAP: ${CHUNK_OVERLAP:-50}
       CHUNK_SPLIT_PATTERN: ${CHUNK_SPLIT_PATTERN:-heading}
-      # Langfuse 外部观测（可选）：默认关闭，随 docker-compose.langfuse.yml 一起启用。
-      # 容器内通过服务名 langfuse 访问自托管实例；本地非 Docker 运行使用 .env 的 LANGFUSE_HOST。
+      # Langfuse 外部观测（可选，--profile langfuse 时启用）。
       LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
       LANGFUSE_HOST: http://langfuse:3000
       LANGFUSE_SAMPLING_RATE: ${LANGFUSE_SAMPLING_RATE:-1.0}
     ports:
-      - "${APP_PORT:-8000}:8000"
+      - "${APP_PORT:-8100}:8000"
     depends_on:
       mysql: {condition: service_healthy}
       redis: {condition: service_healthy}
@@ -169,9 +197,243 @@ services:
       retries: 10
       start_period: 30s
 
+  # ==================== Langfuse 自托管观测栈（--profile langfuse） ====================
+  langfuse-db:
+    profiles: ["langfuse"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:?LANGFUSE_DB_PASSWORD must be set}
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d langfuse"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  langfuse-clickhouse:
+    profiles: ["langfuse"]
+    image: clickhouse/clickhouse-server:24.3
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:?LANGFUSE_CLICKHOUSE_PASSWORD must be set}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user default --password '${LANGFUSE_CLICKHOUSE_PASSWORD}' --query 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  langfuse-minio-init:
+    profiles: ["langfuse"]
+    image: minio/mc
+    depends_on:
+      minio: {condition: service_healthy}
+    entrypoint: >
+      /bin/sh -c "mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin}
+      ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set} &&
+      mc mb --ignore-existing local/langfuse local/langfuse-media"
+
+  langfuse:
+    profiles: ["langfuse"]
+    image: langfuse/langfuse:3
+    ports:
+      - "${LANGFUSE_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:${LANGFUSE_DB_PASSWORD}@langfuse-db:5432/langfuse
+      DIRECT_URL: postgresql://postgres:${LANGFUSE_DB_PASSWORD}@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3000}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?LANGFUSE_NEXTAUTH_SECRET must be set}
+      SALT: ${LANGFUSE_SALT:?LANGFUSE_SALT must be set}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?LANGFUSE_ENCRYPTION_KEY must be set}
+      CLICKHOUSE_MIGRATION_URL: clickhouse://default:${LANGFUSE_CLICKHOUSE_PASSWORD}@langfuse-clickhouse:9000/default
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_CONNECTION_STRING: redis://redis:6379
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      # 首次启动自动创建组织/项目/管理员，项目 API key 即 .env 的 LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY。
+      LANGFUSE_INIT_ORG_ID: ai-customer
+      LANGFUSE_INIT_ORG_NAME: AI Customer
+      LANGFUSE_INIT_PROJECT_ID: ai-customer
+      LANGFUSE_INIT_PROJECT_NAME: AI Customer
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:?LANGFUSE_PUBLIC_KEY must be set}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:?LANGFUSE_SECRET_KEY must be set}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_ADMIN_EMAIL:-admin@ai-customer.local}
+      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_ADMIN_USERNAME:-admin}
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_ADMIN_PASSWORD:?LANGFUSE_ADMIN_PASSWORD must be set}
+      NODE_OPTIONS: --max-old-space-size=1024
+    depends_on:
+      langfuse-db: {condition: service_healthy}
+      langfuse-clickhouse: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+      langfuse-minio-init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  langfuse-worker:
+    profiles: ["langfuse"]
+    image: langfuse/langfuse-worker:3
+    ports:
+      - "3030:3030"
+    environment:
+      DATABASE_URL: postgresql://postgres:${LANGFUSE_DB_PASSWORD}@langfuse-db:5432/langfuse
+      DIRECT_URL: postgresql://postgres:${LANGFUSE_DB_PASSWORD}@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3000}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?LANGFUSE_NEXTAUTH_SECRET must be set}
+      SALT: ${LANGFUSE_SALT:?LANGFUSE_SALT must be set}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?LANGFUSE_ENCRYPTION_KEY must be set}
+      CLICKHOUSE_MIGRATION_URL: clickhouse://default:${LANGFUSE_CLICKHOUSE_PASSWORD}@langfuse-clickhouse:9000/default
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_CONNECTION_STRING: redis://redis:6379
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse-media
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      NODE_OPTIONS: --max-old-space-size=1024
+    depends_on:
+      langfuse-db: {condition: service_healthy}
+      langfuse-clickhouse: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+      langfuse-minio-init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  # ==================== 本地模型栈（--profile reranker / local-models） ====================
+  # 本地重排：bge-reranker-large via Infinity（CPU 推理）。应用侧 RERANKER_LOCAL_BASE=http://reranker:7997。
+  reranker:
+    profiles: ["reranker"]
+    image: michaelf34/infinity:latest
+    command: v2 --model-id ${RERANKER_LOCAL_MODEL:-BAAI/bge-reranker-large} --port 7997
+    ports:
+      - "${RERANKER_LOCAL_PORT:-7997}:7997"
+    environment:
+      HF_ENDPOINT: https://hf-mirror.com
+    volumes:
+      - reranker_hf_cache:/app/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7997/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  # 本地 LLM：Qwen3-4B-Instruct-2507-AWQ-4bit（意图识别+问题重写）via vLLM（GPU，8GB 卡独占）。
+  # 纯文本模型（无视觉权重）；AWQ 4bit (compressed-tensors) 权重约 3.2GB；服务端关闭思考模式。
+  # 应用侧 LLM_LOCAL_BASE=http://llm-local:8001/v1。
+  llm-local:
+    profiles: ["local-models", "local-llm"]
+    image: vllm/vllm-openai:latest
+    command: >
+      --model ${LLM_LOCAL_MODEL_ID:-cyankiwi/Qwen3-4B-Instruct-2507-AWQ-4bit}
+      --served-model-name qwen3-4b-awq
+      --host 0.0.0.0
+      --port 8001
+      --max-model-len 4096
+      --max-num-seqs 4
+      --enforce-eager
+      --reasoning-parser qwen3
+      --default-chat-template-kwargs '{"enable_thinking": false}'
+      --gpu-memory-utilization 0.65
+    ports:
+      - "${LLM_LOCAL_PORT:-8011}:8001"
+    environment:
+      HF_ENDPOINT: https://hf-mirror.com
+      # WSL2（Docker Desktop）下默认禁用 pinned memory，导致 UVA is not available；
+      # 官方开关开启后启用 pinned memory / UVA。
+      VLLM_WSL2_ENABLE_PIN_MEMORY: "1"
+      # hf-mirror 不代理 HF 的 Xet 分片存储（cas-server 401），禁用 Xet 回退普通 LFS 下载。
+      HF_HUB_DISABLE_XET: "1"
+      # hf-mirror 大文件下载易断连，调大超时并依赖 HF 断点续传。
+      HF_HUB_DOWNLOAD_TIMEOUT: "120"
+    volumes:
+      - vllm_hf_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # 本地向量化：Qwen3-Embedding-0.6B via Ollama（CPU 推理，不占 GPU 显存）。
+  # 应用侧 EMBEDDING_API_BASE=http://embedding-local:11434/v1；启动后需拉模型：
+  #   docker exec ai-customer-embedding-local-1 ollama pull qwen3-embedding:0.6b
+  embedding-local:
+    profiles: ["local-models", "local-embedding"]
+    image: ollama/ollama:latest
+    command: serve
+    ports:
+      - "${EMBEDDING_LOCAL_PORT:-8012}:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+      # 模型常驻内存，避免批量入库时批次间隔触发卸载/重载（默认 5 分钟后释放）。
+      OLLAMA_KEEP_ALIVE: "-1"
+      HF_ENDPOINT: https://hf-mirror.com
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          # CPU 推理上限，避免与主栈（MySQL/Redis/Milvus）和 reranker 争抢算力。
+          cpus: "4.0"
+
 volumes:
   mysql_data:
   redis_data:
   etcd_data:
   minio_data:
   milvus_data:
+  langfuse_pg_data:
+  langfuse_clickhouse_data:
+  # 复用既有权重缓存卷，避免合并后重新下载（vLLM 约 4.5GB / Ollama 约 0.6GB / reranker 约 1.3GB）。
+  reranker_hf_cache:
+    name: aicustomer_reranker_hf_cache
+  vllm_hf_cache:
+    name: aicustomer_vllm_hf_cache
+  ollama_models:
+    name: aicustomer_ollama_models

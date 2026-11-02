@@ -29,12 +29,12 @@ Authorization: Bearer <access_token>
 
 ```bash
 # 登录（本地演示账号）
-curl -s http://localhost:8000/api/v1/users/login \
+curl -s http://localhost:8100/api/v1/users/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"user001","password":"user12345"}'
 
 # 使用返回的 access_token 聊天
-curl -s http://localhost:8000/api/v1/chat/send \
+curl -s http://localhost:8100/api/v1/chat/send \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"user_id":1,"message":"请查询订单 ORD20240001"}'

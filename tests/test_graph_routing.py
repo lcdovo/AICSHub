@@ -28,8 +28,8 @@ def test_route_by_intent_mapping():
     assert graph._route_by_intent(IntentType.PROMOTION) == AgentNode.QUERY_REWRITE
     assert graph._route_by_intent(IntentType.HUMAN) == AgentNode.HUMAN_HANDOFF
     assert graph._route_by_intent(IntentType.GENERAL) == AgentNode.RESPONSE_GENERATION
-    # unknown 兜底到响应生成
-    assert graph._route_by_intent(IntentType.UNKNOWN) == AgentNode.RESPONSE_GENERATION
+    # 未定义意图（历史数据/异常值）兜底到响应生成
+    assert graph._route_by_intent("unknown") == AgentNode.RESPONSE_GENERATION
 
 
 def _state_with_intent(intent: str, **info) -> AgentState:
