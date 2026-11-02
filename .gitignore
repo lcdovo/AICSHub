@@ -37,3 +37,7 @@ _grep_trace_tmp.py
 
 # 数据导入标记
 .seed_done
+
+# 前端生产构建由 npm run build / Docker 构建生成
+/static/
+/.taste-skill/

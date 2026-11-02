@@ -14,5 +14,10 @@ __pycache__
 .ruff_cache
 tests
 customer_service.db
+frontend/node_modules
+static
+reports
+.taste-skill
+.workbuddy
 .gitignore
 README.md

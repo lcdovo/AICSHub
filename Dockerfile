@@ -1,3 +1,10 @@
+FROM node:22-alpine AS frontend-build
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./frontend/
+RUN cd frontend && npm ci
+COPY frontend/ ./frontend/
+RUN cd frontend && npm run build
+
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -26,6 +33,7 @@ RUN pip install \
 RUN addgroup --system --gid 10001 appuser \
     && adduser --system --uid 10001 --gid 10001 appuser
 COPY --chown=appuser:appuser . .
+COPY --from=frontend-build --chown=appuser:appuser /app/static/ ./static/
 RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 USER appuser
 

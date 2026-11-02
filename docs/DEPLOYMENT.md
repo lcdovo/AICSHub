@@ -4,6 +4,8 @@
 
 ## 首次部署
 
+前端生产资源在 Docker 的 Node 构建阶段从 frontend/ 源码生成，复制到容器内 /app/static/；不再依赖 Git 中预存的静态构建文件。本地可运行 cd frontend 后执行 npm ci、npm test、npm run build；Vite 输出仍为根目录 static/，资源路径 /static/。部署前应先在隔离环境检查页面，不要用前端构建替代 API / 模型验收。
+
 ```powershell
 Copy-Item .env.example .env
 notepad .env
