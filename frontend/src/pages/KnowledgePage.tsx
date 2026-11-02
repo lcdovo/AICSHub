@@ -1,15 +1,237 @@
-import { useEffect, useState } from 'react';
-import { BookOpen, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
-import { api } from '../api';
-import type { Document } from '../types';
-import { Badge, Empty, Modal } from '../components/common';
-
-export default function KnowledgePage({ flash, isAdmin }: { flash: (t: string, type?: 'ok' | 'error') => void; isAdmin: boolean }) {
-  const [docs, setDocs] = useState<Document[]>([]); const [query, setQuery] = useState(''); const [results, setResults] = useState<any[]>([]); const [showAdd, setShowAdd] = useState(false); const [title, setTitle] = useState(''); const [content, setContent] = useState('');
-  const load = () => api.documents().then((r) => setDocs(r.documents || [])).catch((e) => flash(e.message, 'error')); useEffect(() => { if (isAdmin) void load(); }, [isAdmin]);
-  async function search() { if (!query.trim()) return; try { const r = await api.searchKnowledge(query); setResults(r.results || []); } catch (e) { flash((e as Error).message, 'error'); } }
-  async function add() { try { await api.addDocument({ title, content, category: 'manual', keywords: [] }); flash('文档已加入知识库'); setShowAdd(false); setTitle(''); setContent(''); load(); } catch (e) { flash((e as Error).message, 'error'); } }
-  async function seed() { try { await api.seedDocuments(); flash('默认知识已导入'); load(); } catch (e) { flash((e as Error).message, 'error'); } }
-  async function remove(id: string) { if (!window.confirm('确定删除该文档？')) return; try { await api.deleteDocument(id); flash('文档已删除'); load(); } catch (e) { flash((e as Error).message, 'error'); } }
-  return <div className="page-body"><div className="page-actions"><div><p className="eyebrow">RETRIEVAL AUGMENTED GENERATION</p><h3>知识库</h3><p className="muted">检索、管理和验证 Agent 的知识来源。</p></div>{isAdmin && <div className="actions"><button className="secondary" onClick={seed}>导入示例知识</button><button className="primary" onClick={() => setShowAdd(true)}><Plus size={15} />添加文档</button></div>}</div><div className="knowledge-grid"><div className="panel search-panel"><div className="search-box"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} placeholder="输入问题，测试 RAG 检索" /><button className="primary" onClick={search}>检索</button></div>{results.length ? <div className="result-list">{results.map((r) => <div className="result" key={r.id}><div><Badge tone="purple">{(r.final_score || 0).toFixed(2)}</Badge><strong>{r.title}</strong></div><p>{r.content}</p></div>)}</div> : <div className="search-empty"><BookOpen size={29} /><h3>检索知识库</h3><p>用真实问题验证混合检索与重排结果。</p></div>}</div>{isAdmin && <div className="panel table-panel"><div className="panel-head"><div><h3>文档列表</h3><span className="muted">{docs.length} 篇文档</span></div><button className="icon-btn" onClick={load}><RefreshCw size={16} /></button></div>{docs.length ? <div className="doc-list">{docs.map((d) => <div className="doc" key={d.id}><div className="doc-icon"><BookOpen size={16} /></div><div><strong>{d.title}</strong><span>{d.category || '未分类'} · {d.chunks_count || 0} 个分块</span></div><button className="icon-btn danger" onClick={() => remove(d.id)}><Trash2 size={15} /></button></div>)}</div> : <Empty text="暂无文档" />}</div>}</div>{showAdd && <Modal title="添加文本知识" onClose={() => setShowAdd(false)}><label>标题<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例如：退换货政策" /></label><label>内容<textarea value={content} onChange={(e) => setContent(e.target.value)} rows={8} placeholder="输入可被检索的知识内容" /></label><button className="primary wide" disabled={!title.trim() || !content.trim()} onClick={add}>保存并建立索引</button></Modal>}</div>;
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, RefreshCw, Upload } from "lucide-react";
+import { api } from "../api";
+import type { KnowledgeDocument } from "../api/types";
+import { useTask } from "../hooks/useTask";
+import {
+  Button,
+  Dialog,
+  Empty,
+  ErrorState,
+  Field,
+  Loading,
+  Notice,
+  PageHeader,
+  Status,
+  dateTime,
+} from "../components/ui";
+import {
+  DocumentEditor,
+  UploadDocument,
+} from "../features/knowledge/DocumentEditor";
+type Operation = {
+  kind: "publish" | "delete" | "seed" | "rebuild";
+  document?: KnowledgeDocument;
+};
+function ConfirmKnowledge({
+  operation,
+  onClose,
+}: {
+  operation: Operation;
+  onClose: () => void;
+}) {
+  const task = useTask();
+  const cache = useQueryClient();
+  const doc = operation.document;
+  const copy =
+    operation.kind === "delete"
+      ? ["删除知识文档", "将软删除“" + doc?.title + "”，该文档将不再参与检索。"]
+      : operation.kind === "publish"
+        ? [
+            doc?.status === "published" ? "取消发布" : "发布知识文档",
+            doc?.status === "published"
+              ? "取消发布后，该文档不再参与回答检索。"
+              : "发布后，该文档可被客服检索引用。",
+          ]
+        : operation.kind === "seed"
+          ? [
+              "导入示例知识",
+              "将向当前知识库加入内置示例内容。不会清空现有知识，但可能产生重复资料。",
+            ]
+          : [
+              "重建检索索引",
+              "将从现有持久化知识重建索引。不会删除文档，过程中检索可能短暂受影响。",
+            ];
+  return (
+    <Dialog title={copy[0]} onClose={onClose} busy={task.pending}>
+      <p>{copy[1]}</p>
+      <ErrorState error={task.error} />
+      <div className="form-actions">
+        <Button onClick={onClose} disabled={task.pending}>
+          取消
+        </Button>
+        <Button
+          tone={operation.kind === "delete" ? "danger" : "primary"}
+          busy={task.pending}
+          onClick={() =>
+            task.run(async () => {
+              if (operation.kind === "delete" && doc)
+                await api.deleteDocument(doc.id);
+              else if (operation.kind === "publish" && doc)
+                await api.publish(doc.id, doc.status !== "published");
+              else if (operation.kind === "seed") await api.seed();
+              else await api.rebuild();
+              await cache.invalidateQueries({ queryKey: ["documents"] });
+              onClose();
+            })
+          }
+        >
+          确认{copy[0]}
+        </Button>
+      </div>
+    </Dialog>
+  );
+}
+export default function KnowledgePage() {
+  const [editor, setEditor] = useState<KnowledgeDocument | "new">();
+  const [upload, setUpload] = useState(false);
+  const [operation, setOperation] = useState<Operation>();
+  const [filter, setFilter] = useState("");
+  const docs = useQuery({
+    queryKey: ["documents"],
+    queryFn: ({ signal }) => api.documents(signal),
+  });
+  const filtered = docs.data?.documents.filter((doc) =>
+    (doc.title + doc.category + doc.source)
+      .toLowerCase()
+      .includes(filter.toLowerCase()),
+  );
+  return (
+    <>
+      <PageHeader
+        title="知识文档"
+        description="管理客服回答的知识来源与发布状态。"
+        actions={
+          <>
+            <Button onClick={() => setUpload(true)}>
+              <Upload size={16} />
+              上传文件
+            </Button>
+            <Button tone="primary" onClick={() => setEditor("new")}>
+              <Plus size={16} />
+              新增文档
+            </Button>
+          </>
+        }
+      />
+      <div className="knowledge-tools">
+        <Field label="查找文档">
+          <input
+            type="search"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="标题、分类或来源"
+          />
+        </Field>
+        <div className="actions">
+          <Button onClick={() => void docs.refetch()} busy={docs.isFetching}>
+            <RefreshCw size={16} />
+            刷新
+          </Button>
+          <Button onClick={() => setOperation({ kind: "rebuild" })}>
+            重建索引
+          </Button>
+          <Button onClick={() => setOperation({ kind: "seed" })}>
+            导入示例
+          </Button>
+        </div>
+      </div>
+      <ErrorState error={docs.error} retry={() => void docs.refetch()} />
+      {docs.data?.degraded && (
+        <Notice kind="warning">
+          检索处于降级模式：{docs.data.degraded_reason || "服务端未提供原因"}
+        </Notice>
+      )}
+      <div className="section-heading">
+        <h2>文档目录</h2>
+        <span>
+          {filtered?.length ?? "未知"} 篇 · 更新时间仅在接口提供时显示
+        </span>
+      </div>
+      {docs.isLoading ? (
+        <Loading />
+      ) : filtered?.length ? (
+        <div className="data-table documents-table">
+          <table>
+            <thead>
+              <tr>
+                <th>文档与来源</th>
+                <th>发布状态</th>
+                <th className="num">分块 / 版本</th>
+                <th className="num">更新时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((doc) => (
+                <tr key={doc.id}>
+                  <td data-label="文档">
+                    <button
+                      className="text-button row-title"
+                      onClick={() => setEditor(doc)}
+                    >
+                      {doc.title}
+                    </button>
+                    <small>
+                      {doc.category || "未分类"} · {doc.source || "来源未知"}
+                    </small>
+                  </td>
+                  <td data-label="状态">
+                    <Status value={doc.status} />
+                  </td>
+                  <td data-label="分块 / 版本" className="num">
+                    {doc.chunks_count} / v{doc.version}
+                  </td>
+                  <td data-label="更新时间" className="num">
+                    {dateTime(doc.updated_at)}
+                  </td>
+                  <td className="row-action">
+                    <div className="actions">
+                      <Button
+                        tone="plain"
+                        onClick={() =>
+                          setOperation({ kind: "publish", document: doc })
+                        }
+                      >
+                        {doc.status === "published" ? "取消发布" : "发布"}
+                      </Button>
+                      <Button
+                        tone="danger"
+                        onClick={() =>
+                          setOperation({ kind: "delete", document: doc })
+                        }
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        docs.data && (
+          <Empty
+            title={filter ? "没有找到对应文档" : "知识库还没有文档"}
+            description="添加经过核对的政策或服务说明，供客服检索。"
+          />
+        )
+      )}
+      {editor && (
+        <DocumentEditor
+          document={editor === "new" ? undefined : editor}
+          onClose={() => setEditor(undefined)}
+        />
+      )}
+      {upload && <UploadDocument onClose={() => setUpload(false)} />}
+      {operation && (
+        <ConfirmKnowledge
+          operation={operation}
+          onClose={() => setOperation(undefined)}
+        />
+      )}
+    </>
+  );
 }

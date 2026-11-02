@@ -1,47 +1,397 @@
-import { useEffect, useRef, useState } from 'react';
-import { Bot, ChevronRight, CircleAlert, Clipboard, MessageSquare, PhoneCall, Plus, Send, Settings2, UserRound, Wifi, WifiOff, Wrench } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { api, websocketUrl } from '../api';
-import type { Message, Session, Tool } from '../types';
-import { Empty, Metric, Modal, formatTime, labels } from '../components/common';
-
-/** 拆分"参考来源"段：正文正常渲染，来源折叠为可点击展开的明细。 */
-function AssistantContent({ content }: { content: string }) {
-  const match = content.match(/\n+参考来源：/);
-  if (!match) return <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || '正在思考…'}</ReactMarkdown>;
-  const start = match.index ?? 0;
-  const body = content.slice(0, start);
-  const sources = content.slice(start + match[0].length).trim();
-  return (
-    <>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{body || '正在思考…'}</ReactMarkdown>
-      <details className="citations">
-        <summary>参考来源</summary>
-        <div className="citations-body">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{sources}</ReactMarkdown>
-        </div>
-      </details>
-    </>
-  );
-}
-
-export default function ChatPage({ userId, flash, isAdmin }: { userId: number; flash: (t: string, type?: 'ok' | 'error') => void; isAdmin: boolean }) {
-  const [sessions, setSessions] = useState<Session[]>([]); const [sessionId, setSessionId] = useState<string>(); const [messages, setMessages] = useState<Message[]>([]); const [input, setInput] = useState(''); const [streaming, setStreaming] = useState(false); const [connected, setConnected] = useState(false); const [tools, setTools] = useState<Tool[]>([]); const [intent, setIntent] = useState('—'); const [latency, setLatency] = useState('—'); const [trace, setTrace] = useState<string>(); const [handoffOpen, setHandoffOpen] = useState(false); const [handoffReason, setHandoffReason] = useState('需要人工客服进一步处理'); const [handoffPriority, setHandoffPriority] = useState('normal'); const ws = useRef<WebSocket>(); const bottom = useRef<HTMLDivElement>(null); const pendingPreview = useRef('');
-  useEffect(() => { Promise.all([api.sessions(userId), isAdmin ? api.tools() : Promise.resolve([] as Tool[])]).then(([s, t]) => { setSessions(s); setTools(t); if (s[0]) selectSession(s[0].id); }).catch((e) => flash(e.message, 'error')); }, [userId, isAdmin]);
-  useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-  useEffect(() => () => ws.current?.close(), []);
-  async function selectSession(id: string) { setSessionId(id); try { const data = await api.history(id); setMessages(data.messages); } catch (e) { flash((e as Error).message, 'error'); } }
-  function touchSession(id: string, preview?: string) {
-    setSessions((current) => {
-      const existing = current.find((session) => session.id === id);
-      const next = { ...existing, id, status: existing?.status || 'active', message_count: existing?.message_count || 0, title: existing?.title || '新会话', preview: preview ?? (existing?.preview || ''), updated_at: new Date().toISOString() };
-      return [next, ...current.filter((session) => session.id !== id)];
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronRight, History, Plus, Send, Settings2 } from "lucide-react";
+import { api } from "../api";
+import { useAuth } from "../state/auth";
+import { useChat } from "../state/chat";
+import { navigate, useRoute } from "../app/router";
+import {
+  Button,
+  Dialog,
+  Empty,
+  ErrorState,
+  Loading,
+  Notice,
+  PageHeader,
+  Pagination,
+  Status,
+  dateTime,
+  intentLabels,
+} from "../components/ui";
+import { useTask } from "../hooks/useTask";
+import { useConversation } from "../features/chat/useConversation";
+import { MessageList } from "../features/chat/MessageList";
+import { HandoffDialog } from "../features/chat/HandoffDialog";
+import { Diagnostics } from "../features/chat/Diagnostics";
+export default function ChatPage() {
+  const user = useAuth((s) => s.user)!;
+  const admin = user.role === "admin";
+  const { id } = useRoute();
+  const cache = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [humanOpen, setHumanOpen] = useState(false);
+  const [diagnostics, setDiagnostics] = useState(false);
+  const [mode, setMode] = useState<"stream" | "rest">("stream");
+  const task = useTask();
+  const sessions = useQuery({
+    queryKey: ["sessions", user.id, admin, page],
+    queryFn: ({ signal }) =>
+      admin
+        ? api.allSessions(page, signal)
+        : api.sessions(user.id, page, signal),
+  });
+  const details = useQuery({
+    queryKey: ["session", id],
+    queryFn: ({ signal }) => api.session(id!, signal),
+    enabled: !!id,
+  });
+  const conversation = useConversation(user.id, id, limit);
+  const draftKey = id || "new";
+  const input = useChat((s) => s.drafts[draftKey] || "");
+  const setInput = (value: string) =>
+    useChat.getState().setDraft(draftKey, value);
+  const own = !id || details.data?.user_id === user.id;
+  const closed = details.data?.status === "closed";
+  const canSend =
+    !conversation.busy &&
+    conversation.room?.phase !== "complete" &&
+    (!id ||
+      (!!details.data &&
+        !conversation.history.isFetching &&
+        !conversation.history.error &&
+        own &&
+        !closed));
+  const create = async () => {
+    const session = await api.createSession(user.id);
+    cache.setQueryData(["session", session.id], {
+      ...session,
+      user_id: user.id,
+    });
+    await cache.invalidateQueries({ queryKey: ["sessions"] });
+    navigate("chat", session.id);
+    setHistoryOpen(false);
+  };
+  async function send() {
+    if (!input.trim() || !canSend) return;
+    await task.run(async () => {
+      let sessionId = id;
+      if (!sessionId) {
+        const session = await api.createSession(user.id);
+        sessionId = session.id;
+        cache.setQueryData(["session", sessionId], {
+          ...session,
+          user_id: user.id,
+        });
+        navigate("chat", sessionId);
+        useChat.getState().setDraft("new", "");
+      }
+      await conversation.send(
+        input.trim(),
+        sessionId,
+        conversation.messages,
+        mode === "rest",
+      );
     });
   }
-  function connect() { if (ws.current && ws.current.readyState <= 1) return ws.current; const socket = new WebSocket(websocketUrl()); ws.current = socket; socket.onopen = () => setConnected(true); socket.onclose = () => setConnected(false); socket.onerror = () => setConnected(false); socket.onmessage = (event) => { const data = JSON.parse(event.data); if (data.type === 'stream_start') { setSessionId(data.session_id); touchSession(data.session_id, pendingPreview.current); pendingPreview.current = ''; setTrace(data.trace_id); setMessages((m) => [...m, { id: Date.now(), session_id: data.session_id, role: 'assistant', content: '' }]); } else if (data.type === 'token') setMessages((m) => { const next = [...m]; next[next.length - 1] = { ...next[next.length - 1], content: `${next[next.length - 1].content}${data.content}` }; return next; }); else if (data.type === 'token_reset') setMessages((m) => { const next = [...m]; const last = next[next.length - 1]; if (last && last.role === 'assistant') { next[next.length - 1] = { ...last, content: '' }; } return next; }); else if (data.type === 'intent') setIntent(labels[data.intent] || data.intent); else if (data.type === 'done') { setLatency(`${data.execution_time_ms ?? '—'} ms`); if (data.reply) setMessages((m) => { const next = [...m]; next[next.length - 1] = { ...next[next.length - 1], content: data.reply }; return next; }); } else if (data.type === 'stream_end' || data.type === 'error') setStreaming(false); }; return socket; }
-  async function send() { const text = input.trim(); if (!text || streaming) return; setInput(''); pendingPreview.current = text; if (sessionId) touchSession(sessionId, text); setMessages((m) => [...m, { id: Date.now(), session_id: sessionId || '', role: 'user', content: text }]); setStreaming(true); const socket = connect(); const payload = JSON.stringify({ user_id: userId, message: text, session_id: sessionId }); if (socket.readyState === WebSocket.OPEN) socket.send(payload); else socket.addEventListener('open', () => socket.send(payload), { once: true }); }
-  async function newSession() { try { const result = await api.createSession(userId); setSessions((s) => [{ id: result.id, status: 'active', message_count: 0, title: '新会话', preview: '', updated_at: new Date().toISOString() }, ...s]); setSessionId(result.id); setMessages([]); } catch (e) { flash((e as Error).message, 'error'); } }
-  async function requestHuman() { if (!sessionId) { flash('请先发送一条消息，再发起转人工', 'error'); return; } try { await api.requestHandoff({ user_id: userId, session_id: sessionId, reason: handoffReason, priority: handoffPriority, context: { intent } }); setHandoffOpen(false); flash('已提交转人工请求，请留意后续处理'); } catch (e) { flash((e as Error).message, 'error'); } }
-  return <div className={`chat-layout ${isAdmin ? '' : 'user-chat-layout'}`}><section className="panel sessions"><div className="panel-head"><div><p className="eyebrow">CONVERSATIONS</p><h3>会话</h3></div><button className="icon-btn" onClick={newSession} title="新建会话"><Plus size={17} /></button></div><div className="session-list">{sessions.length === 0 && <Empty text="暂无会话" />}{sessions.map((s) => <button className={s.id === sessionId ? 'session active' : 'session'} key={s.id} onClick={() => selectSession(s.id)}><div className="session-icon"><MessageSquare size={16} /></div><div><strong>{s.title}</strong><span>{s.preview || '开始一段新的对话'}</span></div><small>{formatTime(s.updated_at)}</small></button>)}</div></section><section className="panel conversation"><div className="conversation-head"><div><p className="eyebrow">{isAdmin ? 'LIVE AGENT SESSION' : 'YOUR SERVICE SESSION'}</p><h3>{sessionId ? '智能客服 · 在线' : '开始咨询'}</h3></div><div className="conversation-head-actions">{!isAdmin && <button className="handoff-btn" onClick={() => setHandoffOpen(true)}><PhoneCall size={14} />转人工</button>}<span className={connected ? 'connection connected' : 'connection'}>{connected ? <Wifi size={14} /> : <WifiOff size={14} />}{connected ? '流式已连接' : '等待连接'}</span></div></div><div className="messages">{messages.length === 0 && <div className="welcome"><div className="welcome-icon"><Bot size={30} /></div><h3>{isAdmin ? 'Agent 对话监控' : '你好，我是你的 AI 客服'}</h3><p>{isAdmin ? '以用户视角查看 Agent 的实时响应。' : '我可以回答问题、查询订单，也可以帮你转接人工客服。'}</p><div className="quick-row">{['查询我的订单', '退货政策是什么？', '我要转人工'].map((q) => <button key={q} onClick={() => q === '我要转人工' && !isAdmin ? setHandoffOpen(true) : setInput(q)}>{q}<ChevronRight size={14} /></button>)}</div></div>}{messages.map((m) => <div className={`message ${m.role}`} key={m.id}><div className="message-avatar">{m.role === 'user' ? <UserRound size={16} /> : <Bot size={16} />}</div><div className="message-body"><div className="message-label">{m.role === 'user' ? '你' : 'AI Agent'}</div><div className="bubble">{m.role === 'assistant' ? <AssistantContent content={m.content || ''} /> : m.content}</div>{m.role === 'assistant' && m.content && <div className="message-tools"><button onClick={() => navigator.clipboard.writeText(m.content)}><Clipboard size={13} />复制</button>{!isAdmin && <button onClick={() => api.feedback({ user_id: userId, session_id: sessionId, message_id: m.id, feedback_type: 'like', content: m.content }).then(() => flash('感谢反馈')).catch((e) => flash(e.message, 'error'))}>有帮助</button>}</div>}</div></div>)}<div ref={bottom} /></div><div className="composer"><textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={isAdmin ? '输入测试消息，Enter 发送' : '输入问题，Enter 发送，Shift + Enter 换行'} rows={2} /><button className="send-btn" onClick={send} disabled={streaming || !input.trim()}><Send size={17} />发送</button></div></section>{isAdmin && <aside className="panel trace"><div className="panel-head"><div><p className="eyebrow">OBSERVABILITY</p><h3>Agent 运行面板</h3></div><Settings2 size={18} className="muted-icon" /></div><div className="metric-grid"><Metric label="当前意图" value={intent} /><Metric label="响应耗时" value={latency} /><Metric label="Trace ID" value={trace ? `${trace.slice(0, 12)}…` : '—'} /></div><div className="trace-section"><h4><Wrench size={15} />可用工具 <span>{tools.length}</span></h4>{tools.slice(0, 7).map((tool) => <div className="tool" key={tool.name}><span>{tool.name}</span><small>{tool.description}</small></div>)}</div><div className="trace-tip"><CircleAlert size={16} /><span>Agent 会根据意图自动选择检索、订单查询或工单工具。</span></div></aside>}{handoffOpen && <Modal title="联系人工客服" onClose={() => setHandoffOpen(false)}><p className="muted">请描述需要人工处理的原因，客服会根据优先级尽快响应。</p><label>转人工原因<textarea value={handoffReason} onChange={(e) => setHandoffReason(e.target.value)} rows={4} /></label><label>优先级<select value={handoffPriority} onChange={(e) => setHandoffPriority(e.target.value)}><option value="low">普通</option><option value="normal">标准</option><option value="high">较高</option><option value="urgent">紧急</option></select></label><button className="primary wide" onClick={requestHuman}>提交转人工请求</button></Modal>}</div>;
+  const historyList = (
+    <>
+      <div className="session-toolbar">
+        <h2>{admin ? "会话记录" : "我的会话"}</h2>
+        <Button
+          tone="plain"
+          aria-label="刷新会话"
+          onClick={() => void sessions.refetch()}
+        >
+          刷新
+        </Button>
+      </div>
+      <div className="session-items">
+        <ErrorState
+          error={sessions.error}
+          retry={() => void sessions.refetch()}
+        />
+        {sessions.isLoading ? (
+          <Loading />
+        ) : !sessions.data?.length ? (
+          <Empty
+            title="还没有会话"
+            description="开始一次咨询，记录会保存在这里。"
+          />
+        ) : (
+          sessions.data.map((session) => (
+            <a
+              href={"#/chat/" + session.id}
+              className={
+                "session-item" + (session.id === id ? " selected" : "")
+              }
+              key={session.id}
+              onClick={() => {
+                setHistoryOpen(false);
+                setLimit(50);
+              }}
+            >
+              <strong>
+                {admin && session.user_id
+                  ? "用户 #" + session.user_id + " · "
+                  : ""}
+                {session.title ||
+                  intentLabels[session.last_intent || ""] ||
+                  "客服会话"}
+              </strong>
+              <span>
+                {session.preview ||
+                  (session.user_id
+                    ? "会话 " +
+                      session.id.slice(0, 8) +
+                      " · " +
+                      session.message_count +
+                      " 条消息"
+                    : "尚未开始咨询")}
+              </span>
+              <small>
+                {dateTime(session.updated_at || session.created_at)} ·{" "}
+                {session.status === "closed" ? "已关闭" : "进行中"}
+              </small>
+            </a>
+          ))
+        )}
+      </div>
+      <Pagination
+        page={page}
+        hasNext={sessions.data?.length === 50}
+        onChange={setPage}
+      />
+    </>
+  );
+  return (
+    <div className="chat-page">
+      <PageHeader
+        title={admin ? "会话工作台" : "我的智能客服"}
+        description={
+          admin
+            ? "查看会话记录，定位问题与回答依据。数据按需刷新。"
+            : "咨询订单、售后与使用问题，接着上次的对话继续。"
+        }
+        actions={
+          <>
+            <Button
+              className="history-toggle"
+              onClick={() => setHistoryOpen(true)}
+            >
+              <History size={16} />
+              会话
+            </Button>
+            <Button busy={task.pending} onClick={() => task.run(create)}>
+              <Plus size={16} />
+              {admin ? "新建测试会话" : "新建会话"}
+            </Button>
+          </>
+        }
+      />
+      <ErrorState error={task.error} />
+      <div className="conversation-layout">
+        <aside className="conversation-list" aria-label="会话列表">
+          {historyList}
+        </aside>
+        <section className="conversation-pane">
+          <header className="conversation-heading">
+            <div>
+              <h2>
+                {id
+                  ? details.data?.last_intent
+                    ? intentLabels[details.data.last_intent] || "客服会话"
+                    : "客服会话"
+                  : "开始一次咨询"}
+              </h2>
+              <span>
+                {id ? (
+                  <Status value={details.data?.status} />
+                ) : (
+                  "问题会保存为独立会话"
+                )}
+              </span>
+            </div>
+            <div className="actions">
+              {admin && (
+                <Button tone="plain" onClick={() => setDiagnostics(true)}>
+                  <Settings2 size={16} />
+                  诊断
+                </Button>
+              )}
+              {!admin && id && (
+                <Button onClick={() => setHumanOpen(true)}>转人工</Button>
+              )}
+            </div>
+          </header>
+          <ErrorState
+            error={details.error}
+            retry={() => void details.refetch()}
+          />
+          <ErrorState
+            error={conversation.history.error}
+            retry={() => task.run(() => conversation.reload())}
+          />
+          {id && conversation.history.isLoading ? (
+            <Loading label="正在读取会话" />
+          ) : (
+            <MessageList
+              messages={
+                conversation.room?.phase === "error"
+                  ? conversation.messages.filter(
+                      (message) =>
+                        message.role !== "assistant" || !!message.content,
+                    )
+                  : conversation.messages
+              }
+              sessionId={id || ""}
+              userId={user.id}
+              feedback={!admin && own}
+            >
+              {conversation.messages.length === 0 && (
+                <div className="conversation-welcome">
+                  <h2>{admin ? "从一条测试消息开始" : "有什么可以帮你？"}</h2>
+                  <p>
+                    说明你的问题或订单号。涉及退款等业务操作时，请核对客服给出的确认信息。
+                  </p>
+                  <div className="quick-questions">
+                    {[
+                      "退换货有哪些要求？",
+                      "如何查询订单物流？",
+                      "产品使用遇到问题怎么办？",
+                    ].map((question) => (
+                      <button key={question} onClick={() => setInput(question)}>
+                        {question}
+                        <ChevronRight size={16} />
+                      </button>
+                    ))}
+                  </div>
+                  <small>回答以知识库与业务工具的实际结果为依据。</small>
+                </div>
+              )}
+              {id && conversation.messages.length >= limit && (
+                <Button
+                  tone="plain"
+                  onClick={() => setLimit((value) => value + 50)}
+                >
+                  加载更多历史（当前读取上限 {limit} 条）
+                </Button>
+              )}
+            </MessageList>
+          )}
+          {conversation.room?.error && (
+            <Notice kind="error">
+              {conversation.room.error}
+              <Button
+                tone="plain"
+                onClick={() => task.run(() => conversation.reload())}
+              >
+                刷新本轮记录
+              </Button>
+            </Notice>
+          )}
+          {(conversation.busy || conversation.room?.phase === "complete") && (
+            <div className="stream-status" role="status">
+              {conversation.room?.phase === "connecting"
+                ? "正在连接服务…"
+                : conversation.room?.phase === "complete"
+                  ? "回答已保存，正在同步会话记录…"
+                  : conversation.room?.phase === "saving"
+                    ? "回答已接收，正在保存…"
+                    : conversation.room?.phase === "streaming"
+                      ? "正在接收经服务端校验的答复…"
+                      : "正在处理并校验回答…"}
+            </div>
+          )}
+          {id && !own ? (
+            <div className="read-only">
+              其他用户的会话只读。新建测试会话后可以测试 Agent。
+            </div>
+          ) : closed ? (
+            <div className="read-only">会话已关闭。请新建会话继续咨询。</div>
+          ) : (
+            <form
+              className="composer"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send();
+              }}
+            >
+              <label className="sr-only" htmlFor="message-input">
+                你的问题
+              </label>
+              <textarea
+                id="message-input"
+                rows={2}
+                maxLength={5000}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === "Enter" &&
+                    !e.shiftKey &&
+                    !e.nativeEvent.isComposing &&
+                    e.keyCode !== 229
+                  ) {
+                    e.preventDefault();
+                    void send();
+                  }
+                }}
+                placeholder="输入你的问题…"
+                disabled={conversation.busy || task.pending}
+              />
+              <div className="composer-footer">
+                <label className="transport-choice">
+                  传输
+                  <select
+                    aria-label="消息传输方式"
+                    value={mode}
+                    onChange={(e) =>
+                      setMode(e.target.value as "stream" | "rest")
+                    }
+                    disabled={conversation.busy}
+                  >
+                    <option value="stream">流式连接</option>
+                    <option value="rest">普通请求</option>
+                  </select>
+                </label>
+                <span className="composer-hint">
+                  Enter 发送，Shift + Enter 换行
+                </span>
+                <Button
+                  type="submit"
+                  tone="primary"
+                  disabled={!canSend || !input.trim()}
+                  busy={conversation.busy || task.pending}
+                >
+                  <Send size={16} />
+                  发送
+                </Button>
+              </div>
+            </form>
+          )}
+        </section>
+      </div>
+      {historyOpen && (
+        <Dialog title="会话历史" onClose={() => setHistoryOpen(false)}>
+          <div className="mobile-session-list">{historyList}</div>
+        </Dialog>
+      )}
+      {humanOpen && id && (
+        <HandoffDialog
+          key={id}
+          userId={user.id}
+          sessionId={id}
+          onClose={() => setHumanOpen(false)}
+        />
+      )}
+      {diagnostics && (
+        <Diagnostics
+          room={conversation.room}
+          onClose={() => setDiagnostics(false)}
+        />
+      )}
+    </div>
+  );
 }

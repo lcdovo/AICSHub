@@ -1,9 +1,0 @@
-export type User = { id: number; username: string; nickname: string; level: string; role: string; status: boolean; avatar_url?: string | null; tags?: string[] };
-export type Session = { id: string; status: string; message_count: number; last_intent?: string | null; title: string; preview: string; updated_at: string };
-export type Message = { id: number; session_id: string; role: 'user' | 'assistant' | 'system'; content: string; token_count?: number; response_time_ms?: number | null; created_at?: string };
-export type Ticket = { ticket_id: string; user_id: number; category: string; content: string; priority: string; status: string; assigned_to?: string | null; session_id?: string | null; created_at: string; updated_at?: string; resolution?: string | null };
-export type Handoff = { request_id: string; user_id: number; session_id: string; reason: string; priority: string; context: Record<string, unknown>; status: string; assigned_to?: string | null; resolution?: string | null; created_at: string; sla_deadline?: string | null };
-export type Tool = { name: string; description: string; parameters: { name: string; type: string; description: string; required: boolean }[] };
-export type Document = { id: string; title: string; category?: string; keywords?: string[]; source?: string; is_published?: boolean; created_at?: string; updated_at?: string; content?: string; chunks_count?: number };
-export type ChatResponse = { message_id: number; session_id: string; reply: string; intent?: string | null; response_time_ms: number; trace_id?: string | null };
-export type ApiEnvelope<T> = { code: number; message: string; data: T };

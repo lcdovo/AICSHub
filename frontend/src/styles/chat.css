@@ -1,0 +1,323 @@
+.chat-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.chat-page > .page-header {
+  flex: none;
+}
+.conversation-layout {
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+  border-top: 1px solid var(--border);
+  min-height: 0;
+  flex: 1;
+}
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  min-height: 0;
+  padding-right: 16px;
+}
+.session-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+}
+.session-toolbar h2 {
+  font-size: 14px;
+}
+.session-items {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+.session-item {
+  display: block;
+  color: var(--text);
+  padding: 16px 12px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-control);
+}
+.session-item:hover {
+  text-decoration: none;
+  background: var(--raised);
+}
+.session-item.selected {
+  background: var(--active);
+}
+.session-item strong,
+.session-item span,
+.session-item small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-item strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.session-item span {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 5px 0;
+}
+.session-item small {
+  font-size: 13px;
+}
+.conversation-list .pagination {
+  font-size: 13px;
+  margin: 12px 0 0;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.conversation-list .pagination .button {
+  padding: 5px 7px;
+  font-size: 12px;
+}
+.conversation-list .pagination svg {
+  display: none;
+}
+.conversation-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  padding-left: 24px;
+}
+.conversation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  flex: none;
+}
+.conversation-heading h2 {
+  font-size: 14px;
+}
+.conversation-heading > div > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.conversation-heading .status {
+  margin-top: 4px;
+}
+.message-region {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.message-scroll {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 20px 12px 20px 0;
+  scrollbar-gutter: stable;
+}
+.message {
+  padding: 0 0 28px;
+  max-width: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
+}
+.message > header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.message > header strong {
+  font-weight: 500;
+  color: var(--text);
+}
+.message time {
+  font-size: 11px;
+}
+.message.user .message-content {
+  display: inline-block;
+  background: var(--raised);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  max-width: 100%;
+}
+.message-content {
+  font-size: 14px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+.message-content p {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+}
+.message-content p:last-child {
+  margin: 0;
+}
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+  font-size: 16px;
+  margin: 16px 0 10px;
+}
+.message-content ul,
+.message-content ol {
+  margin: 8px 0;
+}
+.message-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.message-actions .button {
+  padding: 2px 0;
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.markdown-table {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  margin: 16px 0;
+}
+.markdown-table table {
+  table-layout: auto;
+  min-width: 400px;
+}
+.markdown-table th,
+.markdown-table td {
+  padding: 10px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  width: auto;
+  white-space: normal;
+  min-width: 110px;
+}
+.citations {
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  margin-top: 16px;
+  color: var(--muted);
+}
+.citations p {
+  font-size: 12px;
+}
+.new-messages {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 20px #19282d12; /* taste-skill-ignore: floating message control */
+}
+.composer {
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid var(--control);
+  border-radius: var(--radius);
+  background: var(--surface);
+  flex: none;
+}
+.composer textarea {
+  border: 0;
+  padding: 0;
+  resize: none;
+  min-height: 52px;
+  max-height: 150px;
+}
+.composer textarea:focus-visible {
+  outline: none;
+}
+.composer:focus-within {
+  border-color: var(--accent);
+}
+.composer-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  padding-top: 8px;
+}
+.transport-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.transport-choice select {
+  width: auto;
+  border: 0;
+  min-height: 32px;
+  padding: 4px;
+  font-size: 12px;
+}
+.composer-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.stream-status {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 0;
+}
+.read-only {
+  background: var(--raised);
+  padding: 16px;
+  font-size: 13px;
+  color: var(--muted);
+  border-radius: var(--radius-control);
+}
+.conversation-welcome {
+  max-width: 560px;
+  margin: 7vh auto 0;
+  padding: 12px 24px;
+}
+.conversation-welcome h2 {
+  font-size: 24px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+.conversation-welcome > p {
+  color: var(--muted);
+  margin: 16px 0 28px;
+  line-height: 1.8;
+}
+.quick-questions {
+  display: grid;
+  margin-bottom: 28px;
+}
+.quick-questions button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--text);
+  text-align: left;
+  padding: 15px 0;
+  font-size: 13px;
+}
+.quick-questions button:hover {
+  color: var(--accent);
+}
+.history-toggle {
+  display: none;
+}
+.mobile-navigation .workspace {
+  margin: 4px 12px 20px;
+}
+.mobile-navigation .nav-bottom {
+  margin-top: 24px;
+}

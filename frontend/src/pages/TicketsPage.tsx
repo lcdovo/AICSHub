@@ -1,14 +1,261 @@
-import { useEffect, useState } from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
-import { api } from '../api';
-import type { Ticket } from '../types';
-import { Badge, Empty, Modal, Stat, formatTime, ticketLabels } from '../components/common';
-
-export default function TicketsPage({ userId, flash, isAdmin }: { userId: number; flash: (t: string, type?: 'ok' | 'error') => void; isAdmin: boolean }) {
-  const [tickets, setTickets] = useState<Ticket[]>([]); const [stats, setStats] = useState<any>(); const [filter, setFilter] = useState(''); const [showCreate, setShowCreate] = useState(false); const [content, setContent] = useState(''); const [category, setCategory] = useState('general'); const [priority, setPriority] = useState('medium');
-  const load = () => Promise.all([api.tickets(filter ? `&status=${filter}` : ''), isAdmin ? api.ticketStats() : Promise.resolve(undefined)]).then(([r, s]) => { setTickets(r.tickets); setStats(s); }).catch((e) => flash(e.message, 'error'));
-  useEffect(() => { void load(); }, [filter]);
-  async function create() { try { await api.createTicket({ user_id: userId, category, content, priority }); flash('工单已创建'); setShowCreate(false); setContent(''); load(); } catch (e) { flash((e as Error).message, 'error'); } }
-  async function update(ticket: Ticket, status: string) { try { await api.updateTicket(ticket.ticket_id, { status }); flash('工单状态已更新'); load(); } catch (e) { flash((e as Error).message, 'error'); } }
-  return <div className="page-body"><div className="page-actions"><div><p className="eyebrow">TICKET OPERATIONS</p><h3>工单与问题闭环</h3><p className="muted">追踪 AI 无法直接解决的业务请求。</p></div><div className="actions"><button className="secondary" onClick={load}><RefreshCw size={15} />刷新</button><button className="primary" onClick={() => setShowCreate(true)}><Plus size={15} />新建工单</button></div></div>{isAdmin && stats && <div className="stat-row"><Stat label="全部工单" value={stats.total_tickets} /><Stat label="解决率" value={`${stats.resolution_rate}%`} /><Stat label="处理中" value={stats.status_distribution?.processing || 0} /><Stat label="待处理" value={stats.status_distribution?.pending || 0} /></div>}<div className="panel table-panel"><div className="table-toolbar"><div className="tabs"><button className={!filter ? 'selected' : ''} onClick={() => setFilter('')}>全部</button>{Object.entries(ticketLabels).map(([key, value]) => <button className={filter === key ? 'selected' : ''} key={key} onClick={() => setFilter(key)}>{value}</button>)}</div></div>{tickets.length ? <div className="table-wrap"><table><thead><tr><th>工单</th><th>分类</th><th>内容</th><th>优先级</th><th>状态</th><th>创建时间</th><th /></tr></thead><tbody>{tickets.map((ticket) => <tr key={ticket.ticket_id}><td><code>{ticket.ticket_id.slice(0, 8)}</code></td><td>{ticket.category}</td><td className="truncate">{ticket.content}</td><td><Badge tone={ticket.priority === 'urgent' ? 'red' : ticket.priority === 'high' ? 'amber' : 'blue'}>{ticket.priority}</Badge></td><td><Badge tone={ticket.status === 'resolved' || ticket.status === 'closed' ? 'green' : 'blue'}>{ticketLabels[ticket.status] || ticket.status}</Badge></td><td>{formatTime(ticket.created_at)}</td><td>{isAdmin && ticket.status === 'pending' && <button className="table-action" onClick={() => update(ticket, 'processing')}>开始处理</button>}{isAdmin && ticket.status === 'processing' && <button className="table-action" onClick={() => update(ticket, 'resolved')}>标记解决</button>}</td></tr>)}</tbody></table></div> : <Empty text="暂无工单" />}</div>{showCreate && <Modal title="创建工单" onClose={() => setShowCreate(false)}><label>问题分类<select value={category} onChange={(e) => setCategory(e.target.value)}><option value="general">通用咨询</option><option value="order">订单问题</option><option value="refund">退换货</option><option value="complaint">投诉建议</option></select></label><label>优先级<select value={priority} onChange={(e) => setPriority(e.target.value)}><option value="low">低</option><option value="medium">中</option><option value="high">高</option><option value="urgent">紧急</option></select></label><label>问题描述<textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} placeholder="描述需要人工处理的问题" /></label><button className="primary wide" disabled={!content.trim()} onClick={create}>提交工单</button></Modal>}</div>;
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
+import { api } from "../api";
+import { useAuth } from "../state/auth";
+import { navigate, useRoute } from "../app/router";
+import {
+  Button,
+  Empty,
+  ErrorState,
+  Field,
+  Loading,
+  PageHeader,
+  Pagination,
+  Status,
+  categories,
+  dateTime,
+  statusLabels,
+} from "../components/ui";
+import {
+  CreateTicket,
+  EditTicket,
+  PriorityOptions,
+} from "../features/tickets/TicketForms";
+export default function TicketsPage() {
+  const user = useAuth((s) => s.user)!;
+  const admin = user.role === "admin";
+  const { id } = useRoute();
+  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState("");
+  const [priority, setPriority] = useState("");
+  const [create, setCreate] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const tickets = useQuery({
+    queryKey: ["tickets", page, status, priority],
+    queryFn: ({ signal }) => api.tickets(page, status, priority, signal),
+  });
+  const detail = useQuery({
+    queryKey: ["ticket", id],
+    queryFn: ({ signal }) => api.ticket(id!, signal),
+    enabled: !!id,
+  });
+  const ticket = detail.data;
+  return (
+    <>
+      <PageHeader
+        title={id ? "工单详情" : admin ? "工单管理" : "我的工单"}
+        description={
+          id
+            ? "查看问题描述、负责人和处理结果。"
+            : admin
+              ? "按状态与优先级安排处理，保留问题的每一步进展。"
+              : "查看已提交的问题和处理进展。"
+        }
+        actions={
+          id ? (
+            <Button onClick={() => navigate("tickets")}>
+              <ArrowLeft size={16} />
+              返回列表
+            </Button>
+          ) : (
+            <>
+              <Button
+                onClick={() => void tickets.refetch()}
+                busy={tickets.isFetching}
+              >
+                <RefreshCw size={16} />
+                刷新
+              </Button>
+              <Button tone="primary" onClick={() => setCreate(true)}>
+                <Plus size={16} />
+                创建工单
+              </Button>
+            </>
+          )
+        }
+      />
+      {id ? (
+        <>
+          <ErrorState
+            error={detail.error}
+            retry={() => void detail.refetch()}
+          />
+          {detail.isLoading ? (
+            <Loading />
+          ) : (
+            ticket && (
+              <div className="detail-layout">
+                <section>
+                  <div className="section-heading">
+                    <h2>{categories[ticket.category] || ticket.category}</h2>
+                    <Status value={ticket.status} />
+                  </div>
+                  <p className="ticket-content">{ticket.content}</p>
+                  <section className="resolution">
+                    <h2>处理结果</h2>
+                    <p>{ticket.resolution || "尚未填写处理结果。"}</p>
+                  </section>
+                  {admin && (
+                    <Button tone="primary" onClick={() => setEdit(true)}>
+                      编辑处理状态
+                    </Button>
+                  )}
+                </section>
+                <aside className="detail-meta">
+                  <h2>工单信息</h2>
+                  <dl className="details-list">
+                    <dt>工单编号</dt>
+                    <dd className="break-word">{ticket.ticket_id}</dd>
+                    <dt>优先级</dt>
+                    <dd>
+                      <Status value={ticket.priority} />
+                    </dd>
+                    <dt>负责人</dt>
+                    <dd>{ticket.assigned_to || "未分配"}</dd>
+                    <dt>创建时间</dt>
+                    <dd>{dateTime(ticket.created_at)}</dd>
+                    <dt>更新时间</dt>
+                    <dd>{dateTime(ticket.updated_at)}</dd>
+                    {admin && (
+                      <>
+                        <dt>提交用户</dt>
+                        <dd>#{ticket.user_id}</dd>
+                      </>
+                    )}
+                    {ticket.session_id && (
+                      <>
+                        <dt>关联会话</dt>
+                        <dd>
+                          <a href={"#/chat/" + ticket.session_id}>查看会话</a>
+                        </dd>
+                      </>
+                    )}
+                  </dl>
+                </aside>
+              </div>
+            )
+          )}
+        </>
+      ) : (
+        <>
+          <div className="filter-bar">
+            <Field label="状态">
+              <select
+                value={status}
+                onChange={(e) => {
+                  setStatus(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">全部状态</option>
+                {[
+                  "pending",
+                  "processing",
+                  "escalated",
+                  "resolved",
+                  "closed",
+                ].map((value) => (
+                  <option key={value} value={value}>
+                    {statusLabels[value]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="优先级">
+              <select
+                value={priority}
+                onChange={(e) => {
+                  setPriority(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">全部优先级</option>
+                <PriorityOptions />
+              </select>
+            </Field>
+            <span>
+              {tickets.data
+                ? "共 " + tickets.data.total + " 条工单"
+                : "等待工单数据"}
+            </span>
+          </div>
+          <ErrorState
+            error={tickets.error}
+            retry={() => void tickets.refetch()}
+          />
+          {tickets.isLoading ? (
+            <Loading />
+          ) : tickets.data?.tickets.length ? (
+            <div className="data-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>问题与类别</th>
+                    <th>优先级</th>
+                    <th>状态</th>
+                    <th>负责人</th>
+                    <th className="num">更新时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.data.tickets.map((item) => (
+                    <tr key={item.ticket_id}>
+                      <td data-label="问题">
+                        <a
+                          href={"#/tickets/" + item.ticket_id}
+                          className="row-title"
+                        >
+                          {item.content}
+                        </a>
+                        <small>
+                          {categories[item.category] || item.category} ·{" "}
+                          {item.ticket_id.slice(0, 8)}
+                        </small>
+                      </td>
+                      <td data-label="优先级">
+                        <Status value={item.priority} />
+                      </td>
+                      <td data-label="状态">
+                        <Status value={item.status} />
+                      </td>
+                      <td data-label="负责人">
+                        {item.assigned_to || "未分配"}
+                      </td>
+                      <td data-label="更新时间" className="num">
+                        {dateTime(item.updated_at)}
+                      </td>
+                      <td className="row-action">
+                        <a href={"#/tickets/" + item.ticket_id}>查看详情</a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            tickets.data && (
+              <Empty
+                title="没有符合条件的工单"
+                description="可以调整筛选，或创建新的问题工单。"
+              />
+            )
+          )}
+          <Pagination
+            page={page}
+            total={tickets.data?.total}
+            hasNext={!!tickets.data && page * 20 < tickets.data.total}
+            onChange={setPage}
+          />
+        </>
+      )}
+      {create && (
+        <CreateTicket userId={user.id} onClose={() => setCreate(false)} />
+      )}
+      {edit && ticket && (
+        <EditTicket ticket={ticket} onClose={() => setEdit(false)} />
+      )}
+    </>
+  );
 }

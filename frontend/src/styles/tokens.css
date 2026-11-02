@@ -1,0 +1,39 @@
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+:root {
+  --ground: #f1f5f5;
+  --surface: #fff;
+  --raised: #f6f8f8;
+  --active: #e4eaea;
+  --border: #e6eaea;
+  --rule: #eef1f1;
+  --control: #b8c2c3;
+  --text: #19282d;
+  --muted: #58686c;
+  --faint: #617175;
+  --accent: #1b6c80;
+  --primary: #213c43;
+  --positive: #1e7b4f;
+  --negative: #a82730;
+  --warning: #86531b;
+  --positive-bg: #edf7f1;
+  --negative-bg: #fff0f0;
+  --warning-bg: #fff7e8;
+  --radius-sheet: 16px;
+  --radius: 8px;
+  --radius-control: 6px;
+  --gap: 24px;
+  --pad: 24px;
+  --font:
+    "IBM Plex Sans", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC",
+    sans-serif;
+  --viewport-height: 100dvh;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--ground);
+  font-synthesis: none;
+  font-variant-numeric: tabular-nums;
+}
