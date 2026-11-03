@@ -57,6 +57,15 @@ async def claim(factory: async_sessionmaker[AsyncSession], *, kind: str | None =
         exhausted = (await db.execute(select(BackgroundJob.resource_id).where(BackgroundJob.kind == "notification",
             BackgroundJob.status == "running", BackgroundJob.lease_expires_at <= now,
             BackgroundJob.attempts >= BackgroundJob.max_attempts))).scalars().all()
+        # 最后一次索引尝试进程消失时，版本也必须显示失败，不能永久indexing。
+        from app.models.models import KnowledgeVersion
+        failed_versions=(await db.execute(select(BackgroundJob.resource_id).where(BackgroundJob.kind=="knowledge_index",
+            BackgroundJob.status=="running",BackgroundJob.lease_expires_at<=now,
+            BackgroundJob.attempts>=BackgroundJob.max_attempts))).scalars().all()
+        if failed_versions:
+            await db.execute(update(KnowledgeVersion).where(KnowledgeVersion.id.in_(failed_versions),
+                KnowledgeVersion.status.in_(["draft","indexing"]))
+                .values(status="failed",error_code="attempts_exhausted"))
         if exhausted:
             await db.execute(update(NotificationRecord).where(NotificationRecord.id.in_(exhausted),
                 NotificationRecord.status == NotificationStatus.SENDING)
@@ -123,6 +132,13 @@ async def perform(factory: async_sessionmaker[AsyncSession], jid: str, token: st
             job = await _owned(db, jid, token)
             kind, resource_id = job.kind, job.resource_id
             await db.commit()
+        if kind == "knowledge_index":
+            import asyncio
+            from app.services.knowledge_base import get_knowledge_base
+            from app.services.knowledge_base.index_worker import index_job
+            kb=await asyncio.to_thread(get_knowledge_base)
+            await asyncio.to_thread(index_job,kb._repository,kb._embedding_service,kb._vector_store,jid,token)
+            return
         if kind == "summary":
             await _summary(factory, jid, token)
             return

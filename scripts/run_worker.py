@@ -41,7 +41,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--once",action="store_true")
     parser.add_argument("--simulate",action="store_true",help="只生成明确标记的模拟投递回执")
-    parser.add_argument("--kind",choices=["summary","notification"])
+    parser.add_argument("--kind",choices=["summary","notification","knowledge_index"])
     parser.add_argument("--limit",type=int,choices=range(1,101),default=10)
     parser.add_argument("--poll",type=float,default=1.0)
     args=parser.parse_args()

@@ -2,6 +2,10 @@
 知识库管理 API - 文件上传、文档管理、检索测试
 支持多种格式：txt, markdown, json, csv
 """
+
+import asyncio
+import csv
+import io
 import os
 import json
 import tempfile
@@ -9,7 +13,7 @@ import logging
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.services.knowledge_base import get_knowledge_base
 from app.services.llm_service import LLMService
@@ -22,26 +26,44 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentCreateRequest(BaseModel):
-    title: str
-    content: str
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1, max_length=2_000_000)
     category: str = ""
     keywords: Optional[List[str]] = None
     source: str = ""
+    is_published: bool = True
 
 
 class DocumentUpdateRequest(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    content: Optional[str] = Field(default=None, min_length=1, max_length=2_000_000)
     category: Optional[str] = None
     keywords: Optional[List[str]] = None
     source: Optional[str] = None
     is_published: Optional[bool] = None
+    expected_version: Optional[int] = Field(default=None, ge=1)
 
 
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 3
     similarity_threshold: float = 0.3
+    recall_k: Optional[int] = None
+    rerank_k: Optional[int] = None
+
+
+async def read_bounded(file):
+    parts = []
+    size = 0
+    while True:
+        block = await file.read(64 * 1024)
+        if not block:
+            break
+        size += len(block)
+        if size > settings.MAX_UPLOAD_FILE_BYTES:
+            raise HTTPException(413, "文件大小超过限制")
+        parts.append(block)
+    return b"".join(parts)
 
 
 def parse_file_content(file_path: str, file_type: str) -> str:
@@ -59,7 +81,9 @@ def parse_file_content(file_path: str, file_type: str) -> str:
                     content = json.dumps(data, ensure_ascii=False, indent=2)
                 elif isinstance(data, list):
                     content = "\n\n".join(
-                        json.dumps(item, ensure_ascii=False) if isinstance(item, dict) else str(item)
+                        json.dumps(item, ensure_ascii=False)
+                        if isinstance(item, dict)
+                        else str(item)
                         for item in data
                     )
                 else:
@@ -68,37 +92,16 @@ def parse_file_content(file_path: str, file_type: str) -> str:
                 content = raw_content
 
         elif file_type == "csv":
-            lines = raw_content.strip().split("\n")
-            if len(lines) > 1:
-                header = lines[0].split(",")
-                rows = lines[1:]
-                paragraphs = []
-                for row in rows:
-                    cols = row.split(",")
-                    pairs = [f"{h.strip()}: {c.strip()}" for h, c in zip(header, cols) if h.strip() and c.strip()]
-                    if pairs:
-                        paragraphs.append("；".join(pairs))
-                content = "\n".join(paragraphs)
-            else:
-                content = raw_content
+            reader = csv.DictReader(io.StringIO(raw_content))
+            content = "\n".join(
+                "；".join(
+                    f"{key}: {value}" for key, value in row.items() if key and value
+                )
+                for row in reader
+            )
 
         elif file_type == "md":
-            lines = raw_content.split("\n")
-            processed = []
-            in_code_block = False
-            for line in lines:
-                if line.strip().startswith("```"):
-                    in_code_block = not in_code_block
-                    continue
-                if in_code_block:
-                    continue
-                if line.startswith("#"):
-                    processed.append(line.lstrip("#").strip())
-                elif line.startswith("- ") or line.startswith("* "):
-                    processed.append(line[2:].strip())
-                elif line.strip():
-                    processed.append(line.strip())
-            content = "\n".join(processed)
+            content = raw_content  # 保留标题、表格、例外条款的原文位置。
 
         else:
             content = raw_content
@@ -108,7 +111,9 @@ def parse_file_content(file_path: str, file_type: str) -> str:
             with open(file_path, "r", encoding="gbk") as f:
                 content = f.read()
         except Exception:
-            raise HTTPException(status_code=400, detail="文件编码不支持，请使用 UTF-8 编码")
+            raise HTTPException(
+                status_code=400, detail="文件编码不支持，请使用 UTF-8 编码"
+            )
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"文件读取失败: {str(e)}")
@@ -123,7 +128,7 @@ def get_file_type(filename: str) -> str:
     if ext not in supported:
         raise HTTPException(
             status_code=400,
-            detail=f"不支持的文件类型: .{ext}，支持的类型: {', '.join(supported)}"
+            detail=f"不支持的文件类型: .{ext}，支持的类型: {', '.join(supported)}",
         )
     if ext == "markdown":
         return "md"
@@ -139,29 +144,30 @@ async def upload_document(
     _: User = Depends(require_admin),
 ):
     """上传文件到知识库"""
-    kb = get_knowledge_base()
-
-    file_type = get_file_type(file.filename)
+    kb = await asyncio.to_thread(get_knowledge_base)
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="请上传文件")
+    file_type = get_file_type(file.filename)
+    content = await read_bounded(file)
 
     suffix = f".{file_type}"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        content = await file.read()
-        if len(content) > settings.MAX_UPLOAD_FILE_BYTES:
-            raise HTTPException(status_code=413, detail=f"文件大小不能超过 {settings.MAX_UPLOAD_FILE_BYTES} 字节")
         tmp.write(content)
         temp_path = tmp.name
 
     try:
-        doc_content = parse_file_content(temp_path, file_type)
+        doc_content = await asyncio.wait_for(
+            asyncio.to_thread(parse_file_content, temp_path, file_type), 10
+        )
 
         if not doc_content.strip():
             raise HTTPException(status_code=400, detail="文件内容为空")
 
         doc_title = title or os.path.splitext(file.filename)[0]
-        doc_keywords = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
+        doc_keywords = (
+            [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
+        )
 
         result = await kb.async_add_document(
             title=doc_title,
@@ -173,9 +179,9 @@ async def upload_document(
 
         return {
             "code": 0,
-            "message": "上传成功",
+            "message": "已接收入库任务",
             "data": {
-                "document_id": result["document_id"],
+                **result,
                 "title": doc_title,
                 "chunks_count": result["chunks_count"],
                 "file_type": file_type,
@@ -191,9 +197,11 @@ async def upload_document(
 
 
 @router.post("/documents/text")
-async def add_text_document(request: DocumentCreateRequest, _: User = Depends(require_admin)):
+async def add_text_document(
+    request: DocumentCreateRequest, _: User = Depends(require_admin)
+):
     """直接添加文本内容到知识库"""
-    kb = get_knowledge_base()
+    kb = await asyncio.to_thread(get_knowledge_base)
 
     if not request.content.strip():
         raise HTTPException(status_code=400, detail="内容不能为空")
@@ -204,23 +212,30 @@ async def add_text_document(request: DocumentCreateRequest, _: User = Depends(re
         category=request.category,
         keywords=request.keywords,
         source=request.source or "manual",
+        is_published=request.is_published,
     )
 
     return {
         "code": 0,
-        "message": "添加成功",
+        "message": "已保存草稿并排队索引",
         "data": result,
     }
+
 
 @router.post("/search")
 async def search_knowledge(request: SearchRequest, _: User = Depends(require_user)):
     """搜索知识库"""
-    kb = get_knowledge_base()
+    kb = await asyncio.to_thread(get_knowledge_base)
 
     result = await kb.async_search(
         query=request.query,
         top_k=request.top_k,
         similarity_threshold=request.similarity_threshold,
+        **(
+            {"recall_k": request.recall_k, "rerank_k": request.rerank_k}
+            if isinstance(request, SearchRequest)
+            else {}
+        ),
     )
 
     return {
@@ -233,7 +248,7 @@ async def search_knowledge(request: SearchRequest, _: User = Depends(require_use
 @router.get("/documents")
 async def list_documents(_: User = Depends(require_admin)):
     """获取文档列表"""
-    kb = get_knowledge_base()
+    kb = await asyncio.to_thread(get_knowledge_base)
     stats = await kb.async_get_stats()
 
     doc_list = await kb.async_list_documents()
@@ -249,32 +264,68 @@ async def list_documents(_: User = Depends(require_admin)):
 
 
 @router.patch("/documents/{document_id}")
-async def update_document(document_id: str, request: DocumentUpdateRequest, _: User = Depends(require_admin)):
+async def update_document(
+    document_id: str, request: DocumentUpdateRequest, _: User = Depends(require_admin)
+):
     """以新版本更新文档，旧版本软删除并从检索索引中移除。"""
     if request.content is not None and not request.content.strip():
         raise HTTPException(status_code=400, detail="内容不能为空")
-    result = await get_knowledge_base().async_update_document(document_id, **request.model_dump(exclude_unset=True))
+    from app.repositories.knowledge_repository import KnowledgeConflict
+
+    try:
+        kb = await asyncio.to_thread(get_knowledge_base)
+        result = await kb.async_update_document(
+            document_id, **request.model_dump(exclude_unset=True)
+        )
+    except KeyError:
+        raise HTTPException(404, "文档不存在") from None
+    except KnowledgeConflict as exc:
+        raise HTTPException(409, str(exc)) from None
     if not result.get("success"):
         raise HTTPException(status_code=404, detail=result.get("message", "文档不存在"))
-    return {"code": 0, "message": "更新成功", "data": result}
+    return {"code": 0, "message": "新版本已排队，原发布版保持可用", "data": result}
 
 
 @router.post("/documents/{document_id}/publish")
-async def publish_document(document_id: str, published: bool = Query(True), _: User = Depends(require_admin)):
-    if not await get_knowledge_base().async_set_document_published(document_id, published):
+async def publish_document(
+    document_id: str,
+    published: bool = Query(True),
+    version: Optional[int] = None,
+    expected_version: Optional[int] = None,
+    _: User = Depends(require_admin),
+):
+    from app.repositories.knowledge_repository import KnowledgeConflict
+
+    try:
+        kb = await asyncio.to_thread(get_knowledge_base)
+        changed = await kb.async_set_document_published(
+            document_id, published, version, expected_version
+        )
+    except KnowledgeConflict as exc:
+        raise HTTPException(409, str(exc)) from None
+    if not changed:
         raise HTTPException(status_code=404, detail="文档不存在")
-    return {"code": 0, "message": "发布状态已更新", "data": {"document_id": document_id, "is_published": published}}
+    return {
+        "code": 0,
+        "message": "发布状态已更新",
+        "data": {"document_id": document_id, "is_published": published},
+    }
 
 
 @router.post("/rebuild-index")
 async def rebuild_index(_: User = Depends(require_admin)):
-    return {"code": 0, "message": "索引重建完成", "data": await get_knowledge_base().async_rebuild_index()}
+    kb = await asyncio.to_thread(get_knowledge_base)
+    return {
+        "code": 0,
+        "message": "索引重建任务已排队",
+        "data": await kb.async_rebuild_index(),
+    }
 
 
 @router.delete("/documents/{document_id}")
 async def delete_document(document_id: str, _: User = Depends(require_admin)):
     """删除文档"""
-    kb = get_knowledge_base()
+    kb = await asyncio.to_thread(get_knowledge_base)
 
     success = await kb.async_delete_document(document_id)
     if not success:
@@ -289,7 +340,7 @@ async def delete_document(document_id: str, _: User = Depends(require_admin)):
 @router.delete("/documents")
 async def clear_all_documents(_: User = Depends(require_admin)):
     """清空所有文档"""
-    kb = get_knowledge_base()
+    kb = await asyncio.to_thread(get_knowledge_base)
     result = await kb.async_clear_all()
 
     return {
@@ -308,32 +359,54 @@ async def batch_upload_documents(
 ):
     """批量上传文件"""
     if len(files) > settings.MAX_BATCH_UPLOAD_FILES:
-        raise HTTPException(status_code=413, detail=f"批量上传数量不能超过 {settings.MAX_BATCH_UPLOAD_FILES} 个")
-    kb = get_knowledge_base()
+        raise HTTPException(
+            status_code=413,
+            detail=f"批量上传数量不能超过 {settings.MAX_BATCH_UPLOAD_FILES} 个",
+        )
+    kb = await asyncio.to_thread(get_knowledge_base)
     results = []
 
     for file in files:
-        file_type = get_file_type(file.filename)
-
+        try:
+            file_type = get_file_type(file.filename or "")
+        except HTTPException:
+            results.append(
+                {
+                    "filename": file.filename,
+                    "success": False,
+                    "error": "unsupported_file_type",
+                }
+            )
+            continue
+        try:
+            content = await read_bounded(file)
+        except HTTPException:
+            results.append(
+                {"filename": file.filename, "success": False, "error": "file_too_large"}
+            )
+            continue
+        if not content:
+            results.append(
+                {"filename": file.filename, "success": False, "error": "file_empty"}
+            )
+            continue
         suffix = f".{file_type}"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            content = await file.read()
-            if len(content) > settings.MAX_UPLOAD_FILE_BYTES:
-                results.append({"filename": file.filename, "success": False, "error": f"文件大小不能超过 {settings.MAX_UPLOAD_FILE_BYTES} 字节"})
-                try:
-                    os.unlink(tmp.name)
-                except OSError:
-                    pass
-                continue
             tmp.write(content)
             temp_path = tmp.name
 
         try:
-            doc_content = parse_file_content(temp_path, file_type)
+            doc_content = await asyncio.wait_for(
+                asyncio.to_thread(parse_file_content, temp_path, file_type), 10
+            )
 
             if doc_content.strip():
                 doc_title = os.path.splitext(file.filename)[0]
-                doc_keywords = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
+                doc_keywords = (
+                    [k.strip() for k in keywords.split(",") if k.strip()]
+                    if keywords
+                    else []
+                )
 
                 result = await kb.async_add_document(
                     title=doc_title,
@@ -343,25 +416,33 @@ async def batch_upload_documents(
                     source=f"batch_upload:{file.filename}",
                 )
 
-                results.append({
-                    "filename": file.filename,
-                    "document_id": result.get("document_id"),
-                    "chunks_count": result.get("chunks_count", 0),
-                    "success": True,
-                })
+                results.append(
+                    {
+                        "filename": file.filename,
+                        "document_id": result.get("document_id"),
+                        "chunks_count": result.get("chunks_count", 0),
+                        "success": bool(result.get("success")),
+                        "status": result.get("status"),
+                        "job_id": result.get("job_id"),
+                    }
+                )
             else:
-                results.append({
-                    "filename": file.filename,
-                    "success": False,
-                    "error": "文件内容为空",
-                })
+                results.append(
+                    {
+                        "filename": file.filename,
+                        "success": False,
+                        "error": "文件内容为空",
+                    }
+                )
 
         except Exception as e:
-            results.append({
-                "filename": file.filename,
-                "success": False,
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "filename": file.filename,
+                    "success": False,
+                    "error": "file_parse_or_persistence_failed",
+                }
+            )
         finally:
             try:
                 os.unlink(temp_path)
@@ -384,7 +465,7 @@ async def batch_upload_documents(
 @router.post("/documents/seed")
 async def seed_default_documents(_: User = Depends(require_admin)):
     """导入默认种子文档"""
-    kb = get_knowledge_base()
+    kb = await asyncio.to_thread(get_knowledge_base)
 
     default_docs = [
         {
@@ -486,7 +567,7 @@ A: 在对话框输入"人工客服"或点击"转人工"按钮，工作日9:00-21
 @router.get("/stats")
 async def get_knowledge_stats(_: User = Depends(require_admin)):
     """获取知识库统计信息"""
-    kb = get_knowledge_base()
+    kb = await asyncio.to_thread(get_knowledge_base)
     stats = await kb.async_get_stats()
     return {
         "code": 0,
@@ -505,11 +586,16 @@ class RagQueryRequest(BaseModel):
 @router.post("/rag-query")
 async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
     """RAG问答：检索+LLM生成回答"""
-    kb = get_knowledge_base()
+    kb = await asyncio.to_thread(get_knowledge_base)
     search_result = await kb.async_search(
         query=request.query,
         top_k=request.top_k,
         similarity_threshold=request.similarity_threshold,
+        **(
+            {"recall_k": request.recall_k, "rerank_k": request.rerank_k}
+            if isinstance(request, SearchRequest)
+            else {}
+        ),
     )
 
     if not search_result.get("results"):
@@ -528,11 +614,13 @@ async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
     sources = []
     for r in search_result["results"]:
         context_chunks.append(f"【{r.get('title', '')}】{r.get('content', '')}")
-        sources.append({
-            "id": r.get("id", ""),
-            "title": r.get("title", ""),
-            "score": r.get("final_score", r.get("vector_score", 0)),
-        })
+        sources.append(
+            {
+                "id": r.get("id", ""),
+                "title": r.get("title", ""),
+                "score": r.get("final_score", r.get("vector_score", 0)),
+            }
+        )
 
     context_text = "\n\n".join(context_chunks)
 
@@ -553,7 +641,10 @@ async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
                 session_id="rag_query",
                 message=prompt,
             )
-            answer = reply or f"根据知识库检索，找到 {len(sources)} 条相关内容，但AI生成回答失败。"
+            answer = (
+                reply
+                or f"根据知识库检索，找到 {len(sources)} 条相关内容，但AI生成回答失败。"
+            )
         except Exception as e:
             logger.error(f"LLM生成失败: {e}")
             answer = f"已检索到 {len(sources)} 条相关内容，但AI回答生成失败。以下是检索到的内容摘要。"
@@ -564,6 +655,9 @@ async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
         else:
             answer = "未找到相关内容。"
 
+    if not await asyncio.to_thread(kb.evidence_is_current, search_result["results"]):
+        answer = "知识版本已变化，请重新查询。"
+        sources = []
     return {
         "code": 0,
         "message": "查询成功",
@@ -576,3 +670,15 @@ async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
             "search_result": search_result,
         },
     }
+
+
+@router.get("/documents/{document_id}/versions/{version}")
+async def document_version(
+    document_id: str, version: int, _: User = Depends(require_admin)
+):
+    try:
+        kb = await asyncio.to_thread(get_knowledge_base)
+        data = await asyncio.to_thread(kb.document_detail, document_id, version)
+    except KeyError:
+        raise HTTPException(404, "文档版本不存在") from None
+    return {"code": 0, "data": data}

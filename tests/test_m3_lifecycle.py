@@ -187,3 +187,44 @@ def test_source_context_keeps_faq_question_table_units_and_exception_tail():
     assert chunks[-1]["source_context"]["table_header"].startswith(
         "| 项目 | 金额（元） |"
     )
+
+
+def test_100_chunks_use_five_worker_batches_with_exact_counts(kb):
+    result = kb.add_document("100 chunks", "X" * 35050)
+    execute(kb, result)
+    assert len(kb._embedding_service.calls) == 5
+    assert all(len(batch) == 20 for batch in kb._embedding_service.calls)
+    with kb._repository.transaction() as db:
+        assert db.scalar(select(func.count()).select_from(KnowledgeChunk)) == 100
+
+
+async def test_real_job_consumer_retry_and_exhaustion_converge(kb, monkeypatch):
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    from sqlalchemy.pool import NullPool
+    from app.services import background_jobs as jobs
+    from app.models.models import KnowledgeVersion
+
+    url = kb._repository.engine.url.set(drivername="sqlite+aiosqlite").render_as_string(
+        hide_password=False
+    )
+    engine = create_async_engine(url, poolclass=NullPool)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    monkeypatch.setattr("app.services.knowledge_base.get_knowledge_base", lambda: kb)
+    try:
+        result = kb.add_document("worker", "真实消费路径")
+        assert await jobs.tick(factory, kind="knowledge_index")
+        assert kb.document_detail(result["document_id"])["status"] == "published"
+        updated = kb.update_document(
+            result["document_id"], content="过期任务", expected_version=1
+        )
+        with kb._repository.transaction() as db:
+            job = db.get(BackgroundJob, updated["job_id"])
+            job.status = "running"
+            job.attempts = job.max_attempts
+            job.lease_expires_at = datetime.utcnow() - timedelta(seconds=1)
+            db.get(KnowledgeVersion, updated["version_id"]).status = "indexing"
+        assert await jobs.claim(factory, kind="knowledge_index") is None
+        assert kb.document_detail(result["document_id"])["status"] == "failed"
+        assert kb.document_detail(result["document_id"])["published_version"] == 1
+    finally:
+        await engine.dispose()

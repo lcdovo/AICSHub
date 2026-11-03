@@ -1,7 +1,7 @@
 """将 ``文档/`` 下的 Markdown 文档按当前 RAG 策略导入知识库。
 
-示例：``python scripts/import_rag_documents.py --clear``
-脚本通过 KnowledgeBaseService 写入持久化数据库，并在 Milvus 可用时同步向量。
+示例：``python scripts/import_rag_documents.py``
+脚本通过 KnowledgeBaseService 写入持久化数据库，排队knowledge_index任务，独立worker验证索引后才发布。
 """
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def import_documents(folder: Path, clear: bool = False) -> dict:
         )
         results.append({"file": path.name, **result})
     stats = kb.get_stats()
-    return {"files": len(files), "success": sum(r.get("success", False) for r in results), "results": results, "stats": stats}
+    return {"files": len(files), "queued": sum(r.get("success", False) for r in results), "status":"queued", "results": results, "stats": stats}
 
 
 def main() -> None:
