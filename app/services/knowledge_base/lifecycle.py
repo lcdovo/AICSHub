@@ -147,7 +147,7 @@ class LifecycleMixin:
             expected_version=old["version"]
             if expected_version is None
             else expected_version,
-            publish=kwargs.get("is_published", True),
+            publish=kwargs.get("is_published", old["publication_enabled"]),
             owner_id=kwargs.get("owner_id"),
         )
 
@@ -203,7 +203,15 @@ class LifecycleMixin:
         for doc in self.list_documents():
             current = self.document_detail(doc["id"])
             results.append(
-                self.update_document(doc["id"], expected_version=current["version"])
+                self.update_document(
+                    doc["id"],
+                    expected_version=current["version"],
+                    is_published=(
+                        current["publish_requested"]
+                        if doc["status"] != "archived"
+                        else False
+                    ),
+                )
             )
         return {"success": True, "status": "queued", "results": results}
 

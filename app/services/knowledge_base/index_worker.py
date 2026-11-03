@@ -53,6 +53,8 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
                 version.number,
                 doc.id,
             )
+        if settings.USE_MILVUS and vector_store is None:
+            raise RuntimeError("required_milvus_unavailable")
         chunks = source_chunks(content)
         if not chunks or len(chunks) > 10000:
             raise ValueError("chunk_count_invalid")
@@ -125,7 +127,11 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
                 metadata,
             )
             version.status, version.error_code = "ready", None
-            if version.publish_requested and doc.version == number:
+            if (
+                version.publish_requested
+                and doc.version == number
+                and doc.lifecycle_status != "archived"
+            ):
                 doc.published_version = number
                 doc.is_published = True
                 doc.lifecycle_status = "published"

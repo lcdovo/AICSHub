@@ -191,6 +191,8 @@ class KnowledgeRepository:
                 "embedding_fingerprint": item.embedding_fingerprint,
                 "embedding_metadata": item.embedding_metadata,
                 "publish_requested": item.publish_requested,
+                "publication_enabled": doc.lifecycle_status != "archived"
+                and (doc.published_version is not None or item.publish_requested),
             }
 
     def publish(self, document_id, published=True, version=None, expected_version=None):
@@ -290,9 +292,13 @@ class KnowledgeRepository:
                     "source": versions[d.id].source if d.id in versions else d.source,
                     "version": d.version,
                     "published_version": d.published_version,
-                    "status": versions[d.id].status
-                    if d.id in versions
-                    else d.lifecycle_status,
+                    "status": "archived"
+                    if d.lifecycle_status == "archived"
+                    else (
+                        versions[d.id].status
+                        if d.id in versions
+                        else d.lifecycle_status
+                    ),
                     "error_code": versions[d.id].error_code
                     if d.id in versions
                     else None,
@@ -302,6 +308,7 @@ class KnowledgeRepository:
                     )
                     or [],
                     "created_at": d.created_at.isoformat() if d.created_at else None,
+                    "updated_at": d.updated_at.isoformat() if d.updated_at else None,
                 }
                 for d in docs
             ]

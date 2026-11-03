@@ -228,3 +228,50 @@ async def test_real_job_consumer_retry_and_exhaustion_converge(kb, monkeypatch):
         assert kb.document_detail(result["document_id"])["published_version"] == 1
     finally:
         await engine.dispose()
+
+
+def test_unpublish_and_rebuild_do_not_reactivate_document(kb):
+    result = kb.add_document("发布控制", "合成条款")
+    execute(kb, result)
+    assert kb.set_document_published(result["document_id"], False)
+    assert kb.list_documents()[0]["status"] == "archived"
+    rebuilt = kb.rebuild_index()["results"][0]
+    execute(kb, rebuilt)
+    assert kb.document_detail(result["document_id"])["published_version"] is None
+    assert kb._repository.snapshot()[1] == []
+
+
+def test_configured_milvus_outage_cannot_publish_new_version(kb, monkeypatch):
+    from app.config.config import settings
+
+    first = kb.add_document("旧版", "原发布合成条款")
+    execute(kb, first)
+    updated = kb.update_document(
+        first["document_id"], content="不得发布新条款", expected_version=1
+    )
+    monkeypatch.setattr(settings, "USE_MILVUS", True)
+    execute(kb, updated)
+    detail = kb.document_detail(first["document_id"])
+    assert detail["status"] == "failed" and detail["published_version"] == 1
+
+
+def test_unpublish_during_index_and_later_edit_do_not_implicitly_publish(kb):
+    first = kb.add_document("发布控制", "原合成正文")
+    execute(kb, first)
+    next = kb.update_document(
+        first["document_id"], content="索引中的正文", expected_version=1
+    )
+
+    class UnpublishDuringIndex:
+        def write(self, *args):
+            kb.set_document_published(first["document_id"], False)
+
+    kb._vector_store = UnpublishDuringIndex()
+    execute(kb, next)
+    assert kb.document_detail(first["document_id"])["published_version"] is None
+    kb._vector_store = None
+    later = kb.update_document(
+        first["document_id"], content="未发布文档后续编辑", expected_version=2
+    )
+    execute(kb, later)
+    assert kb.document_detail(first["document_id"])["published_version"] is None
