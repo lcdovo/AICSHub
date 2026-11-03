@@ -44,7 +44,7 @@ class ConservativeQueryRewriter:
 
         previous = self._previous_user_message(original, messages or [])
         if not previous:
-            return QueryRewriteResult(original, original, False, "no_previous_user_query", 1.0, True)
+            return QueryRewriteResult(original, original, False, "no_previous_user_query", 1.0, False)
 
         # 先剥掉标点再匹配：避免"价格呢？""大概多久？"因句尾标点导致 endswith 失配。
         compact = re.sub(r"[？?!！。，,、～~·:：]+", "", original.replace(" ", ""))

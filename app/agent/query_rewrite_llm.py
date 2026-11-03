@@ -61,10 +61,10 @@ class LLMQueryRewriter:
         # 规则已明确判定"无需改写"：直接短路返回，不再调 LLM 复审。
         # ① self_contained_query：问题字面完整可独立检索（如"机械键盘的轴体
         #    怎么换"），LLM 复审大概率也返回不改写，只为它串行多花 1~3s 浪费。
-        # ② no_previous_user_query：messages 里找不到上一条 user 消息，属单轮
-        #    首问（无上文可拼）。LLM 同样拿不到历史上下文，无法补全，纯属浪费。
-        if rule.reason in ("self_contained_query", "no_previous_user_query"):
+        if rule.reason == "self_contained_query":
             return rule
+        if rule.reason == "no_previous_user_query":
+            return await self._rewrite_with_llm(original, messages, collected_info) or rule
 
         # 规则命中"需要改写"（reference_with_context / short_follow_up）：
         # 按复杂度分流——简单指代规则拼接已足够（零延迟），复杂场景才由 LLM
@@ -97,12 +97,10 @@ class LLMQueryRewriter:
             return None
 
         history = self._recent_user_messages(original, messages, self._HISTORY_TURNS)
-        if not history:
-            return None
 
         info = collected_info or {}
         order_id = str(info.get("order_id") or "").strip()
-        history_text = "\n".join(history)[: self._MAX_HISTORY_CHARS]
+        history_text = "\n".join(history)[: self._MAX_HISTORY_CHARS] or "无历史；不要编造省略的对象，无法补全时返回不改写。"
         user_text = (
             f"对话历史（按时间先后）：\n{history_text}\n\n当前追问：{original}"
             + (f"\n已知信息：订单号 {order_id}" if order_id else "")

@@ -209,6 +209,13 @@ class EnhancedIntentRecognizer:
             ):
                 keyword_result.needs_llm_fallback = True
 
+        # 短输入含领域/负面线索但不足以确定诉求时，保持澄清与模型兜底机会；
+        # 这不授权动作，副作用仍必须经过独立参数及确认门禁。
+        if ((keyword_result.needs_clarification or keyword_result.intent == "complaint") and len(message.strip()) <= 5
+                and not self._is_non_domain_template(message)
+                and any(cue in message for cue in ("退", "坑", "差", "坏"))):
+            keyword_result.needs_llm_fallback = True
+            keyword_result.needs_clarification = True
         return keyword_result
 
     def _is_non_domain_template(self, message: str) -> bool:
