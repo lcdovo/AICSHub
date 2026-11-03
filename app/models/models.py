@@ -509,3 +509,44 @@ class KnowledgeEpoch(Base):
     __tablename__ = "knowledge_epoch"
     id = Column(Integer, primary_key=True)
     value = Column(Integer, nullable=False, default=0)
+
+
+class ModelBudgetDay(Base):
+    __tablename__="model_budget_days"
+    key=Column(String(100),primary_key=True)
+    tokens=Column(Integer,nullable=False,default=0)
+    cost=Column(Numeric(18,8),nullable=False,default=0)
+
+
+class ModelCallRecord(Base):
+    __tablename__="model_calls"
+    id=Column(String(36),primary_key=True)
+    user_id=Column(Integer,nullable=False,index=True)
+    run_id=Column(String(100),nullable=False,index=True)
+    purpose=Column(String(50),nullable=False,index=True)
+    provider=Column(String(100),nullable=False)
+    model=Column(String(160),nullable=False)
+    model_version=Column(String(160),nullable=True)
+    price_snapshot=Column(JSON,nullable=True)
+    route_version=Column(String(80),nullable=False)
+    schema_version=Column(String(100),nullable=False)
+    prompt_version=Column(String(80),nullable=False)
+    status=Column(String(30),nullable=False,index=True)
+    reserved_tokens=Column(Integer,nullable=False)
+    input_tokens=Column(Integer,nullable=True)
+    output_tokens=Column(Integer,nullable=True)
+    reserved_cost=Column(Numeric(18,8),nullable=False)
+    cost=Column(Numeric(18,8),nullable=True)
+    usage_basis=Column(String(30),nullable=False,default="reserved_estimate")
+    latency_ms=Column(Integer,nullable=True)
+    error_code=Column(String(80),nullable=True)
+    created_at=Column(DateTime,nullable=False,default=datetime.utcnow)
+    expires_at=Column(DateTime,nullable=False,index=True)
+    request_hash=Column(String(64),nullable=False)
+
+
+class ModelConcurrencySlot(Base):
+    __tablename__="model_concurrency_slots"
+    id=Column(Integer,primary_key=True)
+    call_id=Column(String(36),nullable=True)
+    expires_at=Column(DateTime,nullable=True)

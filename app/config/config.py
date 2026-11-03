@@ -68,6 +68,12 @@ class Settings(BaseSettings):
     LLM_LOCAL_MODEL: str = Field(default="")
     # 全局并发闸门：限制同一进程内同时进行的 LLM 调用数，防止多 worker 汇聚
     # 后打爆外部供应商的 RPM/TPM 配额（429）与连接池。
+    REQUEST_UNDERSTANDING_MODE: str = Field(default="rules", pattern="^(rules|shadow|model)$")
+    REQUEST_UNDERSTANDING_VERSION: str = Field(default="understanding.v1")
+    REQUEST_UNDERSTANDING_PERCENTAGE: int = Field(default=100,ge=0,le=100)
+    LLM_GATEWAY_ENABLED: bool = Field(default=False)
+    LLM_UNDERSTANDING_MAX_TOKENS: int = Field(default=500,ge=128,le=1024)
+    LLM_PRICE_VERIFIED: bool = Field(default=False)
     LLM_MAX_CONCURRENCY: int = Field(default=8, ge=1, le=128)
     # LLM governance: limits are deliberately conservative in local/demo mode.
     LLM_PROMPT_VERSION: str = Field(default="v1", min_length=1, max_length=50)

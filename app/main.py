@@ -167,8 +167,10 @@ app.include_router(users_router)
 app.include_router(sessions_router)
 app.include_router(tickets_router)
 app.include_router(chat_router)
+from app.routers.model_calls import router as model_calls_router
 from app.routers.jobs import router as jobs_router
 app.include_router(jobs_router)
+app.include_router(model_calls_router)
 app.include_router(analytics_router)
 app.include_router(feedback_router)
 app.include_router(knowledge_router)

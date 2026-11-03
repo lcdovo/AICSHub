@@ -2,6 +2,7 @@
 LLM 服务 - Phase 3 增强版
 支持多模型切换、降级策略、重试机制、调用统计
 """
+
 import asyncio
 from contextvars import ContextVar
 from copy import deepcopy
@@ -16,7 +17,16 @@ from langchain_openai import ChatOpenAI
 
 from app.config.config import settings
 from app.agent.intent import EnhancedIntentRecognizer
-from app.services.llm_governance import BudgetManager, BudgetPolicy, CostEstimator, SensitiveDataRedactor, PromptInjectionScanner, ToolPolicy, build_default_registry
+from app.services.llm_governance import (
+    BudgetDecision,
+    BudgetManager,
+    BudgetPolicy,
+    CostEstimator,
+    SensitiveDataRedactor,
+    PromptInjectionScanner,
+    ToolPolicy,
+    build_default_registry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +61,13 @@ class LLMResponse(BaseModel):
 
     reply: str = Field(default="", description="给用户的中文回复")
     intent: Literal[
-        "query_order", "refund", "complaint", "technical",
-        "promotion", "human", "general"
+        "query_order",
+        "refund",
+        "complaint",
+        "technical",
+        "promotion",
+        "human",
+        "general",
     ] = "general"
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     citations: List[str] = Field(default_factory=list)
@@ -60,16 +75,25 @@ class LLMResponse(BaseModel):
     # ---- 二合一自检字段（随生成一次返回）----
     grounded: bool = Field(default=True, description="回答关键论断是否都有检索证据支撑")
     fact_score: float = Field(default=1.0, ge=0.0, le=1.0, description="综合可信度 0-1")
-    has_unsupported_claim: bool = Field(default=False, description="是否存在证据之外的臆造信息")
-    refuse_recommended: bool = Field(default=False, description="是否建议采用'无据不答'拒答话术")
+    has_unsupported_claim: bool = Field(
+        default=False, description="是否存在证据之外的臆造信息"
+    )
+    refuse_recommended: bool = Field(
+        default=False, description="是否建议采用'无据不答'拒答话术"
+    )
 
 
 class IntentClassification(BaseModel):
     """Structured intent contract used only for low-confidence fallback."""
 
     intent: Literal[
-        "query_order", "refund", "complaint", "technical",
-        "promotion", "human", "general"
+        "query_order",
+        "refund",
+        "complaint",
+        "technical",
+        "promotion",
+        "human",
+        "general",
     ] = "general"
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     need_clarification: bool = False
@@ -87,7 +111,9 @@ class ModelConfig:
         is_local: bool = False,
         priority: int = 0,
         thinking_mode: Literal["", "enabled", "disabled"] = "",
-        structured_output_method: Literal["json_schema", "function_calling"] = "json_schema",
+        structured_output_method: Literal[
+            "json_schema", "function_calling"
+        ] = "json_schema",
     ):
         self.name = name
         self.api_base = api_base
@@ -126,7 +152,9 @@ class CircuitBreaker:
         return False
 
     def record_failure(self, model_name: str):
-        state = self.states.setdefault(model_name, {"failures": 0, "open": False, "last_failure": 0})
+        state = self.states.setdefault(
+            model_name, {"failures": 0, "open": False, "last_failure": 0}
+        )
         state["failures"] = state.get("failures", 0) + 1
         state["last_failure"] = time.time()
 
@@ -156,12 +184,31 @@ class LLMService:
         self.circuit_breaker = CircuitBreaker()
         self._chat_models: Dict[str, ChatOpenAI] = {}
         self.call_stats: Dict[str, Dict[str, int]] = {}
-        self.registry = build_default_registry(settings.LLM_PROMPT_VERSION, settings.LLM_MODEL_VERSION or settings.LLM_MODEL, settings.LLM_SCHEMA_VERSION, settings.LLM_ROUTE_VERSION)
+        self.registry = build_default_registry(
+            settings.LLM_PROMPT_VERSION,
+            settings.LLM_MODEL_VERSION or settings.LLM_MODEL,
+            settings.LLM_SCHEMA_VERSION,
+            settings.LLM_ROUTE_VERSION,
+        )
         self.redactor = SensitiveDataRedactor()
         self.injection_scanner = PromptInjectionScanner()
         self.tool_policy = ToolPolicy()
-        self.budget_manager = BudgetManager(BudgetPolicy(max_tokens=settings.LLM_MAX_TOKENS, max_cost_usd=settings.LLM_MAX_COST_USD, user_daily_tokens=settings.LLM_DAILY_USER_TOKEN_BUDGET, user_daily_cost_usd=settings.LLM_DAILY_USER_COST_USD, max_latency_seconds=settings.LLM_REQUEST_TIMEOUT_SECONDS), CostEstimator(settings.LLM_INPUT_PRICE_PER_1K_USD, settings.LLM_OUTPUT_PRICE_PER_1K_USD))
-        self._call_metadata: ContextVar[Optional[Dict[str, Any]]] = ContextVar("llm_call_metadata", default=None)
+        self.budget_manager = BudgetManager(
+            BudgetPolicy(
+                max_tokens=settings.LLM_MAX_TOKENS,
+                max_cost_usd=settings.LLM_MAX_COST_USD,
+                user_daily_tokens=settings.LLM_DAILY_USER_TOKEN_BUDGET,
+                user_daily_cost_usd=settings.LLM_DAILY_USER_COST_USD,
+                max_latency_seconds=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+            ),
+            CostEstimator(
+                settings.LLM_INPUT_PRICE_PER_1K_USD,
+                settings.LLM_OUTPUT_PRICE_PER_1K_USD,
+            ),
+        )
+        self._call_metadata: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+            "llm_call_metadata", default=None
+        )
         # 全局并发闸门：限制同一进程内同时进行的 LLM 调用数（asyncio.Semaphore），
         # 防止多 worker 汇聚后打爆外部供应商 RPM/TPM 配额（429）与连接池。
         self._semaphore = asyncio.Semaphore(max(1, settings.LLM_MAX_CONCURRENCY))
@@ -195,9 +242,8 @@ class LLMService:
 
         # 备用模型必须同时指定 base 与 model 才启用（避免只配了地址却默认
         # 落到 gpt-4o-mini 造成误用）；任一为空则主模型单点，故障时整体降级。
-        if (
-            getattr(settings, "LLM_BACKUP_BASE", "")
-            and getattr(settings, "LLM_BACKUP_MODEL", "")
+        if getattr(settings, "LLM_BACKUP_BASE", "") and getattr(
+            settings, "LLM_BACKUP_MODEL", ""
         ):
             backup = ModelConfig(
                 name="backup",
@@ -213,9 +259,8 @@ class LLMService:
         # 只参与 classify_intent / run_structured(prefer_local=True) 的本地优先链，
         # 不进生成链 self.models（回复生成与 judge 仍走主链外接）。
         # 本地推理服务（vLLM/Ollama）不校验 key，api_key 用占位符占位。
-        if (
-            getattr(settings, "LLM_LOCAL_BASE", "")
-            and getattr(settings, "LLM_LOCAL_MODEL", "")
+        if getattr(settings, "LLM_LOCAL_BASE", "") and getattr(
+            settings, "LLM_LOCAL_MODEL", ""
         ):
             self.local_model = ModelConfig(
                 name="local",
@@ -238,6 +283,18 @@ class LLMService:
         return list(self.models)
 
     async def close(self):
+        seen = set()
+        for model in self._chat_models.values():
+            for name in ("root_async_client", "root_client"):
+                client = getattr(model, name, None)
+                if client is None or id(client) in seen:
+                    continue
+                seen.add(id(client))
+                close = getattr(client, "close", None)
+                if callable(close):
+                    result = close()
+                    if __import__("inspect").isawaitable(result):
+                        await result
         self._chat_models.clear()
 
     def detect_intent(self, message: str) -> str:
@@ -249,7 +306,9 @@ class LLMService:
         try:
             return EnhancedIntentRecognizer().recognize(message).intent
         except Exception:
-            logger.warning("detect_intent 复用规则识别失败，兜底 general", exc_info=True)
+            logger.warning(
+                "detect_intent 复用规则识别失败，兜底 general", exc_info=True
+            )
             return "general"
 
     def is_available(self) -> bool:
@@ -260,8 +319,7 @@ class LLMService:
         主链（外接）需真实 key；本地模型不校验 key，base+model 配置齐即视为可用。
         """
         main_available = any(
-            bool(m.api_key) and m.api_key != "your-api-key-here"
-            for m in self.models
+            bool(m.api_key) and m.api_key != "your-api-key-here" for m in self.models
         )
         local_available = (
             self.local_model is not None
@@ -283,33 +341,14 @@ class LLMService:
         if not self.is_available():
             return None
 
-        messages = [
-            SystemMessage(content=_ensure_json_hint(
-                "你是客服意图分类器。只输出结构化结果。"
-                "意图只能是 query_order、refund、complaint、technical、"
-                "promotion、human、general。置信度范围为 0 到 1；"
-                "无法确定时使用 general 并将 need_clarification 设为 true。"
-            )),
-            HumanMessage(content=self.redactor.redact(message)),
-        ]
-        for attempt, model in enumerate(self._analytic_models(prefer_local=True)):
-            if not model.api_key or not self.circuit_breaker.can_execute(model.name):
-                continue
-            try:
-                structured = self._with_structured_output(self._get_chat_model(
-                    model, temperature=ANALYTIC_TEMPERATURE, max_tokens=ANALYTIC_MAX_TOKENS
-                ), IntentClassification, model)
-                async with self._semaphore:
-                    result = await structured.ainvoke(messages)
-                parsed = result if isinstance(result, IntentClassification) else IntentClassification.model_validate(result)
-                self.circuit_breaker.record_success(model.name)
-                return parsed.model_dump()
-            except Exception as exc:
-                self.circuit_breaker.record_failure(model.name)
-                logger.warning("意图分类模型调用失败: %s", exc)
-                # 指数退避后再尝试下一模型，避免瞬时故障时蜂拥重试。
-                await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
-        return None
+        prompt = "你是客服意图分类器。返回query_order/refund/complaint/technical/promotion/human/general、confidence和need_clarification。"
+        payload = __import__("json").dumps(
+            {"current": message, "history": (context or [])[-6:]}, ensure_ascii=False
+        )
+        parsed = await self.run_structured(
+            prompt, payload, IntentClassification, tags=["intent"], prefer_local=True
+        )
+        return parsed.model_dump() if parsed else None
 
     async def run_structured(
         self,
@@ -319,6 +358,7 @@ class LLMService:
         *,
         tags: Optional[list[str]] = None,
         prefer_local: bool = False,
+        max_tokens: int | None = None,
     ) -> Optional[BaseModel]:
         """Run one structured (JSON-schema) completion against the active models.
 
@@ -336,26 +376,101 @@ class LLMService:
             SystemMessage(content=_ensure_json_hint(system_prompt)),
             HumanMessage(content=self.redactor.redact(user_text)),
         ]
-        for attempt, model in enumerate(self._analytic_models(prefer_local=prefer_local)):
+        for attempt, model in enumerate(
+            self._analytic_models(prefer_local=prefer_local)
+        ):
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
-                structured_model = self._with_structured_output(self._get_chat_model(
-                    model, temperature=ANALYTIC_TEMPERATURE, max_tokens=ANALYTIC_MAX_TOKENS
-                ), contract, model)
-                async with self._semaphore:
-                    result = await structured_model.ainvoke(
-                        messages,
-                        config={"run_name": "llm_structured", "tags": tags or ["llm_structured"]},
-                    )
-                parsed = result if isinstance(result, contract) else contract.model_validate(result)
+                structured_model = self._with_structured_output(
+                    self._get_chat_model(
+                        model,
+                        temperature=ANALYTIC_TEMPERATURE,
+                        max_tokens=max_tokens or ANALYTIC_MAX_TOKENS,
+                    ),
+                    contract,
+                    model,
+                )
+                result = await self._gateway_invoke(
+                    model,
+                    messages,
+                    structured_model,
+                    (tags or ["structured"])[0],
+                    contract.__name__,
+                    output_limit=max_tokens or ANALYTIC_MAX_TOKENS,
+                    extra_input_tokens=len(
+                        __import__("json").dumps(contract.model_json_schema()).encode()
+                    ),
+                )
+                parsed = (
+                    result
+                    if isinstance(result, contract)
+                    else contract.model_validate(result)
+                )
                 self.circuit_breaker.record_success(model.name)
                 return parsed
             except Exception as exc:
                 self.circuit_breaker.record_failure(model.name)
-                logger.warning("结构化 LLM 调用失败 (%s): %s", getattr(contract, "__name__", "contract"), exc)
-                await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
+                logger.warning(
+                    "结构化 LLM 调用失败 (%s): %s",
+                    getattr(contract, "__name__", "contract"),
+                    type(exc).__name__,
+                )
+                await asyncio.sleep(self.RETRY_DELAY * (2**attempt))
         return None
+
+    async def _gateway_invoke(
+        self,
+        model,
+        messages,
+        target,
+        purpose,
+        schema_version="plain",
+        *,
+        user_id=0,
+        run_id=None,
+        output_limit=None,
+        extra_input_tokens=0,
+    ):
+        from app.services.model_gateway import GATEWAY, CALL_CONTEXT, model_context
+
+        async def call():
+            result = await GATEWAY.invoke(
+                self,
+                model,
+                messages,
+                target,
+                purpose,
+                schema_version,
+                output_limit=output_limit,
+                extra_input_tokens=extra_input_tokens,
+            )
+            if (
+                settings.LLM_GATEWAY_ENABLED
+                and isinstance(result, dict)
+                and "parsed" in result
+            ):
+                if result.get("parsing_error") or result["parsed"] is None:
+                    raise ValueError("structured_contract_invalid")
+                self.last_call_metadata.update(
+                    {
+                        "provider_usage": getattr(
+                            result.get("raw"), "usage_metadata", None
+                        )
+                        or {},
+                        "provider": model.name,
+                        "purpose": purpose,
+                    }
+                )
+                return result["parsed"]
+            return result
+
+        if settings.LLM_GATEWAY_ENABLED and CALL_CONTEXT.get() is None:
+            async with model_context(
+                user_id, run_id or "direct:" + __import__("uuid").uuid4().hex
+            ):
+                return await call()
+        return await call()
 
     async def chat(
         self,
@@ -368,7 +483,13 @@ class LLMService:
         intent = self.detect_intent(message)
         injection_patterns = self.injection_scanner.scan(message)
         input_tokens = max(1, len(message) // 4)
-        budget = await self.budget_manager.acheck(user_id, input_tokens, settings.LLM_MAX_TOKENS)
+        budget = (
+            BudgetDecision(True)
+            if settings.LLM_GATEWAY_ENABLED
+            else await self.budget_manager.acheck(
+                user_id, input_tokens, settings.LLM_MAX_TOKENS
+            )
+        )
         self.last_call_metadata = {
             "prompt_version": self.registry.get("prompt").version,
             "model_version": self.registry.get("model").version,
@@ -384,9 +505,15 @@ class LLMService:
         }
         if injection_patterns or not budget.allowed:
             reason = "prompt_injection" if injection_patterns else budget.reason
-            reply = "抱歉，我不能执行修改系统规则、泄露凭据或绕过权限的请求。请描述具体的业务问题。" if injection_patterns else "当前模型预算已用尽，我将使用规则模式继续为您服务。"
+            reply = (
+                "抱歉，我不能执行修改系统规则、泄露凭据或绕过权限的请求。请描述具体的业务问题。"
+                if injection_patterns
+                else "当前模型预算已用尽，我将使用规则模式继续为您服务。"
+            )
             tokens = max(1, len(reply) // 4)
-            await self._record_call_metadata(user_id, "rule_fallback", tokens, started, degraded=True, reason=reason)
+            await self._record_call_metadata(
+                user_id, "rule_fallback", tokens, started, degraded=True, reason=reason
+            )
             return reply, intent, tokens
 
         for attempt in range(len(self.models)):
@@ -403,30 +530,75 @@ class LLMService:
                     )
                     self.circuit_breaker.record_success(model.name)
                     self._record_stats(model.name, True)
-                    await self._record_call_metadata(user_id, model.name, token_count, started)
+                    await self._record_call_metadata(
+                        user_id, model.name, token_count, started
+                    )
                     return reply, model_intent or intent, token_count
 
             except Exception as e:
-                logger.warning(f"模型 {model.name} 调用失败: {e}")
+                logger.warning("模型 %s 调用失败: %s", model.name, type(e).__name__)
                 self.circuit_breaker.record_failure(model.name)
                 self._record_stats(model.name, False)
 
                 if attempt < len(self.models) - 1:
                     logger.info("降级到下一个模型")
                     # 指数退避后再降级，避免瞬时故障时对下一模型蜂拥重试。
-                    await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
+                    await asyncio.sleep(self.RETRY_DELAY * (2**attempt))
                     continue
 
         # 所有模型均不可用：返回空回复，由上层降级到默认话术。
-        await self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")
+        await self._record_call_metadata(
+            user_id,
+            "rule_fallback",
+            0,
+            started,
+            degraded=True,
+            reason="provider_unavailable",
+        )
         return "", intent, 0
 
-    async def _record_call_metadata(self, user_id: int, model_name: str, tokens: int, started: float, *, degraded: bool = False, reason: str | None = None) -> None:
-        input_tokens = max(1, len(self.last_call_metadata.get("input_summary", "")) // 4)
-        cost = self.budget_manager.estimator.estimate(input_tokens, tokens)
-        await self.budget_manager.aconsume(user_id, tokens, cost)
+    async def _record_call_metadata(
+        self,
+        user_id: int,
+        model_name: str,
+        tokens: int,
+        started: float,
+        *,
+        degraded: bool = False,
+        reason: str | None = None,
+    ) -> None:
+        if settings.LLM_GATEWAY_ENABLED:
+            usage = self.last_call_metadata.get("provider_usage", {})
+            input_tokens = usage.get("input_tokens", 0)
+            output_tokens = usage.get("output_tokens", 0)
+            cost = (
+                self.budget_manager.estimator.estimate(input_tokens, output_tokens)
+                if usage
+                else None
+            )
+            self.last_call_metadata["cost_basis"] = (
+                "provider_usage_configured_rates"
+                if usage
+                else "unknown_reserved_see_model_calls"
+            )
+        else:
+            input_tokens = max(
+                1, len(self.last_call_metadata.get("input_summary", "")) // 4
+            )
+            cost = self.budget_manager.estimator.estimate(input_tokens, tokens)
+            await self.budget_manager.aconsume(user_id, tokens, cost)
         route = "rule_fallback" if model_name == "rule_fallback" else "external"
-        self.last_call_metadata.update({"model": model_name, "route": route, "tokens": max(0, int(tokens)), "cost_usd": cost, "latency_ms": int((time.perf_counter() - started) * 1000), "degraded": degraded, "degraded_reason": reason})
+        self.last_call_metadata.update(
+            {
+                "model": model_name,
+                "route": route,
+                "tokens": max(0, int(tokens)),
+                "cost_usd": cost,
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+                "degraded": degraded,
+                "degraded_reason": reason,
+            }
+        )
 
     def get_last_call_metadata(self) -> Dict[str, Any]:
         return deepcopy(self.last_call_metadata)
@@ -449,15 +621,18 @@ class LLMService:
             else chat_model
         )
         response = None
-        async with self._semaphore:
-            response = await structured_model.ainvoke(
-                messages,
-                config={
-                    "run_name": "customer_service_chat",
-                    "tags": ["customer-service", model.name],
-                    "metadata": {"user_id": user_id, "session_id": session_id},
-                },
-            )
+        response = await self._gateway_invoke(
+            model,
+            messages,
+            structured_model,
+            "generation",
+            LLMResponse.__name__,
+            user_id=user_id,
+            run_id=session_id,
+            extra_input_tokens=len(
+                __import__("json").dumps(LLMResponse.model_json_schema()).encode()
+            ),
+        )
 
         if isinstance(response, LLMResponse):
             reply = response.reply
@@ -489,7 +664,13 @@ class LLMService:
         intent = self.detect_intent(message)
         injection_patterns = self.injection_scanner.scan(message)
         input_tokens = max(1, len(message) // 4)
-        budget = await self.budget_manager.acheck(user_id, input_tokens, settings.LLM_MAX_TOKENS)
+        budget = (
+            BudgetDecision(True)
+            if settings.LLM_GATEWAY_ENABLED
+            else await self.budget_manager.acheck(
+                user_id, input_tokens, settings.LLM_MAX_TOKENS
+            )
+        )
         self.last_call_metadata = {
             "prompt_version": self.registry.get("prompt").version,
             "model_version": self.registry.get("model").version,
@@ -513,10 +694,21 @@ class LLMService:
             )
             for index in range(0, len(reply), 24):
                 await asyncio.sleep(0)
-                yield reply[index:index + 24]
-            await self._record_call_metadata(user_id, "rule_fallback", len(reply) // 4, started, degraded=True, reason=reason)
+                yield reply[index : index + 24]
+            await self._record_call_metadata(
+                user_id,
+                "rule_fallback",
+                len(reply) // 4,
+                started,
+                degraded=True,
+                reason=reason,
+            )
             self.last_call_metadata["stream_provider"] = "rule_fallback"
-            self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
+            self.last_call_metadata["structured_output"] = {
+                "reply": reply,
+                "intent": intent,
+                "confidence": 0.0,
+            }
             return
 
         messages = self._build_messages(message, context)
@@ -526,39 +718,100 @@ class LLMService:
             try:
                 chat_model = self._get_chat_model(model, streaming=True)
                 chunks: list[str] = []
-                async with self._semaphore:
-                    async for chunk in chat_model.astream(
-                        messages,
-                        config={
-                            "run_name": "customer_service_chat_stream",
-                            "tags": ["customer-service", "stream", model.name],
-                            "metadata": {"user_id": user_id, "session_id": session_id},
-                        },
-                    ):
-                        text = self._message_content(chunk)
-                        if text:
-                            chunks.append(text)
-                            yield text
+                async for chunk in self._gateway_stream(
+                    model, messages, chat_model, user_id, session_id
+                ):
+                    text = self._message_content(chunk)
+                    if text:
+                        chunks.append(text)
+                        yield text
                 reply = "".join(chunks)
                 self.circuit_breaker.record_success(model.name)
                 self._record_stats(model.name, True)
-                await self._record_call_metadata(user_id, model.name, max(1, len(reply) // 4), started)
+                await self._record_call_metadata(
+                    user_id, model.name, max(1, len(reply) // 4), started
+                )
                 self.last_call_metadata["stream_provider"] = "langchain"
-                self.last_call_metadata["structured_output"] = {"reply": reply, "intent": intent, "confidence": 0.0}
+                self.last_call_metadata["structured_output"] = {
+                    "reply": reply,
+                    "intent": intent,
+                    "confidence": 0.0,
+                }
                 return
             except Exception as exc:
-                logger.warning("模型流式调用失败: %s", exc)
+                logger.warning("模型流式调用失败: %s", type(exc).__name__)
                 self.circuit_breaker.record_failure(model.name)
                 self._record_stats(model.name, False)
                 # 指数退避后再尝试下一模型，避免瞬时故障时蜂拥重试。
-                await asyncio.sleep(self.RETRY_DELAY * (2 ** attempt))
+                await asyncio.sleep(self.RETRY_DELAY * (2**attempt))
 
         # 所有模型均不可用：不输出内容，由上层降级到默认话术。
-        await self._record_call_metadata(user_id, "rule_fallback", 0, started, degraded=True, reason="provider_unavailable")
+        await self._record_call_metadata(
+            user_id,
+            "rule_fallback",
+            0,
+            started,
+            degraded=True,
+            reason="provider_unavailable",
+        )
         self.last_call_metadata["stream_provider"] = "none"
-        self.last_call_metadata["structured_output"] = {"reply": "", "intent": intent, "confidence": 0.0}
+        self.last_call_metadata["structured_output"] = {
+            "reply": "",
+            "intent": intent,
+            "confidence": 0.0,
+        }
 
-    def _build_messages(self, message: str, context: Optional[list] = None, *, force_json: bool = False) -> list:
+    async def _gateway_stream(self, model, messages, chat_model, user_id, run_id):
+        from app.services.model_gateway import GATEWAY, CALL_CONTEXT, model_context
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def context():
+            if settings.LLM_GATEWAY_ENABLED and CALL_CONTEXT.get() is None:
+                async with model_context(user_id, run_id):
+                    yield
+            else:
+                yield
+
+        async with context():
+            ticket = (
+                await GATEWAY.reserve(
+                    model,
+                    messages,
+                    "generation_stream",
+                    settings.LLM_MAX_TOKENS,
+                    "stream",
+                )
+                if settings.LLM_GATEWAY_ENABLED
+                else None
+            )
+            aggregate = None
+            try:
+                timeout = (min(self.TIMEOUT, max(0.01, ticket["deadline"] - time.monotonic()))
+                           if ticket else self.TIMEOUT)
+                async with asyncio.timeout(timeout):
+                    async with self._semaphore:
+                        async for chunk in chat_model.astream(
+                            messages,
+                            config={
+                                "run_name": "customer_service_chat_stream",
+                                "metadata": {"user_id": user_id, "session_id": run_id},
+                            },
+                        ):
+                            aggregate = (
+                                chunk if aggregate is None else aggregate + chunk
+                            )
+                            yield chunk
+                if ticket:
+                    await GATEWAY.settle(ticket, aggregate)
+            except BaseException as exc:
+                if ticket:
+                    await asyncio.shield(GATEWAY.settle(ticket, error=exc))
+                raise
+
+    def _build_messages(
+        self, message: str, context: Optional[list] = None, *, force_json: bool = False
+    ) -> list:
         """构建模型消息。
 
         force_json 仅用于结构化输出调用（非流式答复走 with_structured_output、
@@ -581,9 +834,17 @@ class LLMService:
         return messages
 
     @staticmethod
-    def _with_structured_output(chat_model: ChatOpenAI, contract: type[BaseModel], model: ModelConfig):
+    def _with_structured_output(
+        chat_model: ChatOpenAI, contract: type[BaseModel], model: ModelConfig
+    ):
+        if settings.LLM_GATEWAY_ENABLED:
+            return chat_model.with_structured_output(
+                contract, method=model.structured_output_method, include_raw=True
+            )
         if model.structured_output_method == "function_calling":
-            return chat_model.with_structured_output(contract, method="function_calling")
+            return chat_model.with_structured_output(
+                contract, method="function_calling"
+            )
         return chat_model.with_structured_output(contract)
 
     def _get_chat_model(
@@ -610,7 +871,9 @@ class LLMService:
             max_retries=0,
             max_completion_tokens=max_tokens,
             streaming=streaming,
-            extra_body={"thinking": {"type": model.thinking_mode}} if model.thinking_mode else None,
+            extra_body={"thinking": {"type": model.thinking_mode}}
+            if model.thinking_mode
+            else None,
         )
         self._chat_models[cache_key] = chat_model
         return chat_model
@@ -629,7 +892,10 @@ class LLMService:
     def _message_token_count(message: Any, fallback: int = 0) -> int:
         usage = getattr(message, "usage_metadata", None) or {}
         if usage:
-            return int(usage.get("total_tokens", 0) or (usage.get("input_tokens", 0) + usage.get("output_tokens", 0)))
+            return int(
+                usage.get("total_tokens", 0)
+                or (usage.get("input_tokens", 0) + usage.get("output_tokens", 0))
+            )
         metadata = getattr(message, "response_metadata", None) or {}
         token_usage = metadata.get("token_usage", metadata.get("usage", {})) or {}
         return int(token_usage.get("total_tokens", fallback) or fallback)
@@ -644,7 +910,9 @@ class LLMService:
 6. 直接输出给用户看的回复正文，不要输出 JSON、不要包含字段名或代码块"""
 
     def _record_stats(self, model_name: str, success: bool):
-        stats = self.call_stats.setdefault(model_name, {"success": 0, "failure": 0, "total": 0})
+        stats = self.call_stats.setdefault(
+            model_name, {"success": 0, "failure": 0, "total": 0}
+        )
         stats["total"] += 1
         if success:
             stats["success"] += 1
