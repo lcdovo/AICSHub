@@ -83,3 +83,5 @@ RAG节点依赖切片新增：`tests/test_m4_node_dependencies.py`、`docs/M4-NO
 工具观察切片新增：`app/agent/tool_contracts.py`、`tests/test_m4_tool_observations.py`、`docs/M4-STATE-CONTRACT-v1.md`；修改AgentState与工具/人工观察入口。
 
 流程结论切片新增：`app/agent/flow_contracts.py`、`tests/test_m4_flow_contract.py`；修改AgentState、统一理解及意图/检索/响应/人工节点。
+
+测试来源切片新增：`scripts/test_provenance.py`、`tests/test_test_provenance.py`、`docs/TEST-EVIDENCE-v1.md`；修改T0执行器使源码漂移的绿色用例不被误当有效证据。

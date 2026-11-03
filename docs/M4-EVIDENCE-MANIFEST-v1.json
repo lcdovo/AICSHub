@@ -380,6 +380,30 @@
       "sha256": "daf65a0f2461b2c3a8ec62c09cd992c65f90427453f6060b1652b125449c0d7b",
       "bytes": 604,
       "snapshot": "typed-turn-flow-flags"
+    },
+    {
+      "path": "reports/offline/20261104-030630-601855/junit.xml",
+      "sha256": "30f575082fbbb91e79aa497f6c8e35fc9bfe7394bea937aba89d17c88cf78011",
+      "bytes": 2837,
+      "snapshot": "offline-source-provenance"
+    },
+    {
+      "path": "reports/offline/20261104-030630-601855/manifest.json",
+      "sha256": "9d277c4cc7c480f1a5b584055a54e15fb43b4a547cd9a9bd60fca449c8adf8da",
+      "bytes": 1450,
+      "snapshot": "offline-source-provenance"
+    },
+    {
+      "path": "reports/offline/20261104-030630-601855/source-start.json",
+      "sha256": "30c34d8e4da78d8eff35e9ae84cd2c158ab97f734ebd9107bd38c206e26d618d",
+      "bytes": 27139,
+      "snapshot": "offline-source-provenance"
+    },
+    {
+      "path": "reports/offline/20261104-030630-601855/source-end.json",
+      "sha256": "30c34d8e4da78d8eff35e9ae84cd2c158ab97f734ebd9107bd38c206e26d618d",
+      "bytes": 27139,
+      "snapshot": "offline-source-provenance"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

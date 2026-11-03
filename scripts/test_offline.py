@@ -44,6 +44,12 @@ def main() -> int:
     output = root / "reports" / "offline" / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     output.mkdir(parents=True)
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    sys.path.insert(0, str(root))
+    from scripts.test_provenance import snapshot_sources, compare_sources, evidence_exit_code
+    source_start = snapshot_sources(root)
+    (output / "source-start.json").write_text(
+        json.dumps(source_start, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     # 不继承宿主机业务配置；从类声明识别字段，避免手工漏掉新的密钥/服务配置。
     tree = ast.parse((root / "app/config/config.py").read_text(encoding="utf-8-sig"))
     fields = [node.target.id for cls in tree.body if isinstance(cls, ast.ClassDef)
@@ -96,7 +102,8 @@ def main() -> int:
         manifest = {
             "commit": commit, "python": sys.version.split()[0], "environment": "T0",
             "dependencies": {name: version(name) for name in (
-                "pytest", "pytest-asyncio", "SQLAlchemy", "aiosqlite", "fastapi", "langgraph"
+                "pytest", "pytest-asyncio", "SQLAlchemy", "aiosqlite", "fastapi", "langgraph",
+                "langchain-core", "langchain-openai", "openai", "httpx", "pydantic",
             )},
             "arguments": arguments, "network_allowed": False,
             "config_fingerprint": hashlib.sha256(json.dumps(
@@ -109,12 +116,27 @@ def main() -> int:
                     code = int(pytest.main(["-c", str(root / "pytest.ini"),
                                            f"--basetemp={Path(temporary) / 'pytest'}",
                                            f"--junitxml={output / 'junit.xml'}", *arguments]))
-            manifest.update(exit_code=code, blocked_network_operations=len(blocked_connections))
+            source_end = snapshot_sources(root)
+            comparison = compare_sources(source_start, source_end)
+            (output / "source-end.json").write_text(
+                json.dumps(source_end, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+            evidence_code = evidence_exit_code(code, comparison)
+            manifest.update(
+                pytest_exit_code=code, exit_code=evidence_code, **comparison,
+                commit_at_end=subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], cwd=root, text=True
+                ).strip(),
+                dirty_input_paths_at_start=source_start["dirty_input_paths"],
+                blocked_network_operations=len(blocked_connections),
+            )
             (output / "manifest.json").write_text(
                 json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
             )
             print(f"T0 evidence: {output}")
-            return code
+            if evidence_code != code:
+                print("T0 evidence rejected: source inputs changed or snapshot incomplete; see manifest.json")
+            return evidence_code
         finally:
             os.chdir(original_directory)
 

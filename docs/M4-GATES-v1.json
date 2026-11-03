@@ -233,6 +233,14 @@
   },
   "verification": [
     {
+      "layer": "T0 evidence provenance with actual child runner and flow regression",
+      "path": "reports/offline/20261104-030630-601855",
+      "passed": 18,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "c9cdb0697c27efe3d34d638ec32db110868dcb329be8fd38f89fc00f95c3ff16"
+    },
+    {
       "layer": "T0 full at bf63e5e before flow types",
       "path": "reports/offline/20261104-025449-456536",
       "passed": 733,
