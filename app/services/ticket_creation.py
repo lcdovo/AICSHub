@@ -27,6 +27,25 @@ def ticket_receipt(ticket: Ticket) -> dict[str, Any]:
             "resolution": ticket.resolution}
 
 
+def handoff_receipt(item: HandoffRequestRecord) -> dict[str, Any]:
+    return {"request_id": item.id, "user_id": item.user_id, "session_id": item.session_id,
+            "reason": item.reason, "priority": item.priority, "context": item.context or {},
+            "status": item.status.value, "assigned_to": item.assigned_to, "resolution": item.resolution,
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+            "assigned_at": item.assigned_at.isoformat() if item.assigned_at else None,
+            "resolved_at": item.resolved_at.isoformat() if item.resolved_at else None,
+            "sla_deadline": item.sla_deadline.isoformat() if item.sla_deadline else None}
+
+
+def handoff_message(data: dict[str, Any]) -> str:
+    request_id = data.get("request_id") or data.get("escalation_id")
+    labels = {"pending": "待处理", "assigned": "已分配", "resolved": "已解决", "cancelled": "已取消"}
+    if (not isinstance(request_id, str) or not request_id.strip()
+            or not isinstance(data.get("status"), str) or data["status"] not in labels):
+        return "暂时无法确认转人工请求结果，请查看请求记录或联系支持。"
+    return f"转人工请求 {request_id} 已登记，当前状态：{labels[data['status']]}。"
+
+
 def resolve_idempotency_key(body_key: str | None, header_key: str | None) -> str | None:
     for key in (body_key, header_key):
         if key is not None and (not key.strip() or len(key) > 128):

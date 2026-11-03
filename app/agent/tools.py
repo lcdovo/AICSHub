@@ -504,9 +504,11 @@ class SearchKBTool(BaseTool):
 
 
 class EscalateToHumanTool(BaseTool):
-    """转接人工客服"""
+    """持久登记人工请求，不承诺已接通或虚构等待时间。"""
     name = "escalate_to_human"
-    description = "将用户转接至人工客服处理，支持选择优先级和转接原因"
+    max_retries = 1
+    cache_success = False
+    description = "登记可查询的人工处理请求；登记不代表已接通客服"
     parameters = [
         {"name": "reason", "type": "string", "description": "转接原因", "required": True},
         {"name": "priority", "type": "string", "description": "优先级", "required": False,
@@ -517,61 +519,43 @@ class EscalateToHumanTool(BaseTool):
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
-        reason = kwargs.get("reason", "")
-        priority = kwargs.get("priority", "normal")
-        context = kwargs.get("context", "")
-        user_id = kwargs.get("user_id", 0)
-        session_id = kwargs.get("session_id", "")
+        from fastapi import HTTPException
+        from app.agent.handoff_authorization import HandoffToolInput, verify_handoff_authorization
+        from app.models.models import User, Message, MessageRole, Session
+        from app.services.ticket_creation import create_request, resolve_idempotency_key, handoff_receipt, handoff_message
+        from app.utils.database import async_session
 
-        if not reason:
-            return {"success": False, "error": "请提供转接原因", "hint": "请简要说明需要人工客服处理的原因"}
-
+        values = dict(kwargs)
+        authorization = values.pop("authorization", "")
         try:
-            from app.services.collaboration import get_collaboration_service
-            collaboration_service = get_collaboration_service()
-            
-            result = collaboration_service.execute_handoff(
-                user_id=user_id,
-                session_id=session_id,
-                reason=reason,
-                priority=priority,
-                context={"context": context} if context else None,
-            )
-            
-            return {
-                "success": True,
-                "data": {
-                    "escalation_id": result.get("request_id", str(uuid.uuid4())),
-                    "status": result.get("status", "pending"),
-                    "priority": priority,
-                    "reason": reason,
-                    "context": context,
-                    "message": result.get("message", "正在为您转接人工客服，请稍候..."),
-                    "sla_deadline": result.get("sla_deadline", ""),
-                    "assigned_to": result.get("assigned_to"),
-                },
-            }
-        except Exception as e:
-            logger.error(f"创建转人工请求失败: {e}")
-            priority_config = {
-                "normal": {"wait_time": "3-5分钟", "position": 5, "label": "普通"},
-                "urgent": {"wait_time": "立即", "position": 1, "label": "紧急"},
-            }
-            config = priority_config.get(priority, priority_config["normal"])
-            return {
-                "success": True,
-                "data": {
-                    "escalation_id": str(uuid.uuid4()),
-                    "status": "queued",
-                    "priority": priority,
-                    "priority_label": config["label"],
-                    "queue_position": config["position"],
-                    "estimated_wait_time": config["wait_time"],
-                    "reason": reason,
-                    "context": context,
-                    "message": f"正在为您转接人工客服（{config['label']}优先级），预计等待{config['wait_time']}，请稍候...",
-                },
-            }
+            payload = HandoffToolInput.model_validate(values).model_dump()
+            if not payload["reason"].strip():
+                raise ValueError("Missing handoff reason")
+            resolve_idempotency_key(payload["idempotency_key"], None)
+            message_id, actor_id = verify_handoff_authorization(authorization, payload)
+        except (ValidationError, ValueError, TypeError, HTTPException):
+            return {"success": False, "error": "转人工参数或执行授权无效", "error_type": "validation", "retryable": False}
+        try:
+            async with async_session() as db:
+                actor = await db.get(User, actor_id)
+                source = await db.get(Message, message_id)
+                session = await db.get(Session, payload["session_id"])
+                if (actor is None or not actor.status or actor.disabled_at is not None
+                        or session is None or session.user_id != payload["user_id"]
+                        or source is None or source.session_id != session.id or source.role != MessageRole.USER):
+                    return {"success": False, "error": "无权执行此人工请求", "error_type": "permission", "retryable": False}
+                key = payload.pop("idempotency_key")
+                payload["context"] = {"context": payload["context"]} if payload["context"] else {}
+                item, _ = await create_request(db, actor, "request_handoff", payload, key)
+                receipt = handoff_receipt(item)
+                receipt.update(escalation_id=item.id, message=handoff_message(receipt))
+                return {"success": True, "data": receipt}
+        except HTTPException as exc:
+            return {"success": False, "error": exc.detail,
+                    "error_type": {409: "conflict", 404: "not_found"}.get(exc.status_code, "permission"), "retryable": False}
+        except Exception:
+            return {"success": False, "error": "人工请求服务暂时不可用，请使用原请求核查结果",
+                    "error_type": "dependency_unavailable", "retryable": False}
 
 
 class NotificationToolInput(BaseModel):

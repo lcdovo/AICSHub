@@ -350,15 +350,9 @@ def build_ticket_status_reply_template(data: Dict[str, Any]) -> str:
 
 
 def build_escalate_reply_template(data: Dict[str, Any]) -> str:
-    """根据 escalate_to_human 工具结果拼出转接确认文案。"""
-    message = str(data.get("message") or "").strip()
-    # fallback 路径的 message 已含优先级与等待时长，直接复用；
-    # 正常路径仅"正在为您转接"，需补全优先级/等待信息避免空泛。
-    if message and "预计等待" in message:
-        return message
-    wait = str(data.get("estimated_wait_time") or "3-5分钟")
-    priority_label = {"normal": "普通", "urgent": "紧急"}.get(str(data.get("priority") or "normal"), "普通")
-    return f"正在为您转接人工客服（{priority_label}优先级），预计等待{wait}，请稍候..."
+    """只描述人工请求的持久状态，不补造队列或接通事实。"""
+    from app.services.ticket_creation import handoff_message
+    return handoff_message(data)
 
 
 def rag_judge_applicable(self: "AgentGraph", state: AgentState) -> bool:

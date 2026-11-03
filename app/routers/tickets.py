@@ -13,7 +13,7 @@ from sqlalchemy import select, func
 from app.utils.database import get_db
 from app.models.models import Ticket, TicketStatus, TicketPriority, User, UserRole, HandoffRequestRecord, HandoffStatus
 from app.services.collaboration import get_collaboration_service
-from app.services.ticket_creation import create_request, resolve_idempotency_key, ticket_receipt as _ticket_dict
+from app.services.ticket_creation import create_request, resolve_idempotency_key, ticket_receipt as _ticket_dict, handoff_receipt as _handoff_dict
 from app.services.ticket_update import update_ticket as update_ticket_record
 from app.utils.tracking import get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, require_admin
@@ -44,17 +44,6 @@ class HandoffRequest(BaseModel):
     priority: str = "normal"
     context: Optional[dict] = None
     idempotency_key: Optional[str] = None
-
-
-def _handoff_dict(item: HandoffRequestRecord) -> dict:
-    return {"request_id": item.id, "user_id": item.user_id, "session_id": item.session_id,
-            "reason": item.reason, "priority": item.priority, "context": item.context or {},
-            "status": item.status.value, "assigned_to": item.assigned_to,
-            "resolution": item.resolution,
-            "created_at": item.created_at.isoformat() if item.created_at else None,
-            "assigned_at": item.assigned_at.isoformat() if item.assigned_at else None,
-            "resolved_at": item.resolved_at.isoformat() if item.resolved_at else None,
-            "sla_deadline": item.sla_deadline.isoformat() if item.sla_deadline else None}
 
 
 @router.post("/tickets")
@@ -226,6 +215,16 @@ async def list_handoff_requests(
             "requests": [_handoff_dict(r) for r in requests],
         },
     }
+
+
+@router.get("/handoff/requests/{request_id}")
+async def get_handoff_request(request_id: str, db: AsyncSession = Depends(get_db),
+                              current_user: User = Depends(get_current_user)):
+    item = await db.get(HandoffRequestRecord, request_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="转人工请求不存在")
+    ensure_owner_or_admin(current_user, item.user_id)
+    return {"code": 0, "message": "获取成功", "data": _handoff_dict(item)}
 
 
 @router.post("/handoff/{request_id}/assign")

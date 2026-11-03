@@ -3,40 +3,36 @@ import logging
 
 from app.agent.state import AgentState, AgentNode
 from app.agent.mcp_client import invoke_tool
+from app.agent.tools import ToolExecutionResult
+from app.agent.handoff_authorization import authorize_handoff
+from app.services.ticket_creation import handoff_message
 
 logger = logging.getLogger(__name__)
 
 
 async def human_handoff_node(self: "AgentGraph", state: AgentState) -> str:
     state.collected_info["handoff_attempted"] = True
-    handoff = await invoke_tool(
-        "escalate_to_human",
-        reason=state.human_reason or "用户要求转人工",
-        priority="urgent" if state.need_human else "normal",
-        user_id=state.user_id,
-        session_id=state.session_id,
-    )
-    if handoff is not None:
-        result = handoff.model_dump()
-        state.add_tool_call(
-            tool_name="escalate_to_human",
-            arguments={"reason": state.human_reason},
-            result=result,
-            success=result.get("success", False),
-        )
-        state.reply = result.get("data", {}).get("message", "正在为您转接人工客服...")
-    else:
-        state.reply = "正在为您转接人工客服，请稍候..."
-
-    # 诉求覆盖兜底（对齐投诉兜底）：转人工回复必须包含明确"转接人工客服"
-    # 字样与等待时间提示。escalate 的 urgent 文案（"客服主管将立即为您处理"）
-    # 缺少转接语义会被质检判定为"未转接"。
-    if state.reply and not any(
-        k in state.reply for k in ("转接人工", "转人工", "转接人工客服", "人工客服正在")
-    ):
-        state.reply = (
-            "已为您转接人工客服，预计等待3-5分钟，请保持在线；"
-            "您的问题已同步给人工座席，感谢您的耐心等待。"
-        )
+    arguments = {"reason": (state.human_reason or "用户要求转人工")[:100],
+                 "priority": "urgent" if state.need_human else "normal", "context": "",
+                 "user_id": state.user_id, "session_id": state.session_id,
+                 "idempotency_key": f"chat-handoff:{state.session_id}:{state.source_message_id}"}
+    try:
+        authorization = authorize_handoff(arguments, state.source_message_id, state.actor_id)
+        handoff = await invoke_tool("escalate_to_human", **arguments, authorization=authorization)
+        if handoff is None:
+            handoff = ToolExecutionResult(success=False, error="人工请求工具不可用", error_type="not_found")
+    except Exception:
+        logger.warning("Handoff execution context or service unavailable")
+        handoff = ToolExecutionResult(success=False, error="人工请求执行上下文无效或服务不可用", error_type="execution")
+    data = handoff.data if isinstance(handoff.data, dict) else {}
+    if handoff.success and (not isinstance(data.get("request_id"), str) or not data["request_id"].strip()
+                            or not isinstance(data.get("status"), str)
+                            or data.get("status") not in {"pending", "assigned", "resolved", "cancelled"}
+                            or type(data.get("user_id")) is not int or data["user_id"] != state.user_id
+                            or data.get("session_id") != state.session_id):
+        handoff = ToolExecutionResult(success=False, error="人工请求缺少可信回执", error_type="unknown")
+    state.add_tool_call(tool_name="escalate_to_human", arguments=arguments, result=handoff.model_dump(),
+                        success=handoff.success, error_message=handoff.error, error_type=handoff.error_type)
+    state.reply = handoff_message(data) if handoff.success else "暂时无法确认转人工请求结果，请查看请求记录或联系支持。"
 
     return AgentNode.RESPONSE_GENERATION

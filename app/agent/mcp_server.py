@@ -81,13 +81,15 @@ async def search_kb(query: str, top_k: int = 3) -> Dict[str, Any]:
     return await _invoke("search_kb", query=query, top_k=top_k)
 
 
-@mcp.tool(name="escalate_to_human", description="将用户转接至人工客服处理，支持选择优先级和转接原因")
+@mcp.tool(name="escalate_to_human", description="登记可查询的人工处理请求；登记不代表已接通客服")
 async def escalate_to_human(
     reason: str,
     priority: str = "normal",
     context: str = "",
     user_id: int = 0,
     session_id: str = "",
+    idempotency_key: str = "",
+    authorization: str = "",
 ) -> Dict[str, Any]:
     return await _invoke(
         "escalate_to_human",
@@ -96,6 +98,8 @@ async def escalate_to_human(
         context=context,
         user_id=user_id,
         session_id=session_id,
+        idempotency_key=idempotency_key,
+        authorization=authorization,
     )
 
 
