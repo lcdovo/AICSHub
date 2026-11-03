@@ -61,3 +61,5 @@
 阶段边界验收切片新增：`tests/test_m4_stage_boundaries.py`，无生产代码变更。
 
 动作恢复切片新增：`tests/test_m4_action_projection.py`；修改ChatService统一hydrate，SQL动作覆盖旧投影/缓存确认。
+
+迟到结果切片新增：`tests/test_m4_late_results.py`；修改model_gateway.py、llm_service.py、run_execution.py。

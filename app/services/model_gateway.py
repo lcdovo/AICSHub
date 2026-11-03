@@ -316,15 +316,17 @@ class ModelGateway:
             extra_input_tokens=extra_input_tokens,
         )
         dispatched = False
+        raw = None
         try:
             if time.monotonic() >= ticket["deadline"]:
                 raise TimeoutError("run_model_deadline_exceeded")
             timeout = min(
                 service.TIMEOUT, max(0.01, ticket["deadline"] - time.monotonic())
             )
-            async with asyncio.timeout(timeout):
+            call_deadline = time.monotonic() + timeout
+            async with asyncio.timeout(timeout) as call_budget:
                 async with service._semaphore:
-                    if time.monotonic() >= ticket["deadline"]:
+                    if time.monotonic() >= call_deadline:
                         raise TimeoutError("run_model_deadline_exceeded")
                     dispatched = True
                     result = await target.ainvoke(messages)
@@ -333,10 +335,13 @@ class ModelGateway:
                 if isinstance(result, dict) and "raw" in result
                 else result
             )
+            # 依赖可能吞掉CancelledError或阻塞事件循环；timeout退出不等于按时完成。
+            if call_budget.expired() or time.monotonic() >= call_deadline:
+                raise TimeoutError("late_model_result_rejected")
             await self.settle(ticket, raw)
             return result
         except BaseException as exc:
-            await asyncio.shield(self.settle(ticket, error=exc, dispatched=dispatched))
+            await asyncio.shield(self.settle(ticket, raw, error=exc, dispatched=dispatched))
             raise
 
 

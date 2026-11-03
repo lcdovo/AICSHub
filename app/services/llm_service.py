@@ -792,27 +792,36 @@ class LLMService:
                     raise TimeoutError("run_model_deadline_exceeded")
                 timeout = (min(self.TIMEOUT, max(0.01, ticket["deadline"] - time.monotonic()))
                            if ticket else self.TIMEOUT)
-                async with asyncio.timeout(timeout):
+                stream_deadline = time.monotonic() + timeout
+                async with asyncio.timeout(timeout) as stream_budget:
                     async with self._semaphore:
-                        if ticket and time.monotonic() >= ticket["deadline"]:
+                        if time.monotonic() >= stream_deadline:
                             raise TimeoutError("run_model_deadline_exceeded")
                         dispatched = True
-                        async for chunk in chat_model.astream(
+                        provider_stream = chat_model.astream(
                             messages,
                             config={
                                 "run_name": "customer_service_chat_stream",
                                 "metadata": {"user_id": user_id, "session_id": run_id},
                             },
-                        ):
-                            aggregate = (
-                                chunk if aggregate is None else aggregate + chunk
-                            )
-                            yield chunk
+                        )
+                        try:
+                            async for chunk in provider_stream:
+                                aggregate = (
+                                    chunk if aggregate is None else aggregate + chunk
+                                )
+                                if time.monotonic() >= stream_deadline:
+                                    raise TimeoutError("late_model_stream_rejected")
+                                yield chunk
+                        finally:
+                            await provider_stream.aclose()
+                if stream_budget.expired() or time.monotonic() >= stream_deadline:
+                    raise TimeoutError("late_model_stream_rejected")
                 if ticket:
                     await GATEWAY.settle(ticket, aggregate)
             except BaseException as exc:
                 if ticket:
-                    await asyncio.shield(GATEWAY.settle(ticket, error=exc, dispatched=dispatched))
+                    await asyncio.shield(GATEWAY.settle(ticket, aggregate, error=exc, dispatched=dispatched))
                 raise
 
     def _build_messages(

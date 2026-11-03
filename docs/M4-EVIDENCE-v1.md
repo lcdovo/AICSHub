@@ -94,3 +94,13 @@ OPT-05/07/09/15，AC-07-04。5项实际SQL/旧缓存/真实LangGraph checkpoint�
 修复在ChatService统一hydrate：清除投影中的refund_preview/refund_action/confirm_refund及对应旧动作参数，待确认apply_refund从当前SQL pending且未过期动作重建；无有效动作则不恢复。显式action_id仍可加载终态动作供既有领域服务核验或幂等回执，但不会标成待确认，ConversationContext.pending_action_id仅来自有效待确认状态。未完成且尚无持久预览的补参场景仍保留必要参数。订单一般上下文不充当授权。
 
 完整旧checkpoint用例使用真实已取消SQL动作、缓存伪造确认、同thread_id更新过时checkpoint，再hydrate+执行新“确认”轮次：原动作仍cancelled，0退款申请且不执行apply_refund。有效动作以SQL原因/ID覆盖伪造投影，旧确认标记被清除。69项动作恢复/Run/上下文/策略/聊天/阶段检查通过（20261104-013508-011513），compileall及本切片F401/F821通过。隔离SQLite与内存checkpoint，不是新部署/真实Redis故障注入；现有M2真实依赖边界仍保留。无供应商调用、无业务数据变更。
+
+## 后续切片：依赖吞取消及阻塞后的迟到结果（2026-11-04）
+
+OPT-07/14/15，AC-07-07及AC-14-05。原asyncio.timeout在依赖吞掉CancelledError后可正常退出，普通模型、流式及Run迟到结果可能被当成功；修复前5个反例全失败，证据reports/offline/20261104-013713-145078（最后一项初版测试仅0.1秒总期限，后改1秒以确保先完成真实业务提交，再明确等待2秒跨deadline；未放宽生产期限）。
+
+修复在普通模型返回后复核局部/整轮单调时钟deadline和timeout.expired；流每个chunk在yield前及流退出后复核，finally显式关闭供应商生成器，避免异常退出后仍持有资源。模型迟到内容不发布，但实际收到的完整usage仍结算，错误状态不标succeeded；无usage仍保守unknown。Run执行结束、进入持久化前及最终commit前检查同一deadline，吞取消/阻塞事件循环不能绕过；超时进入既有reconciling，恢复只读真实业务回执，不重做工具。
+
+新增9项专项覆盖普通异步吞取消、直接阻塞事件循环、真实线程工作完成后迟到、迟到流且生成器关闭、普通/流式Run吞取消与阻塞、已提交工单回执恢复。46项相关T0通过（20261104-014151-746888），真实SQL/工具回执，模型和故障替身。真实隔离MySQL多进程预算/槽与未知预留2项复验通过（reports/m4-closeout/real-20261104-014023）；该T1验证网关回归，不替代迟到的专项故障层证据。compileall与选定F401/F821通过，无供应商调用/部署/业务数据写入。
+
+覆盖范围：依赖返回或线程结束后拒绝迟到内容，已提交副作用按回执恢复；不宣称Python能强制终止任意吞取消且永不返回的第三方线程，不宣称本地时钟检查能撤回已发出SQL commit。现有业务Run SQL租约/版本fence继续负责失租与并发旧worker。更广泛的后台资源压力长期验收仍属未完成项。

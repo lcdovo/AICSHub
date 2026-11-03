@@ -77,8 +77,8 @@
       "evidence_and_limit": "主图白名单及schema拒绝写工具/任意代码/user_id，计划订单与可见实体绑定，实际授权工具拒绝他人订单；真实模型恶意计划与新schema未验证"
     },
     "AC-07-07": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "模型deadline/迟到流拒绝T0通过；已提交业务副作用恢复仍依赖M2范围"
+      "status": "PASS_F_P_ISOLATED",
+      "evidence_and_limit": "返回后/每流chunk及Run提交前复核deadline，9项吞取消/阻塞/实际线程迟到/已提交回执恢复，46项相关T0通过；迟到内容不写入/发布、线程完成后结果拒绝，不能强杀任意永不返回线程；M2 SQLfence范围保留"
     },
     "AC-07-08": {
       "status": "PARTIAL",
@@ -231,6 +231,16 @@
   },
   "verification": [
     {
+      "layer": "T1 real MySQL gateway regression",
+      "path": "reports/m4-closeout/real-20261104-014023",
+      "passed": 2
+    },
+    {
+      "layer": "T0 late cancellation/blocking/thread/receipt",
+      "path": "reports/offline/20261104-014151-746888",
+      "passed": 46
+    },
+    {
       "layer": "T0 actual checkpoint and SQL projection mismatch",
       "path": "reports/offline/20261104-013508-011513",
       "passed": 69
@@ -325,8 +335,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 15,
+    "partial": 14,
     "fail": 1,
-    "layer_limited_pass": 14
+    "layer_limited_pass": 15
   }
 }

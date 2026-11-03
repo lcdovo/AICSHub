@@ -7,6 +7,7 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 import hashlib
 import json
+import time
 import uuid
 
 from fastapi import HTTPException
@@ -214,13 +215,14 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
             state.understanding_mode=run.request_data.get("_understanding_mode","rules")
             state.strategy_version=run.request_data.get("_strategy_version","legacy")
             from app.services.model_gateway import CALL_CONTEXT
+            run_deadline = time.monotonic() + RUN_TIMEOUT_SECONDS
             gateway_token=CALL_CONTEXT.set({"user_id":run.user_id,"run_id":run.id,"factory":factory,
-                "route_version":state.strategy_version,"deadline":__import__('time').monotonic()+RUN_TIMEOUT_SECONDS,"attempts":0})
+                "route_version":state.strategy_version,"deadline":run_deadline,"attempts":0})
             async with factory() as db:
                 current = await db.get(ChatRun,rid)
                 current.action_id = state.collected_info.get("refund_preview",{}).get("action_id")
                 await db.commit()
-            async with asyncio.timeout(RUN_TIMEOUT_SECONDS):
+            async with asyncio.timeout_at(run_deadline) as run_budget:
                 if streaming:
                     # 文本和done只在最终SQL提交后发布；只保留有界阶段进度。
                     count = 0
@@ -240,12 +242,16 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
                         await agen.aclose()
                 else:
                     state = await service.process(state)
+            if run_budget.expired() or time.monotonic() >= run_deadline:
+                raise TimeoutError("late_run_result_rejected")
             await assert_owner()
             async with factory() as db:
                 current = await db.get(ChatRun, rid)
                 await assert_fence(db, current, token, version)
                 if current.status != "running":
                     raise SessionLeaseError("轮次已停止")
+                if time.monotonic() >= run_deadline:
+                    raise TimeoutError("late_run_result_rejected")
                 session = await db.get(Session, sid, populate_existing=True)
                 current.action_id = state.collected_info.get("refund_preview",{}).get("action_id") or current.action_id
                 message, _ = await service.persist_result(db, session, state, run.request_data["message"], rid, commit=False)
@@ -260,6 +266,8 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
                 from app.services.background_jobs import enqueue
                 enqueue(db, "summary", sid, run.user_id, f"summary:{sid}:{version+1}")
                 await assert_owner()
+                if time.monotonic() >= run_deadline:
+                    raise TimeoutError("late_run_result_rejected")
                 await db.commit()
             # 缓存/摘要失败不能撤销已经提交的最终结果。
             with suppress(Exception):

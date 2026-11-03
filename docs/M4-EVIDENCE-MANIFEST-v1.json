@@ -170,6 +170,24 @@
       "sha256": "8ed054afb610c25ea764d55d649104ccc0e0c3bc29e9c2d1d9ae45c805c42399",
       "bytes": 9121,
       "snapshot": "action-projection-mismatch"
+    },
+    {
+      "path": "reports/offline/20261104-013713-145078/junit.xml",
+      "sha256": "9cc035c28de52995d04e77e7a28482522394d87907fcc4806442cf8afbd0d759",
+      "bytes": 10383,
+      "snapshot": "late-result-fencing"
+    },
+    {
+      "path": "reports/offline/20261104-014151-746888/junit.xml",
+      "sha256": "3b5ea081fa957a0f2b144202fa128d0f9023a799cde97cb98699bc7241b90d95",
+      "bytes": 6238,
+      "snapshot": "late-result-fencing"
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-014023/junit.xml",
+      "sha256": "e1b9899b82ee64dc5d495e98c72824a15a729be18995d0928c79804cb09b42da",
+      "bytes": 503,
+      "snapshot": "late-result-fencing"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

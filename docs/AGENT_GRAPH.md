@@ -131,3 +131,5 @@ Run固定rules/shadow/model与策略版本。model对非确定问候执行Reques
 主图模型query输出可选read_tasks：最多2项query_order/get_user_history。工具节点从本轮可信actor/user/session构造ReadPrincipal，重新验证订单实体来源，经原私有签名/实时权限调用工具。独立读取并行，失败或父Run取消会取消并回收同组任务；结果逐项报告不隐式执行条件写动作。读结果校验失败澄清，不创建人工请求。
 
 SQL恢复时不信任会话投影中的refund_preview/refund_action/confirm_refund：清除旧动作与确认，从未过期pending SQL动作重建待确认。终态显式action_id可供领域服务核验/幂等回执但不标pending；旧checkpoint不能复活取消动作。
+
+Run和模型不能仅依赖asyncio.timeout抛异常：依赖若吞取消或阻塞，返回后仍检查单调deadline，流在yield前检查；Run持久化与commit前再次检查。迟到返回不发布，已提交业务按回执恢复而不重跑，不能把线程无法强杀解释为允许迟到写入。
