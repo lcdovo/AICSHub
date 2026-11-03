@@ -203,9 +203,9 @@ async def send_message(
         session = await db.get(Session, session_id)
         if not session:
             raise HTTPException(status_code=404, detail="会话不存在")
+        ensure_owner_or_admin(current_user, session.user_id)
         if session.status == SessionStatus.CLOSED:
             raise HTTPException(status_code=400, detail="会话已关闭")
-        ensure_owner_or_admin(current_user, session.user_id)
     else:
         session_id = str(uuid.uuid4())
         session = Session(
@@ -443,8 +443,7 @@ async def websocket_chat_stream(websocket: WebSocket):
                         if session.user_id != authenticated_user_id:
                             raise HTTPException(status_code=403, detail="无权访问该会话")
                         if session.status == SessionStatus.CLOSED:
-                            session.status = SessionStatus.ACTIVE
-                            session.closed_at = None
+                            raise HTTPException(status_code=400, detail="会话已关闭")
                         user_message = Message(
                             session_id=session_id,
                             role=MessageRole.USER,
