@@ -17,7 +17,7 @@
 4. M7：原OPT-18/19全部必选、业务基础剩余P1与其他未覆盖要求、迁移恢复/回滚、独立环境重现、综合安全/性能门禁与文档。原方案包含M7，不能在M6后自动宣布完工。
 5. 原195项各自需要当前实现及对应层次证据。缺外部条件/调用预算时如实保留未通过，同时继续可独立实施的工作；不删标准、不把有限mock/单样本当完整L/P/B验收。
 
-供应商已用658/660请求；一般“代选”不自动扩展此前明确费用上限。新的批量付费评测仍需预算，不能删账本或换文件名规避。纯本地合成测试继续自主执行。实际部署、数据删除仍保留原明确授权边界。
+供应商已用660/660请求；一般“代选”不自动扩展此前明确费用上限。新的批量付费评测仍需预算，不能删账本或换文件名规避。纯本地合成测试继续自主执行。实际部署、数据删除仍保留原明确授权边界。
 
 ## 逐项对照
 
@@ -89,7 +89,7 @@
 | AC-07-03 | P1/C+F | PARTIAL_CURRENT | M4 | [M4: PASS_C_F_ISOLATED](M4-GATES-v1.json) |
 | AC-07-04 | P0/I+F | PARTIAL_CURRENT | M4 | [M4: PASS_I_F_ISOLATED](M4-GATES-v1.json) |
 | AC-07-05 | P1/C+P | PARTIAL_CURRENT | M4 | [M4: PASS_C_P_ISOLATED](M4-GATES-v1.json) |
-| AC-07-06 | P0/C+L | PARTIAL_CURRENT | M4 | [M4: PARTIAL](M4-GATES-v1.json) |
+| AC-07-06 | P0/C+L | PARTIAL_CURRENT | M4 | [M4: PASS_C_L_FIXED_SYNTHETIC](M4-GATES-v1.json) |
 | AC-07-07 | P1/F+P | PARTIAL_CURRENT | M4 | [M4: PASS_F_P_ISOLATED](M4-GATES-v1.json) |
 | AC-07-08 | P1/C | PARTIAL_CURRENT | M4 | [M4: PASS_C_ISOLATED](M4-GATES-v1.json) |
 | AC-08-01 | P0/I | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M1基础剩余要求及M7综合复验 | [M1: PASS](M1-GATES-v1.json) |

@@ -875,7 +875,7 @@
           "stage": "M4",
           "status": "PARTIAL",
           "document": "docs/M4-GATES-v1.json",
-          "limit": "证据/审查/工具观察/6项TurnFlow流程结论分区已有类型，主节点枚举读写布尔结论，兼容字典不覆盖已有结论；最新87项相关T0通过。仍有业务槽位、计量/其他状态未全面类型化，保持PARTIAL"
+          "limit": "证据/审查/工具观察/TurnFlow/GenerationMetadata及四类BusinessParameters已分区类型化；提取额外控制字段拒绝，参数不受后改字典覆盖，144项最新相关T0通过。其他编号/持久预览/改写等状态仍未全面类型化，保持PARTIAL；同轮TurnRefundConfirmation绑定身份/消息/完整预览，旧bool不授权，103项最新相关T0及实际SQL非确认拒绝通过；预览等剩余状态仍待迁移"
         }
       ]
     },
@@ -958,9 +958,9 @@
       "evidence": [
         {
           "stage": "M4",
-          "status": "PARTIAL",
+          "status": "PASS_C_L_FIXED_SYNTHETIC",
           "document": "docs/M4-GATES-v1.json",
-          "limit": "主图白名单/schema拒绝写工具/任意代码/user_id，订单与可见实体绑定且实际授权拒绝他人订单；当前新版schema两任务输出已1次真实UINO通过，但真实模型恶意计划尚未验证，保持PARTIAL"
+          "limit": "2次真实UINO生成不受信任exec/伪造user_id提议，生产ReadTask拒绝；冻结输出经RequestUnderstanding+完整图离线回放2次无效后澄清，未进入工具/人工。46项最新T0含owner授权通过。此为固定C+L执行边界，不是prompt抵抗率/全负载/普遍线上0风险，宽松提议schema只供测试。"
         }
       ]
     },
@@ -2043,7 +2043,7 @@
           "stage": "M4",
           "status": "PARTIAL",
           "document": "docs/M4-GATES-v1.json",
-          "limit": "真实usage/缺失/部分/未知及幂等结算验证；账户组倍率和实际账单未对账；价格验证来源固定为预留持久快照，配置变化不篡改历史标签"
+          "limit": "真实usage/缺失/部分/未知及幂等结算验证；账户组倍率和实际账单未对账；价格验证来源固定为预留持久快照，配置变化不篡改历史标签；生成观察头完整/部分/缺失usage有类型基准，缺失output不按0算实际费用；SQL账本仍权威，真实账户账单未对账"
         }
       ]
     },
@@ -2803,5 +2803,7 @@
       "next_scope": "M7",
       "evidence": []
     }
-  ]
+  ],
+  "m4_evidence_refresh_reference": "3f1b2b95625fe72df098b7a7b7aa6d4ad8777449",
+  "m4_supplier_authorization_requests_used": 660
 }
