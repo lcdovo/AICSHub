@@ -54,7 +54,7 @@
     },
     "AC-07-01": {
       "status": "PARTIAL",
-      "evidence_and_limit": "证据/审查/工具观察/TurnFlow及GenerationMetadata已分区严格类型，正文不入计量头、无效头降级不缓存，评测Trace读类型版本；最新82项相关T0通过。业务槽位/改写等仍未全面类型化，保持PARTIAL"
+      "evidence_and_limit": "证据/审查/工具观察/TurnFlow及GenerationMetadata已分区严格类型，正文不入计量头、无效头降级不缓存，评测Trace读类型版本；最新82项相关T0通过。业务槽位/改写等仍未全面类型化，保持PARTIAL；SQL恢复与内存新轮次现在复用同一白名单，旧证据/审查/计量/流程字段不回流，最新83项恢复相关T0通过"
     },
     "AC-07-02": {
       "status": "PASS_C_ISOLATED",
@@ -232,6 +232,31 @@
     "current_schema_live_probe": "ad1166d"
   },
   "verification": [
+    {
+      "layer": "T1 local actual HTTP/SDK/MySQL and multi-process budget regression",
+      "path": "reports/m4-closeout/real-20261104-032106",
+      "passed": 3,
+      "actual_local_synthetic_requests": 260,
+      "external_provider_requests": 0
+    },
+    {
+      "layer": "T0 full at 492f26b before SQL clean-turn filter",
+      "path": "reports/offline/20261104-032105-931567",
+      "passed": 766,
+      "failures": 0,
+      "errors": 0,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "dfad44b81b4259a98da164de9b6096e7c7ebe7db812c153f93a58dbbdc53f8e4"
+    },
+    {
+      "layer": "T0 SQL projection clean-turn recovery",
+      "path": "reports/offline/20261104-032822-460781",
+      "passed": 83,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "8398535605a477aa240e111cc42209c8e7a9ac37aa70a06387e5c14530695cb4"
+    },
     {
       "layer": "T0 typed generation header and actual SQL report/trace persistence",
       "path": "reports/offline/20261104-031913-619566",

@@ -151,3 +151,5 @@ Run和模型不能仅依赖asyncio.timeout抛异常：依赖若吞取消或阻�
 本轮smalltalk/grounded/refused/validated/cache-hit/handoff-attempted六项流程结论现由严格TurnFlow和FlowFlag管理，None/False/True分开。旧字典仅兼容镜像，已有或显式清空结论不能被字典复活；新轮次清空。其他状态/计量/槽位类型迁移仍见M4-STATE-CONTRACT-v1.md未完成范围。
 
 生成计量头现在由GenerationMetadata/ProviderTokenUsage选择并验证，完整回答和输入摘要不入llm_governance兼容投影。unknown/partial usage不补缺失输出为0；无效头明确degraded、禁止缓存，回答仍独立审查。评测/Trace读取类型模型版本，SQL调用账本是费用事实。更广泛槽位类型化仍未完成。
+
+SQL会话恢复与内存新轮次使用同一carryover_context白名单，不能因历史SQL投影被视为“持久”就恢复旧证据/校验/计量/工具结果。当前退款动作仍独立从SQL核验，补参背景保留；不删除旧历史投影。

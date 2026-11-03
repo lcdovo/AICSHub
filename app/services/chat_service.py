@@ -65,6 +65,9 @@ class ChatService:
                     or state.collected_info.get("refund_action")
                     or "apply_refund" in state.pending_confirmations
                 )
+                state.collected_info = AgentState.carryover_context(
+                    state.collected_info, unfinished=bool(state.missing_slots or state.pending_confirmations)
+                )
                 for field in ("refund_preview", "refund_action", "confirm_refund"):
                     state.collected_info.pop(field, None)
                 state.pending_confirmations = [

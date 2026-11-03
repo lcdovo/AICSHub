@@ -482,6 +482,78 @@
       "sha256": "2a49d394cc2ac9702ec1ce64f6db20ce5e6511c83903c6f676ac22040e120bd7",
       "bytes": 27485,
       "snapshot": "typed-generation-metadata"
+    },
+    {
+      "path": "reports/offline/20261104-032642-493495/junit.xml",
+      "sha256": "652d31fe2f7f6f5ce0036d0593128b7a2e09e093206973ac7ec7eddaa18358b7",
+      "bytes": 11547,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-032822-460781/junit.xml",
+      "sha256": "e1356bc3f2a5dbf590fdb1cbd6fedd4ba71192d9ee74affa38cb3cce1e08a3be",
+      "bytes": 11325,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-032822-460781/manifest.json",
+      "sha256": "20ba9f86159ea88f37e5aa06adcb744a388106cf710a90eb9ac53cee4cfe3476",
+      "bytes": 2018,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-032822-460781/source-start.json",
+      "sha256": "2f5d03bf9ed854aaccadf21aaa859774aeee5ec93391208862485a8fc469c5c5",
+      "bytes": 27469,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-032822-460781/source-end.json",
+      "sha256": "2f5d03bf9ed854aaccadf21aaa859774aeee5ec93391208862485a8fc469c5c5",
+      "bytes": 27469,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-032105-931567/junit.xml",
+      "sha256": "1b8b3fc0c0c0f749f474442c911c4e1b7e416d3ab08494b38af5c9b5c917398d",
+      "bytes": 101880,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-032105-931567/manifest.json",
+      "sha256": "87fb0486af523ab7ff8038986ba6fb11135163a272bd7a3a5ee3def0f00f4d74",
+      "bytes": 1203,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-032105-931567/source-start.json",
+      "sha256": "8318e16aedaaf557318cb08000be5a0f6caec713611208918fb509b86274e9b0",
+      "bytes": 27257,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-032105-931567/source-end.json",
+      "sha256": "8318e16aedaaf557318cb08000be5a0f6caec713611208918fb509b86274e9b0",
+      "bytes": 27257,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-032106/junit.xml",
+      "sha256": "efb9d5a751536db8943f74a9c94adc09b8246063f0c0d6aff75ad61b52b10b53",
+      "bytes": 635,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-032106/manifest.json",
+      "sha256": "66f13b3c32b1df49294710ecbf6d0ecbfc11e7d1f5b0e5f0b87b5a87aef1d90c",
+      "bytes": 594,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-032106/local-http-soak.json",
+      "sha256": "d84f512f2db7d2423baef55c988ef19142cb339dc02a6817a62ce2d677bfdef0",
+      "bytes": 674,
+      "snapshot": "sql-clean-turn-filter-and-generation-full"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

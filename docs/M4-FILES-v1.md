@@ -91,3 +91,5 @@ RAG节点依赖切片新增：`tests/test_m4_node_dependencies.py`、`docs/M4-NO
 类型状态夹具补验：`tests/test_m4_response_dependencies.py`改用正式set_flow并断言实际缓存读取，生产代码无新变更；全量751及强化后69项分别封存。
 
 生成元数据切片新增：`app/agent/generation_contracts.py`、`tests/test_m4_generation_metadata.py`；修改AgentState、响应节点、ChatService与LLMService观察计量。
+
+SQL轮次恢复切片新增：`tests/test_m4_sql_turn_reset.py`；修改AgentState跨轮白名单与ChatService SQL hydrate复用，数据不删除。

@@ -214,13 +214,18 @@ class AgentState(BaseModel):
             self.collected_info.pop(key, None)
         return True
 
-    def for_next_turn(self, user_id: int, message: str) -> "AgentState":
-        """Copy conversation facts and unfinished actions; reset every turn artifact."""
+    @staticmethod
+    def carryover_context(info: Dict[str, Any], *, unfinished: bool) -> Dict[str, Any]:
+        """内存新轮次和SQL恢复共用白名单，持久存储不是本轮证据/授权来源。"""
         persistent_keys = {"order_id", "tracking_number", "ticket_id", "intent_history"}
-        if self.missing_slots or self.pending_confirmations:
+        if unfinished:
             persistent_keys.update(
                 {"reason", "refund_type", "refund_preview", "refund_action"}
             )
+        return {key: deepcopy(value) for key, value in info.items() if key in persistent_keys}
+
+    def for_next_turn(self, user_id: int, message: str) -> "AgentState":
+        """Copy conversation facts and unfinished actions; reset every turn artifact."""
         state = AgentState(
             session_id=self.session_id,
             user_id=user_id,
@@ -231,11 +236,9 @@ class AgentState(BaseModel):
             intent_confidence=self.intent_confidence,
             needs_clarification=self.needs_clarification,
             pending_confirmations=list(self.pending_confirmations),
-            collected_info={
-                key: deepcopy(value)
-                for key, value in self.collected_info.items()
-                if key in persistent_keys
-            },
+            collected_info=self.carryover_context(
+                self.collected_info, unfinished=bool(self.missing_slots or self.pending_confirmations)
+            ),
         )
         state.collected_info.update({"user_id": user_id, "session_id": self.session_id})
         state.messages.append(

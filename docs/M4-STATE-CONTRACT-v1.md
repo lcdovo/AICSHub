@@ -30,3 +30,5 @@ record_tool_observation只接受注册的8种业务工具名字，工具身份�
 流程类型迁移：TurnFlow以None代表未执行/无结论，与False明确区分。set_flow完整验证strict bool与额外键后原子替换不可变模型，不使用绕过验证的model_copy(update=...)。旧Graph直调无结论时可一次性导入真实bool，字符串/数值不是结论；正式Run的clean next-turn及SQL versioned session snapshot不携带旧流程状态。intent_source/reply_source、模型计量和业务槽位仍待进一步声明。
 
 生成观察头迁移：模型/版本/降级/预算/tokens/耗时/有限价格字段明确声明并严格验证，计数非负、费用有限且非负、usage总数须自洽。usage_basis由计数字段完整性推导，不能用自报标签伪造真实usage。无效元数据转unknown+degraded禁止缓存，不代替回答审查；只对允许的标识字符串脱敏，不复制正文/输入摘要。评测和Trace读取类型头，旧兼容字典首次导入后不覆盖已建立类型记录。业务槽位、改写和其他标记仍未全部声明，AC-07-01仍未完成。
+
+SQL恢复与for_next_turn共用carryover_context白名单；历史SQL context_data不是本轮证据/审查/模型计量/工具观察的来源。只保留必要背景与未完成参数，当前动作仍须SQL事实核验。该过滤只改变运行时投影，不删除历史记录。业务字段内容的完整严格类型契约仍待迁移，不能把白名单当全面类型化完成。
