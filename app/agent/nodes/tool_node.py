@@ -8,6 +8,7 @@ from langgraph.types import interrupt
 from app.agent.state import AgentState, AgentNode, IntentType
 from app.agent.mcp_client import invoke_tool
 from app.agent.ticket_authorization import authorize_ticket
+from app.agent.refund_authorization import authorize_refund
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,12 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
                                  idempotency_key=f"chat-ticket:{state.session_id}:{state.source_message_id}")
                 logged_args = dict(tool_args)
                 tool_args["authorization"] = authorize_ticket(tool_args, state.source_message_id, state.actor_id)
+            elif tool_name == "apply_refund":
+                tool_args.update(user_id=state.user_id, session_id=state.session_id)
+                logged_args = dict(tool_args)
+                # 无持久来源的离线/内部调用仍交由工具明确拒绝，不能从历史取得授权。
+                tool_args["authorization"] = (authorize_refund(tool_args, state.source_message_id, state.actor_id)
+                                              if state.source_message_id is not None else "")
             result = await invoke_tool(tool_name, **tool_args)
             if result is None:
                 # 工具不存在：跳过，不记录失败（与原跳过行为一致）。
@@ -88,7 +95,7 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
                     return AgentNode.HUMAN_HANDOFF
 
         except Exception as e:
-            error = "工单执行上下文无效或服务不可用" if tool_name == "create_ticket" else str(e)
+            error = "动作执行上下文无效或服务不可用" if tool_name in {"create_ticket", "apply_refund"} else str(e)
             logger.error("工具 %s 执行异常: %s", tool_name, error)
             state.add_tool_call(
                 tool_name=tool_name,

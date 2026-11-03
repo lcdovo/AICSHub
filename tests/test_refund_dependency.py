@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.agent.tools import ApplyRefundTool
-from app.models.models import Base, Order, User
+from app.models.models import Base, Order, User, Session, Message, MessageRole
+from app.agent.refund_authorization import authorize_refund
 
 
 @pytest.mark.parametrize("order_id", ["ORD20260801", "ORD20260802", "ORD900099"])
@@ -23,7 +24,13 @@ async def test_dependency_failure_never_returns_or_caches_receipt(monkeypatch, o
     async def session():
         if failure_at == "enter":
             raise RuntimeError(sentinel)
-        yield SimpleNamespace(scalar=query)
+        async def lookup(model, ident):
+            if model is User:
+                return SimpleNamespace(id=101, role="user", status=True, disabled_at=None)
+            if model is Message:
+                return SimpleNamespace(role=MessageRole.USER, content="确认", session_id="synthetic-refund-session")
+            return SimpleNamespace(user_id=101)
+        yield SimpleNamespace(scalar=query, get=AsyncMock(side_effect=lookup))
         if failure_at == "exit":
             raise RuntimeError(sentinel)
 
@@ -32,8 +39,9 @@ async def test_dependency_failure_never_returns_or_caches_receipt(monkeypatch, o
     generated_id = Mock(return_value="synthetic-generated-refund-id")
     monkeypatch.setattr("app.agent.tools.uuid.uuid4", generated_id)
     tool = ApplyRefundTool()
-    arguments = dict(order_id=order_id, reason="合成测试商品破损", user_id=101,
-                     idempotency_key="synthetic-refund-key")
+    arguments = dict(order_id=order_id, reason="合成测试商品破损", user_id=101, type="refund",
+                     session_id="synthetic-refund-session", idempotency_key="synthetic-refund-key")
+    arguments["authorization"] = authorize_refund(arguments, 1, 101)
     raw = await tool.execute(**arguments)
     assert raw["success"] is False
     assert raw.get("data") is None
@@ -59,14 +67,20 @@ async def test_missing_and_foreign_orders_remain_rejected(tmp_path, monkeypatch)
         async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
         async with factory() as session:
-            session.add(User(id=202, username="synthetic-b", role="user"))
+            session.add_all([User(id=202, username="synthetic-b", role="user"),
+                             User(id=101, username="synthetic-a", role="user")])
             await session.flush()
+            session.add(Session(id="synthetic-refund-session", user_id=101))
+            await session.flush()
+            session.add(Message(id=1, session_id="synthetic-refund-session", role=MessageRole.USER, content="确认"))
             session.add(Order(order_id="ORD20260801", user_id=202, status="已发货",
                               status_code="shipped", total_amount=17, items=[]))
             await session.commit()
         monkeypatch.setattr("app.utils.database.async_session", factory)
         for order_id in ("ORD20260801", "ORD900099"):
-            result = await ApplyRefundTool().execute(order_id=order_id, reason="合成测试商品破损", user_id=101)
+            payload = dict(order_id=order_id, reason="合成测试商品破损", user_id=101, type="refund",
+                           session_id="synthetic-refund-session", idempotency_key="negative-refund-k")
+            result = await ApplyRefundTool().execute(**payload, authorization=authorize_refund(payload, 1, 101))
             assert result["success"] is False
             assert result.get("data") is None
             assert "17" not in str(result)

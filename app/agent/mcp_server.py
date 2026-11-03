@@ -58,13 +58,15 @@ async def create_ticket(user_id: int, category: str, content: str, priority: str
     )
 
 
-@mcp.tool(name="apply_refund", description="申请退换货，需校验订单状态是否满足退换货条件")
+@mcp.tool(name="apply_refund", description="登记模拟待审核退换货申请，需要本轮确认与执行凭据；不执行真实支付")
 async def apply_refund(
     order_id: str,
     reason: str,
     type: str = "refund",  # noqa: A002 - 与既有工具参数名保持一致
     user_id: int = 0,
     idempotency_key: str = "",
+    session_id: str = "",
+    authorization: str = "",
 ) -> Dict[str, Any]:
     return await _invoke(
         "apply_refund",
@@ -73,6 +75,8 @@ async def apply_refund(
         type=type,
         user_id=user_id,
         idempotency_key=idempotency_key,
+        session_id=session_id,
+        authorization=authorization,
     )
 
 

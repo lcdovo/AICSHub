@@ -8,6 +8,7 @@ import json
 import hashlib
 import logging
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
@@ -322,9 +323,12 @@ def build_refund_reply_template(data: Dict[str, Any]) -> str:
     type_label = str(data.get("type_label") or "退款")
     status_label = str(data.get("status_label") or "待审核")
     amount = data.get("amount")
-    amount_text = f"金额 {amount:.2f} 元" if isinstance(amount, (int, float)) else ""
+    try:
+        amount_text = f"金额 {Decimal(str(amount)):.2f} 元" if amount is not None else ""
+    except InvalidOperation:
+        amount_text = ""
 
-    parts = ["您的退换货申请已提交"]
+    parts = ["您的模拟退换货申请已登记" if data.get("is_simulated") else "您的退换货申请已提交"]
     if refund_id:
         parts.append(f"申请单号 {refund_id}")
     if order_id:

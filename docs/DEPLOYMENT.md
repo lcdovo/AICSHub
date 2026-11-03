@@ -1,5 +1,9 @@
 # Docker 部署
 
+## M1-13 模拟退换货申请升级补充
+
+新增`0006_refund_applications`只建立模拟待审申请表，不修改订单、不回填旧伪回执、不执行支付。未来切换前需迁移并完整切换工具worker；缺少内部确认凭据的旧调用将失败。此轮只在独立SQLite演练新增表upgrade/downgrade/upgrade，未对业务库运行迁移或部署。真实MySQL与备份恢复未验；不能在新worker运行时删除申请表，也不应回退到会生成假成功的旧工具。
+
 ## M1-11 人工分配升级补充
 
 新增迁移`0005_handoff_capacity`只建立`handoff_capacity_gates`事务闸门表，不修改历史人工指派或种入演示座席。切换分配写流量前需迁移并确保所有worker使用新分配路径及一致的名册/容量配置；旧版本直接写ASSIGNED可绕过闸门，不应混跑。此轮仅在临时SQLite演练新增迁移的upgrade/downgrade/upgrade，没有在当前业务库迁移或部署。

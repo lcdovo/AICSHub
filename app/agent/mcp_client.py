@@ -103,7 +103,7 @@ class _McpToolClient:
             return ToolExecutionResult.model_validate(raw)
         except Exception as exc:
             logger.warning("MCP tool call %s failed, fallback to direct call: %s", tool_name,
-                           type(exc).__name__ if tool_name in {"create_ticket", "update_ticket_status", "escalate_to_human"} else exc)
+                           type(exc).__name__ if tool_name in {"create_ticket", "update_ticket_status", "escalate_to_human", "apply_refund"} else exc)
             return None
 
     async def aclose(self) -> None:

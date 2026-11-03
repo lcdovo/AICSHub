@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean, Enum, Float,
-    Index, ForeignKey, JSON
+    Index, ForeignKey, JSON, Numeric
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 import enum
@@ -120,6 +120,26 @@ class Order(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     pay_method = Column(String(50), nullable=True)
     address = Column(String(500), nullable=True)
+
+
+class RefundApplication(Base):
+    """模拟退换货待审核申请；不代表真实支付或退款到账。"""
+    __tablename__ = "refund_applications"
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    actor_id = Column(Integer, nullable=False)
+    session_id = Column(String(36), nullable=False, index=True)
+    source_message_id = Column(Integer, nullable=False)
+    order_id = Column(String(32), ForeignKey("orders.order_id"), nullable=False, index=True)
+    type = Column(String(20), nullable=False)
+    reason = Column(Text, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    currency = Column(String(3), nullable=False, default="CNY")
+    status = Column(String(30), nullable=False, default="pending_review")
+    is_simulated = Column(Boolean, nullable=False, default=True)
+    idempotency_key = Column(String(128), nullable=False, unique=True)
+    request_hash = Column(String(64), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class TicketStatus(str, enum.Enum):

@@ -25,6 +25,7 @@ from app.routers.chat import router as chat_router
 from app.routers.analytics import router as analytics_router
 from app.routers.feedback import router as feedback_router
 from app.routers.knowledge import router as knowledge_router
+from app.routers.refunds import router as refunds_router
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -169,6 +170,7 @@ app.include_router(chat_router)
 app.include_router(analytics_router)
 app.include_router(feedback_router)
 app.include_router(knowledge_router)
+app.include_router(refunds_router)
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

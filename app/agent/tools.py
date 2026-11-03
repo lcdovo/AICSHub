@@ -296,7 +296,9 @@ class CreateTicketTool(BaseTool):
 class ApplyRefundTool(BaseTool):
     """退换货申请"""
     name = "apply_refund"
-    description = "申请退换货，需校验订单状态是否满足退换货条件"
+    max_retries = 1
+    cache_success = False
+    description = "登记模拟待审核退换货申请，需要本轮确认与执行凭据；不执行真实支付"
     parameters = [
         {"name": "order_id", "type": "string", "description": "订单号", "required": True},
         {"name": "reason", "type": "string", "description": "退换货原因", "required": True},
@@ -307,86 +309,34 @@ class ApplyRefundTool(BaseTool):
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
-        order_id = kwargs.get("order_id", "").strip().upper()
-        reason = kwargs.get("reason", "").strip()
-        refund_type = kwargs.get("type", "refund")
-        user_id = kwargs.get("user_id", 0)
-
-        if not order_id:
-            return {"success": False, "error": "请提供订单号", "hint": "订单号格式：ORD + 数字，如 ORD20260801"}
-
-        if not reason or len(reason) < 3:
-            return {"success": False, "error": "请说明退换货原因", "hint": "请详细描述退换货原因，便于我们为您处理"}
-
-        if refund_type not in ["refund", "return", "exchange"]:
-            return {"success": False, "error": f"无效的退换货类型: {refund_type}", "hint": "支持的类型：refund(仅退款)、return(退货退款)、exchange(换货)"}
-
-        # 校验订单是否存在且属于当前用户、状态可退（schema 由启动期初始化，此处不执行 DDL）
+        from fastapi import HTTPException
+        from app.agent.refund_authorization import RefundToolInput, verify_refund
+        from app.services.refund_application import submit
+        from app.services.ticket_creation import resolve_idempotency_key
         from app.utils.database import async_session
-        from app.models.models import Order
-        from sqlalchemy import select
+
+        values = dict(kwargs)
+        authorization = values.pop("authorization", "")
         try:
-            async with async_session() as session:
-                order_row = await session.scalar(
-                    select(Order).where(Order.order_id == order_id, Order.user_id == user_id)
-                )
-                if order_row is None:
-                    return {"success": False, "error": f"未找到订单 {order_id}", "hint": "请确认订单号是否正确"}
-                if order_row.status_code not in {"shipped", "delivered", "completed"}:
-                    return {
-                        "success": False,
-                        "error": f"订单 {order_id} 当前状态（{order_row.status}）不支持退换货",
-                        "hint": "仅已发货/已完成的订单可申请退换货。待付款或已取消的订单无法申请。",
-                    }
-                refundable_amount = float(order_row.total_amount)
+            payload = RefundToolInput.model_validate(values).model_dump()
+            if not payload["order_id"].strip() or len(payload["reason"].strip()) < 3:
+                raise ValueError("Invalid refund parameters")
+            resolve_idempotency_key(payload["idempotency_key"], None)
+            message_id, actor_id = verify_refund(authorization, payload)
+            payload["order_id"] = payload["order_id"].strip().upper()
+            payload["reason"] = payload["reason"].strip()
+        except (ValidationError, ValueError, TypeError, HTTPException):
+            return {"success": False, "error": "退款参数或本轮执行授权无效", "error_type": "validation", "retryable": False}
+        try:
+            data = await submit(async_session, payload, message_id, actor_id)
+            return {"success": True, "data": data}
+        except HTTPException as exc:
+            return {"success": False, "error": exc.detail,
+                    "error_type": {403: "permission", 404: "not_found", 409: "conflict"}.get(exc.status_code, "validation"),
+                    "retryable": False}
         except Exception:
-            # 无法读取权威订单时，既不能校验归属/资格，也不能构造申请回执。
-            # 不透传连接异常；本分支尚未执行提交，交由调用方明确处理失败。
-            return {
-                "success": False,
-                "error": "订单服务暂时不可用，未提交退换货申请",
-                "hint": "请稍后重试或联系人工客服",
-                "error_type": "dependency_unavailable",
-                "retryable": False,
-            }
-
-        # 订单归属已在数据库查询（Order.user_id == user_id）中校验；
-        # 只有完成查询与资格校验后才能继续后续处理。
-        refund_type_labels = {"refund": "仅退款", "return": "退货退款", "exchange": "换货"}
-
-        return {
-            "success": True,
-            "data": {
-                "refund_id": str(uuid.uuid4()),
-                "order_id": order_id,
-                "type": refund_type,
-                "type_label": refund_type_labels.get(refund_type, "退款"),
-                "reason": reason,
-                "status": "pending_review",
-                "status_label": "待审核",
-                "amount": refundable_amount,
-                "currency": "CNY",
-                "apply_time": datetime.now().isoformat(),
-                "next_steps": [
-                    "1. 退款审核将在 1 个工作日内完成",
-                    "2. 审核通过后，退款将原路返回至您的支付账户",
-                    "3. 如有需要，我们会安排快递员上门取件",
-                ] if refund_type == "refund" else [
-                    "1. 请将商品寄回指定地址（我们会通过短信发送）",
-                    "2. 请确保商品完好无损、配件齐全",
-                    "3. 我们将在收到商品后 3 个工作日内处理",
-                    "4. 退款将原路返回至您的支付账户",
-                ],
-                "shipping_address": {
-                    "province": "广东省",
-                    "city": "深圳市",
-                    "district": "南山区",
-                    "detail": "科技园路10号创新大厦A座",
-                    "contact": "售后部",
-                    "phone": "400-888-9999",
-                } if refund_type in {"return", "exchange"} else None,
-            },
-        }
+            return {"success": False, "error": "退款申请服务暂时不可用，请使用原请求核查结果",
+                    "error_type": "dependency_unavailable", "retryable": False}
 
 
 class SearchKBTool(BaseTool):
