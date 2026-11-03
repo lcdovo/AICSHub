@@ -17,6 +17,16 @@ from app.models.models import (
 from app.security import ensure_owner_or_admin
 
 
+def ticket_receipt(ticket: Ticket) -> dict[str, Any]:
+    return {"ticket_id": ticket.id, "user_id": ticket.user_id, "category": ticket.category,
+            "content": ticket.content, "priority": ticket.priority.value, "status": ticket.status.value,
+            "assigned_to": ticket.assigned_to, "session_id": ticket.session_id,
+            "sla_deadline": ticket.sla_deadline.isoformat() if ticket.sla_deadline else None,
+            "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
+            "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+            "resolution": ticket.resolution}
+
+
 def resolve_idempotency_key(body_key: str | None, header_key: str | None) -> str | None:
     for key in (body_key, header_key):
         if key is not None and (not key.strip() or len(key) > 128):

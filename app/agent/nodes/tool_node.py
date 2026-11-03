@@ -7,6 +7,7 @@ from langgraph.types import interrupt
 
 from app.agent.state import AgentState, AgentNode, IntentType
 from app.agent.mcp_client import invoke_tool
+from app.agent.ticket_authorization import authorize_ticket
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,13 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
         state.pending_confirmations = []
 
     for tool_name, tool_args in tools_to_execute:
+        logged_args = dict(tool_args)
         try:
+            if tool_name == "create_ticket":
+                tool_args.update(user_id=state.user_id, session_id=state.session_id,
+                                 idempotency_key=f"chat-ticket:{state.session_id}:{state.source_message_id}")
+                logged_args = dict(tool_args)
+                tool_args["authorization"] = authorize_ticket(tool_args, state.source_message_id, state.actor_id)
             result = await invoke_tool(tool_name, **tool_args)
             if result is None:
                 # 工具不存在：跳过，不记录失败（与原跳过行为一致）。
@@ -45,7 +52,7 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
 
             state.add_tool_call(
                 tool_name=tool_name,
-                arguments=tool_args,
+                arguments=logged_args,
                 result={
                     "success": result.success,
                     "data": result.data,
@@ -81,13 +88,14 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
                     return AgentNode.HUMAN_HANDOFF
 
         except Exception as e:
-            logger.error(f"工具 {tool_name} 执行异常: {e}")
+            error = "工单执行上下文无效或服务不可用" if tool_name == "create_ticket" else str(e)
+            logger.error("工具 %s 执行异常: %s", tool_name, error)
             state.add_tool_call(
                 tool_name=tool_name,
-                arguments=tool_args,
+                arguments=logged_args,
                 result=None,
                 success=False,
-                error_message=str(e),
+                error_message=error,
             )
 
     return AgentNode.RESULT_VERIFICATION

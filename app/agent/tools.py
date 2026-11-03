@@ -65,6 +65,7 @@ class BaseTool:
     timeout_ms: int = 5000
     circuit_failure_threshold: int = 3
     circuit_recovery_seconds: int = 30
+    cache_success: bool = True
 
     def __init__(self):
         self._idempotency_cache: Dict[str, ToolExecutionResult] = {}
@@ -112,7 +113,7 @@ class BaseTool:
             )
 
         idempotency_key = str(kwargs.get("idempotency_key", "")).strip()
-        if idempotency_key and idempotency_key in self._idempotency_cache:
+        if self.cache_success and idempotency_key and idempotency_key in self._idempotency_cache:
             return self._idempotency_cache[idempotency_key].model_copy(deep=True)
 
         for attempt in range(self.max_retries):
@@ -135,7 +136,7 @@ class BaseTool:
                         execution_time_ms=execution_time,
                         retry_count=attempt,
                     )
-                    if idempotency_key:
+                    if self.cache_success and idempotency_key:
                         self._idempotency_cache[idempotency_key] = tool_result.model_copy(deep=True)
                     return tool_result
                 else:
@@ -234,8 +235,10 @@ class QueryOrderTool(BaseTool):
 
 
 class CreateTicketTool(BaseTool):
-    """创建工单并自动分配"""
+    """创建持久工单；内部签名凭据绑定可信轮次，不接受裸user_id授权。"""
     name = "create_ticket"
+    max_retries = 1
+    cache_success = False
     description = "创建客服工单，用于处理用户投诉、咨询等问题"
     parameters = [
         {"name": "user_id", "type": "integer", "description": "用户ID", "required": True},
@@ -247,47 +250,47 @@ class CreateTicketTool(BaseTool):
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
-        user_id = kwargs.get("user_id", 0)
-        category = kwargs.get("category", "")
-        content = kwargs.get("content", "")
-        priority = kwargs.get("priority", "medium")
+        from fastapi import HTTPException
+        from pydantic import ValidationError
+        from app.agent.ticket_authorization import TicketToolInput, verify_ticket_authorization
+        from app.models.models import User, Message, MessageRole, Session
+        from app.services.ticket_creation import create_request, resolve_idempotency_key, ticket_receipt
+        from app.utils.database import async_session
 
-        if not category:
-            return {"success": False, "error": "请选择工单分类", "hint": "可选分类: 产品咨询、订单问题、退换货、投诉建议、技术支持"}
+        values = dict(kwargs)
+        authorization = values.pop("authorization", "")
+        try:
+            payload = TicketToolInput.model_validate(values).model_dump()
+            if len(payload["content"].strip()) < 2:
+                raise ValueError("Empty ticket content")
+            resolve_idempotency_key(payload["idempotency_key"], None)
+            message_id, actor_id = verify_ticket_authorization(authorization, payload)
+        except (ValidationError, ValueError, TypeError, HTTPException):
+            return {"success": False, "error": "工单参数或执行授权无效", "error_type": "validation", "retryable": False}
 
-        if not content or len(content.strip()) < 2:
-            return {"success": False, "error": "工单内容过于简短", "hint": "请简要描述您的问题（至少2个字符），以便我们更好地为您服务"}
-
-        ticket_id = str(uuid.uuid4())
-        sla_hours = {"low": 48, "medium": 24, "high": 12, "urgent": 4}
-        sla = sla_hours.get(priority, 24)
-        priority_labels = {"low": "低", "medium": "中", "high": "高", "urgent": "紧急"}
-
-        assignee_map = {
-            "产品咨询": "产品组-李专员",
-            "订单问题": "订单组-王专员",
-            "退换货": "售后组-张专员",
-            "投诉建议": "客服主管-赵经理",
-            "技术支持": "技术组-刘工程师",
-        }
-        assignee = assignee_map.get(category, "客服组")
-
-        return {
-            "success": True,
-            "data": {
-                "ticket_id": ticket_id,
-                "category": category,
-                "priority": priority,
-                "priority_label": priority_labels.get(priority, "中"),
-                "content": content,
-                "assignee": assignee,
-                "sla_hours": sla,
-                "sla_deadline": (datetime.now() + timedelta(hours=sla)).isoformat(),
-                "status": "pending",
-                "created_at": datetime.now().isoformat(),
-                "message": f"工单创建成功（{ticket_id[:8]}...），已分配给{assignee}，将在 {sla} 小时内处理",
-            },
-        }
+        try:
+            async with async_session() as db:
+                actor = await db.get(User, actor_id)
+                source = await db.get(Message, message_id)
+                session = await db.get(Session, payload["session_id"])
+                if (actor is None or not actor.status or actor.disabled_at is not None
+                        or session is None or session.user_id != payload["user_id"]
+                        or source is None or source.session_id != session.id or source.role != MessageRole.USER):
+                    return {"success": False, "error": "无权执行此工单请求", "error_type": "permission", "retryable": False}
+                key = payload.pop("idempotency_key")
+                item, _ = await create_request(db, actor, "create_ticket", payload, key)
+                receipt = ticket_receipt(item)
+                labels = {"pending": "待处理", "processing": "处理中", "resolved": "已解决",
+                          "closed": "已关闭", "escalated": "已升级"}
+                receipt["message"] = f"工单 {item.id} 已登记，当前状态：{labels[item.status.value]}。"
+                return {"success": True, "data": receipt}
+        except HTTPException as exc:
+            return {"success": False, "error": exc.detail,
+                    "error_type": "conflict" if exc.status_code == 409 else "permission", "retryable": False}
+        except Exception:
+            # 可能在提交后丢失回包，不能编造ID或宣称确定未执行。原键可重查持久回执。
+            return {"success": False, "error": "工单服务暂时不可用，请使用原请求核查结果",
+                    "error_type": "dependency_unavailable", "retryable": False}
 
 
 class ApplyRefundTool(BaseTool):

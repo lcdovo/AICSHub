@@ -13,7 +13,7 @@ from sqlalchemy import select, func
 from app.utils.database import get_db
 from app.models.models import Ticket, TicketStatus, TicketPriority, User, UserRole, HandoffRequestRecord, HandoffStatus
 from app.services.collaboration import get_collaboration_service
-from app.services.ticket_creation import create_request, resolve_idempotency_key
+from app.services.ticket_creation import create_request, resolve_idempotency_key, ticket_receipt as _ticket_dict
 from app.utils.tracking import get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, require_admin
 
@@ -52,16 +52,6 @@ _ALLOWED_TRANSITIONS = {
     TicketStatus.ESCALATED: {TicketStatus.PROCESSING, TicketStatus.RESOLVED},
     TicketStatus.CLOSED: set(),
 }
-
-
-def _ticket_dict(ticket: Ticket) -> dict:
-    return {"ticket_id": ticket.id, "user_id": ticket.user_id, "category": ticket.category,
-            "content": ticket.content, "priority": ticket.priority.value, "status": ticket.status.value,
-            "assigned_to": ticket.assigned_to, "session_id": ticket.session_id,
-            "sla_deadline": ticket.sla_deadline.isoformat() if ticket.sla_deadline else None,
-            "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
-            "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
-            "resolution": ticket.resolution}
 
 
 def _handoff_dict(item: HandoffRequestRecord) -> dict:

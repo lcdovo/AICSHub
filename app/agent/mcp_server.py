@@ -11,8 +11,8 @@
 本项目 agent 内部则通过 ``app.agent.mcp_client`` 调用该 server
 （MCP 不可用时自动回退到进程内直调）。
 
-入参与原 Function Calling 定义一致；``user_id``/``session_id`` 等执行
-上下文参数保留为可选，缺失时由工具实现给出明确引导。
+工单创建需要服务端签发的绑定轮次凭据、session_id和幂等键；裸user_id
+不构成写入授权。其他工具仍按各自执行上下文与能力边界处理。
 """
 import logging
 from typing import Any, Dict
@@ -28,7 +28,7 @@ mcp = FastMCP(
     instructions=(
         "智能客服企业级工具集：订单查询、工单创建、退换货申请、知识库检索、"
         "转人工、通知发送、工单状态更新、用户画像查询。"
-        "所有结构化工具有幂等键与重试机制，失败时返回 error/hint 字段。"
+        "工具按各自契约校验上下文、幂等与重试；工单创建需要内部执行凭据。失败时返回 error/hint 字段。"
     ),
 )
 
@@ -50,9 +50,11 @@ async def query_order(order_id: str, user_id: int = 0) -> Dict[str, Any]:
 
 
 @mcp.tool(name="create_ticket", description="创建客服工单，用于处理用户投诉、咨询等问题")
-async def create_ticket(user_id: int, category: str, content: str, priority: str = "medium") -> Dict[str, Any]:
+async def create_ticket(user_id: int, category: str, content: str, priority: str = "medium",
+                        session_id: str = "", idempotency_key: str = "", authorization: str = "") -> Dict[str, Any]:
     return await _invoke(
-        "create_ticket", user_id=user_id, category=category, content=content, priority=priority
+        "create_ticket", user_id=user_id, category=category, content=content, priority=priority,
+        session_id=session_id, idempotency_key=idempotency_key, authorization=authorization,
     )
 
 

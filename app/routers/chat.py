@@ -230,12 +230,15 @@ async def send_message(
             ensure_owner_or_admin(current_user, session.user_id)
             if session.status == SessionStatus.CLOSED:
                 raise HTTPException(status_code=400, detail="会话已关闭")
-            db.add(Message(session_id=session_id, role=MessageRole.USER, content=chat_data.message))
+            user_message = Message(session_id=session_id, role=MessageRole.USER, content=chat_data.message)
+            db.add(user_message)
             session.message_count += 1
             session.updated_at = datetime.utcnow()
             await db.commit()
             await assert_owner()
             agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message)
+            agent_state.source_message_id = user_message.id
+            agent_state.actor_id = current_user.id
             agent_state = await chat_service.process(agent_state)
             await assert_owner()
             assistant_message, _evaluation = await chat_service.persist_result(
@@ -455,6 +458,8 @@ async def websocket_chat_stream(websocket: WebSocket):
 
                         await assert_owner()
                         agent_state = await chat_service.hydrate_state(session_id, user_id, message)
+                        agent_state.source_message_id = user_message.id
+                        agent_state.actor_id = authenticated_user_id
 
                         structured_logger.log_agent(
                             trace_id=trace_id,
