@@ -15,6 +15,7 @@ from app.models.models import Ticket, TicketStatus, TicketPriority, User, UserRo
 from app.services.collaboration import get_collaboration_service
 from app.services.ticket_creation import create_request, resolve_idempotency_key, ticket_receipt as _ticket_dict, handoff_receipt as _handoff_dict
 from app.services.ticket_update import update_ticket as update_ticket_record
+from app.services.handoff_assignment import assign_request, assigned_loads, effective_load
 from app.utils.tracking import get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, require_admin
 
@@ -232,14 +233,11 @@ async def assign_handoff(
     request_id: str,
     agent_id: str = Query(..., description="客服ID"),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ):
     """分配人工客服"""
-    item = await db.get(HandoffRequestRecord, request_id)
-    if not item or item.status != HandoffStatus.PENDING:
-        raise HTTPException(status_code=400, detail="分配失败，请检查客服ID或负载情况")
-    item.assigned_to = agent_id; item.assigned_at = datetime.utcnow(); item.status = HandoffStatus.ASSIGNED
-    await db.commit()
+    await assign_request(db, current_user, request_id, agent_id,
+                         get_collaboration_service().human_agent_service)
 
     return {
         "code": 0,
@@ -276,6 +274,7 @@ async def list_agents(
     skill: Optional[str] = Query(default=None, description="技能筛选"),
     status: Optional[str] = Query(default=None, description="状态筛选"),
     _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
 ):
     """获取人工客服列表"""
     collaboration_service = get_collaboration_service()
@@ -283,6 +282,10 @@ async def list_agents(
         skill=skill,
         status=status,
     )
+    loads = await assigned_loads(db)
+    for data in agents:
+        agent = collaboration_service.human_agent_service.get_agent(data["agent_id"])
+        data["current_load"] = effective_load(agent, loads)
 
     return {
         "code": 0,
