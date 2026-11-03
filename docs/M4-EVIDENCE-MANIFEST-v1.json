@@ -230,6 +230,18 @@
       "sha256": "45a7119890e7ee786dc96ce26053b79c04c2f7a34369ebaca3d783634a2189c9",
       "bytes": 88343,
       "snapshot": "typed-evidence-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-015939-121052/junit.xml",
+      "sha256": "291d9c05332cdab2369715a950f5bd7c5c21b7925e070eccff601bdd7227e91f",
+      "bytes": 13223,
+      "snapshot": "entity-routing-negation"
+    },
+    {
+      "path": "reports/offline/20261104-020047-559213/junit.xml",
+      "sha256": "a945f3ab28ac160410f2bae7131106d76ec0b37e26d2ca16c83b5b0d438d1e2e",
+      "bytes": 15175,
+      "snapshot": "entity-routing-negation"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

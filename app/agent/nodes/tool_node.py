@@ -46,6 +46,8 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
     extracted_info = self._extract_info_from_message(state.user_message)
 
     for key, value in extracted_info.items():
+        if key == "order_id" and state.understanding is not None:
+            continue
         if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
             state.collected_info[key] = value
 

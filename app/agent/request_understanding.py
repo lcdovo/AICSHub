@@ -159,11 +159,14 @@ def validate_semantics(result, state):
         raise ValueError("incorrect_entity_source")
     if result.entity_source == "none" and any(values.values()):
         raise ValueError("incorrect_entity_source")
-    if result.request_type == "apply" and re.search(
-        r"(?:不要|不想|不需要|别)(?:给我|帮我|现在|立即|直接)?(?:退款|退货)|不是申请|不申请(?:退款|退货)",
-        text,
-    ):
-        raise ValueError("negated_action")
+    if result.request_type == "apply":
+        negated = {
+            "refund": r"(?:不要|不想|不需要|别)(?:给我|帮我|现在|立即|直接)?(?:退款|退货)|不是申请|不申请(?:退款|退货)",
+            "complaint": r"(?:不要|不想|不需要|别)(?:给我|帮我|现在|立即|直接|创建|新建)?(?:投诉|举报)|不(?:提交|创建|发起)(?:投诉|举报)",
+            "human": r"(?:不要|不想|不需要|别)(?:给我|帮我|现在|立即|直接)?(?:转|接|联系|找)(?:接)?(?:人工|真人|活人)|不要人工|不需要人工",
+        }.get(result.topic)
+        if negated and re.search(negated, text):
+            raise ValueError("negated_action")
     if result.conditions and result.request_type == "apply":
         raise ValueError("conditional_write_without_read")
     if result.read_tasks:
@@ -218,6 +221,9 @@ def route_understanding(state, result):
     state.collected_info["smalltalk"] = result.request_type == "greeting"
     if result.entities.order_id:
         state.collected_info["order_id"] = result.entities.order_id
+    elif result.request_type in {"apply", "query", "change"}:
+        # 本轮理解未确定订单时不能借旧槽位替模型选中上一轮订单。
+        state.collected_info.pop("order_id", None)
     if (
         result.request_type in ["clarify", "out_of_scope", "change"]
         or result.clarification

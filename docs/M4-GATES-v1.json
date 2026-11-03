@@ -14,7 +14,7 @@
     },
     "AC-06-03": {
       "status": "PARTIAL",
-      "evidence_and_limit": "否定/转述替身及真实留出；最新否定防线修复仅T0验证"
+      "evidence_and_limit": "否定/转述替身及真实留出；最新否定防线修复仅T0验证；补齐退款/投诉/人工各自否定范围，101项相关T0通过，未重验真实全量"
     },
     "AC-06-04": {
       "status": "PARTIAL",
@@ -26,7 +26,7 @@
     },
     "AC-06-06": {
       "status": "PARTIAL",
-      "evidence_and_limit": "必要历史实际送入结构化调用替身；实体总门槛失败；补齐实际7条/600字可见上下文、known_order与实体来源交叉校验，70项T0通过，真实全量未重验"
+      "evidence_and_limit": "必要历史实际送入结构化调用替身；实体总门槛失败；补齐实际7条/600字可见上下文、known_order与实体来源交叉校验，70项T0通过，真实全量未重验；模型所选订单贯穿旧路由/工具节点不再被首个regex订单覆盖，未确定新订单不复用旧槽位"
     },
     "AC-06-07": {
       "status": "PARTIAL",
@@ -230,6 +230,11 @@
     "stage_boundaries": "584404f"
   },
   "verification": [
+    {
+      "layer": "T0 model entity routing and scoped negation",
+      "path": "reports/offline/20261104-020047-559213",
+      "passed": 101
+    },
     {
       "layer": "T0 full at 374710e before evidence slice",
       "path": "reports/offline/20261104-015114-663605",

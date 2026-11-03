@@ -67,3 +67,5 @@
 用户归属切片新增：`tests/test_m4_model_identity.py`；修改model_gateway.py、llm_service.py、graph.py、memory.py、knowledge路由及现行说明。
 
 类型化证据切片新增：`tests/test_m4_evidence_contract.py`；修改state.py、request_understanding.py、RAG/response节点。
+
+订单路由/否定范围切片新增：`tests/test_m4_entity_routing.py`；修改request_understanding.py与intent/tool节点的旧提取兼容边界。
