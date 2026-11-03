@@ -1,8 +1,8 @@
 {
   "date": "2026-11-03",
   "scope": "M3 frozen 21 criteria",
-  "status": "INCOMPLETE_EXTERNAL_PROVIDER",
-  "code_commit": "4967dfb1b520690ddfc54113e7176a1260cf45fe",
+  "status": "PASS",
+  "code_commit": "e676fd81458b696a3c9acbdb2e83ce7c73efac3b",
   "acceptance": {
     "AC-11-01": "PASS",
     "AC-11-02": "PASS",
@@ -11,8 +11,8 @@
     "AC-11-05": "PASS",
     "AC-11-06": "PASS",
     "AC-11-07": "PASS",
-    "AC-11-08": "BLOCKED_REAL_PROVIDER",
-    "AC-11-09": "BLOCKED_REAL_PROVIDER",
+    "AC-11-08": "PASS_LOCAL_REAL_OLLAMA",
+    "AC-11-09": "PASS_LOCAL_REAL_OLLAMA_AND_REVISION_ISOLATION",
     "AC-11-10": "PASS",
     "AC-11-11": "PASS",
     "AC-11-12": "PASS",
@@ -29,83 +29,91 @@
   "checks": [
     {
       "scope": "latest_full_offline",
-      "path": "reports/offline/20261103-221344-665009",
+      "path": "reports/offline/20261103-230955-132771",
       "tests": 556,
-      "failures": 0,
       "errors": 0,
+      "failures": 0,
       "skipped": 0,
       "exit_code": 0,
-      "junit_sha256": "449e7d756e896c8eb492e3d8e4fd510aa527ae4ed266d15bfabe762369d5aa1f"
-    },
-    {
-      "scope": "final_full_offline",
-      "path": "reports/offline/20261103-175446-899534",
-      "tests": 554,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0,
-      "exit_code": 0,
-      "junit_sha256": "d401ef2e2485d7c6a22f154d07553a70842062d4f121a527aa60ef8eff74a590"
-    },
-    {
-      "scope": "final_affected",
-      "path": "reports/offline/20261103-175349-071707",
-      "tests": 82,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0,
-      "exit_code": 0,
-      "junit_sha256": "86756159b6c8f09060a478c4b34f845b4a40cd717ee7cb3bd57142bc3cf64599"
-    },
-    {
-      "scope": "sqlite_legacy_migration_added_after_full",
-      "path": "reports/offline/20261103-175653-881277",
-      "tests": 1,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0,
-      "exit_code": 0,
-      "junit_sha256": "1b95dc1a818f57152dda41b01ecff73aa643eff04c31c201568554de7b621ff3"
-    },
-    {
-      "scope": "real_auth_added_after_full",
-      "path": "reports/offline/20261103-175742-509603",
-      "tests": 1,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0,
-      "exit_code": 0,
-      "junit_sha256": "96745ed6dab42a6ef202da144054a158780a2b130575f8b60ef077fb289006c8"
-    },
-    {
-      "scope": "real_mysql_milvus_all",
-      "path": "reports/m3-closeout/real-20261103-173807",
-      "tests": 7,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0,
-      "exit_code": 0,
-      "junit_sha256": "a6f800d0fd3eb8810090fbaeef87afe0761454ff1378da0a9a81f183cc2f77e4"
-    },
-    {
-      "scope": "real_publish_snapshot",
-      "path": "reports/m3-closeout/real-20261103-174523",
-      "tests": 2,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0,
-      "exit_code": 0,
-      "junit_sha256": "899aa4b8d7d3bb406200f6a23dc7e15a928d444c635e4f94f83ced8cf349cf18"
+      "junit_sha256": "37f9541085454ec06812ff0acff720af1d3ef39ee9c6d32156d471b254d17863"
     },
     {
       "scope": "fixture_import_followup",
       "path": "reports/offline/20261103-222249-353470",
       "tests": 12,
-      "failures": 0,
       "errors": 0,
+      "failures": 0,
       "skipped": 0,
       "exit_code": 0,
       "junit_sha256": "cf68de1b443aac305cfa5f391d8059bdec76e022a5420870bc9ee26b84dcdcdd"
+    },
+    {
+      "scope": "affected_82",
+      "path": "reports/offline/20261103-175349-071707",
+      "tests": 82,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "86756159b6c8f09060a478c4b34f845b4a40cd717ee7cb3bd57142bc3cf64599"
+    },
+    {
+      "scope": "sqlite_legacy_migration",
+      "path": "reports/offline/20261103-175653-881277",
+      "tests": 1,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "1b95dc1a818f57152dda41b01ecff73aa643eff04c31c201568554de7b621ff3"
+    },
+    {
+      "scope": "real_jwt_authorization",
+      "path": "reports/offline/20261103-175742-509603",
+      "tests": 1,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "96745ed6dab42a6ef202da144054a158780a2b130575f8b60ef077fb289006c8"
+    },
+    {
+      "scope": "real_mysql_milvus_7",
+      "path": "reports/m3-closeout/real-20261103-173807",
+      "tests": 7,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "a6f800d0fd3eb8810090fbaeef87afe0761454ff1378da0a9a81f183cc2f77e4"
+    },
+    {
+      "scope": "real_sql_publish_snapshot_2",
+      "path": "reports/m3-closeout/real-20261103-174523",
+      "tests": 2,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "899aa4b8d7d3bb406200f6a23dc7e15a928d444c635e4f94f83ced8cf349cf18"
+    },
+    {
+      "scope": "model/local-model-integration.json",
+      "path": "reports/m3-closeout/model/local-model-integration.json",
+      "status": "PASS",
+      "evidence_sha256": "33a33126cbf7892f0813cfcfdbf19be91917a2833b839d3dc72987e83a198ac7"
+    },
+    {
+      "scope": "model/local-app-search.json",
+      "path": "reports/m3-closeout/model/local-app-search.json",
+      "status": "PASS",
+      "evidence_sha256": "b4c00c3d35f824f8d2133cc1cc9f28bcf49d4e0bc91404f3887670ebba62f638"
+    },
+    {
+      "scope": "browser/final-restart-check.json",
+      "path": "reports/m3-closeout/browser/final-restart-check.json",
+      "status": "PASS",
+      "evidence_sha256": "2aa2d49c809c9200677d83577ef38155b5a7ed29623e9dc706dc50f3923c3eb4"
     }
   ],
   "frontend": {
@@ -116,38 +124,86 @@
   },
   "compileall_exit_code": 0,
   "diff_check_exit_code": 0,
-  "source_manifest_sha256": "dc601103fd0649468f4c5c89ef20676690bdab234313739665dbc17126a1fca0",
+  "source_manifest_sha256": "f62cfdc4c50ed8263bd50fd13652cfb16bcc74b06b1f4fc42a855a4c266088c9",
   "build_manifest_sha256": "b5dca437cc7143e052805f4c0be02b8832a89ae682e2ae48fd6267c83bc4e600",
   "browser": {
     "draft_publish_failure_retry": "PASS",
     "app_restart": "PASS",
     "console_errors": 0,
-    "path": "reports/m3-closeout/browser"
+    "path": "reports/m3-closeout/browser",
+    "final_restart_http_sql": "PASS",
+    "latest_screenshot": "reports/m3-closeout/browser/local-embedding-app-v2.png"
   },
   "real_embedding": {
     "requests": 2,
     "input_texts": 5,
-    "status": "FAIL",
+    "status": "HISTORICAL_EXTERNAL_PROVIDER_FAIL",
     "error_code": "AllocationQuota.FreeTierOnly",
     "http_status": 400,
     "chat_model_calls": 0,
     "automatic_retry": false,
-    "additional_calls_authorized": false
+    "additional_calls_authorized": false,
+    "local_provider_replacement": "PASS"
   },
   "not_run": [
     "production_migration_deployment_backup_restore",
-    "real_embedding_success",
-    "real_reranker",
+    "external_reranker",
     "production_corpus_quality",
-    "long_term_load"
+    "long_term_load",
+    "external_embedding_success_after_free_quota_exhaustion"
   ],
   "production_resources_used": false,
   "push": false,
   "lint_f401_f821": "PASS",
   "last_environment_check": {
-    "docker_engine": "UNAVAILABLE",
-    "ui_mysql_connect": "CONNECTION_REFUSED",
-    "ui_process": "NOT_RUNNING",
-    "note": "Historical PASS evidence retained; final UI/SQL restart recheck could not run. No business resources restarted."
-  }
+    "docker_engine": "AVAILABLE",
+    "local_embedding": "healthy",
+    "local_reranker": "healthy",
+    "isolated_mysql_redis": "running",
+    "ui_app_process": "running",
+    "browser_restart_http_sql": "PASS",
+    "other_compose_projects": "running_after_engine_restart",
+    "production_resources_used": false
+  },
+  "local_model": {
+    "embedding": "Ollama qwen3-embedding:0.6b",
+    "dimension": 1024,
+    "reranker": "Infinity BAAI/bge-reranker-large",
+    "integration": "PASS_REAL_LOCAL",
+    "app_index_and_search_after_restart": "PASS_REAL_LOCAL",
+    "external_model_calls": 0,
+    "endpoints": {
+      "embedding": "http://127.0.0.1:8012/v1",
+      "reranker": "http://127.0.0.1:7997"
+    },
+    "business_env_changed": false
+  },
+  "supplier_budget_experiment": {
+    "requests": 2,
+    "input_texts": 5,
+    "status": "HTTP_400",
+    "provider_code": "AllocationQuota.FreeTierOnly",
+    "automatic_retry": false,
+    "quota_exhausted": true,
+    "usage_reported": false
+  },
+  "latest_full_offline": {
+    "path": "reports/offline/20261103-230955-132771",
+    "tests": 556,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "command": "python scripts/test_offline.py -q --tb=short tests"
+  },
+  "local_model_evidence": {
+    "integration": "reports/m3-closeout/model/local-model-integration.json",
+    "reusable_command": "python scripts/test_m3_local_models.py",
+    "app_search": "reports/m3-closeout/model/local-app-search.json",
+    "browser_sql_restart": "reports/m3-closeout/browser/final-restart-check.json",
+    "current_browser_screenshot": "reports/m3-closeout/browser/local-embedding-app-v2.png"
+  },
+  "source_manifest_path": "reports/m3-closeout/source-sha256.json",
+  "build_manifest_path": "reports/m3-closeout/build-sha256.json",
+  "latest_scope": "M3 frozen 21, local model provider; external supplier quota failure retained"
 }

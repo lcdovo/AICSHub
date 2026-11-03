@@ -12,4 +12,4 @@
 
 M3相关既有基线：35 passed，reports/offline/20261103-171446-448324。核实缺陷：不稳定doc_db/doc_mysql/随机ID、MySQL按标题删除/旧版停用遗漏、索引异常吞掉、空向量补零/错维度截断、Embedding失败短路BM25、RRF量纲混用、缓存/worker旧知识未版本隔离。
 
-状态：实现及本地/真实依赖验证已封存；19项通过，AC-11-08/09真实供应商部分因AllocationQuota.FreeTierOnly额度耗尽阻塞，M3整体验收未完成。两次授权请求已用尽，不自动追加。详见M3-EVIDENCE-v1.md与M3-GATES-v1.json。
+状态：M3冻结21项已完成验收。真实本地Ollama Embedding与Infinity Reranker完成索引/检索/重启补验；供应商免费额度探测HTTP400另记失败；本地Ollama/Infinity作为实际部署provider已补齐Embedding、索引、搜索及重启验收。证据见M3-EVIDENCE-v1.md与M3-GATES-v1.json。

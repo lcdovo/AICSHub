@@ -1,6 +1,6 @@
 # M3修改文件清单 v1
 
-范围：基线a063d13至本轮封存。原未跟踪两份方案/规范及scripts/_dev_run_import.py保持未跟踪。行为、AC与限制见M3-EVIDENCE-v1.md。
+范围：基线a063d13至本轮封存。原未跟踪两份优化方案/验收规范及scripts/_dev_run_import.py保留未跟踪。行为、OPT/AC和证据见M3-EVIDENCE-v1.md。
 
 ## 知识版本、索引与检索
 
@@ -41,6 +41,7 @@
 - [scripts/import_rag_documents.py](../scripts/import_rag_documents.py)
 - [scripts/run_worker.py](../scripts/run_worker.py)
 - [scripts/setup_m3_test.py](../scripts/setup_m3_test.py)
+- [scripts/test_m3_local_models.py](../scripts/test_m3_local_models.py)
 - [scripts/test_m3_model.py](../scripts/test_m3_model.py)
 - [scripts/test_m3_real.py](../scripts/test_m3_real.py)
 - [tests/test_m3_api.py](../tests/test_m3_api.py)

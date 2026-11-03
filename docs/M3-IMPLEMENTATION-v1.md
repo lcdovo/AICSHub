@@ -28,4 +28,7 @@ knowledge_docs保留原数字主键，新增stable_id、published_version与生�
 
 ## 验证边界
 
-合成Embedding验证协议/错配/批次，不证明真实模型语义效果；真实MySQL/Milvus/实际进程证据单列。真实收费Embedding/LLM/reranker、业务库升级、生产部署未运行。最终逐项结果见M3-EVIDENCE-v1.md。
+合成Embedding验证协议/错配/批次，不证明真实模型语义效果；真实MySQL/Milvus/实际进程证据单列。本地Ollama Embedding与Infinity Reranker真实集成及应用检索重启已验证；真实外部收费Embedding探测两请求曾遇免费额度上限（见证据），没有再次调用。真实聊天LLM/外部reranker、业务库升级、生产部署未运行。最终逐项结果见M3-EVIDENCE-v1.md。
+
+
+本地真实模型复验：宿主机Ollama地址http://127.0.0.1:8012/v1、模型qwen3-embedding:0.6b、实际1024维；Infinity地址http://127.0.0.1:7997、模型BAAI/bge-reranker-large。仅专属合成验收进程显式使用，项目.env未切换。脚本python scripts/test_m3_local_models.py核对真实测试Milvus的label/端口，写新collection后验证查询与revision空间隔离；仍不代表业务旧索引已重建或生产部署完成。
