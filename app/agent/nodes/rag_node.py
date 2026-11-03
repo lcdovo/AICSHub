@@ -45,7 +45,7 @@ async def rag_retrieval_node(self: "AgentGraph", state: AgentState) -> str:
     # The chat path and the admin knowledge APIs must share one source of truth.
     # KnowledgeBaseService loads published documents from SQLite/Milvus and keeps
     # the in-memory fallback when external services are unavailable.
-    knowledge_base = _graph_module.get_knowledge_base()
+    knowledge_base = await asyncio.to_thread(_graph_module.get_knowledge_base)
     if hasattr(knowledge_base, "async_search"):
         search_result = await knowledge_base.async_search(query=query, top_k=top_k)
     else:
@@ -68,7 +68,8 @@ async def rag_retrieval_node(self: "AgentGraph", state: AgentState) -> str:
         )
 
     score = float(state.collected_info.get("best_match_score") or 0)
-    if not state.collected_info["kb_results"] or score < self.RAG_MIN_SCORE:
+    score_type=search_result.get("meta",{}).get("score_type")
+    if not state.collected_info["kb_results"] or (score_type != "rrf" and score < self.RAG_MIN_SCORE):
         state.collected_info["rag_grounded"] = False
         state.collected_info["rag_fallback_reason"] = (
             "no_results" if not state.collected_info["kb_results"] else "low_score"

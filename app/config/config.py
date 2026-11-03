@@ -132,6 +132,7 @@ class Settings(BaseSettings):
     # 查询侧指令前缀（Qwen3-Embedding 等指令感知模型建议启用）：
     # 检索时自动加此前缀，文档入库侧不加；留空保持原行为。
     EMBEDDING_QUERY_INSTRUCTION: str = Field(default="")
+    EMBEDDING_REVISION: str = Field(default="unspecified")
 
     # Reranker 重排服务（模型 reranker，优先外部 API，本地 bge-reranker-large 兜底）
     # 外部 API：RERANKER_API_BASE/KEY/MODEL 配置后启用；style=openai 走
@@ -150,6 +151,8 @@ class Settings(BaseSettings):
     # RAG 检索增强生成
     COLLECTION_NAME: str = Field(default="customer_service_knowledge")
     RAG_TOP_K: int = Field(default=5)
+    RAG_RECALL_K: int = Field(default=20)
+    RAG_RERANK_K: int = Field(default=20)
     RAG_SIMILARITY_THRESHOLD: float = Field(default=0.2)
     # 检索融合已改为 RRF（Rank 融合，不依赖权重），历史上的
     # RAG_BM25_WEIGHT / RAG_VECTOR_WEIGHT / RAG_SEARCH_TOP_K_MULTIPLIER 已移除。

@@ -87,7 +87,7 @@ class LLMRAGJudge:
         lines = []
         for i, item in enumerate(kb_context[:3], 1):
             title = item.get("title", "未命名文档")
-            content = " ".join(str(item.get("content", "")).split())[:200]
+            content = " ".join(str(item.get("evidence_text", item.get("content", ""))).split())
             lines.append(f"[知识库{i}] {title}: {content}")
         if tool_evidence:
             lines.append(f"[工具结果] {tool_evidence[:300]}")

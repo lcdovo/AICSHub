@@ -3,6 +3,7 @@ Embedding 服务 - 文本向量化
 仅支持真实 Embedding API；未配置时 encode 抛出 RuntimeError，不再使用伪向量降级。
 """
 import asyncio
+import math
 import logging
 import time
 from typing import List, Optional, Dict, Any
@@ -117,7 +118,9 @@ class APIEmbedding(BaseEmbedding):
                 cache_key = f"{self.model}:{texts[idx]}"
                 self._text_cache[cache_key] = vec
 
-        return [r if r is not None else [0.0] * self.dim for r in results]
+        if any(r is None for r in results):
+            raise RuntimeError("embedding_response_missing")
+        return results
 
     def _call_api(self, texts: List[str]) -> List[List[float]]:
         """调用 Embedding API；大批量按 self.batch_size 分批后合并结果。"""
@@ -151,16 +154,17 @@ class APIEmbedding(BaseEmbedding):
                 data = response.json()
 
                 if "data" not in data:
-                    raise ValueError(f"Unexpected API response: {data}")
+                    raise ValueError("embedding_response_invalid")
 
-                vectors = []
-                for item in data["data"]:
-                    vector = item.get("embedding", [])
-                    if not vector or len(vector) == 0:
-                        vector = [0.0] * self.dim
-                    elif len(vector) != self.dim:
-                        vector = self._pad_or_truncate(vector, self.dim)
-                    vectors.append(vector)
+                items = data["data"]
+                if not isinstance(items,list) or len(items)!=len(texts):
+                    raise ValueError("embedding_count_mismatch")
+                vectors = [None]*len(texts)
+                for item in items:
+                    index=item.get("index")
+                    if type(index) is not int or not 0<=index<len(texts) or vectors[index] is not None:
+                        raise ValueError("embedding_index_invalid")
+                    vectors[index]=validate_vector(item.get("embedding"),self.dim)
 
                 return vectors
 
@@ -173,18 +177,11 @@ class APIEmbedding(BaseEmbedding):
                     break
             except Exception as e:
                 last_error = e
-                logger.warning(f"Embedding API error (attempt {attempt + 1}): {e}")
+                logger.warning("Embedding API contract/dependency error (attempt %s)",attempt+1)
                 time.sleep(1 * (attempt + 1))
 
-        raise RuntimeError(f"Embedding API error: {last_error}")
+        raise RuntimeError("embedding_dependency_or_contract_error") from None
 
-    @staticmethod
-    def _pad_or_truncate(vector: List[float], target_dim: int) -> List[float]:
-        if len(vector) >= target_dim:
-            return vector[:target_dim]
-        result = vector.copy()
-        result.extend([0.0] * (target_dim - len(result)))
-        return result
 
     def close(self):
         if self._client and not self._client.is_closed:
@@ -234,7 +231,8 @@ class EmbeddingService:
                 query_instruction=settings.EMBEDDING_QUERY_INSTRUCTION or "",
                 batch_size=int(settings.EMBEDDING_BATCH_SIZE or 20),
             )
-            api_embedding.encode("test")
+            # 配置初始化不发付费探测；实际请求才验证服务与向量。
+            pass
             self._embedding = api_embedding
             self._backend_name = f"api({model})"
             self._dim = dim
@@ -310,3 +308,10 @@ def reset_embedding_service():
     if _embedding_service and isinstance(_embedding_service._embedding, APIEmbedding):
         _embedding_service._embedding.close()
     _embedding_service = None
+
+
+def validate_vector(vector,dim):
+    if not isinstance(vector,list) or len(vector)!=dim or any(type(v) not in (int,float) or not math.isfinite(v) for v in vector):
+        raise ValueError("embedding_dimension_or_value_invalid")
+    if not any(v!=0 for v in vector): raise ValueError("embedding_zero_vector")
+    return [float(v) for v in vector]

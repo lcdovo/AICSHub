@@ -1,0 +1,189 @@
+"""M3临时SQLite/合成Embedding，发布与回滚真实SQL；不代表模型效果。"""
+
+from datetime import datetime, timedelta
+import pytest
+from sqlalchemy import select, func
+from app.models.models import Base, BackgroundJob, KnowledgeChunk
+from app.repositories.knowledge_repository import KnowledgeRepository, KnowledgeConflict
+from app.services.knowledge_base import KnowledgeBaseService
+from app.services.knowledge_base.index_worker import index_job
+
+
+class SyntheticEmbedding:
+    _dim = 3
+    backend_name = "synthetic-v1"
+
+    def __init__(self):
+        self.calls = []
+        self.fail = False
+
+    def encode_batch(self, texts):
+        self.calls.append(list(texts))
+        if self.fail:
+            raise RuntimeError("synthetic failure")
+        return [[1.0, 0.0, 0.0] for _ in texts]
+
+    def encode_query(self, text):
+        return [1.0, 0.0, 0.0]
+
+
+@pytest.fixture
+def kb(tmp_path, monkeypatch):
+    from app.config.config import settings
+
+    monkeypatch.setattr(settings, "USE_MILVUS", False)
+    repo = KnowledgeRepository("sqlite:///" + (tmp_path / "knowledge.db").as_posix())
+    Base.metadata.create_all(repo.engine)
+    embedding = SyntheticEmbedding()
+    service = KnowledgeBaseService(repository=repo, embedding=embedding)
+    service.initialize()
+    yield service
+    repo.engine.dispose()
+
+
+def execute(kb, result):
+    with kb._repository.transaction() as db:
+        job = db.get(BackgroundJob, result["job_id"])
+        job.status = "running"
+        job.lease_token = "synthetic-owner"
+        job.lease_expires_at = datetime.utcnow() + timedelta(seconds=30)
+        job.attempts += 1
+    index_job(
+        kb._repository,
+        kb._embedding_service,
+        kb._vector_store,
+        result["job_id"],
+        "synthetic-owner",
+    )
+
+
+def test_stable_id_restart_version_and_same_title_isolation(kb):
+    first = kb.add_document("同名", "第一版本政策")
+    other = kb.add_document("同名", "另一个文档")
+    assert first["status"] == "draft" and first["published_version"] is None
+    execute(kb, first)
+    execute(kb, other)
+    restarted = KnowledgeBaseService(
+        repository=kb._repository, embedding=kb._embedding_service
+    )
+    updated = restarted.update_document(
+        first["document_id"], content="第二版本政策", expected_version=1
+    )
+    execute(kb, updated)
+    assert updated["document_id"] == first["document_id"] and updated["version"] == 2
+    assert (
+        restarted.document_detail(first["document_id"], 1)["content"] == "第一版本政策"
+    )
+    assert restarted.document_detail(other["document_id"])["version"] == 1
+    assert restarted.delete_document(first["document_id"])
+    assert restarted.document_detail(other["document_id"])["published_version"] == 1
+    _, chunks = kb._repository.snapshot()
+    assert {c["document_id"] for c in chunks} == {other["document_id"]}
+
+
+def test_failed_new_index_preserves_published_old_version_and_cas(kb):
+    first = kb.add_document("政策", "原发布版")
+    execute(kb, first)
+    second = kb.update_document(
+        first["document_id"], content="失败新版本", expected_version=1
+    )
+    with pytest.raises(KnowledgeConflict):
+        kb.update_document(first["document_id"], content="迟到编辑", expected_version=1)
+    kb._embedding_service.fail = True
+    execute(kb, second)
+    detail = kb.document_detail(first["document_id"])
+    assert detail["status"] == "failed" and detail["published_version"] == 1
+    _, chunks = kb._repository.snapshot()
+    assert {c["version"] for c in chunks} == {1}
+    with pytest.raises(KnowledgeConflict, match="index_not_ready"):
+        kb.set_document_published(first["document_id"])
+    kb._embedding_service.fail = False
+    execute(kb, second)
+    assert kb.document_detail(first["document_id"])["published_version"] == 2
+
+
+def test_source_chunks_cover_full_original_and_preserve_positions(kb):
+    from app.services.knowledge_base.lifecycle import source_chunks
+
+    original = (
+        "# 条款\n\n| 型号 | 单位 | 期限 |\n| X | 天 | 7 |\n"
+        + "长句无标点" * 180
+        + "\n例外：定制商品不能退。"
+    )
+    chunks = source_chunks(original)
+    covered = set()
+    for c in chunks:
+        assert (
+            c["content"] == original[c["start_offset"] : c["end_offset"]]
+            and len(c["content"]) <= 400
+        )
+        covered.update(range(c["start_offset"], c["end_offset"]))
+    assert covered == set(range(len(original))) and any(
+        "不能退" in c["content"] for c in chunks
+    )
+
+
+def test_repeated_index_is_same_version_same_chunks_and_true_batch(kb):
+    result = kb.add_document("长文", "内容" * 2000)
+    execute(kb, result)
+    execute(kb, result)
+    assert (
+        len(kb._embedding_service.calls) == 1
+        and len(kb._embedding_service.calls[0]) > 1
+    )
+    with kb._repository.transaction() as db:
+        chunks = db.scalars(select(KnowledgeChunk)).all()
+        assert len(chunks) == len(kb._embedding_service.calls[0])
+        assert len({c.chunk_id for c in chunks}) == len(chunks)
+
+
+def test_index_write_partial_failure_and_expired_fence_never_publish(kb):
+    from app.models.models import KnowledgeVersion, KnowledgeDoc
+
+    result = kb.add_document("原发布", "原发布内容")
+    execute(kb, result)
+    updated = kb.update_document(
+        result["document_id"], content="新内容", expected_version=1
+    )
+
+    class InterruptedIndex:
+        def write(self, *args):
+            with kb._repository.transaction() as db:
+                job = db.get(BackgroundJob, updated["job_id"])
+                job.lease_token = "replacement-owner"
+                job.lease_expires_at = datetime.utcnow() + timedelta(seconds=60)
+
+    kb._vector_store = InterruptedIndex()
+    execute(kb, updated)
+    assert kb.document_detail(result["document_id"])["published_version"] == 1
+    with kb._repository.transaction() as db:
+        assert (
+            db.get(BackgroundJob, updated["job_id"]).lease_token == "replacement-owner"
+        )
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(KnowledgeChunk)
+                .where(KnowledgeChunk.version == 2)
+            )
+            == 0
+        )
+
+
+def test_source_context_keeps_faq_question_table_units_and_exception_tail():
+    from app.services.knowledge_base.lifecycle import source_chunks
+
+    faq = "## 售后\nQ: 定制商品能退吗？\nA: " + "说明文字" * 180 + "但定制商品不适用。"
+    chunks = source_chunks(faq)
+    assert any(
+        c["source_context"]["faq_question"] == "Q: 定制商品能退吗？"
+        and "不适用" in c["content"]
+        for c in chunks
+    )
+    table = (
+        "## 费用\n| 项目 | 金额（元） |\n| --- | --- |\n" + "| 合成项目 | 10 |\n" * 80
+    )
+    chunks = source_chunks(table)
+    assert chunks[-1]["source_context"]["table_header"].startswith(
+        "| 项目 | 金额（元） |"
+    )

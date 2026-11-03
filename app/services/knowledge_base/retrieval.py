@@ -1,218 +1,22 @@
-"""检索链路：混合检索（Milvus 原生 hybrid / 内存双路降级）、RRF 融合与重排。
+"""兼容纯融合/启发式重排助手，生产检索统一走versioned_search.py。
 
-自 knowledge_base.py 拆分迁移（原 search / _search_milvus / _merge_results /
-_rerank / _heuristic_rescore 等），逻辑保持原样：
-
-- 主链路：Milvus 2.5 原生混合检索（dense + FULLTEXT BM25，服务端 RRF）。
-- 降级链路：向量 + 内存 BM25 双路 RRF 融合（milvus 不可用时）。
-- 重排：模型 reranker（外部 API → 本地 bge-reranker）→ 启发式回退。
+保留旧纯函数测试与导入契约，真实双路/分数类型/版本过滤不使用旧执行链。
 """
-import asyncio
 import logging
 import re
 import time
 from difflib import SequenceMatcher
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from app.config.config import settings
 
 from .bm25 import BM25Scorer
-from .cache_invalidation import QueryCache
 
 logger = logging.getLogger(__name__)
 
 
 class RetrievalMixin:
     """混合检索链路：Milvus 原生 hybrid、内存双路 RRF 融合、模型/启发式重排。"""
-
-    def search(
-        self,
-        query: str,
-        top_k: int = None,
-        similarity_threshold: float = None,
-    ) -> Dict[str, Any]:
-        self.initialize()
-
-        top_k = top_k if top_k is not None else settings.RAG_TOP_K
-        similarity_threshold = similarity_threshold if similarity_threshold is not None else settings.RAG_SIMILARITY_THRESHOLD
-        top_k = max(1, min(int(top_k), 50))
-        similarity_threshold = max(0.0, min(float(similarity_threshold), 1.0))
-
-        cache_key = QueryCache.make_key(query, top_k, similarity_threshold)
-        cached = self._query_cache.get(cache_key)
-        if cached:
-            return {**cached, "from_cache": True}
-
-        started = time.perf_counter()
-        if self._vector_store:
-            try:
-                result = self._search_milvus(
-                    query, top_k, similarity_threshold, started, cache_key
-                )
-                self._query_cache.set(cache_key, result)
-                return result
-            except Exception as exc:
-                # Milvus 检索失败（索引未就绪/超时等）走内存双路降级，保持三级降级承诺。
-                logger.error(f"Milvus hybrid search failed, falling back to memory: {exc}")
-
-        # 同步路径：串行执行两路检索（语义等价于原实现）。
-        query_embedding = self._encode_query_embedding(query)
-        if query_embedding is None:
-            return self._embedding_failed_result(query, started)
-
-        vector_results = self._retrieve_vector(query_embedding, query, top_k, similarity_threshold)
-        bm25_results = self._retrieve_bm25(query, top_k)
-        return self._compose_result(query, top_k, similarity_threshold, vector_results, bm25_results, started, cache_key)
-
-    async def async_search(
-        self,
-        query: str,
-        top_k: int = None,
-        similarity_threshold: float = None,
-    ) -> Dict[str, Any]:
-        """异步检索：embedding 后向量与 BM25 两路并行，结果与同步 search 等价。"""
-        self.initialize()
-
-        top_k = top_k if top_k is not None else settings.RAG_TOP_K
-        similarity_threshold = similarity_threshold if similarity_threshold is not None else settings.RAG_SIMILARITY_THRESHOLD
-        top_k = max(1, min(int(top_k), 50))
-        similarity_threshold = max(0.0, min(float(similarity_threshold), 1.0))
-
-        cache_key = QueryCache.make_key(query, top_k, similarity_threshold)
-        cached = await self._query_cache.aget(cache_key)
-        if cached:
-            return {**cached, "from_cache": True}
-
-        started = time.perf_counter()
-        if self._vector_store:
-            try:
-                query_embedding = await asyncio.to_thread(self._encode_query_embedding, query)
-                if query_embedding is None:
-                    return self._embedding_failed_result(query, started)
-                result = await asyncio.to_thread(
-                    self._search_milvus, query, top_k, similarity_threshold, started, cache_key
-                )
-                await self._query_cache.aset(cache_key, result)
-                return result
-            except Exception as exc:
-                logger.error(f"Milvus hybrid search failed (async), falling back to memory: {exc}")
-
-        query_embedding = await asyncio.to_thread(self._encode_query_embedding, query)
-        if query_embedding is None:
-            return self._embedding_failed_result(query, started)
-
-        vector_task = asyncio.to_thread(self._retrieve_vector, query_embedding, query, top_k, similarity_threshold)
-        bm25_task = asyncio.to_thread(self._retrieve_bm25, query, top_k)
-        vector_results, bm25_results = await asyncio.gather(vector_task, bm25_task)
-        result = await asyncio.to_thread(
-            self._compose_result, query, top_k, similarity_threshold,
-            vector_results, bm25_results, started, cache_key,
-        )
-        # 写 Redis 共享缓存（_compose_result 已同步写入本地内存，双端保持一致），
-        # 让多 worker 复用本次 embedding/检索结果。
-        await self._query_cache.aset(cache_key, result)
-        return result
-
-    def _search_milvus(
-        self,
-        query: str,
-        top_k: int,
-        similarity_threshold: float,
-        started: float,
-        cache_key: str,
-    ) -> Dict[str, Any]:
-        """主链路：Milvus 2.5 原生混合检索（dense 向量 + FULLTEXT BM25，服务端 RRF 融合）。
-
-        不再由应用进程内存 BM25 打分与合并；查询扩展词仍本地拼接后送入全文字段，
-        语义与旧内存 BM25 等价但索引在服务端维护（多 worker/多副本共享一致）。
-        """
-        query_embedding = self._encode_query_embedding(query)
-        if query_embedding is None:
-            return self._embedding_failed_result(query, started)
-
-        expanded = self._expand_bm25_query(query)
-        try:
-            merged = self._vector_store.hybrid_search(
-                query_embedding=query_embedding,
-                query_text=expanded,
-                top_k=top_k,
-            )
-        except Exception:
-            # FULLTEXT 索引缺失/未就绪时退化为纯向量检索，不阻断主链路。
-            merged = self._vector_store.search(
-                query_embedding=query_embedding,
-                top_k=top_k * 4,
-                score_threshold=similarity_threshold,
-            )
-        if not merged:
-            # 服务端无结果（如集合为空）时回退内存向量检索（含本地持久化文档）。
-            merged = self._memory_search(query_embedding, query, top_k, similarity_threshold)
-
-        reranked = self._rerank(query, merged, top_k) if settings.RAG_USE_RERANKER else merged[:top_k]
-        if not settings.RAG_USE_RERANKER:
-            self._rerank_backend = "none"
-
-        result = {
-            "success": True,
-            "query": query,
-            "results": reranked,
-            "total_candidates": len(merged),
-            "search_strategy": "hybrid_milvus" if merged else "empty",
-            "from_cache": False,
-            "backend": self.backend,
-            "reranker": self._rerank_backend,
-            "degraded": self.degraded,
-            "degraded_reason": self.degraded_reason or None,
-            "latency_ms": round((time.perf_counter() - started) * 1000, 3),
-        }
-        return result
-
-    def _encode_query_embedding(self, query: str) -> Optional[List[float]]:
-        """返回查询向量（走查询侧指令前缀）；embedding 不可用时返回 None。"""
-        try:
-            return self._embedding_service.encode_query(query)
-        except RuntimeError as e:
-            logger.error(f"Embedding 不可用，检索无法执行: {e}")
-            return None
-
-    def _embedding_failed_result(self, query: str, started: float) -> Dict[str, Any]:
-        return {
-            "success": False,
-            "query": query,
-            "results": [],
-            "total_candidates": 0,
-            "search_strategy": "empty",
-            "from_cache": False,
-            "backend": self.backend,
-            "degraded": True,
-            "degraded_reason": "embedding_unavailable",
-            "error": "embedding_unavailable",
-            "latency_ms": round((time.perf_counter() - started) * 1000, 3),
-        }
-
-    def _retrieve_vector(
-        self, query_embedding: List[float], query: str, top_k: int, similarity_threshold: float
-    ) -> List[Dict[str, Any]]:
-        """向量路：Milvus 优先，失败/不可用回退内存向量检索。"""
-        if self._vector_store:
-            try:
-                vector_results = self._vector_store.search(
-                    query_embedding=query_embedding,
-                    top_k=top_k * 4,
-                    score_threshold=similarity_threshold,
-                )
-                if not vector_results:
-                    vector_results = self._memory_search(query_embedding, query, top_k, similarity_threshold)
-            except Exception as e:
-                logger.error(f"Milvus search error: {e}")
-                vector_results = self._memory_search(query_embedding, query, top_k, similarity_threshold)
-        else:
-            vector_results = self._memory_search(query_embedding, query, top_k, similarity_threshold)
-        return vector_results
-
-    def _retrieve_bm25(self, query: str, top_k: int) -> List[Dict[str, Any]]:
-        """BM25 路：查询扩展后关键词检索。"""
-        return self._bm25_search(self._expand_bm25_query(query), top_k)
 
     def _compose_result(
         self, query: str, top_k: int, similarity_threshold: float,
@@ -269,53 +73,6 @@ class RetrievalMixin:
         if any(term in query_lower for term in ("换货", "换一个", "换个", "换颜色")):
             expansions.extend(["退换货", "换货流程", "售后", "政策"])
         return " ".join([query, *expansions])
-
-    def _bm25_search(self, query: str, top_k: int) -> List[Dict[str, Any]]:
-        """内存 BM25 检索（仅在 Milvus 不可用时的降级链路使用）。
-
-        Milvus 正常时全文检索由服务端 FULLTEXT 索引完成，本方法不再作为主链路。
-        """
-        corpus = []
-        meta_chunks = []
-
-        for doc in self._documents:
-            if not doc.get("is_published", True):
-                continue
-            for chunk in doc["chunks"]:
-                corpus.append(chunk["content"])
-                meta_chunks.append({
-                    "id": chunk["id"],
-                    "title": doc["title"],
-                    "category": doc.get("category", ""),
-                    "keywords": doc.get("keywords", []),
-                    "source": doc.get("source", ""),
-                })
-
-        if not corpus:
-            return []
-
-        if not self._bm25_built:
-            self._bm25.build_index(corpus)
-            self._bm25_built = True
-
-        results = []
-        for idx, meta in enumerate(meta_chunks):
-            score = self._bm25.score(query, idx)
-            if score > 0:
-                results.append({
-                    "id": meta["id"],
-                    "title": meta.get("title", ""),
-                    "content": corpus[idx] if idx < len(corpus) else "",
-                    "category": meta.get("category", ""),
-                    "keywords": meta.get("keywords", []),
-                    "source": meta.get("source", ""),
-                    "vector_score": 0.0,
-                    "bm25_score": score,
-                    "final_score": score,
-                })
-
-        results.sort(key=lambda x: x.get("bm25_score", 0), reverse=True)
-        return results[:top_k * 4]
 
     def _merge_results(
         self,
@@ -374,37 +131,6 @@ class RetrievalMixin:
         # 候选 11-20 位（对 top_k=5），此前在 2 倍截断时被直接丢弃导致漏检。
         return results[:top_k * 4]
 
-    def _memory_search(
-        self,
-        query_embedding: List[float],
-        query: str,
-        top_k: int,
-        threshold: float,
-    ) -> List[Dict[str, Any]]:
-        results = []
-        for doc in self._documents:
-            if not doc.get("is_published", True):
-                continue
-            for chunk in doc["chunks"]:
-                if "_embedding" not in chunk:
-                    continue
-
-                similarity = self._cosine_similarity(query_embedding, chunk["_embedding"])
-                if similarity >= threshold:
-                    results.append({
-                        "id": chunk["id"],
-                        "title": doc["title"],
-                        "content": chunk["content"],
-                        "category": doc.get("category", ""),
-                        "keywords": doc.get("keywords", []),
-                        "source": doc.get("source", ""),
-                        "vector_score": round(similarity, 4),
-                        "final_score": round(similarity, 4),
-                    })
-
-        results.sort(key=lambda x: x["vector_score"], reverse=True)
-        return results[:top_k * 4]
-
     def _rerank(
         self, query: str, candidates: List[Dict[str, Any]], top_k: int
     ) -> List[Dict[str, Any]]:
@@ -448,7 +174,7 @@ class RetrievalMixin:
         seen_contents = set()
 
         for candidate in candidates:
-            content_hash = candidate.get("content", "")[:100]
+            content_hash = candidate.get("id") or __import__("hashlib").sha256(candidate.get("content", "").encode()).hexdigest()
             if content_hash in seen_contents:
                 continue
             seen_contents.add(content_hash)
@@ -562,9 +288,8 @@ class RetrievalMixin:
         return scored[:top_k]
 
     def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
-        min_len = min(len(vec1), len(vec2))
-        vec1 = vec1[:min_len]
-        vec2 = vec2[:min_len]
+        if len(vec1)!=len(vec2):
+            raise ValueError("embedding_dimension_mismatch")
 
         dot_product = sum(a * b for a, b in zip(vec1, vec2))
         magnitude1 = sum(a * a for a in vec1) ** 0.5

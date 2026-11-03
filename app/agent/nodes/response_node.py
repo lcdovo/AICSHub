@@ -40,6 +40,13 @@ STRONG_EMOTION_MARKERS = ("气死", "垃圾", "太气人", "打不通", "敷衍"
 
 async def validate_candidate(self: "AgentGraph", state: AgentState) -> bool:
     """The same gate checks every generated draft, including regeneration."""
+    if state.collected_info.get("kb_results") and any(item.get("version_id") for item in state.collected_info["kb_results"]):
+        import asyncio
+        from app.services.knowledge_base import get_knowledge_base
+        if not await asyncio.to_thread(get_knowledge_base().evidence_is_current,state.collected_info["kb_results"]):
+            state.collected_info["rag_grounded"]=False
+            state.collected_info["kb_results"]=[]
+            state.reply="知识版本已变化，请重新提问以读取最新发布内容。"
     state.collected_info.pop("llm_judge", None)
     state.collected_info.pop("inline_self_check", None)
     # Citations are supporting material, not part of the answer being assessed.
@@ -84,6 +91,13 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
     if state.collected_info.get("smalltalk") and not state.reply:
         state.reply = self._get_default_reply(IntentType.GENERAL, state.user_message)
 
+    if state.collected_info.get("kb_results") and any(item.get("version_id") for item in state.collected_info["kb_results"]):
+        import asyncio
+        from app.services.knowledge_base import get_knowledge_base
+        if not await asyncio.to_thread(get_knowledge_base().evidence_is_current,state.collected_info["kb_results"]):
+            state.collected_info["kb_results"]=[]
+            state.collected_info["rag_grounded"]=False
+            state.reply="知识版本已变化，请重新提问以读取最新发布内容。"
     has_business_tool = any(tc.tool_name != "hybrid_search" for tc in state.tool_calls)
     grounded = bool(state.collected_info.get("rag_grounded") and state.collected_info.get("kb_results"))
     answer_cache_key = None
@@ -523,7 +537,7 @@ def build_llm_prompt(self: "AgentGraph", state: AgentState) -> str:
         parts.append("【知识库检索结果】")
         for i, result in enumerate(kb_results[:3], 1):
             title = result.get("title", "")
-            content = result.get("content", "")
+            content = result.get("evidence_text", result.get("content", ""))
             category = result.get("category", "")
             score = result.get("final_score", result.get("hybrid_score", 0))
             parts.append(f"  {i}. 【{title}】({category}, 相关度:{score:.0%})")
@@ -532,7 +546,7 @@ def build_llm_prompt(self: "AgentGraph", state: AgentState) -> str:
                 if chapter:
                     parts.append(f"     章节：{chapter}")
                 if body:
-                    parts.append(f"     {body[:300]}")
+                    parts.append(f"     {body}")
 
     parts.append("")
     parts.append("请根据以上信息，用自然、专业、简洁的中文回复用户。回复要点：")

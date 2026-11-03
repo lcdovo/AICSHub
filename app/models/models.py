@@ -329,6 +329,10 @@ class KnowledgeDoc(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    stable_id = Column(String(40), nullable=True, unique=True, index=True)
+    published_version = Column(Integer, nullable=True)
+    lifecycle_status = Column(String(20), nullable=False, default="legacy")
+
     chunks = relationship("KnowledgeChunk", back_populates="document", cascade="all, delete-orphan")
 
 
@@ -350,6 +354,13 @@ class KnowledgeChunk(Base):
     version = Column(Integer, nullable=False, default=1, index=True)
     is_active = Column(Boolean, nullable=False, default=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    content_hash = Column(String(64), nullable=True)
+    start_offset = Column(Integer, nullable=True)
+    end_offset = Column(Integer, nullable=True)
+    section = Column(String(200), nullable=True)
+    chunk_policy = Column(String(40), nullable=True)
+    source_context = Column(JSON, nullable=True)
 
     document = relationship("KnowledgeDoc", back_populates="chunks")
 
@@ -472,3 +483,29 @@ class SimulatedDelivery(Base):
     event_id = Column(String(36), primary_key=True)
     receipt_id = Column(String(128), nullable=False, unique=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class KnowledgeVersion(Base):
+    __tablename__ = "knowledge_versions"
+    __table_args__ = (UniqueConstraint("document_id", "number", name="uq_knowledge_version"),)
+    id = Column(String(36), primary_key=True)
+    document_id = Column(Integer, ForeignKey("knowledge_docs.id"), nullable=False, index=True)
+    number = Column(Integer, nullable=False)
+    title = Column(String(200), nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(String(50), nullable=False, default="")
+    keywords = Column(JSON, nullable=True)
+    source = Column(String(500), nullable=False, default="")
+    status = Column(String(20), nullable=False, default="draft")
+    publish_requested = Column(Boolean, nullable=False, default=False)
+    embedding_fingerprint = Column(String(64), nullable=True)
+    embedding_metadata = Column(JSON, nullable=True)
+    chunk_policy = Column(String(40), nullable=False, default="bounded-source-v1")
+    error_code = Column(String(80), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class KnowledgeEpoch(Base):
+    __tablename__ = "knowledge_epoch"
+    id = Column(Integer, primary_key=True)
+    value = Column(Integer, nullable=False, default=0)
