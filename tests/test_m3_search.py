@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from app.config.config import settings
 from app.services.knowledge_base import KnowledgeBaseService
-from tests.test_m3_lifecycle import execute
+from tests.test_m3_lifecycle import execute, kb as kb
 
 
 def test_embedding_failure_retains_bm25_and_truthful_metadata(kb, monkeypatch):
