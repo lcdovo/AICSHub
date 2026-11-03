@@ -10,7 +10,7 @@ from app.agent.state import AgentState, AgentNode, IntentType
 from app.agent.tools import ToolExecutionResult
 from app.agent.mcp_client import invoke_tool
 from app.agent.ticket_authorization import authorize_ticket
-from app.agent.refund_authorization import authorize_refund
+from app.agent.refund_authorization import authorize_refund, CONFIRMATIONS
 
 logger = logging.getLogger(__name__)
 
@@ -216,11 +216,8 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
 
 def is_refund_confirmed(state: AgentState) -> bool:
     """识别显式确认，避免将“好的/谢谢”等普通回复当作授权。"""
-    if state.collected_info.get("confirm_refund") is True:
-        return True
-    confirmations = {"确认", "同意", "确定", "提交", "是的", "可以"}
     message = state.user_message.strip()
-    return message in confirmations
+    return message in CONFIRMATIONS or state.has_current_refund_confirmation()
 
 
 
@@ -231,7 +228,11 @@ def refund_cancelled(state: AgentState) -> bool:
 async def confirm_action(dependencies: "ConfirmationDependencies", state: AgentState) -> str:
     preview = state.collected_info.get("refund_preview", {})
     if dependencies.confirmed(state):
-        state.collected_info["confirm_refund"] = True
+        if state.user_message.strip() in CONFIRMATIONS:
+            state.record_refund_confirmation("current_message")
+        elif not state.has_current_refund_confirmation():
+            state.reply, state.needs_clarification = "请在本轮明确确认当前退款预览。", True
+            return AgentNode.RESPONSE_GENERATION
         state.pending_confirmations = []
         return AgentNode.TOOL_EXECUTION
 
@@ -250,8 +251,8 @@ async def confirm_action(dependencies: "ConfirmationDependencies", state: AgentS
         "type": "refund_confirmation", "order_id": order_id,
         "refund_type": refund_type, "reason": reason,
     })
-    if decision is True or str(decision).strip() in {"确认", "同意", "确定", "提交", "是的", "可以", "true", "1"}:
-        state.collected_info["confirm_refund"] = True
+    if decision is True or str(decision).strip() in CONFIRMATIONS | {"true", "1"}:
+        state.record_refund_confirmation("interrupt")
         state.pending_confirmations = []
         return AgentNode.TOOL_EXECUTION
     return AgentNode.RESPONSE_GENERATION

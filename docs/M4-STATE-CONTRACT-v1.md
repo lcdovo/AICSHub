@@ -34,3 +34,5 @@ record_tool_observation只接受注册的8种业务工具名字，工具身份�
 SQL恢复与for_next_turn共用carryover_context白名单；历史SQL context_data不是本轮证据/审查/模型计量/工具观察的来源。只保留必要背景与未完成参数，当前动作仍须SQL事实核验。该过滤只改变运行时投影，不删除历史记录。业务字段内容的完整严格类型契约仍待迁移，不能把白名单当全面类型化完成。
 
 业务输入参数迁移：BusinessParameters严格冻结声明order_id/reason/refund_type/complaint_content四字段，订单长度32与现有OrderReadInput/RefundToolInput一致，原因/投诉内容上限10000与现有领域输入一致；可缺失/短原因代表待补齐，不改变既有6字补槽或资格规则。提取器必须只返回声明字段；当前类型参数权威、旧字典仅投影，明确清空订单不被旧字段复活。已建立参数贯穿请求已知对象、路由、改写、提示词、工具组装、持久动作恢复和下一轮白名单。其他业务编号/持久动作回执/改写观察等全面类型化仍未结束。
+
+确认观察迁移：TurnRefundConfirmation只记current_message/受控interrupt来源及本轮上下文摘要；摘要绑定user/actor/session/source_message_id、消息及完整预览。confirm_refund旧bool仅作兼容镜像，不再是节点确认来源。current_message来源只允许既有精确确认词；暂停来源由可信编排pause接口记录，参数/消息改变即失效，新轮次不继承。它不是签名或SQL事实，实际退款提交仍独立检查数据库当前消息、动作版本/金额/权限/资格与幂等。持久预览等完整类型化仍未结束。

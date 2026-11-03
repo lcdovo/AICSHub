@@ -97,3 +97,5 @@ SQL轮次恢复切片新增：`tests/test_m4_sql_turn_reset.py`；修改AgentSta
 业务参数切片新增：`app/agent/business_contracts.py`、`tests/test_m4_business_parameters.py`；修改AgentState及意图/工具/RAG/响应、统一理解与SQL恢复的参数入口。
 
 模型重绑定切片新增：`tests/test_m4_model_rebinding.py`；修改Graph.llm_service属性以同步其原共享解析组件，保留显式独立Judge。
+
+确认绑定切片新增：`app/agent/confirmation_contracts.py`、`tests/test_m4_confirmation_binding.py`；修改AgentState与工具/确认节点，旧bool不作为授权来源。

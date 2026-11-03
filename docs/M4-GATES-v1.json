@@ -54,7 +54,7 @@
     },
     "AC-07-01": {
       "status": "PARTIAL",
-      "evidence_and_limit": "证据/审查/工具观察/TurnFlow/GenerationMetadata及四类BusinessParameters已分区类型化；提取额外控制字段拒绝，参数不受后改字典覆盖，144项最新相关T0通过。其他编号/持久预览/改写等状态仍未全面类型化，保持PARTIAL"
+      "evidence_and_limit": "证据/审查/工具观察/TurnFlow/GenerationMetadata及四类BusinessParameters已分区类型化；提取额外控制字段拒绝，参数不受后改字典覆盖，144项最新相关T0通过。其他编号/持久预览/改写等状态仍未全面类型化，保持PARTIAL；同轮TurnRefundConfirmation绑定身份/消息/完整预览，旧bool不授权，103项最新相关T0及实际SQL非确认拒绝通过；预览等剩余状态仍待迁移"
     },
     "AC-07-02": {
       "status": "PASS_C_ISOLATED",
@@ -232,6 +232,24 @@
     "current_schema_live_probe": "ad1166d"
   },
   "verification": [
+    {
+      "layer": "T0 full at 8e59ce2 before confirmation binding slice",
+      "path": "reports/offline/20261104-034411-239768",
+      "passed": 786,
+      "failures": 0,
+      "errors": 0,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "a3c925c3781946a650f8da58101bc8326d779e2506c1aa192bd66c9c30648528"
+    },
+    {
+      "layer": "T0 bound turn confirmation plus actual SQL nonconfirmation rejection",
+      "path": "reports/offline/20261104-035137-659047",
+      "passed": 103,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "6f7ea56c63d41266d82aec0f92fd08c1d0d57f7644bc1aa321912d01468effee"
+    },
     {
       "layer": "T0 owned model service rebinding across rewriter and judge adapters",
       "path": "reports/offline/20261104-034216-435117",

@@ -650,6 +650,78 @@
       "sha256": "52e26c9b9a1e30be33772f4a9063503a9fde343db82923930758baecff5f41e7",
       "bytes": 27763,
       "snapshot": "shared-parser-model-rebinding"
+    },
+    {
+      "path": "reports/offline/20261104-034936-388419/junit.xml",
+      "sha256": "7b62c9506eb7deeab5f983f81267b146b2897ef6346844d51690697301ad7a31",
+      "bytes": 21918,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-034936-388419/manifest.json",
+      "sha256": "a1d6937cad87b63979bf49bbd1a394c1aeda10b9ebb14047d772bc0e0e659152",
+      "bytes": 1282,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-034936-388419/source-start.json",
+      "sha256": "8f1d60af4e423174a848ef29ae9b7e921f5bb5eb9c3246213473a3ea9b921c24",
+      "bytes": 27855,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-034936-388419/source-end.json",
+      "sha256": "8f1d60af4e423174a848ef29ae9b7e921f5bb5eb9c3246213473a3ea9b921c24",
+      "bytes": 27855,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-035137-659047/junit.xml",
+      "sha256": "7a1910d16bc594442ea0bcb87edbde72df1f9a2d706a8c1215efcecf916216c9",
+      "bytes": 13705,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-035137-659047/manifest.json",
+      "sha256": "e7c49648a1da9576c8739bc827647a405c53e9f6d886f9be1ca924e29314be29",
+      "bytes": 2317,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-035137-659047/source-start.json",
+      "sha256": "874d624009af31e206eec32dccf61097fcee01c916dfa5db7c1da075179cc3ba",
+      "bytes": 28075,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-035137-659047/source-end.json",
+      "sha256": "874d624009af31e206eec32dccf61097fcee01c916dfa5db7c1da075179cc3ba",
+      "bytes": 28075,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-034411-239768/junit.xml",
+      "sha256": "6b33de3fb1d06e3a357676589347d7f4a1a39009c0f30aa2cbe65dc99912b7f3",
+      "bytes": 105010,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-034411-239768/manifest.json",
+      "sha256": "5178389aa659e1fc13ca181435726c5c061f7eb27f39b122b01095aade8dbb51",
+      "bytes": 1203,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-034411-239768/source-start.json",
+      "sha256": "bc0f963aa9ef77594e9d1dfdd8a3d33043b6e6b37c5d3cf01cdc0425e9d123ea",
+      "bytes": 27695,
+      "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/offline/20261104-034411-239768/source-end.json",
+      "sha256": "bc0f963aa9ef77594e9d1dfdd8a3d33043b6e6b37c5d3cf01cdc0425e9d123ea",
+      "bytes": 27695,
+      "snapshot": "bound-current-turn-confirmation"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

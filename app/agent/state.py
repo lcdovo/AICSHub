@@ -10,6 +10,7 @@ from app.agent.read_plan import ReadTask
 from app.agent.flow_contracts import FlowFlag, TurnFlow
 from app.agent.generation_contracts import GenerationMetadata
 from app.agent.business_contracts import BusinessParameters
+from app.agent.confirmation_contracts import TurnRefundConfirmation
 from app.agent.tool_contracts import ToolObservation, BusinessToolName, TOOL_RESULT_COMPAT_KEYS, TOOL_IDENTIFIER_PROJECTIONS
 
 
@@ -56,6 +57,7 @@ class AgentState(BaseModel):
     generation_metadata_error: Optional[str] = None
     business_parameters: BusinessParameters = Field(default_factory=BusinessParameters)
     business_parameter_errors: List[str] = Field(default_factory=list)
+    refund_confirmation: Optional[TurnRefundConfirmation] = None
     read_plan: List[ReadTask] = Field(default_factory=list)
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
@@ -200,6 +202,29 @@ class AgentState(BaseModel):
             return False
         self.business_parameter_errors = [key for key in self.business_parameter_errors if key != "extracted_parameters"]
         return not self.business_parameter_errors
+
+    def _refund_confirmation_digest(self) -> str:
+        import hashlib
+        import json
+        payload = {
+            "session_id": self.session_id, "user_id": self.user_id, "actor_id": self.actor_id,
+            "source_message_id": self.source_message_id, "message": self.user_message,
+            "preview": self.collected_info.get("refund_preview"),
+        }
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
+
+    def record_refund_confirmation(self, origin: str) -> None:
+        from app.agent.refund_authorization import CONFIRMATIONS
+        if origin == "current_message" and self.user_message.strip() not in CONFIRMATIONS:
+            raise ValueError("current_message_not_confirmation")
+        self.refund_confirmation = TurnRefundConfirmation(
+            origin=origin, context_digest=self._refund_confirmation_digest()
+        )
+        self.collected_info["confirm_refund"] = True  # 仅兼容观察，不再是确认来源。
+
+    def has_current_refund_confirmation(self) -> bool:
+        return bool(self.refund_confirmation and
+                    self.refund_confirmation.context_digest == self._refund_confirmation_digest())
 
     def current_evidence(self) -> List[Dict[str, Any]]:
         """类型证据是主链权威；兼容旧内部调用时仅在尚无bundle时读取旧字段。"""
