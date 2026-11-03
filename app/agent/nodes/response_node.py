@@ -79,6 +79,8 @@ async def validate_candidate(self: "AgentGraph", state: AgentState) -> bool:
                 report["overall_score"] = min(report["overall_score"], judgement.get("fact_score", 0))
                 report["issues"].append({"type": "evidence_rejected", "severity": "error"})
             state.collected_info["rag_refused"] = refused
+    from app.agent.request_understanding import ReviewResult
+    state.review_result=ReviewResult(passed=passed)
     report["passed"] = passed
     state.collected_info["validation"] = report
     state.collected_info["answer_validated"] = passed

@@ -79,6 +79,8 @@ class ChatService:
             summary = await session_manager.get_summary(session_id)
             if summary and summary.intent_history and not state.collected_info.get("intent_history"):
                 state.collected_info["intent_history"] = list(summary.intent_history)
+        from app.agent.request_understanding import ConversationContext
+        state.conversation_context=ConversationContext(messages=state.messages[-6:],known_order_id=state.collected_info.get("order_id"),pending_action_id=state.collected_info.get("refund_preview",{}).get("action_id"))
         return state
 
     async def process(self, state: AgentState) -> AgentState:

@@ -104,6 +104,12 @@ async def accept(db: AsyncSession, actor: User, body) -> tuple[ChatRun, bool]:
             raise HTTPException(400, "会话已关闭")
     payload = dict(message=body.message, action_id=body.action_id, action_version=body.action_version)
     digest = fingerprint({**payload, "actor_id": actor.id, "user_id": body.user_id})
+    from app.config.config import settings
+    from app.services.llm_governance import stable_gray_assignment
+    selected_mode=settings.REQUEST_UNDERSTANDING_MODE
+    if selected_mode=='model' and not stable_gray_assignment(str(body.user_id),settings.REQUEST_UNDERSTANDING_PERCENTAGE):selected_mode='rules'
+    payload["_understanding_mode"]=selected_mode
+    payload["_strategy_version"]=settings.REQUEST_UNDERSTANDING_VERSION
     run = ChatRun(id=str(uuid.uuid4()), user_id=body.user_id, actor_id=actor.id, session_id=sid,
                   client_message_id=cid, request_hash=digest, request_data=payload,
                   lease_expires_at=datetime.utcnow() + timedelta(seconds=LEASE_SECONDS))
@@ -190,6 +196,7 @@ async def _renew(factory: async_sessionmaker[AsyncSession], run: ChatRun, token:
 
 async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, manager, access_token: str | None, streaming: bool) -> None:
     renewer = None
+    gateway_token = None
     token = str(uuid.uuid4())
     try:
         async with factory() as db:
@@ -204,6 +211,11 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
             state.requested_action_id = run.action_id or run.request_data.get("action_id")
             state.requested_action_version = run.request_data.get("action_version")
             state.session_version = version
+            state.understanding_mode=run.request_data.get("_understanding_mode","rules")
+            state.strategy_version=run.request_data.get("_strategy_version","legacy")
+            from app.services.model_gateway import CALL_CONTEXT
+            gateway_token=CALL_CONTEXT.set({"user_id":run.user_id,"run_id":run.id,"factory":factory,
+                "route_version":state.strategy_version,"deadline":__import__('time').monotonic()+RUN_TIMEOUT_SECONDS,"attempts":0})
             async with factory() as db:
                 current = await db.get(ChatRun,rid)
                 current.action_id = state.collected_info.get("refund_preview",{}).get("action_id")
@@ -269,6 +281,9 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
                                      .values(lease_expires_at=datetime.utcnow()))
                     await db.commit()
     finally:
+        if gateway_token is not None:
+            from app.services.model_gateway import CALL_CONTEXT
+            CALL_CONTEXT.reset(gateway_token)
         if renewer:
             renewer.cancel()
             with suppress(asyncio.CancelledError):

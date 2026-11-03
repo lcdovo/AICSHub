@@ -3,6 +3,7 @@
 自 graph.py 拆分迁移（原 AgentGraph._node_intent_recognition 等），逻辑保持原样：
 路由决策直接修改 state 后返回 next_node，图由 graph.py 统一装配。
 """
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -13,12 +14,25 @@ logger = logging.getLogger(__name__)
 
 
 async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
+    mode = state.understanding_mode or settings.REQUEST_UNDERSTANDING_MODE
+    if mode == "shadow":
+        from app.agent.request_understanding import understand
+
+        result = await understand(self.llm_service, state)
+        state.collected_info["shadow_understanding"] = (
+            result.model_dump() if result else {"status": "unavailable"}
+        )
+        state.reply = "影子理解已记录，本轮不执行申请、确认或取消。"
+        return AgentNode.RESPONSE_GENERATION
     if state.collected_info.get("refund_preview") and self._refund_cancelled(state):
         action_id = state.collected_info["refund_preview"].get("action_id")
         if action_id:
             from app.services.refund_actions import cancel
             from app.utils.database import async_session
-            await cancel(async_session, state.actor_id or state.user_id, state.user_id, action_id)
+
+            await cancel(
+                async_session, state.actor_id or state.user_id, state.user_id, action_id
+            )
         state.detected_intent = IntentType.REFUND
         state.intent_confidence = 1.0
         state.needs_clarification = False
@@ -36,10 +50,30 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
         state.needs_clarification = False
         return AgentNode.ROUTE_DECISION
 
+    mode = state.understanding_mode or settings.REQUEST_UNDERSTANDING_MODE
+    if mode in {"model", "shadow"} and not self._is_smalltalk(state.user_message):
+        from app.agent.request_understanding import understand, route_understanding
+
+        result = await understand(self.llm_service, state)
+        if mode == "model":
+            if result:
+                return route_understanding(state, result)
+            state.reply = "本轮请求理解暂时不可用，请明确说明咨询对象或希望办理的操作。"
+            state.needs_clarification = True
+            return AgentNode.RESPONSE_GENERATION
+        state.collected_info["shadow_understanding"] = (
+            result.model_dump() if result else {"status": "unavailable"}
+        )
+        # 影子运行只给只读结果；不让旧规则动作写入污染比较。
+        state.reply = "影子理解已记录，本轮不执行申请或变更。"
+        return AgentNode.RESPONSE_GENERATION
+
     intent_result = self.intent_recognizer.recognize(
         message=state.user_message,
         context=state.messages,
-        history_intent=state.detected_intent if state.detected_intent != IntentType.GENERAL else None,
+        history_intent=state.detected_intent
+        if state.detected_intent != IntentType.GENERAL
+        else None,
         llm_primary=settings.LLM_INTENT_PRIMARY,
     )
 
@@ -52,9 +86,8 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
     # 寒暄拦截优先于澄清与 LLM 兜底：高频寒暄语（你好/谢谢/再见等）已由
     # 规则模板覆盖，强制解除 ≤5 字触发的澄清标记，并且不再调用分类模型二次确认，
     # 由路由直接送入响应生成节点返回固定文案（每轮重算布尔值，防止跨轮泄漏）。
-    is_smalltalk = (
-        intent_result.intent == IntentType.GENERAL
-        and self._is_smalltalk(state.user_message)
+    is_smalltalk = intent_result.intent == IntentType.GENERAL and self._is_smalltalk(
+        state.user_message
     )
     state.collected_info["smalltalk"] = is_smalltalk
     if is_smalltalk:
@@ -82,14 +115,22 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
             if settings.LLM_INTENT_PRIMARY:
                 # LLM 主判：模型返回即采纳（模型不可用/失败返回 None 时保留规则）。
                 intent_result.intent = refined.get("intent", intent_result.intent)
-                intent_result.confidence = float(refined.get("confidence", intent_result.confidence))
-                intent_result.needs_clarification = bool(refined.get("need_clarification", False))
+                intent_result.confidence = float(
+                    refined.get("confidence", intent_result.confidence)
+                )
+                intent_result.needs_clarification = bool(
+                    refined.get("need_clarification", False)
+                )
                 state.collected_info["intent_source"] = "llm_primary"
             elif refined.get("confidence", 0) > intent_result.confidence:
                 # 旧兜底口径：仅当置信度更高时才覆盖规则结果。
                 intent_result.intent = refined.get("intent", intent_result.intent)
-                intent_result.confidence = float(refined.get("confidence", intent_result.confidence))
-                intent_result.needs_clarification = bool(refined.get("need_clarification", False))
+                intent_result.confidence = float(
+                    refined.get("confidence", intent_result.confidence)
+                )
+                intent_result.needs_clarification = bool(
+                    refined.get("need_clarification", False)
+                )
                 state.collected_info["intent_source"] = "llm_fallback"
 
     state.detected_intent = intent_result.intent
@@ -104,7 +145,9 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
     # 意图序列分析：检测升级模式（如 query_order → refund → complaint）
     intent_history = state.collected_info.get("intent_history", [])
     if intent_history:
-        escalation = self._detect_intent_escalation(intent_history, intent_result.intent)
+        escalation = self._detect_intent_escalation(
+            intent_history, intent_result.intent
+        )
         if escalation and not state.need_human:
             state.need_human = True
             state.human_reason = f"意图升级模式检测: {' -> '.join(escalation)}"
@@ -119,7 +162,9 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
     return AgentNode.ROUTE_DECISION
 
 
-def detect_intent_escalation(self: "AgentGraph", intent_history: List[str], current_intent: str) -> Optional[List[str]]:
+def detect_intent_escalation(
+    self: "AgentGraph", intent_history: List[str], current_intent: str
+) -> Optional[List[str]]:
     """检测意图升级模式，返回完整升级路径（含当前意图），无升级返回 None。
     升级路径定义：
     - query_order → refund → complaint：查询订单后申请退款再投诉
@@ -141,7 +186,7 @@ def detect_intent_escalation(self: "AgentGraph", intent_history: List[str], curr
 
     for chain, label in escalation_chains:
         if len(full_sequence) >= len(chain):
-            tail = full_sequence[-len(chain):]
+            tail = full_sequence[-len(chain) :]
             if tail == chain:
                 return tail
     return None
@@ -153,20 +198,29 @@ async def route_decision_node(self: "AgentGraph", state: AgentState) -> str:
     state.collected_info["session_id"] = state.session_id
     extracted = self._extract_info_from_message(state.user_message)
     for key, value in extracted.items():
-        if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
+        if (
+            key == "order_id"
+            or key not in state.collected_info
+            or not state.collected_info[key]
+        ):
             state.collected_info[key] = value
 
     # Answer reuse happens only after rewriting/retrieval, with current evidence.
 
     # 退款意图分流：政策咨询类（无订单号且询问流程/时效/规则）走 RAG，
     # 实际申请退款（有订单号+动作词）才走工具执行。
-    if state.detected_intent == IntentType.REFUND and self._is_refund_policy_inquiry(state.user_message, state.collected_info):
+    if state.detected_intent == IntentType.REFUND and self._is_refund_policy_inquiry(
+        state.user_message, state.collected_info
+    ):
         state.route_reason = "refund:policy_inquiry->rag"
         return AgentNode.QUERY_REWRITE
 
     # 投诉意图分流：政策咨询类（问流程/时效/材料/影响）走 RAG 回答，
     # 明确提交投诉/举报（动作词）才走工具创建工单。
-    if state.detected_intent == IntentType.COMPLAINT and self._is_complaint_policy_inquiry(state.user_message):
+    if (
+        state.detected_intent == IntentType.COMPLAINT
+        and self._is_complaint_policy_inquiry(state.user_message)
+    ):
         state.route_reason = "complaint:policy_inquiry->rag"
         return AgentNode.QUERY_REWRITE
 
@@ -191,10 +245,54 @@ async def route_decision_node(self: "AgentGraph", state: AgentState) -> str:
     return next_node
 
 
-def is_refund_policy_inquiry(self: "AgentGraph", message: str, collected: Dict[str, Any]) -> bool:
+def is_refund_policy_inquiry(
+    self: "AgentGraph", message: str, collected: Dict[str, Any]
+) -> bool:
     """判断退款意图是否为政策咨询（应走 RAG）而非实际退款申请（应走工具）。"""
-    policy_keywords = ["流程", "几天", "多久", "怎么退", "如何退", "政策", "规则", "到账", "无理由", "质保期", "保修期", "售后", "换货流程", "退货流程", "运费谁出", "能退吗", "包装", "保留", "区别", "换货", "条件", "要求", "什么样", "需要注意", "规定", "原路", "返回", "从哪里退", "退到", "退款方式", "几天能到", "什么时候到"]
-    action_keywords = ["申请", "退钱", "帮我退", "给我退", "我要退", "直接退", "马上退", "退款成功"]
+    policy_keywords = [
+        "流程",
+        "几天",
+        "多久",
+        "怎么退",
+        "如何退",
+        "政策",
+        "规则",
+        "到账",
+        "无理由",
+        "质保期",
+        "保修期",
+        "售后",
+        "换货流程",
+        "退货流程",
+        "运费谁出",
+        "能退吗",
+        "包装",
+        "保留",
+        "区别",
+        "换货",
+        "条件",
+        "要求",
+        "什么样",
+        "需要注意",
+        "规定",
+        "原路",
+        "返回",
+        "从哪里退",
+        "退到",
+        "退款方式",
+        "几天能到",
+        "什么时候到",
+    ]
+    action_keywords = [
+        "申请",
+        "退钱",
+        "帮我退",
+        "给我退",
+        "我要退",
+        "直接退",
+        "马上退",
+        "退款成功",
+    ]
     has_policy_kw = any(kw in message for kw in policy_keywords)
     has_action_kw = any(kw in message for kw in action_keywords)
     has_order_id = bool(collected.get("order_id"))
@@ -202,7 +300,10 @@ def is_refund_policy_inquiry(self: "AgentGraph", message: str, collected: Dict[s
     if has_policy_kw and not has_action_kw and not has_order_id:
         return True
     # "能退吗/可以退吗" 这类询问是否可退，无订单号 → 政策咨询
-    if any(kw in message for kw in ["能退吗", "可以退", "好退吗", "给退吗"]) and not has_order_id:
+    if (
+        any(kw in message for kw in ["能退吗", "可以退", "好退吗", "给退吗"])
+        and not has_order_id
+    ):
         return True
     return False
 
@@ -210,8 +311,39 @@ def is_refund_policy_inquiry(self: "AgentGraph", message: str, collected: Dict[s
 def is_complaint_policy_inquiry(self: "AgentGraph", message: str) -> bool:
     """判断投诉意图是否为政策咨询（问流程/时效/材料/影响，应走 RAG），
     而非明确提交投诉/举报（应走工具创建工单）。"""
-    policy_keywords = ["多久", "几天", "流程", "怎么投诉", "如何投诉", "怎么提交", "在哪里投诉", "哪里投诉", "材料", "匿名", "影响", "反馈", "进度", "电话", "入口", "工单"]
-    action_keywords = ["我要投诉", "我要举报", "投诉你们", "举报你们", "投诉你", "举报你", "帮我投诉", "帮我举报", "提交投诉", "投诉一下", "举报一下", "投诉一个", "举报一个"]
+    policy_keywords = [
+        "多久",
+        "几天",
+        "流程",
+        "怎么投诉",
+        "如何投诉",
+        "怎么提交",
+        "在哪里投诉",
+        "哪里投诉",
+        "材料",
+        "匿名",
+        "影响",
+        "反馈",
+        "进度",
+        "电话",
+        "入口",
+        "工单",
+    ]
+    action_keywords = [
+        "我要投诉",
+        "我要举报",
+        "投诉你们",
+        "举报你们",
+        "投诉你",
+        "举报你",
+        "帮我投诉",
+        "帮我举报",
+        "提交投诉",
+        "投诉一下",
+        "举报一下",
+        "投诉一个",
+        "举报一个",
+    ]
     has_policy = any(kw in message for kw in policy_keywords)
     has_action = any(kw in message for kw in action_keywords)
     return has_policy and not has_action
@@ -254,10 +386,12 @@ async def clarification_node(self: "AgentGraph", state: AgentState) -> str:
     state.reply = question
     state.needs_clarification = True
 
-    state.messages.append({
-        "role": "assistant",
-        "content": question,
-        "type": "clarification",
-    })
+    state.messages.append(
+        {
+            "role": "assistant",
+            "content": question,
+            "type": "clarification",
+        }
+    )
 
     return AgentNode.RESPONSE_GENERATION

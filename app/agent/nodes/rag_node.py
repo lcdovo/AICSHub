@@ -18,6 +18,10 @@ async def query_rewrite_node(self: "AgentGraph", state: AgentState) -> str:
 
     组合改写：保守规则优先，规则未命中且 LLM 可用时由模型做语义改写。
     """
+    if state.understanding is not None:
+        state.rewritten_query=state.understanding.retrieval_query
+        state.query_rewrite_reason="unified_understanding"
+        return AgentNode.RAG_RETRIEVAL
     result = await self.llm_rewriter.rewrite(
         query=state.user_message,
         messages=state.messages,
@@ -58,6 +62,8 @@ async def rag_retrieval_node(self: "AgentGraph", state: AgentState) -> str:
         success=search_result.get("success", False),
     )
 
+    from app.agent.request_understanding import EvidenceBundle
+    state.evidence_bundle=EvidenceBundle.model_validate(search_result.get("evidence_bundle") or {"items":search_result.get("results",[])})
     state.collected_info["kb_results"] = search_result.get("results", [])
     state.collected_info["kb_search_meta"] = search_result.get("meta", {})
 

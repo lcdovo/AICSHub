@@ -223,6 +223,10 @@ class AgentGraph:
         async def invoke(payload: Dict[str, Any]) -> Dict[str, Any]:
             state = payload["state"]
             state.current_node = node_name
+            state.node_steps += 1
+            if state.node_steps>24:
+                state.reply="本轮处理步骤已达上限，请稍后重试或联系人工。"
+                return {"state":state,"next_node":AgentNode.END}
             node_start = time.time()
             next_node = await self.nodes[node_name](state)
             state.add_trace(
