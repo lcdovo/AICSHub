@@ -3,7 +3,7 @@ import hashlib
 import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, Callable
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from fastapi import HTTPException
@@ -13,6 +13,25 @@ from app.models.models import (Order, RefundAction, RefundApplication, RefundBus
 from app.security import ensure_owner_or_admin
 from app.config.config import settings
 from app.agent.ticket_authorization import request_hash
+
+
+class RefundActionCoordinator:
+    """编排器的持久动作接口；会话/主体与资格仍由本领域服务核验。"""
+
+    def __init__(self, session_factory: Callable[[], async_sessionmaker[AsyncSession]]):
+        self._session_factory = session_factory
+
+    async def prepare(self, actor_id: int, payload: dict, previous: str | None) -> dict:
+        return await prepare(self._session_factory(), actor_id, payload, previous)
+
+    async def pending_count(self, user_id: int, session_id: str) -> int:
+        from sqlalchemy import func
+        factory = self._session_factory()
+        async with factory() as db:
+            return int(await db.scalar(select(func.count()).select_from(RefundAction).where(
+                RefundAction.user_id == user_id, RefundAction.session_id == session_id,
+                RefundAction.status == "pending", RefundAction.expires_at > datetime.utcnow(),
+            )) or 0)
 
 
 def action_receipt(item: RefundAction) -> dict[str, Any]:

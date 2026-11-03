@@ -82,7 +82,7 @@
     },
     "AC-07-08": {
       "status": "PARTIAL",
-      "evidence_and_limit": "查询改写/检索核心节点显式Protocol+冻结依赖，主图不依赖对应旧self助手，79项相关回归通过；13节点AST属性清单见M4-NODE-DEPENDENCIES-v1.md，其余节点旧绑定/完整模块依赖图仍待迁移，保持PARTIAL"
+      "evidence_and_limit": "查询改写/检索及工具执行/确认已显式注入，结果核验独立state函数，pending SQL移至退款领域接口；110项最新相关回归通过。依赖表已更新，意图/路由/响应旧绑定及完整模块依赖图仍待迁移，保持PARTIAL"
     },
     "AC-14-01": {
       "status": "PASS_C_I_ISOLATED",
@@ -230,6 +230,11 @@
     "stage_boundaries": "584404f"
   },
   "verification": [
+    {
+      "layer": "T0 explicit tool/confirmation/domain facade dependencies",
+      "path": "reports/offline/20261104-022419-454777",
+      "passed": 110
+    },
     {
       "layer": "T0 full at 9816871 before node dependency slice",
       "path": "reports/offline/20261104-021452-292315",

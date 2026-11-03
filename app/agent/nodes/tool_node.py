@@ -1,7 +1,8 @@
 """工具执行链路节点：业务工具执行、退款人工确认、结果校验与信息抽取。"""
 import logging
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable, Protocol
+from dataclasses import dataclass
 
 from langgraph.types import interrupt
 
@@ -14,7 +15,57 @@ from app.agent.refund_authorization import authorize_refund
 logger = logging.getLogger(__name__)
 
 
-async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
+class RefundActions(Protocol):
+    async def prepare(self, actor_id: int, payload: dict, previous: str | None) -> dict: ...
+    async def pending_count(self, user_id: int, session_id: str) -> int: ...
+
+
+class ToolInvoker(Protocol):
+    async def __call__(self, name: str, **arguments: Any) -> ToolExecutionResult | None: ...
+
+
+@dataclass(frozen=True)
+class ToolExecutionDependencies:
+    extract_info: Callable[[str], dict]
+    select_tools: Callable[[str, dict], list[tuple]]
+    confirmed: Callable[[AgentState], bool]
+    invoke: ToolInvoker
+    actions: RefundActions
+
+
+@dataclass(frozen=True)
+class ConfirmationDependencies:
+    confirmed: Callable[[AgentState], bool]
+    pause: Callable[[dict], Any]
+
+
+@dataclass(frozen=True)
+class ToolExecutionNode:
+    dependencies: ToolExecutionDependencies
+
+    async def __call__(self, state: AgentState) -> str:
+        return await execute_tools(self.dependencies, state)
+
+
+@dataclass(frozen=True)
+class ConfirmationNode:
+    dependencies: ConfirmationDependencies
+
+    async def __call__(self, state: AgentState) -> str:
+        return await confirm_action(self.dependencies, state)
+
+
+async def invoke_registered_tool(name: str, **arguments) -> ToolExecutionResult | None:
+    return await invoke_tool(name, **arguments)
+
+
+def persistent_actions():
+    from app.services.refund_actions import RefundActionCoordinator
+    from app.utils import database
+    return RefundActionCoordinator(lambda: database.async_session)
+
+
+async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentState) -> str:
     if state.read_plan:
         from app.agent.read_plan import ReadPrincipal, run_authorized_reads, summarize_reads
         # 即使内部调用绕过理解节点，也必须重新验证计划，模型不能提供Principal。
@@ -43,7 +94,7 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
         return AgentNode.RESULT_VERIFICATION
     state.collected_info["user_id"] = state.user_id
     state.collected_info["session_id"] = state.session_id
-    extracted_info = self._extract_info_from_message(state.user_message)
+    extracted_info = dependencies.extract_info(state.user_message)
 
     for key, value in extracted_info.items():
         if key == "order_id" and state.understanding is not None:
@@ -51,24 +102,22 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
         if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
             state.collected_info[key] = value
 
-    tools_to_execute = self._select_tools_for_intent(
+    tools_to_execute = dependencies.select_tools(
         state.detected_intent, state.collected_info
     )
 
     # 退款是不可逆副作用：第一次请求只生成预览，必须在独立确认节点中得到
     # 明确同意后才能调用工具。确认状态放在 AgentState 中，跨普通/流式入口一致。
     if state.detected_intent == IntentType.REFUND and tools_to_execute:
-        if not self._refund_confirmed(state):
+        if not dependencies.confirmed(state):
             if re.search(r"部分退款|只退|(?:退款|退回|退还)\s*\d+(?:\.\d+)?\s*(?:元|块|CNY)", state.user_message, re.I):
                 state.reply, state.needs_clarification = "本版仅支持模拟全额申请，不支持指定金额或部分退款；请确认是否申请订单全额退款。", True
                 return AgentNode.RESPONSE_GENERATION
             if state.source_message_id is not None:
-                from app.services.refund_actions import prepare
-                from app.utils.database import async_session
                 from fastapi import HTTPException
                 try:
                     previous = state.collected_info.get("refund_preview", {}).get("action_id")
-                    action = await prepare(async_session, state.actor_id or state.user_id,
+                    action = await dependencies.actions.prepare(state.actor_id or state.user_id,
                                            tools_to_execute[0][1] | {"session_id": state.session_id}, previous)
                     tools_to_execute[0][1].update(action_id=action["action_id"], action_version=action["version"],
                                                   idempotency_key=f"refund-action:{action['action_id']}")
@@ -81,15 +130,8 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
             return AgentNode.CONFIRMATION
         preview = state.collected_info.get("refund_preview")
         if state.source_message_id is not None:
-            from app.utils.database import async_session
-            from app.models.models import RefundAction
-            from sqlalchemy import select
-            from datetime import datetime
-            async with async_session() as db:
-                pending = (await db.execute(select(RefundAction.id).where(
-                    RefundAction.session_id == state.session_id, RefundAction.user_id == state.user_id,
-                    RefundAction.status == "pending", RefundAction.expires_at > datetime.utcnow()))).scalars().all()
-            if len(pending) > 1 and state.requested_action_id is None:
+            pending_count = await dependencies.actions.pending_count(state.user_id, state.session_id)
+            if pending_count > 1 and state.requested_action_id is None:
                 state.reply, state.needs_clarification = "有多个待确认退款动作，请指定action_id与版本。", True
                 return AgentNode.RESPONSE_GENERATION
             if state.requested_action_id and preview:
@@ -120,7 +162,7 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
                 # 无持久来源的离线/内部调用仍交由工具明确拒绝，不能从历史取得授权。
                 tool_args["authorization"] = (authorize_refund(tool_args, state.source_message_id, state.actor_id)
                                               if state.source_message_id is not None else "")
-            result = await invoke_tool(tool_name, **tool_args)
+            result = await dependencies.invoke(tool_name, **tool_args)
             if result is None:
                 result = ToolExecutionResult(success=False, error="工具不存在或不可用", error_type="not_found")
 
@@ -175,7 +217,7 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
     return AgentNode.RESULT_VERIFICATION
 
 
-def refund_confirmed(self: "AgentGraph", state: AgentState) -> bool:
+def is_refund_confirmed(state: AgentState) -> bool:
     """识别显式确认，避免将“好的/谢谢”等普通回复当作授权。"""
     if state.collected_info.get("confirm_refund") is True:
         return True
@@ -189,9 +231,9 @@ def refund_cancelled(state: AgentState) -> bool:
     return state.user_message.strip() in {"取消", "不同意", "先不退", "不提交", "算了", "false", "0"}
 
 
-async def confirmation_node(self: "AgentGraph", state: AgentState) -> str:
+async def confirm_action(dependencies: "ConfirmationDependencies", state: AgentState) -> str:
     preview = state.collected_info.get("refund_preview", {})
-    if self._refund_confirmed(state):
+    if dependencies.confirmed(state):
         state.collected_info["confirm_refund"] = True
         state.pending_confirmations = []
         return AgentNode.TOOL_EXECUTION
@@ -207,7 +249,7 @@ async def confirmation_node(self: "AgentGraph", state: AgentState) -> str:
         f"即将为订单 {order_id} 提交{label}申请，原因：{reason or '未填写'}。"
         "该操作提交后将进入审核，是否确认提交？（请回复“确认”）"
     )
-    decision = interrupt({
+    decision = dependencies.pause({
         "type": "refund_confirmation", "order_id": order_id,
         "refund_type": refund_type, "reason": reason,
     })
@@ -219,7 +261,7 @@ async def confirmation_node(self: "AgentGraph", state: AgentState) -> str:
 
 
 
-def extract_info_from_message(self: "AgentGraph", message: str) -> Dict[str, Any]:
+def extract_info(message: str) -> Dict[str, Any]:
     info = {}
 
     order_patterns = [
@@ -247,8 +289,8 @@ def extract_info_from_message(self: "AgentGraph", message: str) -> Dict[str, Any
     return info
 
 
-def select_tools_for_intent(
-    self: "AgentGraph", intent: str, collected_info: Dict[str, Any]
+def select_tools(
+    intent: str, collected_info: Dict[str, Any]
 ) -> List[tuple]:
     tool_plan = []
 
@@ -289,7 +331,7 @@ def select_tools_for_intent(
     return tool_plan
 
 
-async def result_verification_node(self: "AgentGraph", state: AgentState) -> str:
+async def verify_tool_result(state: AgentState) -> str:
     if state.tool_calls:
         last_call = state.tool_calls[-1]
 
@@ -317,3 +359,31 @@ async def result_verification_node(self: "AgentGraph", state: AgentState) -> str
                 )
 
     return AgentNode.RESPONSE_GENERATION
+
+
+# 私有方法兼容层，主图使用显式依赖节点与无图状态函数。
+def refund_confirmed(graph, state: AgentState) -> bool:
+    return is_refund_confirmed(state)
+
+
+def extract_info_from_message(graph, message: str) -> Dict[str, Any]:
+    return extract_info(message)
+
+
+def select_tools_for_intent(graph, intent: str, collected_info: Dict[str, Any]) -> List[tuple]:
+    return select_tools(intent, collected_info)
+
+
+async def tool_execution_node(graph, state: AgentState) -> str:
+    return await execute_tools(ToolExecutionDependencies(
+        graph._extract_info_from_message, graph._select_tools_for_intent,
+        graph._refund_confirmed, invoke_registered_tool, persistent_actions(),
+    ), state)
+
+
+async def confirmation_node(graph, state: AgentState) -> str:
+    return await confirm_action(ConfirmationDependencies(graph._refund_confirmed, interrupt), state)
+
+
+async def result_verification_node(graph, state: AgentState) -> str:
+    return await verify_tool_result(state)

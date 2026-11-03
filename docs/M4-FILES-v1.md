@@ -73,3 +73,5 @@
 连接生命周期切片新增：`acceptance/m4/local_gateway_soak.py`、`tests/test_m4_shutdown.py`；修改llm_service.py、main.py及网关/故障测试和真实依赖执行入口。
 
 RAG节点依赖切片新增：`tests/test_m4_node_dependencies.py`、`docs/M4-NODE-DEPENDENCIES-v1.md`；修改graph.py、rag_node.py及对应验收/架构说明。
+
+工具依赖切片新增：`tests/test_m4_tool_dependencies.py`；修改graph.py、tool_node.py、refund_actions.py及依赖清单/验收说明。

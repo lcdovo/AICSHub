@@ -139,3 +139,5 @@ Run和模型不能仅依赖asyncio.timeout抛异常：依赖若吞取消或阻�
 模型路径的order_id在RequestUnderstanding来源校验后固定，route_decision/tool_execution旧regex不能改回首个文字订单。apply/query/change未确定订单时不复用旧槽位；rules路径仍用原提取契约。否定词按退款/投诉/人工各自topic作用，不把“不要退款”当作否定明确的人工请求。
 
 查询改写/检索已注册为QueryRewriteNode和RetrievalNode，分别注入rewriter、knowledge_factory/top_k/minimum_score；核心节点不反向依赖graph模块。旧私有节点函数仅兼容适配器。其余节点依赖迁移进度见M4-NODE-DEPENDENCIES-v1.md，不把局部迁移当整图完成。
+
+工具执行/确认分别注册ToolExecutionNode、ConfirmationNode并显式注入公共策略、调用器及RefundActionCoordinator；有效待确认动作计数与预览事务位于领域接口。结果核验独立读取AgentState。旧私有方法仍仅兼容调用；其余节点迁移未完成。

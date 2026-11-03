@@ -11,9 +11,9 @@
 | `clarification` | `intent_node.py:clarification_node` | intent_recognizer | 旧绑定待迁移 |
 | `query_rewrite` | `rag_node.py:rewrite_query` | QueryRewriteDependencies(rewriter) | 已显式注入 |
 | `rag_retrieval` | `rag_node.py:retrieve_evidence` | RetrievalDependencies(knowledge_factory, top_k, minimum_score) | 已显式注入 |
-| `tool_execution` | `tool_node.py:tool_execution_node` | _extract_info_from_message、_refund_confirmed、_select_tools_for_intent | 旧绑定待迁移 |
-| `confirmation` | `tool_node.py:confirmation_node` | _refund_confirmed | 旧绑定待迁移 |
-| `result_verification` | `tool_node.py:result_verification_node` | 无 | 无图属性依赖 |
+| `tool_execution` | `tool_node.py:execute_tools` | ToolExecutionDependencies(extract_info, select_tools, confirmed, invoke, actions) | 已显式注入 |
+| `confirmation` | `tool_node.py:confirm_action` | ConfirmationDependencies(confirmed, pause) | 已显式注入 |
+| `result_verification` | `tool_node.py:verify_tool_result` | 无，仅读取本轮ToolCall记录 | 已独立状态函数 |
 | `response_generation` | `response_node.py:response_generation_node` | _add_rag_citations、_answer_cache_get、_answer_cache_set、_build_answer_cache_key、_generate_response_with_llm、_get_default_reply、_try_templated_tool_reply | 旧绑定待迁移 |
 | `human_handoff` | `handoff_node.py:human_handoff_node` | 无 | 无图属性依赖 |
 | `end` | `start_node.py:end_node` | 无 | 无图属性依赖 |
@@ -21,3 +21,5 @@
 主图通过QueryRewriteNode/RetrievalNode callable对象注册，不使用对应旧self私有绑定。旧query_rewrite_node/rag_retrieval_node函数仅是内部兼容适配器，适配器内允许延迟查graph工厂，核心rewrite_query/retrieve_evidence不反向导入graph。知识工厂和同步search保持to_thread边界，异步search直接await。
 
 新节点可声明自己的服务Protocol和冻结依赖dataclass后注册，不必把新助手加到AgentGraph类上。现有其他节点的旧助手绑定仍需逐个迁移，不以两节点完成代替整图重构。
+
+工具执行/确认主图现注册ToolExecutionNode/ConfirmationNode，结果核验注册verify_tool_result。原私有函数和提取/确认/选工具助手仍是兼容适配器，主图使用无图公共策略函数；持久动作准备与有效pending计数经RefundActionCoordinator进入共享领域服务。授权签名/MCP路由/只读计划依赖的模块工厂仍须在完整模块依赖审查中列出，不能从无self访问推导无其他服务依赖。

@@ -244,19 +244,26 @@ class AgentGraph:
         from app.agent.nodes.rag_node import (
             QueryRewriteNode, QueryRewriteDependencies, RetrievalNode, RetrievalDependencies,
         )
+        from app.agent.nodes.tool_node import (
+            ToolExecutionNode, ToolExecutionDependencies, ConfirmationNode, ConfirmationDependencies,
+            extract_info, select_tools, is_refund_confirmed, invoke_registered_tool,
+            persistent_actions, verify_tool_result, interrupt,
+        )
         self.nodes[AgentNode.START] = self._node_start
         self.nodes[AgentNode.INTENT_RECOGNITION] = self._node_intent_recognition
         self.nodes[AgentNode.ROUTE_DECISION] = self._node_route_decision
         self.nodes[AgentNode.SLOT_FILLING] = self._node_slot_filling
         self.nodes[AgentNode.QUERY_REWRITE] = QueryRewriteNode(QueryRewriteDependencies(self.llm_rewriter))
         self.nodes[AgentNode.CLARIFICATION] = self._node_clarification
-        self.nodes[AgentNode.CONFIRMATION] = self._node_confirmation
+        self.nodes[AgentNode.CONFIRMATION] = ConfirmationNode(ConfirmationDependencies(is_refund_confirmed, interrupt))
         self.nodes[AgentNode.RAG_RETRIEVAL] = RetrievalNode(RetrievalDependencies(
             knowledge_factory=lambda: get_knowledge_base(), top_k=lambda: settings.RAG_TOP_K,
             minimum_score=self.RAG_MIN_SCORE,
         ))
-        self.nodes[AgentNode.TOOL_EXECUTION] = self._node_tool_execution
-        self.nodes[AgentNode.RESULT_VERIFICATION] = self._node_result_verification
+        self.nodes[AgentNode.TOOL_EXECUTION] = ToolExecutionNode(ToolExecutionDependencies(
+            extract_info, select_tools, is_refund_confirmed, invoke_registered_tool, persistent_actions(),
+        ))
+        self.nodes[AgentNode.RESULT_VERIFICATION] = verify_tool_result
         self.nodes[AgentNode.RESPONSE_GENERATION] = self._node_response_generation
         self.nodes[AgentNode.HUMAN_HANDOFF] = self._node_human_handoff
         self.nodes[AgentNode.END] = self._node_end
