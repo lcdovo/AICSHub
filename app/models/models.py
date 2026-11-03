@@ -165,6 +165,13 @@ class HandoffStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class HandoffCapacityGate(Base):
+    """座席分配事务闸门；无内存锁依赖，容量仍由有效指派计算。"""
+    __tablename__ = "handoff_capacity_gates"
+    agent_id = Column(String(50), primary_key=True)
+    revision = Column(Integer, nullable=False, default=0)
+
+
 class HandoffRequestRecord(Base):
     """转人工请求持久化记录，与客服分配内存缓存解耦。"""
 

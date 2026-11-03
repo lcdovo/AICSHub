@@ -142,18 +142,20 @@ async def test_same_request_competing_assignments_have_one_winner(tmp_path, monk
         service._agents["second-agent"] = HumanAgent("second-agent", "另一合成座席")
         await seed(factory)
         barrier = asyncio.Barrier(2)
-        original = AsyncSession.execute
+        original = AsyncSession.get
 
-        async def synchronize(db, statement, *args, **kwargs):
-            if getattr(statement, "is_update", False) and statement.table.name == "handoff_requests":
+        async def synchronize(db, entity, ident, **kwargs):
+            value = await original(db, entity, ident, **kwargs)
+            if entity is HandoffRequestRecord and ident == "target":
                 await asyncio.wait_for(barrier.wait(), timeout=10)
-            return await original(db, statement, *args, **kwargs)
+            return value
 
-        monkeypatch.setattr(AsyncSession, "execute", synchronize)
+        monkeypatch.setattr(AsyncSession, "get", synchronize)
         results = await asyncio.gather(*[
             client.post("/api/v1/handoff/target/assign", params={"agent_id": agent}, headers={"X-Test-Actor": "999"})
             for agent in ("synthetic-agent", "second-agent")
         ])
+        monkeypatch.setattr(AsyncSession, "get", original)
         assert sorted(result.status_code for result in results) == [200, 409]
         assert (await snapshot(factory))[3] == 1
 

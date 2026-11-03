@@ -1,5 +1,11 @@
 # Docker 部署
 
+## M1-11 人工分配升级补充
+
+新增迁移`0005_handoff_capacity`只建立`handoff_capacity_gates`事务闸门表，不修改历史人工指派或种入演示座席。切换分配写流量前需迁移并确保所有worker使用新分配路径及一致的名册/容量配置；旧版本直接写ASSIGNED可绕过闸门，不应混跑。此轮仅在临时SQLite演练新增迁移的upgrade/downgrade/upgrade，没有在当前业务库迁移或部署。
+
+真实MySQL行锁、双worker、部署与备份恢复尚未验收。降级应先关闭分配写入；旧实现可能超额分配，不作为安全回滚目标，也不能在新worker运行时删除闸门表。此补充不表示下文历史部署说明已完整核验，实际Compose与启动参数以当前配置为准。
+
 项目唯一支持的 Compose 部署是完整依赖栈：应用、MySQL、Redis、Milvus、etcd 和 MinIO。所有服务都在 [docker-compose.yml](<C:/Users/lz/Desktop/简历&项目/项目一/AI Customer/docker-compose.yml>) 中定义，不使用 Docker profiles。
 
 ## 首次部署
