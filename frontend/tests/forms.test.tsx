@@ -33,6 +33,21 @@ describe("业务表单与可访问弹窗", () => {
     await waitFor(() => expect(close).toHaveBeenCalledOnce());
     expect(mock.mock.calls[1][1]).toBe(firstKey);
   });
+  it("工单失败后改参数生成新幂等键", async () => {
+    const mock = vi.spyOn(api, "createTicket")
+      .mockRejectedValueOnce(new Error("暂时失败"))
+      .mockResolvedValueOnce({} as Awaited<ReturnType<typeof api.createTicket>>);
+    wrap(<CreateTicket userId={101} onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText("问题描述"), { target: { value: "原始描述" } });
+    fireEvent.click(screen.getByRole("button", { name: "确认创建工单" }));
+    expect(await screen.findByText("暂时失败")).toBeInTheDocument();
+    const firstKey = mock.mock.calls[0][1];
+    fireEvent.change(screen.getByLabelText("问题描述"), { target: { value: "更新描述" } });
+    fireEvent.click(screen.getByRole("button", { name: "确认创建工单" }));
+    await waitFor(() => expect(mock).toHaveBeenCalledTimes(2));
+    expect(mock.mock.calls[1][1]).not.toBe(firstKey);
+    expect(mock.mock.calls[1][0].content).toBe("更新描述");
+  });
   it("提交期间双击不创建重复工单", async () => {
     vi.spyOn(api, "createTicket").mockImplementation(
       () => new Promise(() => {}),

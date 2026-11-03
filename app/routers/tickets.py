@@ -2,8 +2,7 @@
 工单管理与人机协同 API - Phase 4 实现
 """
 import time
-import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Depends, Header
@@ -12,8 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.utils.database import get_db
-from app.models.models import Ticket, TicketStatus, TicketPriority, User, UserRole, Session, HandoffRequestRecord, HandoffStatus, NotificationRecord, NotificationStatus, OperationAudit
+from app.models.models import Ticket, TicketStatus, TicketPriority, User, UserRole, HandoffRequestRecord, HandoffStatus
 from app.services.collaboration import get_collaboration_service
+from app.services.ticket_creation import create_request, resolve_idempotency_key
 from app.utils.tracking import get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, require_admin
 
@@ -84,30 +84,18 @@ async def create_ticket(
 ):
     """创建工单"""
     ensure_owner_or_admin(current_user, request.user_id)
-    idempotency_key = request.idempotency_key or idempotency_header
-    if idempotency_key:
-        existing = await db.scalar(select(Ticket).where(Ticket.idempotency_key == idempotency_key))
-        if existing:
-            return {"code": 0, "message": "幂等请求，返回已有工单", "data": _ticket_dict(existing)}
+    idempotency_key = resolve_idempotency_key(request.idempotency_key, idempotency_header)
     try:
-        priority = TicketPriority(request.priority)
+        TicketPriority(request.priority)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="工单优先级无效") from exc
-    ticket = Ticket(id=str(uuid.uuid4()), user_id=request.user_id, category=request.category,
-                    content=request.content, priority=priority, status=TicketStatus.PENDING,
-                    session_id=request.session_id, idempotency_key=idempotency_key)
-    db.add(ticket)
-    await db.flush()
-    db.add(NotificationRecord(id=str(uuid.uuid4()), event_type="ticket.created", recipient=str(request.user_id),
-                              payload={"ticket_id": ticket.id}, idempotency_key=f"ticket-created:{ticket.id}"))
-    db.add(OperationAudit(operation="create_ticket", idempotency_key=idempotency_key or f"ticket:{ticket.id}",
-                          user_id=request.user_id, resource_id=ticket.id,
-                          request_payload=request.model_dump(), result_payload={"ticket_id": ticket.id}))
-    await db.commit()
+    ticket, replayed = await create_request(
+        db, current_user, "create_ticket", request.model_dump(exclude={"idempotency_key"}), idempotency_key,
+    )
 
     return {
         "code": 0,
-        "message": "创建成功",
+        "message": "幂等请求，返回已有工单" if replayed else "创建成功",
         "data": _ticket_dict(ticket),
     }
 
@@ -232,30 +220,16 @@ async def delete_ticket(ticket_id: str, db: AsyncSession = Depends(get_db), curr
 async def request_handoff(request: HandoffRequest, db: AsyncSession = Depends(get_db), idempotency_header: Optional[str] = Header(default=None, alias="Idempotency-Key"), current_user: User = Depends(get_current_user)):
     """请求转人工"""
     ensure_owner_or_admin(current_user, request.user_id)
-    idempotency_key = request.idempotency_key or idempotency_header
-    if idempotency_key:
-        existing = await db.scalar(select(HandoffRequestRecord).where(HandoffRequestRecord.idempotency_key == idempotency_key))
-        if existing: return {"code": 0, "message": "幂等请求，返回已有记录", "data": _handoff_dict(existing)}
-    session = await db.get(Session, request.session_id)
-    if not session or session.user_id != request.user_id:
-        raise HTTPException(status_code=404, detail="会话不存在")
+    idempotency_key = resolve_idempotency_key(request.idempotency_key, idempotency_header)
     if request.priority not in {"urgent", "high", "normal", "low"}:
         raise HTTPException(status_code=400, detail="转人工优先级无效")
-    now = datetime.utcnow(); hours = {"urgent": 1, "high": 4, "normal": 24, "low": 48}[request.priority]
-    item = HandoffRequestRecord(id=str(uuid.uuid4()), user_id=request.user_id, session_id=request.session_id,
-                                reason=request.reason, priority=request.priority, context=request.context or {},
-                                status=HandoffStatus.PENDING, sla_deadline=now + timedelta(hours=hours),
-                                idempotency_key=idempotency_key)
-    db.add(item)
-    db.add(NotificationRecord(id=str(uuid.uuid4()), event_type="handoff.created", recipient=str(request.user_id),
-                              payload={"request_id": item.id}, idempotency_key=f"handoff-created:{item.id}"))
-    db.add(OperationAudit(operation="request_handoff", idempotency_key=idempotency_key or f"handoff:{item.id}",
-                          user_id=request.user_id, resource_id=item.id, request_payload=request.model_dump()))
-    await db.commit()
+    payload = request.model_dump(exclude={"idempotency_key"})
+    payload["context"] = request.context or {}
+    item, replayed = await create_request(db, current_user, "request_handoff", payload, idempotency_key)
 
     return {
         "code": 0,
-        "message": "转人工请求已创建",
+        "message": "幂等请求，返回已有记录" if replayed else "转人工请求已创建",
         "data": _handoff_dict(item),
     }
 

@@ -39,7 +39,7 @@ export function CreateTicket({
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("general");
   const [priority, setPriority] = useState<Priority>("medium");
-  const key = useRef(crypto.randomUUID());
+  const requestIdentity = useRef<{ payload: string; key: string } | null>(null);
   const task = useTask();
   const cache = useQueryClient();
   return (
@@ -48,10 +48,12 @@ export function CreateTicket({
         onSubmit={(e) => {
           e.preventDefault();
           void task.run(async () => {
-            await api.createTicket(
-              { user_id: userId, category, content: content.trim(), priority },
-              key.current,
-            );
+            const payload = { user_id: userId, category, content: content.trim(), priority };
+            const fingerprint = JSON.stringify(payload);
+            if (requestIdentity.current?.payload !== fingerprint) {
+              requestIdentity.current = { payload: fingerprint, key: crypto.randomUUID() };
+            }
+            await api.createTicket(payload, requestIdentity.current.key);
             await cache.invalidateQueries({ queryKey: ["tickets"] });
             onClose();
           });
