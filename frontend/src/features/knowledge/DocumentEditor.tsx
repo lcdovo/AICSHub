@@ -31,6 +31,7 @@ export function DocumentEditor({
           void task.run(async () => {
             const payload: Partial<DocumentInput> = {
               title: title.trim(),
+              ...(document ? { expected_version: document.version } : {}),
               category,
               source,
               keywords: keywords
@@ -52,7 +53,7 @@ export function DocumentEditor({
         <Notice>
           {document
             ? "列表接口不返回原文。正文留空会保留原内容；填写后将替换完整正文并生成新版本。"
-            : "此接口保存后立即发布并建立索引。请确认内容可用于客服回答。"}
+            : "保存后排队索引，验证成功才发布。任务失败时保留原发布版本。"}
         </Notice>
         <Field label="文档标题">
           <input
@@ -102,7 +103,7 @@ export function DocumentEditor({
             busy={task.pending}
             disabled={!title.trim() || (!document && !content.trim())}
           >
-            {document ? "确认更新版本" : "确认保存并发布"}
+            {document ? "确认更新版本" : "保存并排队索引"}
           </Button>
         </div>
       </form>
@@ -132,7 +133,7 @@ export function UploadDocument({ onClose }: { onClose: () => void }) {
           });
         }}
       >
-        <Notice>上传会导入正文并建立检索索引。请先核对文件内容。</Notice>
+        <Notice>上传后排队索引，列表会显示草稿、索引中、失败或已发布。</Notice>
         <Field
           label="文件"
           hint="支持 txt、md、json、csv；大小限制以服务端为准。"

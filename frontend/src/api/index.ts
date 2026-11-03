@@ -158,9 +158,9 @@ export const api = {
       method: "POST",
       body: data,
     }),
-  publish: (id: string, value: boolean) =>
+  publish: (id: string, value: boolean, expectedVersion?: number) =>
     request(
-      "/api/v1/knowledge/documents/" + id + "/publish?published=" + value,
+      "/api/v1/knowledge/documents/" + id + "/publish?published=" + value + (expectedVersion ? "&expected_version=" + expectedVersion : ""),
       json("POST"),
     ),
   deleteDocument: (id: string) =>

@@ -39,8 +39,8 @@ function ConfirmKnowledge({
       ? ["删除知识文档", "将软删除“" + doc?.title + "”，该文档将不再参与检索。"]
       : operation.kind === "publish"
         ? [
-            doc?.status === "published" ? "取消发布" : "发布知识文档",
-            doc?.status === "published"
+            !!doc?.published_version ? "取消发布" : "发布知识文档",
+            !!doc?.published_version
               ? "取消发布后，该文档不再参与回答检索。"
               : "发布后，该文档可被客服检索引用。",
           ]
@@ -69,7 +69,7 @@ function ConfirmKnowledge({
               if (operation.kind === "delete" && doc)
                 await api.deleteDocument(doc.id);
               else if (operation.kind === "publish" && doc)
-                await api.publish(doc.id, doc.status !== "published");
+                await api.publish(doc.id, !doc.published_version, doc.version);
               else if (operation.kind === "seed") await api.seed();
               else await api.rebuild();
               await cache.invalidateQueries({ queryKey: ["documents"] });
@@ -90,6 +90,7 @@ export default function KnowledgePage() {
   const [filter, setFilter] = useState("");
   const docs = useQuery({
     queryKey: ["documents"],
+    refetchInterval: 3000,
     queryFn: ({ signal }) => api.documents(signal),
   });
   const filtered = docs.data?.documents.filter((doc) =>
@@ -179,6 +180,8 @@ export default function KnowledgePage() {
                   </td>
                   <td data-label="状态">
                     <Status value={doc.status} />
+                    {doc.published_version && <small>当前服务 v{doc.published_version}</small>}
+                    {doc.error_code && <small>索引失败，可重建后重试</small>}
                   </td>
                   <td data-label="分块 / 版本" className="num">
                     {doc.chunks_count} / v{doc.version}
@@ -194,7 +197,7 @@ export default function KnowledgePage() {
                           setOperation({ kind: "publish", document: doc })
                         }
                       >
-                        {doc.status === "published" ? "取消发布" : "发布"}
+                        {!!doc.published_version ? "取消发布" : "发布"}
                       </Button>
                       <Button
                         tone="danger"

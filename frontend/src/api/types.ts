@@ -99,13 +99,17 @@ export type KnowledgeDocument = {
   category: string;
   keywords: string[];
   source: string;
-  status: "published" | "draft";
+  status: "published" | "draft" | "indexing" | "ready" | "failed" | "archived" | "legacy_unverified";
+  published_version?: number | null;
+  error_code?: string | null;
   version: number;
   created_at?: string;
   updated_at?: string;
   chunks_count: number;
 };
 export type DocumentInput = {
+  expected_version?: number;
+  is_published?: boolean;
   title: string;
   content: string;
   category: string;
