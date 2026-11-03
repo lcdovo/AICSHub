@@ -1,0 +1,155 @@
+{
+  "date": "2026-11-03",
+  "scope": "M2 frozen foundation only",
+  "status": "PASS",
+  "code_commit": "61323a788ebe9b479a9f00a20de439c80ae01ac6",
+  "p0": {
+    "AC-05-01": "PASS",
+    "AC-05-02": "PASS",
+    "AC-05-03": "PASS",
+    "AC-05-04": "PASS",
+    "AC-05-06": "PASS",
+    "AC-05-07": "PASS",
+    "AC-05-08": "PASS",
+    "AC-05-09": "PASS",
+    "AC-15-01": "PASS",
+    "AC-15-03": "PASS",
+    "AC-15-04": "PASS",
+    "AC-15-05": "PASS",
+    "AC-15-06": "PASS",
+    "AC-15-08": "PASS",
+    "AC-15-10": "PASS",
+    "AC-15-12": "PASS",
+    "AC-16-01": "PASS",
+    "AC-16-02": "PASS",
+    "AC-16-05": "PASS",
+    "AC-16-09": "PASS"
+  },
+  "supporting_p1": {
+    "AC-05-05": "PASS",
+    "AC-05-10": "PASS",
+    "AC-15-02": "PASS",
+    "AC-15-07": "PASS",
+    "AC-15-09": "PASS",
+    "AC-15-11": "PASS",
+    "AC-16-03": "PASS",
+    "AC-16-04": "PASS",
+    "AC-16-06": "PASS",
+    "AC-16-07": "PASS",
+    "AC-16-08": "PASS"
+  },
+  "checks": [
+    {
+      "scope": "full_offline_before_final_projection_fix",
+      "path": "reports/offline/20261103-170056-707628",
+      "tests": 521,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "9d999ee7d58f7e10f6a7834bc8bc0e034237895640276e8baafcbe02d7244a5b"
+    },
+    {
+      "scope": "m2_affected",
+      "path": "reports/offline/20261103-170358-391526",
+      "tests": 25,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "04ab78095fe4e22cbb2ea32df1da39ffb42a2a7f7cdf7ff1e14e5d048dec367b"
+    },
+    {
+      "scope": "run_affected",
+      "path": "reports/offline/20261103-170647-814158",
+      "tests": 10,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "9ecb15bab741867a5cf1bc726e97bc7de4fbd49a62dae1f3a820668c4becc1da"
+    },
+    {
+      "scope": "final_run_refund_chat",
+      "path": "reports/offline/20261103-170801-789008",
+      "tests": 67,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "e8c6d50d503b343d0aeae497b173db818e072ff9bb4f3fafb1690d9f436581b6"
+    },
+    {
+      "scope": "final_context",
+      "path": "reports/offline/20261103-170947-921043",
+      "tests": 4,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "40fb8bc278c98302d35bcf430c6b81985e4f9c018ec3afe04c683289ea814daf"
+    },
+    {
+      "scope": "full_real",
+      "path": "reports/m2-closeout/real-20261103-165914",
+      "tests": 16,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "e0f40b07a43481028bc62eb146bedfb2feb9729812da755d36757aeeb10117eb"
+    },
+    {
+      "scope": "stronger_concurrency_migration",
+      "path": "reports/m2-closeout/real-20261103-170637",
+      "tests": 3,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "35a8b9e68e7f1b5418c7ec15d236212e5bcaaf6f08d97e16add4ec918f9580d2"
+    },
+    {
+      "scope": "final_crash_and_actual_graph",
+      "path": "reports/m2-closeout/real-20261103-170812",
+      "tests": 5,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "247a728172dfbb53330d536e659afbc6caa1e68bfea870a38af7a3bd67bbe46d"
+    }
+  ],
+  "frontend": {
+    "tests": 26,
+    "test_files": 6,
+    "test_exit_code": 0,
+    "build_exit_code": 0,
+    "commands": [
+      "npm test -- --run",
+      "npm run build -- --outDir ../reports/m2-closeout/frontend-build"
+    ]
+  },
+  "compileall_exit_code": 0,
+  "diff_check_exit_code": 0,
+  "source_manifest_sha256": "9f4537324ee8a17c3db546febca2a877356f11a4be827e46adeb1528da99b012",
+  "build_manifest_sha256": "37f4490a2a04c60b18d27f607f4bc2eac64330ecd125af7ce6ec10835c074c7a",
+  "source_manifest_path": "reports/m2-closeout/source-sha256.json",
+  "build_manifest_path": "reports/m2-closeout/build-sha256.json",
+  "browser": {
+    "refresh_during_preview_and_confirmation": "PASS",
+    "restart_http_sql": "PASS",
+    "final_restart_browser": "NOT_RUN_TOOL_UNAVAILABLE",
+    "evidence": "reports/m2-closeout/browser"
+  },
+  "not_run": [
+    "real_llm_embedding_reranker",
+    "real_notification_payment",
+    "milvus_index_algorithm",
+    "production_migration_deployment",
+    "long_term_load"
+  ],
+  "production_resources_used": false,
+  "push": false,
+  "new_model_calls": 0
+}

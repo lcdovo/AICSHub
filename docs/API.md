@@ -8,7 +8,7 @@
 - ReDoc：`GET /redoc`
 - 原始规范：`GET /openapi.json`
 
-所有响应都使用 `code`、`message`、`data` 三段式结构（健康检查和 Prometheus 文本出口除外）。请求链路会返回 `X-Trace-Id`，可用该值查询管理员接口 `/api/v1/analytics/traces/{trace_id}`。
+多数管理接口使用 `code`、`message`、`data` 三段式结构；聊天send返回ChatResponse平铺字段，WS返回事件，健康检查和Prometheus也有独立契约。请求链路会返回 `X-Trace-Id`，可用该值查询管理员接口 `/api/v1/analytics/traces/{trace_id}`。
 
 ## 认证与权限
 
@@ -194,3 +194,17 @@ MCP派发前无法连接可回退进程内同一工具；写调用派发后失�
 ## 兼容与弃用
 
 旧页面仍可使用 `/login.html`、`/user.html`、`/admin.html`。页面内部统一调用 `/api/v1`，新增客户端请勿依赖未带版本前缀的路径。
+
+
+## M2持久轮次与任务
+
+`POST /api/v1/chat/send`及WS消息可带 `client_message_id`（1–128字符）。同owner/session/精确参数返回原Run，改参数409；旧客户端省略ID时不保证任意重试去重。ChatResponse增加run_id/run_status。WS事件增加run/session/event_id/sequence/schema_version/timestamp；done与stream_end均来自已提交最终事务，断线不会取消执行。
+
+- `GET /api/v1/chat/runs/{id}`：终态/序号/result/error_code，owner/admin。
+- `GET /api/v1/chat/runs/{id}/events?after=0`：单调序号分页，最多100条；after为上次确认的序号。
+- `GET /api/v1/chat/sessions/{sid}/runs/{client_message_id}`：找回首响应丢失的原Run，不再次提交消息。
+- `POST /api/v1/chat/runs/{id}/cancel`：仅accepted/awaiting_confirmation可取消；执行中/完成409，只取消该Run引用的待确认动作。
+- `GET /api/v1/jobs/`、`POST /api/v1/jobs/{id}/retry`：管理员查看最近100条/审计重试失败任务。
+- `GET /api/v1/jobs/notifications/{event_id}`：owner/admin只查状态、模拟标志、供应商回执和固定错误码。
+
+删除会话设置tombstone并从列表/历史/记忆隐藏，保留SQL审计/业务回执；已删除会话的Run查询404。执行结果未知时查原Run/业务记录，不更换client_message_id自动重发。详见 `M2-IMPLEMENTATION-v1.md`。

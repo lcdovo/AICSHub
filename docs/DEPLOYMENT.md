@@ -14,7 +14,7 @@
 
 真实MySQL行锁、双worker、部署与备份恢复尚未验收。降级应先关闭分配写入；旧实现可能超额分配，不作为安全回滚目标，也不能在新worker运行时删除闸门表。此补充不表示下文历史部署说明已完整核验，实际Compose与启动参数以当前配置为准。
 
-项目唯一支持的 Compose 部署是完整依赖栈：应用、MySQL、Redis、Milvus、etcd 和 MinIO。所有服务都在 [docker-compose.yml](<C:/Users/lz/Desktop/简历&项目/项目一/AI Customer/docker-compose.yml>) 中定义，不使用 Docker profiles。
+当前默认Compose主栈为app/mysql/redis/etcd/minio/milvus；可选模型与Langfuse使用profiles，具体以仓库docker-compose.yml和AGENTS.md为准。
 
 ## 首次部署
 
@@ -65,3 +65,12 @@ docker compose down                  # 停止服务，保留数据卷
 - `GET /docs` 提供 OpenAPI 文档。
 - 如果 MySQL、Redis 或 Milvus 尚未 healthy，应用容器会等待依赖；使用 `docker compose ps` 和 `docker compose logs <service>` 定位问题。
 - LLM 或 Embedding 不可用时，应用会记录可解释的降级信息；生产环境仍应配置外部服务的超时、重试和监控。
+
+
+## M2迁移和独立worker
+
+`0008_m2_runs_jobs`增加会话version/context_data/摘要游标/租约/tombstone、可空messages.run_id、chat_runs/run_events/background_jobs/simulated_deliveries及通知sending/unknown/回执字段。真实隔离MySQL演练旧列升级与历史记录保留；不为历史消息伪造Run。未执行真实业务库迁移。升级应先备份验证、停止旧写入worker，迁移后完整切换，不能混跑旧绕过fence的worker；downgrade拒绝有损自动回退。
+
+独立消费入口 `python scripts/run_worker.py --once --kind summary`；持续运行省略--once。通知默认未接渠道，显式运行得到failed/channel_unavailable；隔离测试使用 `--kind notification --simulate`，只落模拟回执，不外发。每进程顺序消费，每轮默认10任务，种类可分进程；每任务默认3次尝试、退避上限300秒，unknown先对账。worker也扫描到期Run并只按持久回执恢复。web不会自动启动worker。
+
+M2真实验收入口 `python scripts/test_m2_real.py` 校验专属容器标签/前缀，再为每个用例建立合成库；runtime位于忽略的reports/m2-closeout/runtime。不得指向业务资源或清理业务卷。索引处理器未注册时明确failed，真实知识索引算法归M3；模型/真实通知/生产部署不是本次通过范围。证据见 `M2-EVIDENCE-v1.md`。
