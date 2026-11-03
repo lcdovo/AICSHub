@@ -74,3 +74,12 @@ docker compose down                  # 停止服务，保留数据卷
 独立消费入口 `python scripts/run_worker.py --once --kind summary`；持续运行省略--once。通知默认未接渠道，显式运行得到failed/channel_unavailable；隔离测试使用 `--kind notification --simulate`，只落模拟回执，不外发。每进程顺序消费，每轮默认10任务，种类可分进程；每任务默认3次尝试、退避上限300秒，unknown先对账。worker也扫描到期Run并只按持久回执恢复。web不会自动启动worker。
 
 M2真实验收入口 `python scripts/test_m2_real.py` 校验专属容器标签/前缀，再为每个用例建立合成库；runtime位于忽略的reports/m2-closeout/runtime。不得指向业务资源或清理业务卷。索引处理器未注册时明确failed，真实知识索引算法归M3；模型/真实通知/生产部署不是本次通过范围。证据见 `M2-EVIDENCE-v1.md`。
+
+
+## M3知识迁移与索引切换
+
+0009_m3_knowledge_versions新增稳定ID、不可变版本、发布指针、知识epoch、chunk原文位置/hash/上下文，不删除历史原文或旧collection。迁移只在本轮合成MySQL/SQLite演练；真实业务库尚未迁移。旧发布正文保留SQL关键词降级，旧向量指纹未知，不与新空间混用；显式重建新版本并验证后才发布。升级前备份原文/关系库并验证恢复，先迁移后完整切换worker，不能新旧写路径混跑。拒绝有损自动降级。
+
+保存知识只排队Job；独立 `python scripts/run_worker.py --kind knowledge_index` 消费，运行/费用必须另行安排。worker严格批量向量化，指纹命名的新collection使用dense索引；应用层SQL快照BM25与RRF融合，不声称原生FULLTEXT。索引错误保留原发布版；失败Job可由管理员审计重试。清理历史chunk/collection不在本次执行范围。
+
+隔离入口 `python scripts/setup_m3_test.py` 只创建aicshub.test.owner=m3-closeout专属MySQL/Redis/etcd/minio/Milvus；`python scripts/test_m3_real.py`核对标签后每例建合成库。runtime密码在忽略目录，不能改指向业务资源。真实模型入口有独立2请求预算账本，已授权额度用尽，禁止自行再次运行。供应商FreeTierOnly免费额度耗尽导致真实接入未验收，详见证据文档。

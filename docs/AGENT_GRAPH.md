@@ -112,3 +112,12 @@ M2最终结果及真实依赖/替身边界见 `M2-EVIDENCE-v1.md`。
 `tests/test_query_rewrite.py::test_no_previous_context_calls_llm`。
 `npm test` 当前没有找到前端测试文件，返回非零退出码。
 没有对真实 LLM、Redis 多进程故障或线上数据执行端到端验收。
+
+
+## M3知识事实与RAG正确性
+
+生产知识路径现为稳定SQL文档/不可变版本→持久knowledge_index Job→严格batch向量→指纹命名新collection→SQL原子发布指针/epoch。旧IngestionMixin/IndexAdminMixin仅兼容转发，移除手写DDL及按标题删除旧旁路。
+
+每请求独立取SQL发布快照，真实Milvus dense与SQL BM25独立执行并应用层RRF；Embedding异常仍返回关键词降级。recall/rerank/evidence数量独立；score_type保留，RRF不与余弦阈值混比。完整有界chunk与FAQ/表头上下文进入生成/Judge，不再按300/200字前缀裁剪；证据覆盖校准仍属M5，EvidenceBundle.support保持unknown。缓存按epoch/模型/策略/权限范围隔离，生成及校验前复核活动版本。
+
+M3实现、逐项21项范围、隔离真实依赖证据与供应商额度阻塞见M3-CLOSEOUT-v1.md、M3-IMPLEMENTATION-v1.md、M3-EVIDENCE-v1.md；不能以合成向量证明真实模型效果或生产部署完成。

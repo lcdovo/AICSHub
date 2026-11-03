@@ -208,3 +208,12 @@ MCP派发前无法连接可回退进程内同一工具；写调用派发后失�
 - `GET /api/v1/jobs/notifications/{event_id}`：owner/admin只查状态、模拟标志、供应商回执和固定错误码。
 
 删除会话设置tombstone并从列表/历史/记忆隐藏，保留SQL审计/业务回执；已删除会话的Run查询404。执行结果未知时查原Run/业务记录，不更换client_message_id自动重发。详见 `M2-IMPLEMENTATION-v1.md`。
+
+
+## M3知识版本接口
+
+知识创建/上传/更新现在返回draft、稳定document_id、独立version_id、version与job_id；表示已保存并排队，不表示索引完成。PATCH可带expected_version（前端必带），冲突409；不带时只对本次读到的最新版本做CAS。GET /api/v1/knowledge/documents显示最新索引状态、published_version、error_code与更新时间。POST /documents/{id}/publish可带version/expected_version，仅ready/published版可切换，未就绪409。取消发布不被迟到索引或普通编辑自动恢复。GET /documents/{id}/versions/{version}管理员读取历史正文与指纹。DELETE按稳定ID软删除，历史保留；旧doc_db_N/doc_mysql_N别名可解析，旧未持久随机ID不可猜测映射。
+
+POST /search支持独立recall_k/rerank_k/top_k，结果含逐路ID、score_type、knowledge_epoch、冷/热来源和本次耗时；RRF不是概率。当前所有已认证用户共享已发布知识，未新增文档级ACL业务规则。草稿/删除/旧发布版不能经缓存或高排名绕过SQL过滤。批量上传逐文件报告排队/失败；单文件64KiB分段读取并限总大小，解析10秒超时。
+
+完整契约及验证边界见M3-IMPLEMENTATION-v1.md与M3-EVIDENCE-v1.md。

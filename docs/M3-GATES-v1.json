@@ -1,0 +1,126 @@
+{
+  "date": "2026-11-03",
+  "scope": "M3 frozen 21 criteria",
+  "status": "INCOMPLETE_EXTERNAL_PROVIDER",
+  "code_commit": "075e01ff15ea772dbb7bab2beac99d052b3d4151",
+  "acceptance": {
+    "AC-11-01": "PASS",
+    "AC-11-02": "PASS",
+    "AC-11-03": "PASS",
+    "AC-11-04": "PASS",
+    "AC-11-05": "PASS",
+    "AC-11-06": "PASS",
+    "AC-11-07": "PASS",
+    "AC-11-08": "BLOCKED_REAL_PROVIDER",
+    "AC-11-09": "BLOCKED_REAL_PROVIDER",
+    "AC-11-10": "PASS",
+    "AC-11-11": "PASS",
+    "AC-11-12": "PASS",
+    "AC-12-01": "PASS",
+    "AC-12-02": "PASS",
+    "AC-12-03": "PASS",
+    "AC-12-04": "PASS",
+    "AC-12-06": "PASS",
+    "AC-12-07": "PASS",
+    "AC-12-09": "PASS",
+    "AC-12-11": "PASS",
+    "AC-12-13": "PASS"
+  },
+  "checks": [
+    {
+      "scope": "final_full_offline",
+      "path": "reports/offline/20261103-175446-899534",
+      "tests": 554,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "d401ef2e2485d7c6a22f154d07553a70842062d4f121a527aa60ef8eff74a590"
+    },
+    {
+      "scope": "final_affected",
+      "path": "reports/offline/20261103-175349-071707",
+      "tests": 82,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "86756159b6c8f09060a478c4b34f845b4a40cd717ee7cb3bd57142bc3cf64599"
+    },
+    {
+      "scope": "sqlite_legacy_migration_added_after_full",
+      "path": "reports/offline/20261103-175653-881277",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "1b95dc1a818f57152dda41b01ecff73aa643eff04c31c201568554de7b621ff3"
+    },
+    {
+      "scope": "real_auth_added_after_full",
+      "path": "reports/offline/20261103-175742-509603",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "96745ed6dab42a6ef202da144054a158780a2b130575f8b60ef077fb289006c8"
+    },
+    {
+      "scope": "real_mysql_milvus_all",
+      "path": "reports/m3-closeout/real-20261103-173807",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "a6f800d0fd3eb8810090fbaeef87afe0761454ff1378da0a9a81f183cc2f77e4"
+    },
+    {
+      "scope": "real_publish_snapshot",
+      "path": "reports/m3-closeout/real-20261103-174523",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "899aa4b8d7d3bb406200f6a23dc7e15a928d444c635e4f94f83ced8cf349cf18"
+    }
+  ],
+  "frontend": {
+    "test_files": 7,
+    "tests": 28,
+    "test_exit_code": 0,
+    "build_exit_code": 0
+  },
+  "compileall_exit_code": 0,
+  "diff_check_exit_code": 0,
+  "source_manifest_sha256": "25a10ff8dfa8e9ca23993301ef17779446c18dd91a177fa8d6077c94affa83f3",
+  "build_manifest_sha256": "b5dca437cc7143e052805f4c0be02b8832a89ae682e2ae48fd6267c83bc4e600",
+  "browser": {
+    "draft_publish_failure_retry": "PASS",
+    "app_restart": "PASS",
+    "console_errors": 0,
+    "path": "reports/m3-closeout/browser"
+  },
+  "real_embedding": {
+    "requests": 2,
+    "input_texts": 5,
+    "status": "FAIL",
+    "error_code": "AllocationQuota.FreeTierOnly",
+    "http_status": 400,
+    "chat_model_calls": 0,
+    "automatic_retry": false,
+    "additional_calls_authorized": false
+  },
+  "not_run": [
+    "production_migration_deployment_backup_restore",
+    "real_embedding_success",
+    "real_reranker",
+    "production_corpus_quality",
+    "long_term_load"
+  ],
+  "production_resources_used": false,
+  "push": false
+}

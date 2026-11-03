@@ -58,6 +58,8 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
 - REST 与 WebSocket 使用同一会话锁覆盖状态恢复、执行与持久化；保留锁所有权和租约检查。M2 聊天执行器还使用 SQL 会话租约与版本条件写入；Redis 获取前不可用时由 SQL 后备协调，已获取后失租则中止。该保证仅覆盖已验收的 Run/受保护业务路径，不能推广到任意旧入口。
 - 退款等副作用保留权限、参数、幂等及本轮明确确认；历史确认不能授权新操作。Redis、Milvus、LLM 不可用时保留明确的降级路径。
 
+- 知识写入使用稳定文档ID/版本CAS与持久索引Job；索引验证后才切换SQL发布指针。检索每次核对发布快照/epoch，禁止按标题删除或混用未知Embedding空间。取消发布不能被迟到索引/普通编辑自动恢复。
+
 ## 编码与验证
 
 - Python 使用 4 空格缩进、类型标注及 `snake_case`，异步路由和服务避免阻塞操作；TypeScript 保持严格类型，变量用 `camelCase`、组件用 `PascalCase`。

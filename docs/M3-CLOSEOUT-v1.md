@@ -12,4 +12,4 @@
 
 M3相关既有基线：35 passed，reports/offline/20261103-171446-448324。核实缺陷：不稳定doc_db/doc_mysql/随机ID、MySQL按标题删除/旧版停用遗漏、索引异常吞掉、空向量补零/错维度截断、Embedding失败短路BM25、RRF量纲混用、缓存/worker旧知识未版本隔离。
 
-状态：范围已冻结，实施中。
+状态：实现及本地/真实依赖验证已封存；19项通过，AC-11-08/09真实供应商部分因AllocationQuota.FreeTierOnly额度耗尽阻塞，M3整体验收未完成。两次授权请求已用尽，不自动追加。详见M3-EVIDENCE-v1.md与M3-GATES-v1.json。
