@@ -2,7 +2,7 @@
   "date": "2026-11-03",
   "scope": "M3 frozen 21 criteria",
   "status": "INCOMPLETE_EXTERNAL_PROVIDER",
-  "code_commit": "075e01ff15ea772dbb7bab2beac99d052b3d4151",
+  "code_commit": "4967dfb1b520690ddfc54113e7176a1260cf45fe",
   "acceptance": {
     "AC-11-01": "PASS",
     "AC-11-02": "PASS",
@@ -27,6 +27,16 @@
     "AC-12-13": "PASS"
   },
   "checks": [
+    {
+      "scope": "latest_full_offline",
+      "path": "reports/offline/20261103-221344-665009",
+      "tests": 556,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "449e7d756e896c8eb492e3d8e4fd510aa527ae4ed266d15bfabe762369d5aa1f"
+    },
     {
       "scope": "final_full_offline",
       "path": "reports/offline/20261103-175446-899534",
@@ -86,6 +96,16 @@
       "skipped": 0,
       "exit_code": 0,
       "junit_sha256": "899aa4b8d7d3bb406200f6a23dc7e15a928d444c635e4f94f83ced8cf349cf18"
+    },
+    {
+      "scope": "fixture_import_followup",
+      "path": "reports/offline/20261103-222249-353470",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "junit_sha256": "cf68de1b443aac305cfa5f391d8059bdec76e022a5420870bc9ee26b84dcdcdd"
     }
   ],
   "frontend": {
@@ -96,7 +116,7 @@
   },
   "compileall_exit_code": 0,
   "diff_check_exit_code": 0,
-  "source_manifest_sha256": "25a10ff8dfa8e9ca23993301ef17779446c18dd91a177fa8d6077c94affa83f3",
+  "source_manifest_sha256": "dc601103fd0649468f4c5c89ef20676690bdab234313739665dbc17126a1fca0",
   "build_manifest_sha256": "b5dca437cc7143e052805f4c0be02b8832a89ae682e2ae48fd6267c83bc4e600",
   "browser": {
     "draft_publish_failure_retry": "PASS",
@@ -122,5 +142,12 @@
     "long_term_load"
   ],
   "production_resources_used": false,
-  "push": false
+  "push": false,
+  "lint_f401_f821": "PASS",
+  "last_environment_check": {
+    "docker_engine": "UNAVAILABLE",
+    "ui_mysql_connect": "CONNECTION_REFUSED",
+    "ui_process": "NOT_RUNNING",
+    "note": "Historical PASS evidence retained; final UI/SQL restart recheck could not run. No business resources restarted."
+  }
 }

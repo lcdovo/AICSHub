@@ -1,6 +1,6 @@
 # M3修改文件清单 v1
 
-范围：基线a063d13至M3本轮封存；不包含原未跟踪两份方案/规范与开发脚本。行为与AC证据见M3-EVIDENCE-v1.md。
+范围：基线a063d13至本轮封存。原未跟踪两份方案/规范及scripts/_dev_run_import.py保持未跟踪。行为、AC与限制见M3-EVIDENCE-v1.md。
 
 ## 知识版本、索引与检索
 
@@ -24,7 +24,7 @@
 - [app/services/knowledge_base/versioned_search.py](../app/services/knowledge_base/versioned_search.py)
 - [app/services/reranker_service.py](../app/services/reranker_service.py)
 
-## 前端状态与编辑
+## 前端
 
 - [frontend/src/api/index.ts](../frontend/src/api/index.ts)
 - [frontend/src/api/types.ts](../frontend/src/api/types.ts)
