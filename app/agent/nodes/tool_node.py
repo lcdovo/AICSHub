@@ -81,10 +81,9 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
             for task, (payload, result) in zip(state.read_plan, results):
                 if result is None:
                     result = ToolExecutionResult(success=False, error="只读服务不可用", error_type="unavailable")
+                state.record_tool_observation(task.tool, result.model_dump())
                 state.add_tool_call(task.tool, payload, result.model_dump(), result.success,
                                     result.error, result.error_type)
-                if result.success:
-                    state.collected_info[f"{task.tool}_result"] = result.data
             state.reply = summarize_reads(state.read_plan, results,
                                           has_conditions=bool(state.understanding.conditions))
         except (ValueError, TypeError, TimeoutError):
@@ -166,6 +165,8 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
             if result is None:
                 result = ToolExecutionResult(success=False, error="工具不存在或不可用", error_type="not_found")
 
+            state.record_tool_observation(tool_name, result.model_dump())
+
             state.add_tool_call(
                 tool_name=tool_name,
                 arguments=logged_args,
@@ -184,9 +185,6 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
             )
 
             if result.success and result.data:
-                if isinstance(result.data, dict):
-                    state.collected_info.update(result.data)
-                state.collected_info[f"{tool_name}_result"] = result.data
                 if tool_name == "apply_refund":
                     state.collected_info.pop("refund_preview", None)
                     state.collected_info.pop("confirm_refund", None)

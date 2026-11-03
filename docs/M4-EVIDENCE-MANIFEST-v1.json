@@ -350,6 +350,18 @@
       "sha256": "eb9815469a060e6c7e4ad4248b65480503316622054789a59743b0347e4080c1",
       "bytes": 604,
       "snapshot": "response-composition-full-regression"
+    },
+    {
+      "path": "reports/offline/20261104-024924-998595/junit.xml",
+      "sha256": "70d58d7692833633328dbe3971d6630b3004267ce2a14c832b7e38e5c45195e7",
+      "bytes": 3640,
+      "snapshot": "typed-tool-observation-quarantine"
+    },
+    {
+      "path": "reports/offline/20261104-025201-917607/junit.xml",
+      "sha256": "63569fcd54555ad80ae4b008aa1ecff3f552557b8537dc540a9d3dba756246f7",
+      "bytes": 17038,
+      "snapshot": "typed-tool-observation-quarantine"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

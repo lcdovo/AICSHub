@@ -56,6 +56,7 @@ async def request_handoff(dependencies: HandoffDependencies, state: AgentState) 
                             or type(data.get("user_id")) is not int or data["user_id"] != state.user_id
                             or data.get("session_id") != state.session_id):
         handoff = ToolExecutionResult(success=False, error="人工请求缺少可信回执", error_type="unknown")
+    state.record_tool_observation("escalate_to_human", handoff.model_dump())
     state.add_tool_call(tool_name="escalate_to_human", arguments=arguments, result=handoff.model_dump(),
                         success=handoff.success, error_message=handoff.error, error_type=handoff.error_type)
     state.reply = handoff_message(data) if handoff.success else "暂时无法确认转人工请求结果，请查看请求记录或联系支持。"

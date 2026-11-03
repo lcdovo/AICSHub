@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from copy import deepcopy
 from datetime import datetime
 from app.agent.read_plan import ReadTask
+from app.agent.tool_contracts import ToolObservation, BusinessToolName, TOOL_RESULT_COMPAT_KEYS, TOOL_IDENTIFIER_PROJECTIONS
 
 
 class ToolCall(BaseModel):
@@ -66,6 +67,7 @@ class AgentState(BaseModel):
     # Agent 执行状态
     current_node: str = "start"
     tool_calls: List[ToolCall] = Field(default_factory=list)
+    tool_observations: Dict[BusinessToolName, ToolObservation] = Field(default_factory=dict)
     missing_slots: List[str] = Field(default_factory=list)
     route_reason: Optional[str] = None
     # RAG 查询字段；user_message 始终保留用户原文
@@ -96,6 +98,24 @@ class AgentState(BaseModel):
         if self.evidence_bundle is not None:
             return deepcopy(self.evidence_bundle.items)
         return deepcopy(self.collected_info.get("kb_results", []))
+
+    def record_tool_observation(self, tool_name: str, result: Dict[str, Any]) -> None:
+        observation = ToolObservation.model_validate({**deepcopy(result), "tool": tool_name})
+        self.tool_observations[observation.tool] = observation
+        compatibility_key = TOOL_RESULT_COMPAT_KEYS[observation.tool]
+        if not observation.success:
+            self.collected_info.pop(compatibility_key, None)
+            return
+        self.collected_info[compatibility_key] = deepcopy(observation.data)
+        if not isinstance(observation.data, dict):
+            return
+        for key in TOOL_IDENTIFIER_PROJECTIONS.get(observation.tool, ()):
+            value = observation.data.get(key)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            if key == "order_id" and self.collected_info.get(key) not in (None, "", value):
+                continue
+            self.collected_info[key] = value
 
     def invalidate_evidence(self, reason: str) -> None:
         epoch = self.evidence_bundle.knowledge_epoch if self.evidence_bundle else None
@@ -210,8 +230,8 @@ class AgentState(BaseModel):
         self.tool_calls.append(
             ToolCall(
                 tool_name=tool_name,
-                arguments=arguments,
-                result=result,
+                arguments=deepcopy(arguments),
+                result=deepcopy(result),
                 success=success,
                 error_message=error_message,
                 error_type=error_type,

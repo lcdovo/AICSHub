@@ -1,0 +1,28 @@
+# M4状态契约清点 v1
+
+2026-11-04。用于AC-07-01渐进迁移，当前仍PARTIAL。本表区分主事实、派生观察和旧兼容字段，不把“声明了类型名”当作全图类型化完成。
+
+| 分区 | 当前权威字段/类型 | 旧兼容键或来源 | 生命周期/限制 |
+| --- | --- | --- | --- |
+| 身份/执行 | AgentState.user_id/actor_id/session_id/source_message_id/session_version、请求action_id/version | 可信HTTP/WS及SQL Run；collected_info中的user_id/session_id仅投影 | 工具数据/模型不能覆盖可信身份；每轮由服务恢复 |
+| 对话背景 | ConversationContext、messages、summary | order_id、ticket_id、tracking_number、intent_history | 仅必要背景跨轮；历史不能确认新动作 |
+| 请求与意向 | RequestUnderstanding、ActionIntent、read_plan | intent_source、shadow_understanding、smalltalk | 每轮重置；ActionIntent不是授权凭据 |
+| 持久退款动作 | SQL RefundAction + 共享领域服务 | refund_preview/refund_action/reason/refund_type | 当前仍兼容字典，SQL来源权威；旧confirm_refund不跨轮/恢复复活 |
+| 证据 | EvidenceBundle、retrieval_metadata、retrieval_error | kb_results/kb_search_meta/rag_grounded/best_match_score等投影 | 同一快照内容/版本/epoch核验；支持度由独立审查决定 |
+| 回答审查 | ReviewResult(passed, evidence_version) | validation、answer_validated、llm_judge、inline_self_check | 本轮结果；独立校验和证据指纹绑定，不收工具自报的通过 |
+| 工具观察 | ToolObservation与tool_observations[BusinessToolName] | 明确枚举的xxx_result | 本轮严格外壳、完整回执嵌套保留；data为不透明业务数据，不是权限或控制字段 |
+| 工具审计 | ToolCall列表 | 原统一工具执行链与回执 | 参数/结果深复制，完整历史不被最新观察覆盖；不是当前确认来源 |
+| 生成计量 | 当前仍为llm_governance字典，SQL ModelCallRecord是费用事实 | reply_source、query_rewrite、user_memory等 | 全面类型化尚待完成；供应商估算不冒充账单 |
+| 发布/流程标记 | 本轮控制逻辑写smalltalk/handoff_attempted/rag_refused等 | 仍位于兼容字典 | 不能从工具data展开；不跨轮保留 |
+
+## 工具观察入口
+
+record_tool_observation只接受注册的8种业务工具名字，工具身份取调用器给出的tool_name而非回执自报。search_kb是实际注册工具，hybrid_search是RAG观察标签，后者由独立EvidenceBundle入口处理，二者不混用。
+
+完整result.data只保留在ToolObservation.data、深复制的ToolCall和枚举xxx_result兼容投影中。仅允许投影order_id/ticket_id/refund_id/request_id/notification_id等对应工具的业务编号；已有请求选定订单不能被回执改成另一订单。user_id/session_id、confirm_refund/refund_preview、校验/证据/模型计量和人工流程标记均不从数据展开。
+
+最新失败观察清除该工具旧成功xxx_result投影；历史ToolCall仍保留。供应商对象、兼容字段和类型观察之间不共享可变字典。for_next_turn清空工具观察、工具调用、当前证据/审查，持久化业务回执仍以SQL为准。
+
+## 尚未完成
+
+仍需给业务槽位、待办投影、生成计量、改写元数据和流程标记建立统一的全面类型接口，并移除未声明字符串键的主链依赖。保留兼容字典不能当作最终完成；工具外壳有类型也不代表业务data内容可信。权限/资格/幂等/确认仍必须由领域服务检查，模型最终输出仍必须走响应审查。
