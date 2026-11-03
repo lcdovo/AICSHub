@@ -602,6 +602,54 @@
       "sha256": "48cc4b76ef45f3155b4a05b315d74184228b70c3105e6e9bd823d7c6e0afad6a",
       "bytes": 27365,
       "snapshot": "typed-business-parameters-and-sql-recovery-full"
+    },
+    {
+      "path": "reports/offline/20261104-034139-487063/junit.xml",
+      "sha256": "45f4fa15a0d49eaf4b75be916fdfd6e6686294263a9a3371df823a0c2ea93383",
+      "bytes": 5105,
+      "snapshot": "shared-parser-model-rebinding"
+    },
+    {
+      "path": "reports/offline/20261104-034139-487063/manifest.json",
+      "sha256": "5641b9674cd7b45aa991fd469217bd5fb5da46beb3824b4dcbb5d97c3b3d88ec",
+      "bytes": 1272,
+      "snapshot": "shared-parser-model-rebinding"
+    },
+    {
+      "path": "reports/offline/20261104-034139-487063/source-start.json",
+      "sha256": "e01280fdd9b112d4923599a9cc748f9f326b207793a8e9a94965f5b669816f7a",
+      "bytes": 27736,
+      "snapshot": "shared-parser-model-rebinding"
+    },
+    {
+      "path": "reports/offline/20261104-034139-487063/source-end.json",
+      "sha256": "e01280fdd9b112d4923599a9cc748f9f326b207793a8e9a94965f5b669816f7a",
+      "bytes": 27736,
+      "snapshot": "shared-parser-model-rebinding"
+    },
+    {
+      "path": "reports/offline/20261104-034216-435117/junit.xml",
+      "sha256": "b5c6ff2d217ce06a114688333278a76d9ad66b7b7b404e474c0b0b7c84663d1f",
+      "bytes": 10440,
+      "snapshot": "shared-parser-model-rebinding"
+    },
+    {
+      "path": "reports/offline/20261104-034216-435117/manifest.json",
+      "sha256": "1278e24721d277350a6f6a886ba1eb7bd6a20b4857f327eb184aed6c03b7cdbd",
+      "bytes": 1997,
+      "snapshot": "shared-parser-model-rebinding"
+    },
+    {
+      "path": "reports/offline/20261104-034216-435117/source-start.json",
+      "sha256": "52e26c9b9a1e30be33772f4a9063503a9fde343db82923930758baecff5f41e7",
+      "bytes": 27763,
+      "snapshot": "shared-parser-model-rebinding"
+    },
+    {
+      "path": "reports/offline/20261104-034216-435117/source-end.json",
+      "sha256": "52e26c9b9a1e30be33772f4a9063503a9fde343db82923930758baecff5f41e7",
+      "bytes": 27763,
+      "snapshot": "shared-parser-model-rebinding"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

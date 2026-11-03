@@ -151,6 +151,23 @@ class AgentGraph:
     _EXPLAIN_MARKERS = EXPLAIN_MARKERS
     _STRONG_EMOTION_MARKERS = STRONG_EMOTION_MARKERS
 
+    @property
+    def llm_service(self):
+        return self._llm_service
+
+    @llm_service.setter
+    def llm_service(self, service):
+        previous = self.__dict__.get("_llm_service")
+        self._llm_service = service
+        if previous is None:
+            return
+        # 本图构造并共享原模型的解析组件应跟随替换（例如有界供应商评测hook）。
+        # 显式配置了独立模型的Judge/改写器不被静默改为主模型；旧服务生命周期由调用方负责。
+        for name in ("llm_rewriter", "llm_judge"):
+            component = self.__dict__.get(name)
+            if isinstance(component, (LLMQueryRewriter, LLMRAGJudge)) and component.llm_service is previous:
+                component.llm_service = service
+
     def __init__(self):
         self.llm_service = LLMService()
         self.intent_recognizer = EnhancedIntentRecognizer()

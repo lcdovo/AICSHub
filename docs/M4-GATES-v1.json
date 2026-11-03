@@ -233,6 +233,14 @@
   },
   "verification": [
     {
+      "layer": "T0 owned model service rebinding across rewriter and judge adapters",
+      "path": "reports/offline/20261104-034216-435117",
+      "passed": 76,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "a3c925c3781946a650f8da58101bc8326d779e2506c1aa192bd66c9c30648528"
+    },
+    {
       "layer": "T0 full at f2c97c4 before business parameters slice",
       "path": "reports/offline/20261104-033019-965289",
       "passed": 770,

@@ -36,3 +36,5 @@ M4故障补验：同执行上下文并行预留共享锁，跨实例仍依赖SQL
 模型SDK客户端现在显式使用服务自有sync/async httpx池（每池连接数受LLM_MAX_CONCURRENCY约束），不共享库默认base/timeout全局缓存，临时服务关闭不会关闭聊天图的底层池。close尝试所有去重客户端并清缓存，失败不跳过其他池。FastAPI退出finally清理健康/聊天图各实例及MCP/Redis。260次本机合成协议请求验证资源归零，不能替代多小时真实供应商压力验收。
 
 生成节点与持久评测/Trace使用严格GenerationMetadata观察头，服务last_call_metadata中的structured_output/输入摘要/额外字段不复制到状态。partial/unknown usage明确区分，缺失output不按0计算实际费用；未知头不缓存回答，SQL ModelCallRecord保持计费事实。该头和LLMService展示tokens估算均不替代供应商账单。
+
+Graph模型服务被显式替换时，共享原服务的改写/Judge组件同步重绑定，避免只替换生成/意图而遗留旧请求适配器；专用独立模型不被覆盖。测试捕获与费用授权仍应覆盖所有显式供应商实例，SQL Run预算继续统一约束，旧客户端由调用方关闭。
