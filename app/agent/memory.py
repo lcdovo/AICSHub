@@ -352,7 +352,9 @@ class SessionManager:
         older = state.messages[:-MIN_MESSAGES_AFTER_COMPRESSION]
 
         # 优先使用 LLM 生成摘要，降级到规则摘要
-        summary = await self._generate_llm_summary(older)
+        from app.services.model_gateway import inherited_model_context
+        async with inherited_model_context(state.user_id, "summary"):
+            summary = await self._generate_llm_summary(older)
         if not summary:
             summary = self._generate_summary(older)
         if not summary:
@@ -374,8 +376,10 @@ class SessionManager:
 
     async def _generate_llm_summary(self, messages: List[Dict[str, Any]]) -> str:
         """调用 LLM 生成对话摘要，失败时返回空字符串降级到规则摘要。"""
+        llm_service = None
         try:
-            from app.services.llm_service import llm_service
+            from app.services.llm_service import LLMService
+            llm_service = LLMService()
 
             # 构建对话文本
             dialog_parts = []
@@ -401,7 +405,10 @@ class SessionManager:
             if summary and len(summary) > 10:
                 return summary[:SUMMARY_MAX_LENGTH]
         except Exception as e:
-            logger.warning(f"LLM 生成摘要失败，降级到规则摘要: {e}")
+            logger.warning("LLM 生成摘要失败，降级到规则摘要: %s", type(e).__name__)
+        finally:
+            if llm_service is not None:
+                await llm_service.close()
 
         return ""
 

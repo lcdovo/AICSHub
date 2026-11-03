@@ -466,13 +466,24 @@ class LLMService:
             return result
 
         if settings.LLM_GATEWAY_ENABLED and CALL_CONTEXT.get() is None:
+            if type(user_id) is not int or user_id <= 0:
+                raise RuntimeError("trusted_model_user_required")
             async with model_context(
-                user_id, run_id or "direct:" + __import__("uuid").uuid4().hex
+                user_id, "direct:" + __import__("uuid").uuid4().hex
             ):
                 return await call()
+        if settings.LLM_GATEWAY_ENABLED and user_id and CALL_CONTEXT.get()["user_id"] != user_id:
+            raise RuntimeError("model_context_user_mismatch")
         return await call()
 
     async def chat(
+        self, user_id: int, session_id: str, message: str, context: Optional[list] = None,
+    ) -> Tuple[str, str, int]:
+        from app.services.model_gateway import inherited_model_context
+        async with inherited_model_context(user_id, "chat"):
+            return await self._chat(user_id, session_id, message, context)
+
+    async def _chat(
         self,
         user_id: int,
         session_id: str,
@@ -653,6 +664,18 @@ class LLMService:
         return reply, response_intent, token_count
 
     async def stream_chat(
+        self, user_id: int, session_id: str, message: str, context: Optional[list] = None,
+    ):
+        from app.services.model_gateway import inherited_model_context
+        async with inherited_model_context(user_id, "chat-stream"):
+            stream = self._stream_chat(user_id, session_id, message, context)
+            try:
+                async for chunk in stream:
+                    yield chunk
+            finally:
+                await stream.aclose()
+
+    async def _stream_chat(
         self,
         user_id: int,
         session_id: str,
@@ -762,18 +785,9 @@ class LLMService:
         }
 
     async def _gateway_stream(self, model, messages, chat_model, user_id, run_id):
-        from app.services.model_gateway import GATEWAY, CALL_CONTEXT, model_context
-        from contextlib import asynccontextmanager
+        from app.services.model_gateway import GATEWAY, inherited_model_context
 
-        @asynccontextmanager
-        async def context():
-            if settings.LLM_GATEWAY_ENABLED and CALL_CONTEXT.get() is None:
-                async with model_context(user_id, run_id):
-                    yield
-            else:
-                yield
-
-        async with context():
+        async with inherited_model_context(user_id, "direct-stream"):
             ticket = (
                 await GATEWAY.reserve(
                     model,

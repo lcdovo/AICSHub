@@ -14,6 +14,24 @@ CALL_CONTEXT = ContextVar("model_call_context", default=None)
 
 
 @asynccontextmanager
+async def inherited_model_context(user_id: int, scope: str, *, route_version=None):
+    """可信应用入口传入主体，嵌套调用继承同一Run，禁止串用其他用户账本。"""
+    if not settings.LLM_GATEWAY_ENABLED:
+        yield
+        return
+    if type(user_id) is not int or user_id <= 0:
+        raise RuntimeError("trusted_model_user_required")
+    current = CALL_CONTEXT.get()
+    if current is not None:
+        if current["user_id"] != user_id:
+            raise RuntimeError("model_context_user_mismatch")
+        yield
+        return
+    async with model_context(user_id, scope + ":" + uuid.uuid4().hex, route_version=route_version):
+        yield
+
+
+@asynccontextmanager
 async def model_context(user_id: int, run_id: str, *, factory=None, route_version=None):
     token = CALL_CONTEXT.set(
         {

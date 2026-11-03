@@ -584,7 +584,7 @@ class RagQueryRequest(BaseModel):
 
 
 @router.post("/rag-query")
-async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
+async def rag_query(request: RagQueryRequest, user: User = Depends(require_user)):
     """RAG问答：检索+LLM生成回答"""
     kb = await asyncio.to_thread(get_knowledge_base)
     search_result = await kb.async_search(
@@ -625,6 +625,7 @@ async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
     context_text = "\n\n".join(context_chunks)
 
     if request.use_llm:
+        llm = None
         try:
             llm = LLMService()
             prompt = f"""基于以下参考资料回答用户的问题。如果资料中没有相关信息，请直接说明。
@@ -636,18 +637,23 @@ async def rag_query(request: RagQueryRequest, _: User = Depends(require_user)):
 
 请用中文给出简洁准确的回答。"""
 
-            reply, _, _ = await llm.chat(
-                user_id=0,
-                session_id="rag_query",
-                message=prompt,
-            )
+            from app.services.model_gateway import inherited_model_context
+            async with inherited_model_context(user.id, "rag-query"):
+                reply, _, _ = await llm.chat(
+                    user_id=user.id,
+                    session_id="rag_query",
+                    message=prompt,
+                )
             answer = (
                 reply
                 or f"根据知识库检索，找到 {len(sources)} 条相关内容，但AI生成回答失败。"
             )
         except Exception as e:
-            logger.error(f"LLM生成失败: {e}")
+            logger.error("LLM生成失败: %s", type(e).__name__)
             answer = f"已检索到 {len(sources)} 条相关内容，但AI回答生成失败。以下是检索到的内容摘要。"
+        finally:
+            if llm is not None:
+                await llm.close()
     else:
         if sources:
             top = search_result["results"][0]

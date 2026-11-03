@@ -63,3 +63,5 @@
 动作恢复切片新增：`tests/test_m4_action_projection.py`；修改ChatService统一hydrate，SQL动作覆盖旧投影/缓存确认。
 
 迟到结果切片新增：`tests/test_m4_late_results.py`；修改model_gateway.py、llm_service.py、run_execution.py。
+
+用户归属切片新增：`tests/test_m4_model_identity.py`；修改model_gateway.py、llm_service.py、graph.py、memory.py、knowledge路由及现行说明。

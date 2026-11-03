@@ -85,8 +85,8 @@
       "evidence_and_limit": "新理解节点与共享业务服务分离；全图模块依赖重构尚未完成"
     },
     "AC-14-01": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "用途级T0账本+真实普通/结构化/流式；旧直接调用归system user0，不能声称所有用途已有真实终端用户归属"
+      "status": "PASS_C_I_ISOLATED",
+      "evidence_and_limit": "图/聊天整条回退链/流/RAG/兼容摘要继承或建立实际用户唯一scope，缺可信身份结构化调用关闭；5用途真实隔离SQL账本，89项相关回归通过。正式Run继承实际Run/策略；历史system0记录保留不重写。模型替身，非所有入口新真实调用"
     },
     "AC-14-02": {
       "status": "PASS_T1",
@@ -231,6 +231,18 @@
   },
   "verification": [
     {
+      "layer": "T0 full at 8d9c060 before identity slice",
+      "path": "reports/offline/20261104-014316-713327",
+      "passed": 667,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "layer": "T0 model identity and entrypoint integration",
+      "path": "reports/offline/20261104-014929-687823",
+      "passed": 89
+    },
+    {
       "layer": "T1 real MySQL gateway regression",
       "path": "reports/m4-closeout/real-20261104-014023",
       "passed": 2
@@ -335,8 +347,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 14,
+    "partial": 13,
     "fail": 1,
-    "layer_limited_pass": 15
+    "layer_limited_pass": 16
   }
 }

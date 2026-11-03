@@ -268,6 +268,17 @@ class AgentGraph:
         return intent_routes.get(intent, AgentNode.RESPONSE_GENERATION)
 
     async def run_stream(self, state: AgentState) -> AsyncGenerator[Dict[str, Any], None]:
+        from app.services.model_gateway import inherited_model_context
+
+        async with inherited_model_context(state.user_id, "graph-stream", route_version=state.strategy_version):
+            stream = self._run_stream(state)
+            try:
+                async for event in stream:
+                    yield event
+            finally:
+                await stream.aclose()
+
+    async def _run_stream(self, state: AgentState) -> AsyncGenerator[Dict[str, Any], None]:
         """以同一张 LangGraph 编排图执行流式请求。
 
         流式接口只负责把图的 updates 转换为事件，不再复制节点、路由或校验逻辑，
@@ -398,6 +409,12 @@ class AgentGraph:
                "need_human": state.need_human, "timestamp": datetime.now().isoformat()}
 
     async def run(self, state: AgentState) -> AgentState:
+        from app.services.model_gateway import inherited_model_context
+
+        async with inherited_model_context(state.user_id, "graph", route_version=state.strategy_version):
+            return await self._run(state)
+
+    async def _run(self, state: AgentState) -> AgentState:
         """Run the compiled LangGraph while preserving the public API."""
         start_time = time.time()
         result = await self.langgraph.ainvoke(
