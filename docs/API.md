@@ -119,6 +119,14 @@ MCP更新工具新增idempotency_key与authorization上下文，凭据限定upda
 
 本轮无schema迁移，依赖现有审计键唯一约束。SQLite确定性竞争与同进程MCP验证不能替代真实MySQL/多worker、stdio、崩溃恢复或完整版本化CAS验收；未新增单调版本列，也不宣称运行中权限撤销能取消已开始动作。
 
+## 通知发送能力边界（M1-08）
+
+当前代码未接入sms/email/inapp的真实投递适配器，也没有消费通知队列的worker。`send_notification`保留工具名及合法调用格式，但三类发送均返回`success=false / error_type=channel_unavailable`；参数非法返回validation。不会生成notification_id、sent状态或sent_at，也不创建“已发送”记录，不自动重试或返回进程内旧成功缓存。MCP工具说明同样标示能力未接入。
+
+工单/转人工创建事务仍可写入`NotificationRecord(PENDING)`，它只代表业务事件待处理，不代表已发送或模拟投递完成；通知工具失败不会修改这些记录。Outbox仓储中的状态写入方法只是数据访问助手，不是可运行的发送worker或投递回执证据。本轮没有接入真实或模拟渠道，没有新增配置项、定时消费或对外通知。
+
+工具对user_id使用严格整数类型（兼容省略时默认0，但不会授权发送），拒绝未知字段/强制发送开关。未来启用发送需独立完成可信身份、持久幂等、投递回执、租约与故障恢复验收，并确认真实服务费用；不能仅加配置或把入队状态改成sent就宣布接通。
+
 ## 兼容与弃用
 
 旧页面仍可使用 `/login.html`、`/user.html`、`/admin.html`。页面内部统一调用 `/api/v1`，新增客户端请勿依赖未带版本前缀的路径。

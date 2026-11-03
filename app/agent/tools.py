@@ -8,8 +8,8 @@ import asyncio
 import time
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, List, Callable, Tuple
-from pydantic import BaseModel, Field
+from typing import Any, Dict, Optional, List, Callable, Tuple, Literal
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -574,10 +574,21 @@ class EscalateToHumanTool(BaseTool):
             }
 
 
+class NotificationToolInput(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    channel: Literal["sms", "email", "inapp"]
+    content: str = Field(min_length=5, max_length=10000)
+    # 保留旧MCP省略user_id的调用格式；当前不会实际投递或授权任何身份。
+    user_id: int = Field(default=0, ge=0)
+    idempotency_key: Optional[str] = Field(default=None, min_length=1, max_length=128)
+
+
 class SendNotificationTool(BaseTool):
-    """发送通知 - 支持多渠道"""
+    """发送能力尚未接入：明确拒绝，不构造投递回执。"""
     name = "send_notification"
-    description = "向用户发送短信或站内信通知"
+    max_retries = 1
+    cache_success = False
+    description = "通知发送入口；当前未接入投递适配器，返回能力不可用"
     parameters = [
         {"name": "channel", "type": "string", "description": "通知渠道", "required": True,
          "enum": ["sms", "email", "inapp"]},
@@ -586,31 +597,18 @@ class SendNotificationTool(BaseTool):
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
-        channel = kwargs.get("channel", "")
-        content = kwargs.get("content", "")
-        user_id = kwargs.get("user_id", 0)
-
-        if channel not in ["sms", "email", "inapp"]:
-            return {"success": False, "error": f"不支持的通知渠道: {channel}", "hint": "支持的渠道：sms(短信)、email(邮件)、inapp(站内信)"}
-
-        if not content or len(content.strip()) < 5:
-            return {"success": False, "error": "通知内容过短", "hint": "请提供至少5个字符的通知内容"}
-
-        channel_labels = {"sms": "短信", "email": "邮件", "inapp": "站内信"}
-
-        return {
-            "success": True,
-            "data": {
-                "notification_id": str(uuid.uuid4()),
-                "channel": channel,
-                "channel_label": channel_labels.get(channel, channel),
-                "user_id": user_id,
-                "content": content,
-                "status": "sent",
-                "sent_at": datetime.now().isoformat(),
-                "message": f"{channel_labels.get(channel, channel)}通知已发送",
-            },
-        }
+        try:
+            payload = NotificationToolInput.model_validate(kwargs)
+            if len(payload.content.strip()) < 5 or (
+                payload.idempotency_key is not None and not payload.idempotency_key.strip()
+            ):
+                raise ValueError("Invalid notification input")
+        except (ValidationError, ValueError, TypeError):
+            return {"success": False, "error": "通知参数无效", "error_type": "validation", "retryable": False}
+        # 现有outbox只有事件记录，没有实际投递适配器/消费worker。
+        # 不写库、不生成ID；入队不能被当作“发送成功”的替代事实。
+        return {"success": False, "error": "通知发送能力未接入，未发送通知",
+                "error_type": "channel_unavailable", "retryable": False}
 
 
 class UpdateTicketStatusTool(BaseTool):

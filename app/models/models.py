@@ -193,7 +193,7 @@ class NotificationStatus(str, enum.Enum):
 
 
 class NotificationRecord(Base):
-    """Outbox 通知记录；真实渠道接入前由 Mock worker 消费。"""
+    """Outbox待发送事件记录；当前尚无投递适配器或消费worker。"""
 
     __tablename__ = "notification_records"
 

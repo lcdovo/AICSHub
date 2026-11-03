@@ -99,7 +99,7 @@ async def escalate_to_human(
     )
 
 
-@mcp.tool(name="send_notification", description="向用户发送短信或站内信通知")
+@mcp.tool(name="send_notification", description="通知发送入口；当前未接入投递适配器，返回能力不可用")
 async def send_notification(channel: str, content: str, user_id: int = 0) -> Dict[str, Any]:
     return await _invoke("send_notification", channel=channel, content=content, user_id=user_id)
 
