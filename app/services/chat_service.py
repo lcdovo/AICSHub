@@ -13,7 +13,7 @@ from typing import Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.graph import AgentGraph
-from app.agent.memory import session_manager
+from app.agent.memory import session_manager, SessionLeaseError
 from app.agent.state import AgentState
 from app.config.config import settings
 from app.models.models import AgentTrace, EvaluationResult, Message, MessageRole, Session
@@ -29,6 +29,8 @@ class ChatService:
 
     async def hydrate_state(self, session_id: str, user_id: int, message: str) -> AgentState:
         saved = await session_manager.get_state(session_id)
+        if saved is not None and (saved.session_id != session_id or saved.user_id != user_id):
+            raise SessionLeaseError("共享会话状态归属不一致，请联系管理员核查")
         source = saved or AgentState(session_id=session_id, user_id=user_id, user_message="")
         state = source.for_next_turn(user_id, message)
         if saved:

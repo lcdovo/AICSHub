@@ -227,6 +227,8 @@ class SessionManager:
                 data = await redis.get(f"session:{session_id}")
                 if data:
                     state = self._deserialize_state(json.loads(data))
+                    if state.session_id != session_id:
+                        raise ValueError("Snapshot session identity mismatch")
                     self._state_cache[session_id] = (state.model_copy(deep=True), time.time())
                     return state
                 self._state_cache.pop(session_id, None)
@@ -238,6 +240,16 @@ class SessionManager:
             return cached[0].model_copy(deep=True)
         self._state_cache.pop(session_id, None)
         return None
+
+    async def initialize_state(self, session_id: str, user_id: int) -> None:
+        """仅初始化不存在的共享快照；不覆盖轮次结果，不创建本地陈旧副本。"""
+        if await self._is_redis_available():
+            redis = await get_redis()
+            state = AgentState(session_id=session_id, user_id=user_id, user_message="")
+            await redis.set(
+                f"session:{session_id}", json.dumps(self._serialize_state(state)),
+                nx=True, ex=SESSION_TTL_SECONDS,
+            )
 
     async def save_state(self, state: AgentState):
         self._state_cache[state.session_id] = (state.model_copy(deep=True), time.time())
@@ -480,6 +492,7 @@ class SessionManager:
 
     def _serialize_state(self, state: AgentState) -> Dict[str, Any]:
         return {
+            "schema_version": 1,
             "session_id": state.session_id,
             "user_id": state.user_id,
             "user_message": state.user_message,
@@ -503,6 +516,13 @@ class SessionManager:
         }
 
     def _deserialize_state(self, data: Dict[str, Any]) -> AgentState:
+        # 旧无version对象兼容读取；整数元数据/未知schema不可当作空历史转换。
+        if (not isinstance(data, dict) or type(data.get("schema_version", 1)) is not int
+                or data.get("schema_version", 1) != 1):
+            raise ValueError("Unsupported session snapshot schema")
+        if (not isinstance(data.get("session_id"), str) or not data["session_id"]
+                or type(data.get("user_id")) is not int or data["user_id"] <= 0):
+            raise ValueError("Invalid session snapshot identity")
         return AgentState(
             session_id=data.get("session_id", ""),
             user_id=data.get("user_id", 0),

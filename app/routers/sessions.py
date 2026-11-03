@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime
 from typing import List, Optional
 
@@ -6,48 +5,22 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.utils.database import get_db, get_redis
+from app.utils.database import get_db
 from app.models.models import Session, SessionStatus, User, UserRole
 from app.schemas.schemas import SessionCreate, APIResponse
 from app.security import get_current_user, ensure_owner_or_admin, require_admin
+from app.services.session_creation import create_session as create_session_record
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["会话管理"])
-
-SESSION_TTL_SECONDS = 86400
 
 
 @router.post("/", response_model=APIResponse)
 async def create_session(
     session_data: SessionCreate,
     db: AsyncSession = Depends(get_db),
-    redis=None,
     current_user: User = Depends(get_current_user),
 ):
-    ensure_owner_or_admin(current_user, session_data.user_id)
-    user = current_user
-
-    session_id = str(uuid.uuid4())
-    session = Session(
-        id=session_id,
-        user_id=user.id,
-        status=SessionStatus.ACTIVE,
-    )
-    db.add(session)
-    await db.commit()
-    await db.refresh(session)
-
-    if redis is None:
-        redis = await get_redis()
-    # Redis 是可选依赖；本地 profile 不可用时由 SessionManager 使用内存降级。
-    if redis is not None:
-        try:
-            await redis.setex(
-                f"session:{session_id}",
-                SESSION_TTL_SECONDS,
-                str(session_data.user_id),
-            )
-        except Exception:
-            pass
+    session = await create_session_record(db, current_user, session_data.user_id)
 
     return APIResponse(
         code=0,

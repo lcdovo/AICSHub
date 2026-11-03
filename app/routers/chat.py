@@ -17,6 +17,7 @@ from app.utils.tracking import structured_logger, generate_trace_id, get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, decode_token
 from app.config.config import settings
 from app.services.chat_service import chat_service
+from app.services.session_creation import create_session as create_session_record
 
 router = APIRouter(prefix="/api/v1/chat", tags=["对话管理"])
 
@@ -62,25 +63,13 @@ async def create_session(
     current_user: User = Depends(get_current_user),
 ):
     """创建新会话"""
-    ensure_owner_or_admin(current_user, user_id)
-    user = await db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
-
-    session_id = str(uuid.uuid4())
-    session = Session(
-        id=session_id,
-        user_id=user_id,
-        status=SessionStatus.ACTIVE,
-    )
-    db.add(session)
-    await db.commit()
+    session = await create_session_record(db, current_user, user_id)
 
     return APIResponse(
         code=0,
         message="会话创建成功",
         data={
-            "id": session_id,
+            "id": session.id,
             "status": SessionStatus.ACTIVE.value,
             "message_count": 0,
             "last_intent": None,
