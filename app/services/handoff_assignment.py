@@ -23,26 +23,27 @@ def effective_load(agent: HumanAgent, loads: dict[str, int]) -> int:
     return max(agent.current_load, loads.get(agent.agent_id, 0))
 
 
-async def reserve_capacity(db: AsyncSession, agent: HumanAgent) -> None:
-    """更新闸门取得事务写锁，随后使用current read读取有效指派。
-
-    FOR UPDATE避免MySQL REPEATABLE READ复用本事务先前身份/请求读取的旧快照。
-    SQLite由闸门UPDATE的写事务串行化；事务结束前不能提前释放或commit。
-    """
+async def lock_capacity_gate(db: AsyncSession, agent_id: str) -> None:
+    """持有座席闸门直到事务结束，分配与解决共用。"""
     dialect = db.get_bind().dialect.name
     if dialect == "mysql":
         from sqlalchemy.dialects.mysql import insert
-        statement = insert(HandoffCapacityGate).values(agent_id=agent.agent_id, revision=1)
+        statement = insert(HandoffCapacityGate).values(agent_id=agent_id, revision=1)
         statement = statement.on_duplicate_key_update(revision=HandoffCapacityGate.revision + 1)
     elif dialect == "sqlite":
         from sqlalchemy.dialects.sqlite import insert
-        statement = insert(HandoffCapacityGate).values(agent_id=agent.agent_id, revision=1)
+        statement = insert(HandoffCapacityGate).values(agent_id=agent_id, revision=1)
         statement = statement.on_conflict_do_update(
             index_elements=["agent_id"], set_={"revision": HandoffCapacityGate.revision + 1})
     else:
         raise HTTPException(status_code=503, detail="当前数据库尚未支持安全座席容量协调")
     # upsert本身取得排他写锁，避免并发重复INSERT失败后的共享锁升级竞争。
     await db.execute(statement)
+
+
+async def reserve_capacity(db: AsyncSession, agent: HumanAgent) -> None:
+    """取得闸门后使用current read，避免MySQL旧事务快照。"""
+    await lock_capacity_gate(db, agent.agent_id)
     ids = (await db.execute(select(HandoffRequestRecord.id).where(
         HandoffRequestRecord.assigned_to == agent.agent_id,
         HandoffRequestRecord.status == HandoffStatus.ASSIGNED,

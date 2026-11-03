@@ -16,6 +16,7 @@ from app.services.collaboration import get_collaboration_service
 from app.services.ticket_creation import create_request, resolve_idempotency_key, ticket_receipt as _ticket_dict, handoff_receipt as _handoff_dict
 from app.services.ticket_update import update_ticket as update_ticket_record
 from app.services.handoff_assignment import assign_request, assigned_loads, effective_load
+from app.services.handoff_resolution import resolve_request
 from app.utils.tracking import get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, require_admin
 
@@ -252,20 +253,15 @@ async def resolve_handoff(
     resolution: str = Query(..., description="处理结果"),
     agent_id: Optional[str] = Query(default=None, description="客服ID"),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ):
     """解决转人工请求"""
-    item = await db.get(HandoffRequestRecord, request_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="请求不存在")
-    item.status = HandoffStatus.RESOLVED; item.resolution = resolution; item.resolved_at = datetime.utcnow()
-    if agent_id: item.assigned_to = agent_id
-    await db.commit()
+    receipt = await resolve_request(db, current_user, request_id, resolution, agent_id)
 
     return {
         "code": 0,
         "message": "处理成功",
-        "data": {"request_id": request_id, "resolution": resolution},
+        "data": receipt,
     }
 
 
