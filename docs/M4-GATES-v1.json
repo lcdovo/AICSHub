@@ -231,6 +231,13 @@
   },
   "verification": [
     {
+      "layer": "T0 full at e771e15 before intent dependency slice",
+      "path": "reports/offline/20261104-022609-612964",
+      "passed": 718,
+      "failures": 0,
+      "errors": 0
+    },
+    {
       "layer": "T0 explicit intent/routing/clarification dependencies",
       "path": "reports/offline/20261104-022956-138348",
       "passed": 133
