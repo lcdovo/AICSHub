@@ -104,6 +104,8 @@ class _McpToolClient:
         except Exception as exc:
             logger.warning("MCP tool call %s failed, fallback to direct call: %s", tool_name,
                            type(exc).__name__ if tool_name in {"create_ticket", "update_ticket_status", "escalate_to_human", "apply_refund"} else exc)
+            if tool_name in {"create_ticket", "apply_refund", "update_ticket_status", "escalate_to_human"}:
+                return ToolExecutionResult(success=False, error="工具执行结果尚不确定，请核查原请求", error_type="outcome_unknown")
             return None
 
     async def aclose(self) -> None:
@@ -139,14 +141,26 @@ async def invoke_tool(tool_name: str, **kwargs: Any) -> Optional[ToolExecutionRe
     返回 None 表示工具不存在（调用方按“跳过”处理），与原有行为一致。
     """
     if tool_name not in TOOL_REGISTRY:
-        return None
+        return ToolExecutionResult(success=False, error="工具不存在", error_type="not_found")
 
     if _ENABLED:
         via_mcp = await _get_client().call(tool_name, dict(kwargs))
         if via_mcp is not None:
-            return via_mcp
+            if via_mcp.error_type == "outcome_unknown":
+                from app.agent.receipt_recovery import recover
+                return await recover(tool_name, dict(kwargs)) or via_mcp
+            return _validate_receipt(tool_name, via_mcp)
 
-    return await TOOL_REGISTRY[tool_name].execute_with_retry(**kwargs)
+    return _validate_receipt(tool_name, await TOOL_REGISTRY[tool_name].execute_with_retry(**kwargs))
+
+
+def _validate_receipt(tool_name: str, result: ToolExecutionResult) -> ToolExecutionResult:
+    required = {"create_ticket": "ticket_id", "apply_refund": "refund_id",
+                "update_ticket_status": "ticket_id", "escalate_to_human": "request_id"}.get(tool_name)
+    if required and result.success and (not isinstance(result.data, dict)
+                                       or not isinstance(result.data.get(required), str) or not result.data[required]):
+        return ToolExecutionResult(success=False, error="写操作缺少可信回执", error_type="unknown")
+    return result
 
 
 async def shutdown_mcp_client() -> None:

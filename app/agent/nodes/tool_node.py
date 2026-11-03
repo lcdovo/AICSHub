@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 from langgraph.types import interrupt
 
 from app.agent.state import AgentState, AgentNode, IntentType
+from app.agent.tools import ToolExecutionResult
 from app.agent.mcp_client import invoke_tool
 from app.agent.ticket_authorization import authorize_ticket
 from app.agent.refund_authorization import authorize_refund
@@ -54,8 +55,7 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
                                               if state.source_message_id is not None else "")
             result = await invoke_tool(tool_name, **tool_args)
             if result is None:
-                # 工具不存在：跳过，不记录失败（与原跳过行为一致）。
-                continue
+                result = ToolExecutionResult(success=False, error="工具不存在或不可用", error_type="not_found")
 
             state.add_tool_call(
                 tool_name=tool_name,
