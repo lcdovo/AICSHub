@@ -24,6 +24,9 @@ class RefundActionCoordinator:
     async def prepare(self, actor_id: int, payload: dict, previous: str | None) -> dict:
         return await prepare(self._session_factory(), actor_id, payload, previous)
 
+    async def cancel(self, actor_id: int, user_id: int, action_id: str) -> dict:
+        return await cancel(self._session_factory(), actor_id, user_id, action_id)
+
     async def pending_count(self, user_id: int, session_id: str) -> int:
         from sqlalchemy import func
         factory = self._session_factory()

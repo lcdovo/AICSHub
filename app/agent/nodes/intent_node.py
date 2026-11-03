@@ -5,7 +5,9 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable, Protocol
+from dataclasses import dataclass
+from app.agent.intent import IntentResult
 
 from app.agent.state import AgentState, AgentNode, IntentType
 from app.config.config import settings
@@ -13,25 +15,87 @@ from app.config.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
+class Recognizer(Protocol):
+    def recognize(self, *, message: str, context: list[dict], history_intent: str | None,
+                  llm_primary: bool) -> IntentResult: ...
+    def get_clarification_question(self, intent: str) -> str: ...
+
+
+class UnderstandingModel(Protocol):
+    async def run_structured(self, *args, **kwargs) -> Any: ...
+    async def classify_intent(self, message: str, context: list[dict]) -> dict | None: ...
+    def is_available(self) -> bool: ...
+
+
+class ActionCancellation(Protocol):
+    async def cancel(self, actor_id: int, user_id: int, action_id: str) -> dict: ...
+
+
+@dataclass(frozen=True)
+class IntentDependencies:
+    recognizer: Recognizer
+    model_factory: Callable[[], UnderstandingModel]
+    confirmed: Callable[[AgentState], bool]
+    cancelled: Callable[[AgentState], bool]
+    smalltalk: Callable[[str], bool]
+    escalation: Callable[[list[str], str], list[str] | None]
+    actions: ActionCancellation
+
+
+@dataclass(frozen=True)
+class RoutingDependencies:
+    extract_info: Callable[[str], dict]
+    refund_inquiry: Callable[[str, dict], bool]
+    complaint_inquiry: Callable[[str], bool]
+    missing_slots: Callable[[AgentState], list[str]]
+    destination: Callable[[str], str]
+
+
+@dataclass(frozen=True)
+class ClarificationDependencies:
+    recognizer: Recognizer
+
+
+@dataclass(frozen=True)
+class IntentNode:
+    dependencies: IntentDependencies
+
+    async def __call__(self, state: AgentState) -> str:
+        return await recognize_request(self.dependencies, state)
+
+
+@dataclass(frozen=True)
+class RoutingNode:
+    dependencies: RoutingDependencies
+
+    async def __call__(self, state: AgentState) -> str:
+        return await route_request(self.dependencies, state)
+
+
+@dataclass(frozen=True)
+class ClarificationNode:
+    dependencies: ClarificationDependencies
+
+    async def __call__(self, state: AgentState) -> str:
+        return await clarify_request(self.dependencies, state)
+
+
+async def recognize_request(dependencies: "IntentDependencies", state: AgentState) -> str:
     mode = state.understanding_mode or settings.REQUEST_UNDERSTANDING_MODE
     if mode == "shadow":
         from app.agent.request_understanding import understand, SHADOW_NOTICE
 
-        result = await understand(self.llm_service, state)
+        result = await understand(dependencies.model_factory(), state)
         state.collected_info["shadow_understanding"] = (
             result.model_dump() if result else {"status": "unavailable"}
         )
         state.reply = SHADOW_NOTICE
         return AgentNode.RESPONSE_GENERATION
-    if state.collected_info.get("refund_preview") and self._refund_cancelled(state):
+    if state.collected_info.get("refund_preview") and dependencies.cancelled(state):
         action_id = state.collected_info["refund_preview"].get("action_id")
         if action_id:
-            from app.services.refund_actions import cancel
-            from app.utils.database import async_session
-
-            await cancel(
-                async_session, state.actor_id or state.user_id, state.user_id, action_id
+            await dependencies.actions.cancel(
+                state.actor_id or state.user_id, state.user_id, action_id
             )
         state.detected_intent = IntentType.REFUND
         state.intent_confidence = 1.0
@@ -44,17 +108,17 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
         return AgentNode.RESPONSE_GENERATION
 
     # 确认回复通常只有两个字，优先沿用待确认动作的意图，避免被识别为 general。
-    if state.collected_info.get("refund_preview") and self._refund_confirmed(state):
+    if state.collected_info.get("refund_preview") and dependencies.confirmed(state):
         state.detected_intent = IntentType.REFUND
         state.intent_confidence = 1.0
         state.needs_clarification = False
         return AgentNode.ROUTE_DECISION
 
     mode = state.understanding_mode or settings.REQUEST_UNDERSTANDING_MODE
-    if mode in {"model", "shadow"} and not self._is_smalltalk(state.user_message):
+    if mode in {"model", "shadow"} and not dependencies.smalltalk(state.user_message):
         from app.agent.request_understanding import understand, route_understanding
 
-        result = await understand(self.llm_service, state)
+        result = await understand(dependencies.model_factory(), state)
         if mode == "model":
             if result:
                 return route_understanding(state, result)
@@ -68,7 +132,7 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
         state.reply = "影子理解已记录，本轮不执行申请或变更。"
         return AgentNode.RESPONSE_GENERATION
 
-    intent_result = self.intent_recognizer.recognize(
+    intent_result = dependencies.recognizer.recognize(
         message=state.user_message,
         context=state.messages,
         history_intent=state.detected_intent
@@ -86,7 +150,7 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
     # 寒暄拦截优先于澄清与 LLM 兜底：高频寒暄语（你好/谢谢/再见等）已由
     # 规则模板覆盖，强制解除 ≤5 字触发的澄清标记，并且不再调用分类模型二次确认，
     # 由路由直接送入响应生成节点返回固定文案（每轮重算布尔值，防止跨轮泄漏）。
-    is_smalltalk = intent_result.intent == IntentType.GENERAL and self._is_smalltalk(
+    is_smalltalk = intent_result.intent == IntentType.GENERAL and dependencies.smalltalk(
         state.user_message
     )
     state.collected_info["smalltalk"] = is_smalltalk
@@ -108,7 +172,7 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
         and not is_smalltalk
         and not is_continuation_reply
     ):
-        refined = await self.llm_service.classify_intent(
+        refined = await dependencies.model_factory().classify_intent(
             state.user_message, context=state.messages[-6:]
         )
         if refined:
@@ -145,7 +209,7 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
     # 意图序列分析：检测升级模式（如 query_order → refund → complaint）
     intent_history = state.collected_info.get("intent_history", [])
     if intent_history:
-        escalation = self._detect_intent_escalation(
+        escalation = dependencies.escalation(
             intent_history, intent_result.intent
         )
         if escalation and not state.need_human:
@@ -162,8 +226,8 @@ async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
     return AgentNode.ROUTE_DECISION
 
 
-def detect_intent_escalation(
-    self: "AgentGraph", intent_history: List[str], current_intent: str
+def detect_escalation(
+    intent_history: List[str], current_intent: str
 ) -> Optional[List[str]]:
     """检测意图升级模式，返回完整升级路径（含当前意图），无升级返回 None。
     升级路径定义：
@@ -192,11 +256,11 @@ def detect_intent_escalation(
     return None
 
 
-async def route_decision_node(self: "AgentGraph", state: AgentState) -> str:
+async def route_request(dependencies: "RoutingDependencies", state: AgentState) -> str:
     """根据意图和已收集槽位选择业务分支。"""
     state.collected_info["user_id"] = state.user_id
     state.collected_info["session_id"] = state.session_id
-    extracted = self._extract_info_from_message(state.user_message)
+    extracted = dependencies.extract_info(state.user_message)
     for key, value in extracted.items():
         if key == "order_id" and state.understanding is not None:
             continue
@@ -211,7 +275,7 @@ async def route_decision_node(self: "AgentGraph", state: AgentState) -> str:
 
     # 退款意图分流：政策咨询类（无订单号且询问流程/时效/规则）走 RAG，
     # 实际申请退款（有订单号+动作词）才走工具执行。
-    if state.detected_intent == IntentType.REFUND and self._is_refund_policy_inquiry(
+    if state.detected_intent == IntentType.REFUND and dependencies.refund_inquiry(
         state.user_message, state.collected_info
     ):
         state.route_reason = "refund:policy_inquiry->rag"
@@ -221,12 +285,12 @@ async def route_decision_node(self: "AgentGraph", state: AgentState) -> str:
     # 明确提交投诉/举报（动作词）才走工具创建工单。
     if (
         state.detected_intent == IntentType.COMPLAINT
-        and self._is_complaint_policy_inquiry(state.user_message)
+        and dependencies.complaint_inquiry(state.user_message)
     ):
         state.route_reason = "complaint:policy_inquiry->rag"
         return AgentNode.QUERY_REWRITE
 
-    missing = self._missing_slots_for_intent(state)
+    missing = dependencies.missing_slots(state)
     state.missing_slots = missing
     if missing:
         state.route_reason = f"missing_slots:{','.join(missing)}"
@@ -242,13 +306,13 @@ async def route_decision_node(self: "AgentGraph", state: AgentState) -> str:
         state.route_reason = "general:rag_fallback"
         return AgentNode.QUERY_REWRITE
 
-    next_node = self._route_by_intent(state.detected_intent)
+    next_node = dependencies.destination(state.detected_intent)
     state.route_reason = f"intent:{state.detected_intent}->{next_node}"
     return next_node
 
 
-def is_refund_policy_inquiry(
-    self: "AgentGraph", message: str, collected: Dict[str, Any]
+def is_refund_inquiry(
+    message: str, collected: Dict[str, Any]
 ) -> bool:
     """判断退款意图是否为政策咨询（应走 RAG）而非实际退款申请（应走工具）。"""
     policy_keywords = [
@@ -310,7 +374,7 @@ def is_refund_policy_inquiry(
     return False
 
 
-def is_complaint_policy_inquiry(self: "AgentGraph", message: str) -> bool:
+def is_complaint_inquiry(message: str) -> bool:
     """判断投诉意图是否为政策咨询（问流程/时效/材料/影响，应走 RAG），
     而非明确提交投诉/举报（应走工具创建工单）。"""
     policy_keywords = [
@@ -351,7 +415,7 @@ def is_complaint_policy_inquiry(self: "AgentGraph", message: str) -> bool:
     return has_policy and not has_action
 
 
-def missing_slots_for_intent(self: "AgentGraph", state: AgentState) -> List[str]:
+def required_slots(state: AgentState) -> List[str]:
     collected = state.collected_info
     if state.detected_intent == IntentType.QUERY_ORDER:
         return ["order_id"] if not collected.get("order_id") else []
@@ -366,7 +430,7 @@ def missing_slots_for_intent(self: "AgentGraph", state: AgentState) -> List[str]
     return []
 
 
-async def slot_filling_node(self: "AgentGraph", state: AgentState) -> str:
+async def fill_slots(state: AgentState) -> str:
     """提示用户补齐业务工具所需的最小参数。"""
     prompts = {"order_id": "订单号", "reason": "退款原因"}
     labels = [prompts.get(slot, slot) for slot in state.missing_slots]
@@ -383,8 +447,8 @@ async def slot_filling_node(self: "AgentGraph", state: AgentState) -> str:
     return AgentNode.RESPONSE_GENERATION
 
 
-async def clarification_node(self: "AgentGraph", state: AgentState) -> str:
-    question = self.intent_recognizer.get_clarification_question(state.detected_intent)
+async def clarify_request(dependencies: "ClarificationDependencies", state: AgentState) -> str:
+    question = dependencies.recognizer.get_clarification_question(state.detected_intent)
     state.reply = question
     state.needs_clarification = True
 
@@ -397,3 +461,57 @@ async def clarification_node(self: "AgentGraph", state: AgentState) -> str:
     )
 
     return AgentNode.RESPONSE_GENERATION
+
+
+def intent_destination(intent: str) -> str:
+    return {
+        IntentType.QUERY_ORDER: AgentNode.TOOL_EXECUTION,
+        IntentType.REFUND: AgentNode.TOOL_EXECUTION,
+        IntentType.COMPLAINT: AgentNode.TOOL_EXECUTION,
+        IntentType.TECHNICAL: AgentNode.QUERY_REWRITE,
+        IntentType.PROMOTION: AgentNode.QUERY_REWRITE,
+        IntentType.HUMAN: AgentNode.HUMAN_HANDOFF,
+        IntentType.GENERAL: AgentNode.RESPONSE_GENERATION,
+    }.get(intent, AgentNode.RESPONSE_GENERATION)
+
+
+# 旧内部私有方法兼容；依赖按需访问，保留仅传部分服务的旧测试/调用。
+async def intent_recognition_node(graph, state: AgentState) -> str:
+    from app.agent.nodes.tool_node import persistent_actions
+    return await recognize_request(IntentDependencies(
+        getattr(graph, "intent_recognizer", None), lambda: graph.llm_service,
+        lambda value: graph._refund_confirmed(value), lambda value: graph._refund_cancelled(value),
+        lambda text: graph._is_smalltalk(text), lambda history, current: graph._detect_intent_escalation(history, current),
+        persistent_actions(),
+    ), state)
+
+
+async def route_decision_node(graph, state: AgentState) -> str:
+    return await route_request(RoutingDependencies(
+        graph._extract_info_from_message, graph._is_refund_policy_inquiry,
+        graph._is_complaint_policy_inquiry, graph._missing_slots_for_intent, graph._route_by_intent,
+    ), state)
+
+
+def detect_intent_escalation(graph, intent_history: List[str], current_intent: str) -> Optional[List[str]]:
+    return detect_escalation(intent_history, current_intent)
+
+
+def is_refund_policy_inquiry(graph, message: str, collected: Dict[str, Any]) -> bool:
+    return is_refund_inquiry(message, collected)
+
+
+def is_complaint_policy_inquiry(graph, message: str) -> bool:
+    return is_complaint_inquiry(message)
+
+
+def missing_slots_for_intent(graph, state: AgentState) -> List[str]:
+    return required_slots(state)
+
+
+async def slot_filling_node(graph, state: AgentState) -> str:
+    return await fill_slots(state)
+
+
+async def clarification_node(graph, state: AgentState) -> str:
+    return await clarify_request(ClarificationDependencies(graph.intent_recognizer), state)

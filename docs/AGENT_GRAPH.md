@@ -141,3 +141,5 @@ Run和模型不能仅依赖asyncio.timeout抛异常：依赖若吞取消或阻�
 查询改写/检索已注册为QueryRewriteNode和RetrievalNode，分别注入rewriter、knowledge_factory/top_k/minimum_score；核心节点不反向依赖graph模块。旧私有节点函数仅兼容适配器。其余节点依赖迁移进度见M4-NODE-DEPENDENCIES-v1.md，不把局部迁移当整图完成。
 
 工具执行/确认分别注册ToolExecutionNode、ConfirmationNode并显式注入公共策略、调用器及RefundActionCoordinator；有效待确认动作计数与预览事务位于领域接口。结果核验独立读取AgentState。旧私有方法仍仅兼容调用；其余节点迁移未完成。
+
+意图/路由/澄清注册显式依赖节点，补槽为state函数。当前确认/取消快路径不解析模型工厂，影子仍先拦截写入。纯策略不依赖图私有助手，旧方法兼容层保留；响应组件迁移尚未完成。

@@ -247,14 +247,24 @@ class AgentGraph:
         from app.agent.nodes.tool_node import (
             ToolExecutionNode, ToolExecutionDependencies, ConfirmationNode, ConfirmationDependencies,
             extract_info, select_tools, is_refund_confirmed, invoke_registered_tool,
-            persistent_actions, verify_tool_result, interrupt,
+            persistent_actions, verify_tool_result, interrupt, refund_cancelled,
+        )
+        from app.agent.nodes.intent_node import (
+            IntentNode, IntentDependencies, RoutingNode, RoutingDependencies,
+            ClarificationNode, ClarificationDependencies, fill_slots,
+            detect_escalation, is_refund_inquiry, is_complaint_inquiry, required_slots, intent_destination,
         )
         self.nodes[AgentNode.START] = self._node_start
-        self.nodes[AgentNode.INTENT_RECOGNITION] = self._node_intent_recognition
-        self.nodes[AgentNode.ROUTE_DECISION] = self._node_route_decision
-        self.nodes[AgentNode.SLOT_FILLING] = self._node_slot_filling
+        self.nodes[AgentNode.INTENT_RECOGNITION] = IntentNode(IntentDependencies(
+            self.intent_recognizer, lambda: self.llm_service, is_refund_confirmed, refund_cancelled,
+            is_smalltalk, detect_escalation, persistent_actions(),
+        ))
+        self.nodes[AgentNode.ROUTE_DECISION] = RoutingNode(RoutingDependencies(
+            extract_info, is_refund_inquiry, is_complaint_inquiry, required_slots, intent_destination,
+        ))
+        self.nodes[AgentNode.SLOT_FILLING] = fill_slots
         self.nodes[AgentNode.QUERY_REWRITE] = QueryRewriteNode(QueryRewriteDependencies(self.llm_rewriter))
-        self.nodes[AgentNode.CLARIFICATION] = self._node_clarification
+        self.nodes[AgentNode.CLARIFICATION] = ClarificationNode(ClarificationDependencies(self.intent_recognizer))
         self.nodes[AgentNode.CONFIRMATION] = ConfirmationNode(ConfirmationDependencies(is_refund_confirmed, interrupt))
         self.nodes[AgentNode.RAG_RETRIEVAL] = RetrievalNode(RetrievalDependencies(
             knowledge_factory=lambda: get_knowledge_base(), top_k=lambda: settings.RAG_TOP_K,
@@ -269,16 +279,8 @@ class AgentGraph:
         self.nodes[AgentNode.END] = self._node_end
 
     def _route_by_intent(self, intent: str) -> str:
-        intent_routes = {
-            IntentType.QUERY_ORDER: AgentNode.TOOL_EXECUTION,
-            IntentType.REFUND: AgentNode.TOOL_EXECUTION,
-            IntentType.COMPLAINT: AgentNode.TOOL_EXECUTION,
-            IntentType.TECHNICAL: AgentNode.QUERY_REWRITE,
-            IntentType.PROMOTION: AgentNode.QUERY_REWRITE,
-            IntentType.HUMAN: AgentNode.HUMAN_HANDOFF,
-            IntentType.GENERAL: AgentNode.RESPONSE_GENERATION,
-        }
-        return intent_routes.get(intent, AgentNode.RESPONSE_GENERATION)
+        from app.agent.nodes.intent_node import intent_destination
+        return intent_destination(intent)
 
     async def run_stream(self, state: AgentState) -> AsyncGenerator[Dict[str, Any], None]:
         from app.services.model_gateway import inherited_model_context

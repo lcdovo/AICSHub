@@ -5,10 +5,10 @@
 | 节点 | 主图实现 | 图对象属性访问 | 状态 |
 | --- | --- | --- | --- |
 | `start` | `start_node.py:start_node` | 无 | 无图属性依赖 |
-| `intent_recognition` | `intent_node.py:intent_recognition_node` | _detect_intent_escalation、_is_smalltalk、_refund_cancelled、_refund_confirmed、intent_recognizer、llm_service | 旧绑定待迁移 |
-| `route_decision` | `intent_node.py:route_decision_node` | _extract_info_from_message、_is_complaint_policy_inquiry、_is_refund_policy_inquiry、_missing_slots_for_intent、_route_by_intent | 旧绑定待迁移 |
-| `slot_filling` | `intent_node.py:slot_filling_node` | 无 | 无图属性依赖 |
-| `clarification` | `intent_node.py:clarification_node` | intent_recognizer | 旧绑定待迁移 |
+| `intent_recognition` | `intent_node.py:recognize_request` | IntentDependencies(recognizer, model_factory, confirmed, cancelled, smalltalk, escalation, actions) | 已显式注入 |
+| `route_decision` | `intent_node.py:route_request` | RoutingDependencies(extract_info, refund_inquiry, complaint_inquiry, missing_slots, destination) | 已显式注入 |
+| `slot_filling` | `intent_node.py:fill_slots` | 无，仅读写本轮state | 已独立状态函数 |
+| `clarification` | `intent_node.py:clarify_request` | ClarificationDependencies(recognizer) | 已显式注入 |
 | `query_rewrite` | `rag_node.py:rewrite_query` | QueryRewriteDependencies(rewriter) | 已显式注入 |
 | `rag_retrieval` | `rag_node.py:retrieve_evidence` | RetrievalDependencies(knowledge_factory, top_k, minimum_score) | 已显式注入 |
 | `tool_execution` | `tool_node.py:execute_tools` | ToolExecutionDependencies(extract_info, select_tools, confirmed, invoke, actions) | 已显式注入 |
@@ -23,3 +23,5 @@
 新节点可声明自己的服务Protocol和冻结依赖dataclass后注册，不必把新助手加到AgentGraph类上。现有其他节点的旧助手绑定仍需逐个迁移，不以两节点完成代替整图重构。
 
 工具执行/确认主图现注册ToolExecutionNode/ConfirmationNode，结果核验注册verify_tool_result。原私有函数和提取/确认/选工具助手仍是兼容适配器，主图使用无图公共策略函数；持久动作准备与有效pending计数经RefundActionCoordinator进入共享领域服务。授权签名/MCP路由/只读计划依赖的模块工厂仍须在完整模块依赖审查中列出，不能从无self访问推导无其他服务依赖。
+
+意图识别/路由/澄清已注入服务与纯策略，槽位提示独立。model_factory仅在确实需要模型时解析，兼容实际调用入口替换模型服务，纯确认/取消/确定问候不访问模型；取消动作通过RefundActionCoordinator原身份/会话规则。其他模块工厂和响应组件仍需完成审查，不能以依赖表零self访问代替整个系统的依赖正确性。

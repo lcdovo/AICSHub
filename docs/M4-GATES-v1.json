@@ -82,7 +82,7 @@
     },
     "AC-07-08": {
       "status": "PARTIAL",
-      "evidence_and_limit": "查询改写/检索及工具执行/确认已显式注入，结果核验独立state函数，pending SQL移至退款领域接口；110项最新相关回归通过。依赖表已更新，意图/路由/响应旧绑定及完整模块依赖图仍待迁移，保持PARTIAL"
+      "evidence_and_limit": "RAG、工具/确认及意图/路由/澄清已显式注入，补槽/结果核验独立state函数，取消和pending查询归退款领域接口；最新133项相关回归通过。响应组件旧图助手、完整模块/状态依赖仍待迁移，保持PARTIAL"
     },
     "AC-14-01": {
       "status": "PASS_C_I_ISOLATED",
@@ -230,6 +230,11 @@
     "stage_boundaries": "584404f"
   },
   "verification": [
+    {
+      "layer": "T0 explicit intent/routing/clarification dependencies",
+      "path": "reports/offline/20261104-022956-138348",
+      "passed": 133
+    },
     {
       "layer": "T0 explicit tool/confirmation/domain facade dependencies",
       "path": "reports/offline/20261104-022419-454777",
