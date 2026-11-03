@@ -875,7 +875,7 @@
           "stage": "M4",
           "status": "PARTIAL",
           "document": "docs/M4-GATES-v1.json",
-          "limit": "请求/证据/审查/工具观察/流程/计量/BusinessParameters及RefundPreview/同轮确认已有类型；预览统一scope/形状/镜像变更拒绝，106项最新相关T0含实际SQL损坏预览回执恢复通过。领域回执显示与其他改写/观察字段仍待迁移，保持PARTIAL"
+          "limit": "主请求/业务参数/预览/动作展示/同轮确认/证据/审查/工具观察/流程/计量已有类型；动作展示匹配预览与精确金额/状态，159项最新T0与2项真实MySQL/Redis业务复验通过。其他改写/观察/兼容键全面声明仍待收口，保持PARTIAL"
         }
       ]
     },
@@ -2804,6 +2804,6 @@
       "evidence": []
     }
   ],
-  "m4_evidence_refresh_reference": "ba3643898115ce092fb24083b052832cab25eea5",
+  "m4_evidence_refresh_reference": "af0876e62f93e34850cd5e0b68117ff5a0b32d1d",
   "m4_supplier_authorization_requests_used": 660
 }

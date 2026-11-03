@@ -896,6 +896,126 @@
       "sha256": "cb3d96e7eaa81208928438c78f3225b8a34442524fabff6b16f8c38c597bb405",
       "bytes": 29044,
       "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/offline/20261104-042358-489012/junit.xml",
+      "sha256": "06f87fdbc6f06ead5e85be4c71d1098dcb6d204bea129dfbfdb34b998b703fea",
+      "bytes": 39956,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-042358-489012/manifest.json",
+      "sha256": "ac7e9d749cde06e705799f5e45f782b838e3bc1c1a0beac800899919e2d9823e",
+      "bytes": 1278,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-042358-489012/source-start.json",
+      "sha256": "d22f6c482431a423bd28d431c74d82be8413f35d7909b79b441b1fda529d30e8",
+      "bytes": 28525,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-042358-489012/source-end.json",
+      "sha256": "d22f6c482431a423bd28d431c74d82be8413f35d7909b79b441b1fda529d30e8",
+      "bytes": 28525,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-042452-277219/junit.xml",
+      "sha256": "977622c4c685177dd23eb4938559854219c028b4d0ed8b260fbaa358074d46f5",
+      "bytes": 16512,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-042452-277219/manifest.json",
+      "sha256": "51a5fb04a9b7403c81f487aa12c8b2d91c293797e0035f93acd9f2962c6051ff",
+      "bytes": 2406,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-042452-277219/source-start.json",
+      "sha256": "6876b94e48c4750fbbf19c8ca0cfc4f6bbc877f6173ba68e1e332be40a7f4fd7",
+      "bytes": 28823,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-042452-277219/source-end.json",
+      "sha256": "6876b94e48c4750fbbf19c8ca0cfc4f6bbc877f6173ba68e1e332be40a7f4fd7",
+      "bytes": 28823,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-043432-415451/junit.xml",
+      "sha256": "1560a89a3f8645d208fc497b20abd5b4412fa35256ba6e4156bd1cbfe831a136",
+      "bytes": 22526,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-043432-415451/manifest.json",
+      "sha256": "988a19b80036ea56fb3903fa7ee1a7d83eef6c789a666587b1ff5f7e877e6fb5",
+      "bytes": 2675,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-043432-415451/source-start.json",
+      "sha256": "d21bedcc5a0e4739f459f1bc17a34b90872c389409e7d4012238a2e10247c3a0",
+      "bytes": 28973,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-043432-415451/source-end.json",
+      "sha256": "d21bedcc5a0e4739f459f1bc17a34b90872c389409e7d4012238a2e10247c3a0",
+      "bytes": 28973,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043433/junit.xml",
+      "sha256": "135f11556aeaa2ffa5e8d7bd6dd039417230f5c9ce9a4317eb5969f3bf1e7177",
+      "bytes": 469,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043433/manifest.json",
+      "sha256": "f9a4fa920962d4251fb77aaef1fbe50a45cf69ae8e7bcfb790a420ca45096937",
+      "bytes": 1547,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043433/source-start.json",
+      "sha256": "d21bedcc5a0e4739f459f1bc17a34b90872c389409e7d4012238a2e10247c3a0",
+      "bytes": 28973,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043433/source-end.json",
+      "sha256": "d21bedcc5a0e4739f459f1bc17a34b90872c389409e7d4012238a2e10247c3a0",
+      "bytes": 28973,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-041809-138632/junit.xml",
+      "sha256": "1b22afc12c2de5dcb9afcd85c2b095fe7e973d411cc76d38372b31bf505fd23d",
+      "bytes": 110055,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-041809-138632/manifest.json",
+      "sha256": "39685b24622d4ad90c2ebd40217dcd6eb2c162b9157987092257357546d1661c",
+      "bytes": 1203,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-041809-138632/source-start.json",
+      "sha256": "fd1bc7fb591793b22427d855a3b24ea570e6564af4ee480b962bea0996bd4430",
+      "bytes": 28369,
+      "snapshot": "typed-refund-action-display"
+    },
+    {
+      "path": "reports/offline/20261104-041809-138632/source-end.json",
+      "sha256": "fd1bc7fb591793b22427d855a3b24ea570e6564af4ee480b962bea0996bd4430",
+      "bytes": 28369,
+      "snapshot": "typed-refund-action-display"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

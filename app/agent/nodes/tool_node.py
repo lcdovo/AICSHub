@@ -92,7 +92,8 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
             return AgentNode.RESPONSE_GENERATION
         return AgentNode.RESULT_VERIFICATION
     state.current_refund_preview()
-    if state.refund_preview_error:
+    state.current_refund_action()
+    if state.refund_preview_error or state.refund_action_error:
         state.reply, state.needs_clarification = "退款预览无效或已变化，请重新核对并生成预览。", True
         return AgentNode.RESPONSE_GENERATION
     state.collected_info["user_id"] = state.user_id
@@ -121,9 +122,13 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
                     previous = state.refund_preview_data().get("action_id")
                     action = await dependencies.actions.prepare(state.actor_id or state.user_id,
                                            tools_to_execute[0][1] | {"session_id": state.session_id}, previous)
+                    if not isinstance(action, dict) or not state.record_refund_action(action):
+                        if not isinstance(action, dict):
+                            state.record_refund_action({})
+                        state.reply, state.needs_clarification = "无法核实退款动作回执，请查询当前记录或重新生成预览；未提交退款申请。", True
+                        return AgentNode.RESPONSE_GENERATION
                     tools_to_execute[0][1].update(action_id=action["action_id"], action_version=action["version"],
                                                   idempotency_key=f"refund-action:{action['action_id']}")
-                    state.collected_info["refund_action"] = action
                 except HTTPException as exc:
                     state.reply, state.needs_clarification = str(exc.detail), True
                     return AgentNode.RESPONSE_GENERATION
@@ -190,6 +195,7 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
             if result.success and result.data:
                 if tool_name == "apply_refund":
                     state.set_refund_preview(None)
+                    state.record_refund_action(None)
                     state.collected_info.pop("confirm_refund", None)
 
             if not result.success:
@@ -231,8 +237,13 @@ def refund_cancelled(state: AgentState) -> bool:
 
 async def confirm_action(dependencies: "ConfirmationDependencies", state: AgentState) -> str:
     preview = state.refund_preview_data()
-    if state.refund_preview_error:
+    action = state.current_refund_action()
+    if state.refund_preview_error or state.refund_action_error:
         state.reply, state.needs_clarification = "退款预览无效或已变化，请重新生成后确认。", True
+        return AgentNode.RESPONSE_GENERATION
+    if action is not None and (not action.matches(state.refund_preview) or not action.is_pending()):
+        state.reply, state.needs_clarification = "当前动作回执与预览不一致、已过期或已不是待确认状态，请查询记录或重新生成预览。", True
+        state.pending_confirmations = [value for value in state.pending_confirmations if value != "apply_refund"]
         return AgentNode.RESPONSE_GENERATION
     if dependencies.confirmed(state):
         if state.user_message.strip() in CONFIRMATIONS:
@@ -247,9 +258,8 @@ async def confirm_action(dependencies: "ConfirmationDependencies", state: AgentS
     refund_type = preview.get("type", "refund")
     reason = preview.get("reason", "")[:80]
     label = {"return": "退货退款", "exchange": "换货"}.get(refund_type, "仅退款")
-    action = state.collected_info.get("refund_action", {})
-    detail = (f"模拟金额{action['amount']} {action['currency']}；动作{action['action_id']}，版本{action['version']}，"
-              f"有效至{action['expires_at']}。" if action else "")
+    detail = (f"模拟金额{action.amount} {action.currency}；动作{action.action_id}，版本{action.version}，"
+              f"有效至{action.expires_at}。" if action is not None else "")
     state.reply = detail + (
         f"即将为订单 {order_id} 提交{label}申请，原因：{reason or '未填写'}。"
         "该操作提交后将进入审核，是否确认提交？（请回复“确认”）"

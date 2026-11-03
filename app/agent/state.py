@@ -12,6 +12,7 @@ from app.agent.generation_contracts import GenerationMetadata
 from app.agent.business_contracts import BusinessParameters
 from app.agent.confirmation_contracts import TurnRefundConfirmation
 from app.agent.refund_preview_contracts import RefundPreview
+from app.agent.refund_action_contracts import RefundActionView
 from app.agent.tool_contracts import ToolObservation, BusinessToolName, TOOL_RESULT_COMPAT_KEYS, TOOL_IDENTIFIER_PROJECTIONS
 
 
@@ -62,6 +63,9 @@ class AgentState(BaseModel):
     refund_preview: Optional[RefundPreview] = None
     refund_preview_established: bool = False
     refund_preview_error: Optional[str] = None
+    refund_action_view: Optional[RefundActionView] = None
+    refund_action_established: bool = False
+    refund_action_error: Optional[str] = None
     read_plan: List[ReadTask] = Field(default_factory=list)
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
@@ -194,6 +198,12 @@ class AgentState(BaseModel):
                 context.pop("refund_preview", None)
             else:
                 context["refund_preview"] = preview.model_dump(exclude_none=True)
+        action = self.current_refund_action()
+        if self.refund_action_established:
+            if action is None:
+                context.pop("refund_action", None)
+            else:
+                context["refund_action"] = action.model_dump(exclude_none=True)
         return context
 
     def merge_extracted_business_parameters(self, extracted: Dict[str, Any], *, model_selected_order: bool) -> bool:
@@ -216,10 +226,12 @@ class AgentState(BaseModel):
     def _refund_confirmation_digest(self) -> str:
         import hashlib
         import json
+        action = self.current_refund_action()
         payload = {
             "session_id": self.session_id, "user_id": self.user_id, "actor_id": self.actor_id,
             "source_message_id": self.source_message_id, "message": self.user_message,
             "preview": self.refund_preview_data() or None,
+            "action": action.model_dump(exclude_none=True) if action is not None else None,
         }
         return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
 
@@ -228,7 +240,8 @@ class AgentState(BaseModel):
         if origin == "current_message" and self.user_message.strip() not in CONFIRMATIONS:
             raise ValueError("current_message_not_confirmation")
         self.current_refund_preview()
-        if self.refund_preview_error:
+        self.current_refund_action()
+        if self.refund_preview_error or self.refund_action_error:
             raise ValueError("refund_preview_invalid")
         self.refund_confirmation = TurnRefundConfirmation(
             origin=origin, context_digest=self._refund_confirmation_digest()
@@ -279,6 +292,41 @@ class AgentState(BaseModel):
     def refund_preview_data(self) -> Dict[str, Any]:
         parsed = self.current_refund_preview()
         return parsed.model_dump(exclude_none=True) if parsed is not None else {}
+
+    def record_refund_action(self, raw: Dict[str, Any] | None) -> bool:
+        self.refund_confirmation = None
+        self.collected_info.pop("confirm_refund", None)
+        self.refund_action_established = True
+        self.refund_action_error = None
+        if raw is None:
+            self.refund_action_view = None
+            self.collected_info.pop("refund_action", None)
+            return True
+        try:
+            parsed = RefundActionView.model_validate(raw)
+        except (ValueError, TypeError):
+            self.refund_action_view = None
+            self.refund_action_error = "refund_action_invalid"
+            self.collected_info.pop("refund_action", None)
+            return False
+        self.refund_action_view = parsed
+        self.collected_info["refund_action"] = parsed.model_dump(exclude_none=True)
+        return True
+
+    def current_refund_action(self) -> Optional[RefundActionView]:
+        if self.refund_action_established:
+            if self.refund_action_view is not None and self.collected_info.get("refund_action") != self.refund_action_view.model_dump(exclude_none=True):
+                self.refund_action_error = "refund_action_projection_changed"
+                self.refund_confirmation = None
+                self.collected_info.pop("confirm_refund", None)
+                return None
+            return self.refund_action_view
+        if "refund_action" not in self.collected_info:
+            return None
+        raw = self.collected_info["refund_action"]
+        # 显式clear(None)是可信调用；历史投影中的null不是完整领域回执。
+        self.record_refund_action(raw if raw is not None else {})
+        return self.refund_action_view
 
     def current_evidence(self) -> List[Dict[str, Any]]:
         """类型证据是主链权威；兼容旧内部调用时仅在尚无bundle时读取旧字段。"""
@@ -377,7 +425,7 @@ class AgentState(BaseModel):
         context_source = self.model_copy(deep=True)
         context = context_source.business_context()
         pending = list(self.pending_confirmations)
-        if context_source.refund_preview_error:
+        if context_source.refund_preview_error or context_source.refund_action_error:
             pending = [value for value in pending if value != "apply_refund"]
         state = AgentState(
             session_id=self.session_id,

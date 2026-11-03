@@ -54,7 +54,7 @@
     },
     "AC-07-01": {
       "status": "PARTIAL",
-      "evidence_and_limit": "请求/证据/审查/工具观察/流程/计量/BusinessParameters及RefundPreview/同轮确认已有类型；预览统一scope/形状/镜像变更拒绝，106项最新相关T0含实际SQL损坏预览回执恢复通过。领域回执显示与其他改写/观察字段仍待迁移，保持PARTIAL"
+      "evidence_and_limit": "主请求/业务参数/预览/动作展示/同轮确认/证据/审查/工具观察/流程/计量已有类型；动作展示匹配预览与精确金额/状态，159项最新T0与2项真实MySQL/Redis业务复验通过。其他改写/观察/兼容键全面声明仍待收口，保持PARTIAL"
     },
     "AC-07-02": {
       "status": "PASS_C_ISOLATED",
@@ -232,6 +232,33 @@
     "current_schema_live_probe": "ad1166d"
   },
   "verification": [
+    {
+      "layer": "T0 full at abc1f40 before action-view and runtime reuse changes",
+      "path": "reports/offline/20261104-041809-138632",
+      "passed": 819,
+      "failures": 0,
+      "errors": 0,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "383aabb53edb94a1fdb178c9659e27024432a1cefb1daabc3e6d61a5b7b8d867"
+    },
+    {
+      "layer": "T1 actual isolated MySQL/Redis REST-WS refund review and injected evidence boundary",
+      "path": "reports/m1-closeout/real-20261104-043433",
+      "passed": 2,
+      "resource_owner": "m3-closeout",
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "62c528425fd80259f780fdab0254a1b0acdee15ae70ad6d9cc4bd40379e0548a"
+    },
+    {
+      "layer": "T0 strict refund action display and confirmable quote consistency",
+      "path": "reports/offline/20261104-043432-415451",
+      "passed": 159,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "62c528425fd80259f780fdab0254a1b0acdee15ae70ad6d9cc4bd40379e0548a"
+    },
     {
       "layer": "T0 typed refund preview and actual SQL malformed-projection receipt recovery",
       "path": "reports/offline/20261104-041538-921678",

@@ -105,3 +105,5 @@ SQL轮次恢复切片新增：`tests/test_m4_sql_turn_reset.py`；修改AgentSta
 退款预览切片新增：`app/agent/refund_preview_contracts.py`、`tests/test_m4_refund_preview.py`；修改AgentState、意图/工具节点、统一理解、SQL恢复/Run关联，以及原回执恢复测试的损坏投影变体。
 
 真实测试资源复用切片新增：`tests/test_m1_runtime_guard.py`；修改M1执行器的显式--reuse-m3归属/端口校验、源码指纹与测试证据说明。
+
+动作回执展示切片新增：`app/agent/refund_action_contracts.py`、`tests/test_m4_refund_action_view.py`；修改AgentState、意图/工具确认节点、SQL恢复和正向准备回执夹具；异常部分回执另有负向测试保留。

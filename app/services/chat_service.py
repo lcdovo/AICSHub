@@ -97,6 +97,7 @@ class ChatService:
                         "action_id": action.id, "action_version": action.version, "idempotency_key": f"refund-action:{action.id}"})
                     state.set_business_parameters(order_id=action.order_id, reason=action.reason, refund_type=action.type)
                     state.set_refund_preview(state.collected_info["refund_preview"])
+                    state.record_refund_action(action_receipt(action))
         if saved and not recover_from_db:
             summary = await session_manager.get_summary(session_id)
             if summary and summary.intent_history and not state.collected_info.get("intent_history"):

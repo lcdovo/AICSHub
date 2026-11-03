@@ -28,7 +28,13 @@ async def test_tool_node_runs_only_injected_boundaries_and_keeps_live_user_scope
 
 
 async def test_preview_prepares_persistent_action_without_invoking_write_tool():
-    actions = SimpleNamespace(prepare=AsyncMock(return_value={"action_id": "synthetic-action", "version": 1}),
+    def prepared(actor_id, payload, previous):
+        return {"action_id": "synthetic-action", "version": 1, "order_id": payload["order_id"],
+                "type": payload["type"], "reason": payload["reason"], "amount": "0.10", "currency": "CNY",
+                "status": "pending", "expires_at": (datetime.utcnow() + timedelta(minutes=5)).isoformat(),
+                "application_id": None, "is_simulated": True}
+
+    actions = SimpleNamespace(prepare=AsyncMock(side_effect=prepared),
                               pending_count=AsyncMock())
     invoke = AsyncMock(side_effect=AssertionError("preview must not submit"))
     node = ToolExecutionNode(ToolExecutionDependencies(extract_info, select_tools,

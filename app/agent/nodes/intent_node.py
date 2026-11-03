@@ -94,7 +94,8 @@ async def recognize_request(dependencies: "IntentDependencies", state: AgentStat
         state.reply = SHADOW_NOTICE
         return AgentNode.RESPONSE_GENERATION
     preview = state.refund_preview_data()
-    if state.refund_preview_error:
+    state.current_refund_action()
+    if state.refund_preview_error or state.refund_action_error:
         state.reply, state.needs_clarification = "退款预览无效或已变化，请重新核对当前操作。", True
         return AgentNode.RESPONSE_GENERATION
     if preview and dependencies.cancelled(state):
@@ -109,7 +110,7 @@ async def recognize_request(dependencies: "IntentDependencies", state: AgentStat
         state.pending_confirmations = []
         state.set_refund_preview(None)
         state.collected_info.pop("confirm_refund", None)
-        state.collected_info.pop("refund_action", None)
+        state.record_refund_action(None)
         state.reply = "已取消本次退款申请，未执行任何退款操作。"
         return AgentNode.RESPONSE_GENERATION
 
