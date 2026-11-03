@@ -1,8 +1,12 @@
 # Docker 部署
 
-## M1-13 模拟退换货申请升级补充
+## M1固定收尾迁移与验收环境
 
-新增`0006_refund_applications`只建立模拟待审申请表，不修改订单、不回填旧伪回执、不执行支付。未来切换前需迁移并完整切换工具worker；缺少内部确认凭据的旧调用将失败。此轮只在独立SQLite演练新增表upgrade/downgrade/upgrade，未对业务库运行迁移或部署。真实MySQL与备份恢复未验；不能在新worker运行时删除申请表，也不应回退到会生成假成功的旧工具。
+新增0007_m1_refund_actions：订单金额改Numeric(12,2)，新增签收/币种/已退金额、退款动作与事务闸门、申请审核字段。历史签收保持NULL；缺失时不能批准申请。迁移先拒绝非有限、负数或不能精确表示两位小数的旧金额，不自动猜测或舍入。独立MySQL已演练0006旧列到0007及99.10金额/用户记录保留；真实业务库未迁移。
+
+升级前备份并验证恢复，先迁移后完整切换worker；旧worker不具备action约束，不能新旧混跑。0007拒绝有损自动降级，回滚必须使用经过验证的备份恢复方案。本轮未授权执行业务迁移或部署。
+
+测试使用aicshub-m1-acceptance-*专有MySQL/Redis容器、tmpfs和新建合成库，入口scripts/test_m1_real.py验证容器标签后运行；运行状态/生成密码保存在忽略的reports/m1-closeout/runtime。浏览器入口acceptance/m1/server.py绑定动态localhost端口并只服务reports/m1-closeout/frontend-build，保留同一合成库用于进程重启验证。不要把验收凭据用于真实环境，也不要用down -v或清空业务数据作为验证步骤。
 
 ## M1-11 人工分配升级补充
 

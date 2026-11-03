@@ -169,21 +169,27 @@ MCP更新工具新增idempotency_key与authorization上下文，凭据限定upda
 
 本轮保持原接口对尚未解决状态的许可范围，包括未分配pending和cancelled；没有将其改为“仅assigned可解决”。是否收紧为新的业务状态规则需要单独确认。解决后不可覆盖处理结果是本轮幂等契约；重新分配、终态纠错接口和完整历史生命周期仍未实现。SQLite故障/竞争检查不替代真实MySQL、多进程或重启验收。
 
-## 模拟退换货申请登记（M1-13）
+## 模拟退换货动作、登记与审核（M1固定收尾R1/R2）
 
-聊天保留原预览/本轮明确确认流程；真实提交只登记`RefundApplication(pending_review, is_simulated=true)`，不执行支付、审核、换货、短信、取件或地址承诺。成功回执来自申请和OperationAudit的同一提交事务，不再随机生成未落库ID或承诺固定工作日。
+本节替代M1-13的临时限制描述。流程为持久预览 → 本轮明确确认 → 模拟待审核申请 → 管理员模拟审核；所有状态均不代表真实支付或到账。
 
-内部apply_refund工具新增session_id/authorization，凭据限定apply_refund用途、120秒有效，绑定本轮已提交确认消息、actor、owner与精确参数；工具还检查该USER消息确实包含既有明确确认词。裸user_id/历史确认/布尔身份或模型confirm_refund不能直接授权。管理员代聊仍通过当前actor与目标owner权限判断。凭据不写工具历史/Trace或回复。
+- `POST /api/v1/refunds/actions`：严格接收user_id/session_id/order_id/type/reason，可带previous_action_id重新预览；拒绝额外amount。返回action_id/version、订单全额两位小数金额、CNY和UTC expires_at；不创建申请。
+- `GET /api/v1/refunds/actions/pending?session_id=...`：本人或管理员查询待确认动作；`POST /actions/{action_id}/cancel`持久取消预览，不能取消已提交申请。
+- REST `/api/v1/chat/send`与WS `/api/v1/chat/stream`接收可选action_id/action_version；“确认”必须是本轮USER消息。多个待确认动作未指定目标时澄清；旧版本、到期、已取消或订单/类型/原因/金额不一致时拒绝。历史、文档或模型字段不能授权。
+- `GET /api/v1/refunds/`、`GET /api/v1/refunds/{refund_id}`：查询本人申请；管理员可查全量，可用session_id筛选。回执包含两位小数amount、状态、模拟标记和审核信息。
+- `POST /api/v1/refunds/{refund_id}/review`：仅当前有效管理员可用。decision为approved/rejected，note必填。审核结果不可覆盖，相同决定/意见可重放；approved明确标“未支付”，写入actor/owner审计。
 
-订单归属及原shipped/delivered/completed状态规则保留；amount沿用订单全额快照，申请表改用Numeric(12,2)，回执金额为两位小数字符串。原Order.total_amount仍为Float投影；无法表示有限正数或精确两位小数时拒绝，未证明真实支付账务口径。type保留refund/return/exchange，is_simulated统一明确；尚无审核或履约路径。
+订单金额为Numeric(12,2)，另有refunded_amount、received_at、currency。资格使用真实订单状态及签收后7天；签收缺失只允许登记待核验，禁止批准；未来/超期时间拒绝。仅支持CNY订单全额模拟申请，剩余额度不足、指定金额或部分退款明确拒绝。待审和已批准申请占用额度，拒绝释放占用，审核本身不更新真实已退款金额。
 
-持久幂等作用域为actor/owner/原请求键，参数摘要冲突409；原键重放返回同申请ID，不用进程成功缓存、不自动重试。工具先完成只读资格校验及上下文退出，再在提交事务重新检查身份/确认和订单资格/金额；提交阶段异常可能已完成，需原键或查询接口核查，不能解释为一定未提交。当前重放仍要通过当前订单资格预检，资格已变化时可直接GET原回执。
+同用户、订单、类型已有待审申请时，相同业务参数返回原申请，参数变化409。MySQL/SQLite订单级事务闸门覆盖预览、提交、取消与审核；action/version/精确参数和服务端短期凭据共同绑定确认。已提交action重放读取原登记回执，查询接口展示最新审核状态。进程重启或Redis快照缺失可从SQL恢复动作；完成事件在提交并释放会话锁后发布。
 
-新增`GET /api/v1/refunds/{refund_id}`：本人或管理员200，未登录401、越权403、不存在404。查询返回模拟标记、原申请金额及待审状态，不表示到账。没有新增普通HTTP提交入口、前端申请管理或管理员审核动作。
+`REFUND_ACTION_TTL_SECONDS`默认900秒（允许60～86400），更改只影响新预览。迁移0007新增动作、闸门和签收等字段，先检查旧金额可精确迁移；不猜测历史签收时间、不回填历史伪申请。自动降级拒绝丢失精确金额与动作数据。
 
-**剩余门禁**：未实现跨会话同订单去重/剩余额度、资格时限、部分退款、持久action_id/版本/到期与精确确认预览，客户端重复消息去重和崩溃恢复仍未完成。不同键可能登记多份模拟申请，不应启用为真实支付系统。现有意图政策/动作误路由风险也未在本轮解决。
+## 私有查询与MCP失败契约（R3/R4）
 
-新增迁移0006_refund_applications只创建申请表，不回写历史伪ID或修改订单。本轮仅在临时SQLite演练，真实MySQL、部署和回滚未验；未来切流前须迁移并完整切换写入worker，旧工具不作为安全回滚目标。不要在新worker活动时降级删除申请表。
+`query_order`与`get_user_history`的user_id只是目标范围，不能作为身份。直接/MCP调用需要服务端签发、绑定工具名/精确参数/actor的短期authorization；每次调用重新读取账号和角色。普通用户只能读取本人，管理员跨用户读取记录owner/actor审计。裸ID、参数篡改、失效账号和降权管理员拒绝；凭据不进入工具历史或Trace。
+
+MCP派发前无法连接可回退进程内同一工具；写调用派发后失去响应只查SQL原回执，无法确定返回outcome_unknown，禁止再次直调。未注册工具、缺少业务回执、参数错误明确失败，不伪造ID或成功话术。当前通知/支付适配器未接入，不表示已发送/已到账。
 
 ## 兼容与弃用
 
