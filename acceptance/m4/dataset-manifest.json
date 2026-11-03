@@ -1,0 +1,13 @@
+{
+  "independent_samples": 300,
+  "independent_sha256": "b3cf2df655fb6851bc3a499ffd7cb7ff866de292a1ba15af14e9c9e29e9c830a",
+  "development_samples": 30,
+  "prior_matrix_samples": 300,
+  "critical_samples": 12,
+  "independent_scene_labels_frozen_before_calls": true,
+  "near_duplicate_matrix_not_used_for_final_gate": true,
+  "label_resolution": "退款附带促销政策问题按主要咨询对象标注；跨权限工具测试独立保留，不以分类标签代替权限边界。",
+  "human_reviewed": false,
+  "annotation_note_correction": "assistant authored synthetic labels; original annotation_note is not evidence of human review",
+  "evaluated_and_used_for_error_analysis": true
+}
