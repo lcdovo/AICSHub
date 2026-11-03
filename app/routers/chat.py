@@ -236,9 +236,11 @@ async def send_message(
             session.updated_at = datetime.utcnow()
             await db.commit()
             await assert_owner()
-            agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message)
+            agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message, action_id=chat_data.action_id, recover_from_db=True)
             agent_state.source_message_id = user_message.id
             agent_state.actor_id = current_user.id
+            agent_state.requested_action_id = chat_data.action_id
+            agent_state.requested_action_version = chat_data.action_version
             agent_state = await chat_service.process(agent_state)
             await assert_owner()
             assistant_message, _evaluation = await chat_service.persist_result(
@@ -398,9 +400,20 @@ async def websocket_chat_stream(websocket: WebSocket):
                 )
                 continue
 
+            if not isinstance(data, dict) or not isinstance(data.get("message"), str):
+                await websocket.send_json({"type": "error", "code": 400, "message": "消息格式无效"})
+                continue
             user_id = data.get("user_id")
-            message = data.get("message", "").strip()
+            if user_id is not None and (type(user_id) is not int or user_id <= 0):
+                await websocket.send_json({"type": "error", "code": 400, "message": "用户标识无效"})
+                continue
+            message = data["message"].strip()
             session_id = data.get("session_id")
+            if ((session_id is not None and (not isinstance(session_id, str) or len(session_id) > 36))
+                    or (data.get("action_id") is not None and (not isinstance(data["action_id"], str) or not 1 <= len(data["action_id"]) <= 36))
+                    or (data.get("action_version") is not None and (type(data["action_version"]) is not int or data["action_version"] <= 0))):
+                await websocket.send_json({"type": "error", "code": 400, "message": "会话或动作标识无效"})
+                continue
 
             if user_id and int(user_id) != authenticated_user_id:
                 await websocket.send_json({"type": "error", "code": 403, "message": "无权使用其他用户身份", "timestamp": datetime.now().isoformat()})
@@ -457,9 +470,11 @@ async def websocket_chat_stream(websocket: WebSocket):
                         await db.commit()
 
                         await assert_owner()
-                        agent_state = await chat_service.hydrate_state(session_id, user_id, message)
+                        agent_state = await chat_service.hydrate_state(session_id, user_id, message, action_id=data.get("action_id"), recover_from_db=True)
                         agent_state.source_message_id = user_message.id
                         agent_state.actor_id = authenticated_user_id
+                        agent_state.requested_action_id = data.get("action_id")
+                        agent_state.requested_action_version = data.get("action_version")
 
                         structured_logger.log_agent(
                             trace_id=trace_id,
@@ -499,12 +514,12 @@ async def websocket_chat_stream(websocket: WebSocket):
 
                         get_tracer().record_response(agent_state.execution_time_ms, True)
 
-                        await websocket.send_json({
+                        stream_end_event = {
                             "type": "stream_end",
                             "message_id": assistant_message.id,
                             "session_id": session_id,
                             "timestamp": datetime.now().isoformat(),
-                        })
+                        }
 
                         structured_logger.log_agent(
                             trace_id=trace_id,
@@ -513,6 +528,9 @@ async def websocket_chat_stream(websocket: WebSocket):
                             session_id=session_id,
                             detail=f"intent={agent_state.detected_intent}, time={agent_state.execution_time_ms}ms",
                         )
+
+                    # 完成事件只在数据库提交且会话锁释放后发布；客户端此时可安全重连。
+                    await websocket.send_json(stream_end_event)
 
                 except HTTPException as exc:
                     await db.rollback()

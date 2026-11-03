@@ -5,6 +5,7 @@ from pydantic import Field, model_validator
 
 
 class Settings(BaseSettings):
+    REFUND_ACTION_TTL_SECONDS: int = Field(default=900, ge=60, le=86400)
     APP_NAME: str = Field(default="智能客服系统")
     APP_VERSION: str = Field(default="1.0.0")
     DEBUG: bool = Field(default=True)

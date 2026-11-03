@@ -6,7 +6,6 @@ from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agent.refund_authorization import CONFIRMATIONS
@@ -19,8 +18,9 @@ def receipt(item: RefundApplication) -> dict[str, Any]:
     return {"refund_id": item.id, "order_id": item.order_id, "type": item.type,
             "type_label": {"refund": "仅退款", "return": "退货退款", "exchange": "换货"}[item.type],
             "reason": item.reason, "amount": format(item.amount, ".2f"), "currency": item.currency,
-            "status": item.status, "status_label": "模拟申请待审核", "is_simulated": item.is_simulated,
-            "apply_time": item.created_at.isoformat(),
+            "status": item.status, "status_label": {"pending_review": "模拟申请待审核", "approved": "模拟审核通过（未支付）", "rejected": "模拟审核拒绝"}.get(item.status, item.status), "is_simulated": item.is_simulated,
+            "apply_time": item.created_at.isoformat(), "review_note": item.review_note,
+            "reviewed_at": item.reviewed_at.isoformat() if item.reviewed_at else None,
             "next_steps": ["此为模拟申请登记，尚未审核或执行退款/换货。"]}
 
 
@@ -57,39 +57,51 @@ async def submit(factory: async_sessionmaker[AsyncSession], payload: dict[str, A
     key = "refund-v1:" + hashlib.sha256(f"{actor_id}:{payload['user_id']}:{payload['idempotency_key']}".encode()).hexdigest()
     digest = request_hash(payload)
 
-    def replay(item: RefundApplication) -> dict[str, Any]:
-        if item.request_hash != digest or item.user_id != payload["user_id"] or item.actor_id != actor_id:
-            raise HTTPException(status_code=409, detail="幂等键已用于不同退款请求")
-        return receipt(item)
-
     # 先完成只读校验及退出，再构造业务ID；读依赖失败不能生成任何申请回执。
     async with factory() as db:
         await context(db, payload, message_id, actor_id)
-        amount = await order_amount(db, payload)
+        await order_amount(db, payload)
+    from app.services.refund_actions import lock_order, resolve_action, qualification, business_digest
     async with factory() as db:
         await context(db, payload, message_id, actor_id)
-        existing = await db.scalar(select(RefundApplication).where(RefundApplication.idempotency_key == key))
+        await lock_order(db, payload["user_id"], payload["order_id"])
+        action = await resolve_action(db, payload, actor_id)
+        if action.status == "submitted":
+            existing = await db.get(RefundApplication, action.application_id)
+            if existing is None:
+                raise HTTPException(409, "原动作回执缺失，请核查")
+            original = await db.scalar(select(OperationAudit).where(
+                OperationAudit.operation == "apply_refund", OperationAudit.resource_id == existing.id))
+            return original.result_payload if original and original.result_payload else receipt(existing)
+        order, amount, remaining, applications = await qualification(db, payload["user_id"], payload["order_id"])
+        if amount != action.amount or order.currency != action.currency:
+            raise HTTPException(409, "订单金额已变化，请重新预览并确认")
+        business_hash = business_digest(order.order_id, payload["type"], payload["reason"], amount, order.currency)
+        existing = next((a for a in applications if a.type == payload["type"] and a.status == "pending_review"), None)
         if existing is not None:
-            return replay(existing)
-        amount = await order_amount(db, payload)  # 提交事务重新检查，不能沿用预检旧资格/金额。
+            if existing.business_hash != business_hash:
+                raise HTTPException(409, "订单已有不同参数的待审核申请")
+            action.status, action.application_id = "submitted", existing.id
+            db.add(OperationAudit(operation="confirm_refund", idempotency_key=f"refund-confirm:{action.id}",
+                                  user_id=action.user_id, resource_id=existing.id,
+                                  request_payload={"actor_id": actor_id, "action_id": action.id, "version": action.version}))
+            await db.commit()
+            return receipt(existing)
+        if remaining < amount:
+            raise HTTPException(409, "剩余可退额度不足；本版不支持部分退款")
         item = RefundApplication(id=str(uuid.uuid4()), user_id=payload["user_id"], actor_id=actor_id,
                                  session_id=payload["session_id"], source_message_id=message_id,
                                  order_id=payload["order_id"], type=payload["type"], reason=payload["reason"],
-                                 amount=amount, idempotency_key=key, request_hash=digest)
-        try:
-            db.add(item)
-            await db.flush()
-            result = receipt(item)
-            db.add(OperationAudit(operation="apply_refund", idempotency_key=key, user_id=item.user_id,
-                                  resource_id=item.id,
-                                  request_payload={"actor_id": actor_id, "owner_id": item.user_id,
-                                                   "message_id": message_id, "request": payload, "request_hash": digest},
-                                  result_payload=result))
-            await db.commit()
-            return result
-        except IntegrityError:
-            await db.rollback()
-            existing = await db.scalar(select(RefundApplication).where(RefundApplication.idempotency_key == key))
-            if existing is not None:
-                return replay(existing)
-            raise HTTPException(status_code=409, detail="退款申请冲突，请核查原请求") from None
+                                 amount=amount, currency=order.currency, idempotency_key=key, request_hash=digest,
+                                 action_id=action.id, business_hash=business_hash)
+        db.add(item)
+        await db.flush()
+        result = receipt(item)
+        action.status, action.application_id = "submitted", item.id
+        db.add(OperationAudit(operation="apply_refund", idempotency_key=key, user_id=item.user_id,
+                              resource_id=item.id,
+                              request_payload={"actor_id": actor_id, "owner_id": item.user_id,
+                                               "message_id": message_id, "request": payload, "request_hash": digest},
+                              result_payload=result))
+        await db.commit()
+        return result

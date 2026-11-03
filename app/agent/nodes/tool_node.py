@@ -31,10 +31,42 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
     # 明确同意后才能调用工具。确认状态放在 AgentState 中，跨普通/流式入口一致。
     if state.detected_intent == IntentType.REFUND and tools_to_execute:
         if not self._refund_confirmed(state):
+            if re.search(r"部分退款|只退|(?:退款|退回|退还)\s*\d+(?:\.\d+)?\s*(?:元|块|CNY)", state.user_message, re.I):
+                state.reply, state.needs_clarification = "本版仅支持模拟全额申请，不支持指定金额或部分退款；请确认是否申请订单全额退款。", True
+                return AgentNode.RESPONSE_GENERATION
+            if state.source_message_id is not None:
+                from app.services.refund_actions import prepare
+                from app.utils.database import async_session
+                from fastapi import HTTPException
+                try:
+                    previous = state.collected_info.get("refund_preview", {}).get("action_id")
+                    action = await prepare(async_session, state.actor_id or state.user_id,
+                                           tools_to_execute[0][1] | {"session_id": state.session_id}, previous)
+                    tools_to_execute[0][1].update(action_id=action["action_id"], action_version=action["version"],
+                                                  idempotency_key=f"refund-action:{action['action_id']}")
+                    state.collected_info["refund_action"] = action
+                except HTTPException as exc:
+                    state.reply, state.needs_clarification = str(exc.detail), True
+                    return AgentNode.RESPONSE_GENERATION
             state.pending_confirmations = ["apply_refund"]
             state.collected_info["refund_preview"] = tools_to_execute[0][1]
             return AgentNode.CONFIRMATION
         preview = state.collected_info.get("refund_preview")
+        if state.source_message_id is not None:
+            from app.utils.database import async_session
+            from app.models.models import RefundAction
+            from sqlalchemy import select
+            from datetime import datetime
+            async with async_session() as db:
+                pending = (await db.execute(select(RefundAction.id).where(
+                    RefundAction.session_id == state.session_id, RefundAction.user_id == state.user_id,
+                    RefundAction.status == "pending", RefundAction.expires_at > datetime.utcnow()))).scalars().all()
+            if len(pending) > 1 and state.requested_action_id is None:
+                state.reply, state.needs_clarification = "有多个待确认退款动作，请指定action_id与版本。", True
+                return AgentNode.RESPONSE_GENERATION
+            if state.requested_action_id and preview:
+                preview = {**preview, "action_id": state.requested_action_id,
+                           "action_version": state.requested_action_version}
         if preview:
             tools_to_execute = [("apply_refund", dict(preview))]
         state.pending_confirmations = []
@@ -132,8 +164,11 @@ async def confirmation_node(self: "AgentGraph", state: AgentState) -> str:
     order_id = preview.get("order_id", "")
     refund_type = preview.get("type", "refund")
     reason = preview.get("reason", "")[:80]
-    label = "退货退款" if refund_type in {"return", "exchange"} else "仅退款"
-    state.reply = (
+    label = {"return": "退货退款", "exchange": "换货"}.get(refund_type, "仅退款")
+    action = state.collected_info.get("refund_action", {})
+    detail = (f"模拟金额{action['amount']} {action['currency']}；动作{action['action_id']}，版本{action['version']}，"
+              f"有效至{action['expires_at']}。" if action else "")
+    state.reply = detail + (
         f"即将为订单 {order_id} 提交{label}申请，原因：{reason or '未填写'}。"
         "该操作提交后将进入审核，是否确认提交？（请回复“确认”）"
     )

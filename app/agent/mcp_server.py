@@ -67,6 +67,8 @@ async def apply_refund(
     idempotency_key: str = "",
     session_id: str = "",
     authorization: str = "",
+    action_id: str | None = None,
+    action_version: int | None = None,
 ) -> Dict[str, Any]:
     return await _invoke(
         "apply_refund",
@@ -77,6 +79,7 @@ async def apply_refund(
         idempotency_key=idempotency_key,
         session_id=session_id,
         authorization=authorization,
+        **({"action_id": action_id, "action_version": action_version} if action_id is not None else {}),
     )
 
 

@@ -35,12 +35,18 @@ async def seed(factory, owner=101, status="shipped", confirmation="确认"):
         await db.commit()
 
 
+async def prepared(factory, payload):
+    from app.services.refund_actions import prepare
+    action = await prepare(factory, 101, payload)
+    return {**payload, "action_id": action["action_id"], "action_version": action["version"]}
+
+
 @pytest.mark.parametrize("refund_type", ["refund", "return", "exchange"])
 async def test_confirmed_application_has_persistent_audit_and_no_payment_promises(tmp_path, monkeypatch, refund_type):
     async with api_context(tmp_path / "refund.db") as (_, factory):
         monkeypatch.setattr("app.utils.database.async_session", factory)
         await seed(factory)
-        payload = args(refund_type)
+        payload = await prepared(factory, args(refund_type))
         result = await ApplyRefundTool().execute(**payload, authorization=capability(payload))
         assert result["success"] is True
         data = result["data"]
@@ -86,7 +92,7 @@ async def test_same_key_changed_parameters_conflict_and_ten_replays_are_unique(t
     async with api_context(tmp_path / "refund.db") as (_, factory):
         monkeypatch.setattr("app.utils.database.async_session", factory)
         await seed(factory)
-        payload = args()
+        payload = await prepared(factory, args())
         results = await asyncio.gather(*[ApplyRefundTool().execute(**payload, authorization=capability(payload)) for _ in range(10)])
         assert all(item["success"] for item in results)
         assert len({item["data"]["refund_id"] for item in results}) == 1
@@ -95,7 +101,7 @@ async def test_same_key_changed_parameters_conflict_and_ten_replays_are_unique(t
         assert not result.success and result.error_type == "conflict"
         async with factory() as db:
             assert await db.scalar(select(func.count()).select_from(RefundApplication)) == 1
-            assert await db.scalar(select(func.count()).select_from(OperationAudit)) == 1
+            assert await db.scalar(select(func.count()).select_from(OperationAudit).where(OperationAudit.operation == "apply_refund")) == 1
 
 
 @pytest.mark.parametrize("stage", ["before", "after"])
@@ -114,7 +120,7 @@ async def test_commit_fault_never_fakes_success_and_original_request_replays(tmp
                 await db.flush()
             raise RuntimeError("synthetic-private-submit")
 
-        payload = args()
+        payload = await prepared(factory, args())
         with monkeypatch.context() as patch:
             patch.setattr(AsyncSession, "commit", fail)
             result = await ApplyRefundTool().execute_with_retry(**payload, authorization=capability(payload))
@@ -126,7 +132,7 @@ async def test_commit_fault_never_fakes_success_and_original_request_replays(tmp
         assert replay["success"]
         async with factory() as db:
             assert await db.scalar(select(func.count()).select_from(RefundApplication)) == 1
-            assert await db.scalar(select(func.count()).select_from(OperationAudit)) == 1
+            assert await db.scalar(select(func.count()).select_from(OperationAudit).where(OperationAudit.operation == "apply_refund")) == 1
 
 
 async def test_refund_query_uses_real_auth_and_owner_scope(tmp_path, monkeypatch):
@@ -140,7 +146,7 @@ async def test_refund_query_uses_real_auth_and_owner_scope(tmp_path, monkeypatch
     async with api_context(tmp_path / "refund.db") as (_, factory):
         monkeypatch.setattr("app.utils.database.async_session", factory)
         await seed(factory)
-        payload = args()
+        payload = await prepared(factory, args())
         result = await ApplyRefundTool().execute(**payload, authorization=capability(payload))
         path = f"/api/v1/refunds/{result['data']['refund_id']}"
         app = FastAPI()
@@ -170,7 +176,7 @@ async def test_inprocess_mcp_persists_same_simulated_application(tmp_path, monke
     async with api_context(tmp_path / "refund.db") as (_, factory):
         monkeypatch.setattr("app.utils.database.async_session", factory)
         await seed(factory)
-        payload = args()
+        payload = await prepared(factory, args())
         async with create_connected_server_and_client_session(mcp._mcp_server) as client:
             await client.initialize()
             raw = await client.call_tool("apply_refund", {**payload, "authorization": authorize_refund(payload, 1, 101)})

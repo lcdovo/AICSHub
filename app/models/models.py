@@ -115,7 +115,10 @@ class Order(Base):
     status = Column(String(50), nullable=False)
     status_code = Column(String(50), nullable=False)
     items = Column(JSON, nullable=False, default=list)
-    total_amount = Column(Float, nullable=False, default=0)
+    total_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    refunded_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    received_at = Column(DateTime, nullable=True)
+    currency = Column(String(3), nullable=False, default="CNY")
     shipping = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     pay_method = Column(String(50), nullable=True)
@@ -139,7 +142,35 @@ class RefundApplication(Base):
     is_simulated = Column(Boolean, nullable=False, default=True)
     idempotency_key = Column(String(128), nullable=False, unique=True)
     request_hash = Column(String(64), nullable=False)
+    action_id = Column(String(36), nullable=True, unique=True)
+    business_hash = Column(String(64), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    review_note = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class RefundAction(Base):
+    __tablename__ = "refund_actions"
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    actor_id = Column(Integer, nullable=False)
+    session_id = Column(String(36), nullable=False, index=True)
+    order_id = Column(String(32), nullable=False, index=True)
+    type = Column(String(20), nullable=False)
+    reason = Column(Text, nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    currency = Column(String(3), nullable=False)
+    version = Column(Integer, nullable=False, default=1)
+    status = Column(String(20), nullable=False, default="pending")
+    expires_at = Column(DateTime, nullable=False)
+    application_id = Column(String(36), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class RefundBusinessClaim(Base):
+    __tablename__ = "refund_business_claims"
+    id = Column(String(64), primary_key=True)
+    revision = Column(Integer, nullable=False, default=0)
 
 
 class TicketStatus(str, enum.Enum):

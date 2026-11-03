@@ -27,12 +27,36 @@ class ChatService:
     def __init__(self, agent_graph: Optional[AgentGraph] = None):
         self.agent_graph = agent_graph
 
-    async def hydrate_state(self, session_id: str, user_id: int, message: str) -> AgentState:
+    async def hydrate_state(self, session_id: str, user_id: int, message: str, *, action_id: str | None = None,
+                            recover_from_db: bool = False) -> AgentState:
         saved = await session_manager.get_state(session_id)
         if saved is not None and (saved.session_id != session_id or saved.user_id != user_id):
             raise SessionLeaseError("共享会话状态归属不一致，请联系管理员核查")
         source = saved or AgentState(session_id=session_id, user_id=user_id, user_message="")
         state = source.for_next_turn(user_id, message)
+        # 动作及历史以数据库恢复，Redis快照缺失不能遗忘已提交申请或待确认预览。
+        from app.models.models import RefundAction
+        from app.services.refund_actions import action_receipt
+        from app.utils.database import async_session
+        from sqlalchemy import select
+        if recover_from_db:
+            async with async_session() as db:
+                if saved is None:
+                    history = (await db.execute(select(Message).where(Message.session_id == session_id)
+                                                .order_by(Message.id.desc()).limit(40))).scalars().all()
+                    transcript = [{"role": m.role.value, "content": m.content} for m in reversed(history)]
+                    if transcript and transcript[-1] == {"role": "user", "content": message}:
+                        transcript.pop()
+                    state.messages = transcript + [{"role": "user", "content": message}]
+                query = select(RefundAction).where(RefundAction.session_id == session_id, RefundAction.user_id == user_id)
+                query = query.where(RefundAction.id == action_id) if action_id else query.where(RefundAction.status == "pending")
+                action = await db.scalar(query.order_by(RefundAction.created_at.desc()).limit(1))
+                if action:
+                    state.pending_confirmations = ["apply_refund"]
+                    state.collected_info.update(order_id=action.order_id, reason=action.reason, refund_type=action.type,
+                        refund_action=action_receipt(action), refund_preview={"order_id": action.order_id,
+                        "reason": action.reason, "type": action.type, "user_id": user_id, "session_id": session_id,
+                        "action_id": action.id, "action_version": action.version, "idempotency_key": f"refund-action:{action.id}"})
         if saved:
             summary = await session_manager.get_summary(session_id)
             if summary and summary.intent_history and not state.collected_info.get("intent_history"):

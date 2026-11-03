@@ -26,6 +26,8 @@ class AgentState(BaseModel):
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
     actor_id: Optional[int] = None
+    requested_action_id: Optional[str] = None
+    requested_action_version: Optional[int] = None
     
     # 意图识别
     detected_intent: str = "general"
@@ -66,7 +68,7 @@ class AgentState(BaseModel):
         """Copy conversation facts and unfinished actions; reset every turn artifact."""
         persistent_keys = {"order_id", "tracking_number", "ticket_id", "intent_history"}
         if self.missing_slots or self.pending_confirmations:
-            persistent_keys.update({"reason", "refund_type", "refund_preview"})
+            persistent_keys.update({"reason", "refund_type", "refund_preview", "refund_action"})
         state = AgentState(
             session_id=self.session_id, user_id=user_id, user_message=message,
             messages=deepcopy(self.messages), conversation_summary=self.conversation_summary,

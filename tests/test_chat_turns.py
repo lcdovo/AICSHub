@@ -393,7 +393,7 @@ def chat_api(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
     from sqlalchemy.pool import NullPool
-    from app.models.models import Base, User
+    from app.models.models import Base, User, Order
     from app.security import get_current_user, create_access_token
     from app.utils.database import get_db
     import app.routers.chat as routes
@@ -406,6 +406,7 @@ def chat_api(tmp_path, monkeypatch):
             await conn.run_sync(Base.metadata.create_all)
         async with factory() as db:
             db.add(user)
+            db.add(Order(order_id="ORD123456", user_id=1, status="已发货", status_code="shipped", total_amount=99, items=[]))
             await db.commit()
     asyncio.run(setup())
     async def db_override():

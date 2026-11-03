@@ -19,6 +19,8 @@ class RefundToolInput(BaseModel):
     user_id: int = Field(gt=0)
     session_id: str = Field(min_length=1, max_length=36)
     idempotency_key: str = Field(min_length=1, max_length=128)
+    action_id: str | None = None
+    action_version: int | None = None
 
 
 def authorize_refund(payload: dict, message_id: int, actor_id: int | None = None) -> str:

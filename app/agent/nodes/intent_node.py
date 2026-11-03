@@ -14,12 +14,18 @@ logger = logging.getLogger(__name__)
 
 async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
     if state.collected_info.get("refund_preview") and self._refund_cancelled(state):
+        action_id = state.collected_info["refund_preview"].get("action_id")
+        if action_id:
+            from app.services.refund_actions import cancel
+            from app.utils.database import async_session
+            await cancel(async_session, state.actor_id or state.user_id, state.user_id, action_id)
         state.detected_intent = IntentType.REFUND
         state.intent_confidence = 1.0
         state.needs_clarification = False
         state.pending_confirmations = []
         state.collected_info.pop("refund_preview", None)
         state.collected_info.pop("confirm_refund", None)
+        state.collected_info.pop("refund_action", None)
         state.reply = "已取消本次退款申请，未执行任何退款操作。"
         return AgentNode.RESPONSE_GENERATION
 

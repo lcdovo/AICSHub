@@ -322,7 +322,8 @@ class ApplyRefundTool(BaseTool):
             if not payload["order_id"].strip() or len(payload["reason"].strip()) < 3:
                 raise ValueError("Invalid refund parameters")
             resolve_idempotency_key(payload["idempotency_key"], None)
-            message_id, actor_id = verify_refund(authorization, payload)
+            signed_payload = {k: v for k, v in payload.items() if v is not None}
+            message_id, actor_id = verify_refund(authorization, signed_payload)
             payload["order_id"] = payload["order_id"].strip().upper()
             payload["reason"] = payload["reason"].strip()
         except (ValidationError, ValueError, TypeError, HTTPException):

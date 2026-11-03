@@ -276,7 +276,10 @@ def build_order_reply_template(data: Dict[str, Any]) -> str:
     tracking = str(shipping.get("tracking_no") or shipping.get("tracking") or "")
     eta = str(shipping.get("eta") or shipping.get("expected_delivery") or "")
     amount = data.get("total_amount")
-    amount_text = f"总金额 {amount:.2f} 元" if isinstance(amount, (int, float)) else ""
+    try:
+        amount_text = f"总金额 {Decimal(str(amount)):.2f} 元" if amount is not None else ""
+    except InvalidOperation:
+        amount_text = ""
     items = data.get("items") or []
     product = ""
     if isinstance(items, list) and items and isinstance(items[0], dict):
@@ -336,7 +339,7 @@ def build_refund_reply_template(data: Dict[str, Any]) -> str:
     parts.append(f"类型：{type_label}")
     if amount_text:
         parts.append(amount_text)
-    parts.append(f"当前状态：{status_label}")
+    parts.append(f"登记时状态：{status_label}" if data.get("is_simulated") else f"当前状态：{status_label}")
     # 取 next_steps 首条的后续指引（去掉"1. "编号前缀），避免模板冗长。
     steps = data.get("next_steps")
     if isinstance(steps, list) and steps:

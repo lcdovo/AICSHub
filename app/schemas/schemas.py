@@ -47,6 +47,8 @@ class ChatRequest(BaseModel):
     user_id: int
     session_id: Optional[str] = None
     message: str = Field(..., min_length=1, max_length=5000)
+    action_id: Optional[str] = Field(default=None, min_length=1, max_length=36, strict=True)
+    action_version: Optional[int] = Field(default=None, gt=0, strict=True)
 
 
 class ChatResponse(BaseModel):
