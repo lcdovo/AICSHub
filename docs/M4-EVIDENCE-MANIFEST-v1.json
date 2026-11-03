@@ -140,6 +140,12 @@
       "sha256": "b9ed75774d6f53ef9eab42db687decb4fe635af0d8b522a84a2bd5f7e448d6dd",
       "bytes": 82298,
       "snapshot": "main-graph-read-plan"
+    },
+    {
+      "path": "reports/offline/20261104-013027-458520/junit.xml",
+      "sha256": "0ea641441b481da4557c1251cff4f5e1bf9b630895f2bda19ee306cc5abe0562",
+      "bytes": 3084,
+      "snapshot": "stage-retry-termination"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

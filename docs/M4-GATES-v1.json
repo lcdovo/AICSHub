@@ -57,12 +57,12 @@
       "evidence_and_limit": "新增五类边界类型，仍保留旧collected_info字段；尚未完成全图键依赖审查"
     },
     "AC-07-02": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "已有聊天/退款回归通过；重生成一次的所有工具计数未形成M4专门证据"
+      "status": "PASS_C_ISOLATED",
+      "evidence_and_limit": "完整Run/图+实际工单/退款SQL提交：回答生成两次、提交工具各1次、业务及审计各1条，退款审计绑定本轮确认；生成审查替身，22项专项相关检查通过"
     },
     "AC-07-03": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "节点步数上限24及Run30秒；转人工/审查循环组合未完整故障注入"
+      "status": "PASS_C_F_ISOLATED",
+      "evidence_and_limit": "完整图连续两次审查失败后单次人工尝试终止、人工失败终止、重复工具节点第25次拒绝（实际24次），22项专项相关检查通过；故障与模型为替身"
     },
     "AC-07-04": {
       "status": "PARTIAL",
@@ -229,6 +229,11 @@
   },
   "verification": [
     {
+      "layer": "T0 stage retry and termination",
+      "path": "reports/offline/20261104-013027-458520",
+      "passed": 22
+    },
+    {
       "layer": "T0 full at b28fc49 before read-plan slice",
       "path": "reports/offline/20261104-011954-438273",
       "passed": 634
@@ -305,8 +310,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 18,
+    "partial": 16,
     "fail": 1,
-    "layer_limited_pass": 11
+    "layer_limited_pass": 13
   }
 }

@@ -57,3 +57,5 @@
 策略切片新增：`tests/test_m4_policy.py`，影子通知常量及意图/响应节点；完整图审查失败不得使影子写入人工请求。
 
 主图只读计划切片新增：`tests/test_m4_read_plan.py`；修改read_plan.py、request_understanding.py、state.py及tool/response节点。
+
+阶段边界验收切片新增：`tests/test_m4_stage_boundaries.py`，无生产代码变更。
