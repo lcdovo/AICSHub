@@ -59,3 +59,5 @@
 主图只读计划切片新增：`tests/test_m4_read_plan.py`；修改read_plan.py、request_understanding.py、state.py及tool/response节点。
 
 阶段边界验收切片新增：`tests/test_m4_stage_boundaries.py`，无生产代码变更。
+
+动作恢复切片新增：`tests/test_m4_action_projection.py`；修改ChatService统一hydrate，SQL动作覆盖旧投影/缓存确认。

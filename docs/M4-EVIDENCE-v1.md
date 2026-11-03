@@ -86,3 +86,11 @@ OPT-07，AC-07-02/03。新增5项完整图/Run阶段边界用例，业务使用�
 ### 主图只读计划全量回归补录
 
 033bb4d的生产实现全量离线回归648 passed、0失败/0错误（reports/offline/20261104-012526-767528，383.54秒）。该轮收集早于stage_boundaries新增测试，故不宣称包含它们；后续584404f仅新增阶段边界测试与文档，另有22项专项+策略+恢复检查通过。所有现行生产改动均已有全量覆盖，本轮无新增供应商费用或部署。当前未跟踪文件仍仅原有方案/验收规范及_dev_run_import.py。
+
+## 后续切片：恢复投影不能复活动作或确认（2026-11-04）
+
+OPT-05/07/09/15，AC-07-04。5项实际SQL/旧缓存/真实LangGraph checkpoint反例在修复前全部失败（reports/offline/20261104-013348-485208）：已不存在/取消/过期动作从旧投影恢复为待确认；有效SQL动作虽然覆盖参数，却保留旧confirm_refund=True；实际checkpoint旧动作也可污染新轮次待确认状态。
+
+修复在ChatService统一hydrate：清除投影中的refund_preview/refund_action/confirm_refund及对应旧动作参数，待确认apply_refund从当前SQL pending且未过期动作重建；无有效动作则不恢复。显式action_id仍可加载终态动作供既有领域服务核验或幂等回执，但不会标成待确认，ConversationContext.pending_action_id仅来自有效待确认状态。未完成且尚无持久预览的补参场景仍保留必要参数。订单一般上下文不充当授权。
+
+完整旧checkpoint用例使用真实已取消SQL动作、缓存伪造确认、同thread_id更新过时checkpoint，再hydrate+执行新“确认”轮次：原动作仍cancelled，0退款申请且不执行apply_refund。有效动作以SQL原因/ID覆盖伪造投影，旧确认标记被清除。69项动作恢复/Run/上下文/策略/聊天/阶段检查通过（20261104-013508-011513），compileall及本切片F401/F821通过。隔离SQLite与内存checkpoint，不是新部署/真实Redis故障注入；现有M2真实依赖边界仍保留。无供应商调用、无业务数据变更。

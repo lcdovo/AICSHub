@@ -129,3 +129,5 @@ Run固定rules/shadow/model与策略版本。model对非确定问候执行Reques
 影子响应在完整图内固定为可信流程通知，不生成/缓存/发布供应商草稿，不进入回答审查失败后的人工转接写分支；它不是降低普通或model回答的独立审查标准。已接受Run模式/版本固定，配置回滚只影响新Run，相同请求回放不重做动作。
 
 主图模型query输出可选read_tasks：最多2项query_order/get_user_history。工具节点从本轮可信actor/user/session构造ReadPrincipal，重新验证订单实体来源，经原私有签名/实时权限调用工具。独立读取并行，失败或父Run取消会取消并回收同组任务；结果逐项报告不隐式执行条件写动作。读结果校验失败澄清，不创建人工请求。
+
+SQL恢复时不信任会话投影中的refund_preview/refund_action/confirm_refund：清除旧动作与确认，从未过期pending SQL动作重建待确认。终态显式action_id可供领域服务核验/幂等回执但不标pending；旧checkpoint不能复活取消动作。

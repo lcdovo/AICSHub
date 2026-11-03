@@ -65,8 +65,8 @@
       "evidence_and_limit": "完整图连续两次审查失败后单次人工尝试终止、人工失败终止、重复工具节点第25次拒绝（实际24次），22项专项相关检查通过；故障与模型为替身"
     },
     "AC-07-04": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "沿用M2 SQL持久action和回执；本次未补全部checkpoint错位组合"
+      "status": "PASS_I_F_ISOLATED",
+      "evidence_and_limit": "5项旧缓存/实际LangGraph checkpoint与SQL动作错位反例先红后绿；取消/过期/不存在不能恢复待确认，旧confirm_refund删除，有效SQL参数权威；69项相关回归通过，SQLite/内存checkpoint，M2真实依赖证据仍独立"
     },
     "AC-07-05": {
       "status": "PASS_C_P_ISOLATED",
@@ -231,6 +231,11 @@
   },
   "verification": [
     {
+      "layer": "T0 actual checkpoint and SQL projection mismatch",
+      "path": "reports/offline/20261104-013508-011513",
+      "passed": 69
+    },
+    {
       "layer": "T0 full production code at 033bb4d",
       "path": "reports/offline/20261104-012526-767528",
       "passed": 648,
@@ -320,8 +325,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 16,
+    "partial": 15,
     "fail": 1,
-    "layer_limited_pass": 13
+    "layer_limited_pass": 14
   }
 }

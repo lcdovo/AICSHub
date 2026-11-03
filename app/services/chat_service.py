@@ -59,6 +59,20 @@ class ChatService:
                 state.pending_confirmations = list(projection.get("pending_confirmations") or [])
                 state.missing_slots = list(projection.get("missing_slots") or [])
                 state.needs_clarification = bool(projection.get("needs_clarification"))
+                # 会话投影/checkpoint只保存恢复提示，不能把旧确认或终态动作复活。
+                projected_action = bool(
+                    state.collected_info.get("refund_preview")
+                    or state.collected_info.get("refund_action")
+                    or "apply_refund" in state.pending_confirmations
+                )
+                for field in ("refund_preview", "refund_action", "confirm_refund"):
+                    state.collected_info.pop(field, None)
+                state.pending_confirmations = [
+                    item for item in state.pending_confirmations if item != "apply_refund"
+                ]
+                if projected_action:
+                    for field in ("reason", "refund_type"):
+                        state.collected_info.pop(field, None)
                 state.conversation_summary = persisted.summary
                 history = (await db.execute(select(Message).where(Message.session_id == session_id, Message.id > persisted.summary_cursor)
                                             .order_by(Message.id.desc()).limit(40))).scalars().all()
@@ -67,10 +81,13 @@ class ChatService:
                     transcript.pop()
                 state.messages = transcript + [{"role": "user", "content": message}]
                 query = select(RefundAction).where(RefundAction.session_id == session_id, RefundAction.user_id == user_id)
-                query = query.where(RefundAction.id == action_id) if action_id else query.where(RefundAction.status == "pending")
+                query = query.where(RefundAction.id == action_id) if action_id else query.where(
+                    RefundAction.status == "pending", RefundAction.expires_at > datetime.utcnow()
+                )
                 action = await db.scalar(query.order_by(RefundAction.created_at.desc()).limit(1))
                 if action:
-                    state.pending_confirmations = ["apply_refund"]
+                    if action.status == "pending" and action.expires_at > datetime.utcnow():
+                        state.pending_confirmations.append("apply_refund")
                     state.collected_info.update(order_id=action.order_id, reason=action.reason, refund_type=action.type,
                         refund_action=action_receipt(action), refund_preview={"order_id": action.order_id,
                         "reason": action.reason, "type": action.type, "user_id": user_id, "session_id": session_id,
@@ -80,7 +97,7 @@ class ChatService:
             if summary and summary.intent_history and not state.collected_info.get("intent_history"):
                 state.collected_info["intent_history"] = list(summary.intent_history)
         from app.agent.request_understanding import ConversationContext
-        state.conversation_context=ConversationContext(messages=state.messages[-6:],known_order_id=state.collected_info.get("order_id"),pending_action_id=state.collected_info.get("refund_preview",{}).get("action_id"))
+        state.conversation_context=ConversationContext(messages=state.messages[-6:],known_order_id=state.collected_info.get("order_id"),pending_action_id=(state.collected_info.get("refund_preview",{}).get("action_id") if "apply_refund" in state.pending_confirmations else None))
         return state
 
     async def process(self, state: AgentState) -> AgentState:
