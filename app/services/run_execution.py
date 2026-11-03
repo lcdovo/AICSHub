@@ -350,6 +350,15 @@ async def recover(factory: async_sessionmaker[AsyncSession], rid: str) -> None:
             await db.flush()
             session.message_count += 1
             session.version += 1
+            # 回执已证明原动作提交，不能保留它在上轮SQL投影中的待确认标记。
+            projection = dict(session.context_data or {})
+            info = dict(projection.get("collected_info") or {})
+            if action and action.status == "submitted" and info.get("refund_preview", {}).get("action_id") == action.id:
+                for key in ("refund_preview", "refund_action", "confirm_refund"):
+                    info.pop(key, None)
+                projection["collected_info"] = info
+                projection["pending_confirmations"] = [value for value in projection.get("pending_confirmations", []) if value != "apply_refund"]
+                session.context_data = projection
             state = AgentState(session_id=run.session_id, user_id=run.user_id, user_message="", reply=message.content)
             append_event(db,run,"run_status",{"status":"recovered_from_persisted_receipt","model_called":False})
             finish(db, run, message, state)

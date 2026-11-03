@@ -239,6 +239,9 @@ async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,
             run,_=await runs.accept(db,await db.get(User,101),ChatRequest(user_id=101,session_id="session-101",message="确认",
                 action_id=action["action_id"],action_version=action["version"],client_message_id="refund-crash"))
         claimed,_=await runs._claim(factory,run.id,"old-refund-worker",None)
+        async with factory() as db:
+            (await db.get(Session,run.session_id)).context_data={"collected_info":{"refund_preview":{"action_id":action["action_id"]}},"pending_confirmations":["apply_refund"]}
+            await db.commit()
         result=await submit(factory,{**payload,"action_id":action["action_id"],"action_version":action["version"],
             "idempotency_key":"refund-action:"+action["action_id"]},claimed.user_message_id,101)
         async with factory() as db:
@@ -250,5 +253,7 @@ async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,
             current=await db.get(ChatRun,run.id)
             assert current.status=="succeeded" and result["refund_id"] in current.result["reply"]
             assert "0.10" in current.result["reply"] and "模拟" in current.result["reply"]
+            projection=(await db.get(Session,run.session_id)).context_data
+            assert projection["pending_confirmations"]==[] and "refund_preview" not in projection["collected_info"]
             assert await db.scalar(select(func.count()).select_from(RefundApplication))==1
             assert await db.scalar(select(func.count()).select_from(Message))==2

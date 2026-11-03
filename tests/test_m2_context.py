@@ -51,3 +51,14 @@ async def test_empty_sql_projection_does_not_resurrect_stale_cache_action(tmp_pa
         monkeypatch.setattr("app.services.chat_service.session_manager",manager)
         current=await ChatService().hydrate_state("session-101",101,"你好",recover_from_db=True)
         assert current.pending_confirmations==[] and current.collected_info=={}
+
+
+async def test_summary_cache_is_bounded_without_removing_sql_facts(monkeypatch):
+    import json
+    from app.agent.memory import ConversationSummary
+    redis=AsyncMock()
+    redis.get.return_value=json.dumps(ConversationSummary().to_dict())
+    monkeypatch.setattr("app.agent.memory.get_redis",AsyncMock(return_value=redis))
+    manager=SessionManager();manager._redis_available=True
+    for index in range(1100): assert await manager.get_summary(f"summary-{index}") is not None
+    assert len(manager._summaries)<=1024
