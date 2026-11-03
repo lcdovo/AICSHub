@@ -338,6 +338,18 @@
       "sha256": "51b745fa2f067d06cb8e9fb25840f9c9c6a5cbdc422398dcf79be99b8f543f9a",
       "bytes": 346,
       "snapshot": "current-schema-658-calls"
+    },
+    {
+      "path": "reports/offline/20261104-024144-229847/junit.xml",
+      "sha256": "5e2d6ba5ca1c470d88992e0016f4f281ea0efd4fed6c13cd3ca88184d0af7ddf",
+      "bytes": 96115,
+      "snapshot": "response-composition-full-regression"
+    },
+    {
+      "path": "reports/offline/20261104-024144-229847/manifest.json",
+      "sha256": "eb9815469a060e6c7e4ad4248b65480503316622054789a59743b0347e4080c1",
+      "bytes": 604,
+      "snapshot": "response-composition-full-regression"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

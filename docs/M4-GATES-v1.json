@@ -227,9 +227,19 @@
     "typed_understanding": "c3d5a2a",
     "evaluation": "5f0dbeb",
     "read_plan": "033bb4d",
-    "stage_boundaries": "584404f"
+    "stage_boundaries": "584404f",
+    "response_composition": "68c50c2",
+    "current_schema_live_probe": "ad1166d"
   },
   "verification": [
+    {
+      "layer": "T0 full response composition candidate worktree",
+      "path": "reports/offline/20261104-024144-229847",
+      "passed": 727,
+      "failures": 0,
+      "errors": 0,
+      "source_note": "started with dirty response sources later sealed as 68c50c2; runner manifest HEAD is pre-commit 125ae07, not an exact clean-commit test"
+    },
     {
       "layer": "T2 current RequestUnderstanding schema single synthetic supplier call",
       "path": "reports/m4-closeout/live/current-schema-e0ec0c358e6a401abd9012a492fefff2.json",
