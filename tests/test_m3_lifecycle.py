@@ -275,3 +275,53 @@ def test_unpublish_during_index_and_later_edit_do_not_implicitly_publish(kb):
     )
     execute(kb, later)
     assert kb.document_detail(first["document_id"])["published_version"] is None
+
+
+def test_sqlite_legacy_migration_preserves_text_and_legacy_chunk(tmp_path, monkeypatch):
+    from sqlalchemy import text
+    from alembic import command
+    from alembic.config import Config
+    from app.config.config import settings
+
+    repo = KnowledgeRepository("sqlite:///" + (tmp_path / "legacy.db").as_posix())
+    with repo.engine.begin() as db:
+        db.execute(
+            text(
+                "CREATE TABLE knowledge_docs (id INTEGER PRIMARY KEY, title VARCHAR(200) NOT NULL,category VARCHAR(50) NOT NULL,content TEXT NOT NULL,chunk_count INTEGER,version INTEGER,is_published BOOLEAN,keywords JSON,source VARCHAR(500),deleted_at DATETIME,created_at DATETIME,updated_at DATETIME)"
+            )
+        )
+        db.execute(
+            text(
+                "CREATE TABLE knowledge_chunks (id INTEGER PRIMARY KEY,document_id INTEGER NOT NULL,chunk_id VARCHAR(100) UNIQUE,content TEXT NOT NULL,embedding JSON,chunk_index INTEGER,version INTEGER,is_active BOOLEAN,created_at DATETIME)"
+            )
+        )
+        db.execute(
+            text(
+                "INSERT INTO knowledge_docs VALUES(41,'legacy','policy','ZXKEY original',1,1,1,'[]','synthetic',NULL,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"
+            )
+        )
+        db.execute(
+            text(
+                "INSERT INTO knowledge_chunks VALUES(1,41,'legacy-c41','ZXKEY original','[1,0,0]',0,1,1,CURRENT_TIMESTAMP)"
+            )
+        )
+    root = __import__("pathlib").Path(__file__).resolve().parents[1]
+    monkeypatch.setattr(
+        settings,
+        "DATABASE_URL_OVERRIDE",
+        repo.engine.url.set(drivername="sqlite+aiosqlite").render_as_string(
+            hide_password=False
+        ),
+    )
+    cfg = Config(str(root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "alembic"))
+    command.stamp(cfg, "0008_m2_runs_jobs")
+    command.upgrade(cfg, "head")
+    detail = repo.detail("doc_db_41", 1)
+    assert (
+        detail["content"] == "ZXKEY original"
+        and detail["status"] == "legacy_unverified"
+    )
+    assert repo.snapshot()[1][0]["id"] == "legacy-c41"
+    assert repo.snapshot()[1][0]["embedding_fingerprint"] is None
+    repo.engine.dispose()

@@ -90,3 +90,73 @@ def test_single_upload_limit_reads_bounded_and_leaves_no_temp_file(
         files={"file": ("large.txt", b"x" * 33, "text/plain")},
     )
     assert response.status_code == 413 and list(upload_dir.iterdir()) == []
+
+
+def test_real_auth_preserves_admin_write_and_authenticated_shared_read(kb, monkeypatch):
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    from sqlalchemy.pool import NullPool
+    from app.utils.database import get_db
+    from app.security import create_access_token
+
+    with kb._repository.transaction() as db:
+        admin = User(
+            id=999,
+            username="real-auth-admin",
+            role="admin",
+            status=True,
+            token_version=0,
+        )
+        customer = User(
+            id=101,
+            username="real-auth-customer",
+            role="user",
+            status=True,
+            token_version=0,
+        )
+        db.add_all([admin, customer])
+        db.flush()
+        tokens = {999: create_access_token(admin), 101: create_access_token(customer)}
+    engine = create_async_engine(
+        kb._repository.engine.url.set(drivername="sqlite+aiosqlite"), poolclass=NullPool
+    )
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def override():
+        async with factory() as db:
+            yield db
+
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_db] = override
+    monkeypatch.setattr("app.routers.knowledge.get_knowledge_base", lambda: kb)
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/api/v1/knowledge/search", json={"query": "policy"}
+            ).status_code
+            == 401
+        )
+        user = {"Authorization": "Bearer " + tokens[101]}
+        admin = {"Authorization": "Bearer " + tokens[999]}
+        body = {"title": "shared-publication", "content": "ZXKEY policy"}
+        assert (
+            client.post(
+                "/api/v1/knowledge/documents/text", json=body, headers=user
+            ).status_code
+            == 403
+        )
+        result = client.post(
+            "/api/v1/knowledge/documents/text", json=body, headers=admin
+        ).json()["data"]
+        execute(kb, result)
+        assert (
+            client.get(
+                f"/api/v1/knowledge/documents/{result['document_id']}/versions/1",
+                headers=user,
+            ).status_code
+            == 403
+        )
+        search = client.post(
+            "/api/v1/knowledge/search", json={"query": "ZXKEY"}, headers=user
+        )
+        assert search.status_code == 200 and search.json()["data"]["results"]
