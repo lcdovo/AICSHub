@@ -1,0 +1,71 @@
+{
+  "provider_base": "https://token.uino.com/v1",
+  "model": "deepseek-flash",
+  "authorized_max_calls": 4,
+  "calls_made": 4,
+  "max_output_tokens_per_call": 256,
+  "data": "synthetic only",
+  "results": [
+    {
+      "case": 1,
+      "passed": true,
+      "status_code": 200,
+      "usage": {
+        "prompt_tokens": 96,
+        "completion_tokens": 17,
+        "total_tokens": 113,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 96
+      }
+    },
+    {
+      "case": 2,
+      "passed": true,
+      "status_code": 200,
+      "usage": {
+        "prompt_tokens": 96,
+        "completion_tokens": 17,
+        "total_tokens": 113,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 96
+      }
+    },
+    {
+      "case": 3,
+      "passed": true,
+      "status_code": 200,
+      "usage": {
+        "prompt_tokens": 110,
+        "completion_tokens": 17,
+        "total_tokens": 127,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 110
+      }
+    },
+    {
+      "case": 4,
+      "passed": true,
+      "status_code": 200,
+      "usage": {
+        "prompt_tokens": 100,
+        "completion_tokens": 17,
+        "total_tokens": 117,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 100
+      }
+    }
+  ],
+  "evidence_sha256": "b63135db12d8b2a03010694b79c2ee5a415b5c77d47a0fd4ac7ab6257470fef3"
+}

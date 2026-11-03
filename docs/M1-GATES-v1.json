@@ -1,0 +1,224 @@
+{
+  "date": "2026-11-03",
+  "scope": "M1 fixed 35 P0 local acceptance",
+  "implementation_commit": "f7bae0fa052e1b7010b41ea3e95cd606198aee6f",
+  "source_sha256": "236862b9c41f1f76ac18101d6ad630e3af3c200f1dddf74bea36d67a7b36296b",
+  "build_sha256": "8246689c572b25a2886d375b3eafd18ff03bba7bd4f69d808696e3fea997ed83",
+  "synthetic_data_sha256": "03962c4e319b1bd042834bb9f6fb0e8be94c644996fbeaff60b6b77bfb38286d",
+  "compile_exit_code": 0,
+  "offline": {
+    "command": "python scripts/test_offline.py -q --tb=short tests",
+    "passed": 497,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "evidence": "reports/offline/20261103-153256-188842"
+  },
+  "real_dependencies": {
+    "command": "python scripts/test_m1_real.py",
+    "passed": 11,
+    "failed": 0,
+    "exit_code": 0,
+    "evidence": "reports/m1-closeout/real-20261103-153727"
+  },
+  "frontend": {
+    "tests_passed": 24,
+    "test_exit_code": 0,
+    "build_exit_code": 0,
+    "build_directory": "reports/m1-closeout/frontend-build"
+  },
+  "real_model": {
+    "authorized_max_calls": 4,
+    "calls_made": 4,
+    "passed": 4,
+    "max_output_tokens_per_call": 256,
+    "evidence": "docs/M1-MODEL-EVIDENCE-v1.json"
+  },
+  "cases": [
+    {
+      "ac": "AC-03-01",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-03-02",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-03-03",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-04-01",
+      "status": "PASS",
+      "scope_notes": "PASS；Run子项N/A（M2尚未实现）"
+    },
+    {
+      "ac": "AC-04-02",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-04-03",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-04-04",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-04-05",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-04-06",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-04-07",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-04-09",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-04-11",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-08-01",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-08-02",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-08-03",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-08-05",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-08-06",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-08-08",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-01",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-02",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-03",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-04",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-05",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-06",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-07",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-08",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-09",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-10",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-09-11",
+      "status": "PASS",
+      "scope_notes": "PASS（本地）；支付子项N/A（无适配器）"
+    },
+    {
+      "ac": "AC-09-12",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-10-01",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-10-02",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-10-03",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-10-05",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    },
+    {
+      "ac": "AC-10-06",
+      "status": "PASS",
+      "scope_notes": "PASS（见证据）"
+    }
+  ],
+  "not_run": [
+    "production deployment and migration",
+    "real payment and notification",
+    "real Milvus embedding reranker",
+    "broad real model quality",
+    "concurrent refresh rotation atomicity",
+    "M2 generic Run recovery"
+  ],
+  "production_data_used": false,
+  "pushed": false
+}
