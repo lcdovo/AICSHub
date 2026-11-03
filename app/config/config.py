@@ -133,6 +133,7 @@ class Settings(BaseSettings):
     # 检索时自动加此前缀，文档入库侧不加；留空保持原行为。
     EMBEDDING_QUERY_INSTRUCTION: str = Field(default="")
     EMBEDDING_REVISION: str = Field(default="unspecified")
+    EMBEDDING_TIMEOUT_SECONDS: float = Field(default=30,gt=0,le=180)
 
     # Reranker 重排服务（模型 reranker，优先外部 API，本地 bge-reranker-large 兜底）
     # 外部 API：RERANKER_API_BASE/KEY/MODEL 配置后启用；style=openai 走

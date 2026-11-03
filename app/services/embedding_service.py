@@ -231,6 +231,7 @@ class EmbeddingService:
                 dim=dim,
                 query_instruction=settings.EMBEDDING_QUERY_INSTRUCTION or "",
                 batch_size=int(settings.EMBEDDING_BATCH_SIZE or 20),
+                timeout=settings.EMBEDDING_TIMEOUT_SECONDS,
             )
             # 配置初始化不发付费探测；实际请求才验证服务与向量。
             pass

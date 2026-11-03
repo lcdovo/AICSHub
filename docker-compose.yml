@@ -141,6 +141,8 @@ services:
       EMBEDDING_DIM: ${EMBEDDING_DIM:-1024}
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-20}
       EMBEDDING_QUERY_INSTRUCTION: ${EMBEDDING_QUERY_INSTRUCTION:-}
+      EMBEDDING_REVISION: ${EMBEDDING_REVISION:-unspecified}
+      EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-30}
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:8100,http://127.0.0.1:8100}
       AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:?AUTH_SECRET_KEY must be set}
       AUTH_DEMO_ACCOUNTS_ENABLED: ${AUTH_DEMO_ACCOUNTS_ENABLED:-false}
@@ -333,11 +335,15 @@ services:
   reranker:
     profiles: ["reranker"]
     image: michaelf34/infinity:latest
-    command: v2 --model-id ${RERANKER_LOCAL_MODEL:-BAAI/bge-reranker-large} --port 7997
+    # CPU小批推理禁用编译/全尺寸启动基准；就绪后仍需实际合成检索核验。
+    command: v2 --model-id ${RERANKER_LOCAL_MODEL:-BAAI/bge-reranker-large} --port 7997 --batch-size 4 --no-compile --no-model-warmup
     ports:
       - "${RERANKER_LOCAL_PORT:-7997}:7997"
     environment:
       HF_ENDPOINT: https://hf-mirror.com
+      # 限制CPU线程，避免与Ollama和业务栈争抢导致小批重排也超时。
+      OMP_NUM_THREADS: ${RERANKER_CPU_THREADS:-2}
+      MKL_NUM_THREADS: ${RERANKER_CPU_THREADS:-2}
     volumes:
       - reranker_hf_cache:/app/.cache/huggingface
     healthcheck:
