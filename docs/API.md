@@ -221,3 +221,5 @@ POST /search支持独立recall_k/rerank_k/top_k，结果含逐路ID、score_type
 ## M4候选模型账本（2026-11-04）
 
 管理员GET `/api/v1/model-calls/`返回最近100次调用的用途、user/run/call、版本、真实tokens或未知基准、耗时和错误类别；GET `/api/v1/model-calls/summary`按purpose/usage_basis汇总。需要管理员认证，正文/prompt/凭据不返回，estimated_cost_usd不是供应商账单。策略在Run受理时固化，业务目前rules；详见M4-EVIDENCE-v1.md，未完整验收。
+
+模型调用账本新增status/usage_basis=`not_sent`：已预留但在进入供应商适配器之前因超期或取消而结束，真实输入/输出与费用为0，SQL日预留退还。已发出后失败仍是unknown/unknown_reserved；不能以not_sent清理不确定的外部费用。

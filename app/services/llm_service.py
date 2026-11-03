@@ -786,11 +786,17 @@ class LLMService:
                 else None
             )
             aggregate = None
+            dispatched = False
             try:
+                if ticket and time.monotonic() >= ticket["deadline"]:
+                    raise TimeoutError("run_model_deadline_exceeded")
                 timeout = (min(self.TIMEOUT, max(0.01, ticket["deadline"] - time.monotonic()))
                            if ticket else self.TIMEOUT)
                 async with asyncio.timeout(timeout):
                     async with self._semaphore:
+                        if ticket and time.monotonic() >= ticket["deadline"]:
+                            raise TimeoutError("run_model_deadline_exceeded")
+                        dispatched = True
                         async for chunk in chat_model.astream(
                             messages,
                             config={
@@ -806,7 +812,7 @@ class LLMService:
                     await GATEWAY.settle(ticket, aggregate)
             except BaseException as exc:
                 if ticket:
-                    await asyncio.shield(GATEWAY.settle(ticket, error=exc))
+                    await asyncio.shield(GATEWAY.settle(ticket, error=exc, dispatched=dispatched))
                 raise
 
     def _build_messages(

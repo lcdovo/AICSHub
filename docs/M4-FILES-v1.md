@@ -51,3 +51,5 @@
 - `tests/test_m4_understanding.py`
 
 后续切片新增修改：`app/services/llm_governance.py`、`tests/test_m4_privacy.py`；实体来源切片沿用request_understanding.py及其测试。
+
+预算故障切片新增：`tests/test_m4_fault_matrix.py`；修改model_gateway.py、llm_service.py及相关验收/接口文档。

@@ -45,6 +45,21 @@ def estimate_tokens(messages):
 
 class ModelGateway:
     async def reserve(
+        self, model, messages, purpose, output_limit, schema_version, *, extra_input_tokens=0
+    ):
+        context = CALL_CONTEXT.get()
+        if context is None:
+            raise RuntimeError("model_context_required")
+        # 同一Run的并行子任务共享ContextVar中的字典。费用检查到提交必须串行，
+        # SQL日预算负责跨Run/实例协调，不能替代这里的整轮费用上限。
+        lock = context.setdefault("reservation_lock", asyncio.Lock())
+        async with lock:
+            return await self._reserve(
+                model, messages, purpose, output_limit, schema_version,
+                extra_input_tokens=extra_input_tokens,
+            )
+
+    async def _reserve(
         self,
         model,
         messages,
@@ -215,7 +230,7 @@ class ModelGateway:
             "deadline": context["deadline"],
         }
 
-    async def settle(self, ticket, response=None, *, error=None):
+    async def settle(self, ticket, response=None, *, error=None, dispatched=True):
         usage = getattr(response, "usage_metadata", None) or {}
         raw = getattr(response, "response_metadata", {}) or {}
         usage = usage or raw.get("token_usage", raw.get("usage", {})) or {}
@@ -230,7 +245,17 @@ class ModelGateway:
             )
             if call is None or call.status != "reserved":
                 return
-            if actual:
+            if not dispatched:
+                # 仅调用方确知尚未进入供应商适配器时退还预留；已发出/未知不走此分支。
+                call.input_tokens, call.output_tokens, call.cost = 0, 0, Decimal(0)
+                call.usage_basis = "not_sent"
+                await db.execute(
+                    update(ModelBudgetDay)
+                    .where(ModelBudgetDay.key == ticket["day"])
+                    .values(tokens=ModelBudgetDay.tokens - ticket["tokens"],
+                            cost=ModelBudgetDay.cost - ticket["cost"])
+                )
+            elif actual:
                 cost = Decimal(
                     str(
                         inp * ticket["input_rate"] / 1000
@@ -240,7 +265,7 @@ class ModelGateway:
                 call.input_tokens, call.output_tokens, call.cost = inp, out, cost
                 call.usage_basis = (
                     "provider_usage"
-                    if settings.LLM_PRICE_VERIFIED
+                    if (call.price_snapshot or {}).get("verified", False)
                     else "provider_tokens_est_price"
                 )
                 await db.execute(
@@ -255,7 +280,7 @@ class ModelGateway:
                 call.input_tokens, call.output_tokens = None, None
                 call.cost = ticket["cost"]
                 call.usage_basis = "unknown_reserved" if error else "estimated_reserved"
-            call.status = "unknown" if error else "succeeded"
+            call.status = "not_sent" if not dispatched else "unknown" if error else "succeeded"
             call.error_code = type(error).__name__[:80] if error else None
             call.latency_ms = int((time.monotonic() - ticket["started"]) * 1000)
             await db.execute(
@@ -290,12 +315,18 @@ class ModelGateway:
             schema_version,
             extra_input_tokens=extra_input_tokens,
         )
+        dispatched = False
         try:
+            if time.monotonic() >= ticket["deadline"]:
+                raise TimeoutError("run_model_deadline_exceeded")
             timeout = min(
                 service.TIMEOUT, max(0.01, ticket["deadline"] - time.monotonic())
             )
             async with asyncio.timeout(timeout):
                 async with service._semaphore:
+                    if time.monotonic() >= ticket["deadline"]:
+                        raise TimeoutError("run_model_deadline_exceeded")
+                    dispatched = True
                     result = await target.ainvoke(messages)
             raw = (
                 result.get("raw")
@@ -305,7 +336,7 @@ class ModelGateway:
             await self.settle(ticket, raw)
             return result
         except BaseException as exc:
-            await asyncio.shield(self.settle(ticket, error=exc))
+            await asyncio.shield(self.settle(ticket, error=exc, dispatched=dispatched))
             raise
 
 

@@ -98,6 +98,18 @@
       "sha256": "dc9f52d080a0fc084290b82141b36ab2586214e3a3d1048824982f1d61977f7f",
       "bytes": 8551,
       "snapshot": "privacy-slice-657-calls"
+    },
+    {
+      "path": "reports/offline/20261104-011216-994162/junit.xml",
+      "sha256": "849682fcc5666d4f83764005f2f607dbbba2fd08ffb304e6f03b48f974299dea",
+      "bytes": 5726,
+      "snapshot": "shared-budget-fault-matrix"
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-011307/junit.xml",
+      "sha256": "b610a2914c09f959363b05a5317d013c36ec1ae50392cb58e29d639b8b1d8640",
+      "bytes": 503,
+      "snapshot": "shared-budget-fault-matrix"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

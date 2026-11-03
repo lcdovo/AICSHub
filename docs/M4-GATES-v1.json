@@ -94,15 +94,15 @@
     },
     "AC-14-03": {
       "status": "PARTIAL",
-      "evidence_and_limit": "真实usage/缺失/部分/未知及幂等结算验证；账户组倍率和实际账单未对账"
+      "evidence_and_limit": "真实usage/缺失/部分/未知及幂等结算验证；账户组倍率和实际账单未对账；价格验证来源固定为预留持久快照，配置变化不篡改历史标签"
     },
     "AC-14-04": {
       "status": "PASS_T2",
       "evidence_and_limit": "当前UINO普通/结构化/function_calling/流式实测均通过"
     },
     "AC-14-05": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "每Run至多6次尝试、费用/截止时间约束；429/500多层重试故障矩阵未完整执行"
+      "status": "PASS_F_P_SYNTHETIC",
+      "evidence_and_limit": "真实SDK+MockTransport 429/500/超时，多层回退与修复共享6尝试；Run费用并行锁、普通/流式发出前deadline及not_sent退款；40项T0与2项真实SQL通过，无真实供应商故障请求"
     },
     "AC-14-06": {
       "status": "PASS_C_L",
@@ -229,6 +229,16 @@
   },
   "verification": [
     {
+      "layer": "T1 real MySQL multi-process",
+      "path": "reports/m4-closeout/real-20261104-011307",
+      "passed": 2
+    },
+    {
+      "layer": "T0 SDK fault matrix",
+      "path": "reports/offline/20261104-011216-994162",
+      "passed": 40
+    },
+    {
       "layer": "T2 actual outbound privacy",
       "path": "reports/m4-closeout/live/privacy.json",
       "status": "PASS",
@@ -275,8 +285,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 22,
+    "partial": 21,
     "fail": 1,
-    "layer_limited_pass": 7
+    "layer_limited_pass": 8
   }
 }
