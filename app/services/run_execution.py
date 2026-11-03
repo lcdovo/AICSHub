@@ -220,7 +220,7 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
                 "route_version":state.strategy_version,"deadline":run_deadline,"attempts":0})
             async with factory() as db:
                 current = await db.get(ChatRun,rid)
-                current.action_id = state.collected_info.get("refund_preview",{}).get("action_id")
+                current.action_id = state.refund_preview_data().get("action_id")
                 await db.commit()
             async with asyncio.timeout_at(run_deadline) as run_budget:
                 if streaming:
@@ -253,7 +253,7 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
                 if time.monotonic() >= run_deadline:
                     raise TimeoutError("late_run_result_rejected")
                 session = await db.get(Session, sid, populate_existing=True)
-                current.action_id = state.collected_info.get("refund_preview",{}).get("action_id") or current.action_id
+                current.action_id = state.refund_preview_data().get("action_id") or current.action_id
                 message, _ = await service.persist_result(db, session, state, run.request_data["message"], rid, commit=False)
                 message.run_id = rid
                 state.session_version = version + 1
@@ -376,7 +376,12 @@ async def recover(factory: async_sessionmaker[AsyncSession], rid: str) -> None:
             # 回执已证明原动作提交，不能保留它在上轮SQL投影中的待确认标记。
             projection = dict(session.context_data or {})
             info = dict(projection.get("collected_info") or {})
-            if action and action.status == "submitted" and info.get("refund_preview", {}).get("action_id") == action.id:
+            from app.agent.refund_preview_contracts import RefundPreview
+            try:
+                projected = RefundPreview.model_validate(info["refund_preview"]) if info.get("refund_preview") is not None else None
+            except (ValueError, TypeError):
+                projected = None
+            if action and action.status == "submitted" and (projected is None or projected.action_id == action.id):
                 for key in ("refund_preview", "refund_action", "confirm_refund"):
                     info.pop(key, None)
                 projection["collected_info"] = info

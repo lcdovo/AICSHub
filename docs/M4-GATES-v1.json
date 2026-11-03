@@ -54,7 +54,7 @@
     },
     "AC-07-01": {
       "status": "PARTIAL",
-      "evidence_and_limit": "证据/审查/工具观察/TurnFlow/GenerationMetadata及四类BusinessParameters已分区类型化；提取额外控制字段拒绝，参数不受后改字典覆盖，144项最新相关T0通过。其他编号/持久预览/改写等状态仍未全面类型化，保持PARTIAL；同轮TurnRefundConfirmation绑定身份/消息/完整预览，旧bool不授权，103项最新相关T0及实际SQL非确认拒绝通过；预览等剩余状态仍待迁移"
+      "evidence_and_limit": "请求/证据/审查/工具观察/流程/计量/BusinessParameters及RefundPreview/同轮确认已有类型；预览统一scope/形状/镜像变更拒绝，106项最新相关T0含实际SQL损坏预览回执恢复通过。领域回执显示与其他改写/观察字段仍待迁移，保持PARTIAL"
     },
     "AC-07-02": {
       "status": "PASS_C_ISOLATED",
@@ -232,6 +232,14 @@
     "current_schema_live_probe": "ad1166d"
   },
   "verification": [
+    {
+      "layer": "T0 typed refund preview and actual SQL malformed-projection receipt recovery",
+      "path": "reports/offline/20261104-041538-921678",
+      "passed": 106,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "383aabb53edb94a1fdb178c9659e27024432a1cefb1daabc3e6d61a5b7b8d867"
+    },
     {
       "layer": "T0 full a3eab3e production code before proposal-evaluation support files",
       "path": "reports/offline/20261104-035354-427828",

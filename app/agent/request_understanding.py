@@ -128,7 +128,7 @@ def input_payload(state):
             "source": "current_message",
             "history": history,
             "known_order": state.current_business_parameters().order_id,
-            "pending_action": bool(state.collected_info.get("refund_preview")),
+            "pending_action": bool(state.refund_preview_data()),
         },
         ensure_ascii=False,
     )

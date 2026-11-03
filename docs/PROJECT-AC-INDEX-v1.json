@@ -875,7 +875,7 @@
           "stage": "M4",
           "status": "PARTIAL",
           "document": "docs/M4-GATES-v1.json",
-          "limit": "证据/审查/工具观察/TurnFlow/GenerationMetadata及四类BusinessParameters已分区类型化；提取额外控制字段拒绝，参数不受后改字典覆盖，144项最新相关T0通过。其他编号/持久预览/改写等状态仍未全面类型化，保持PARTIAL；同轮TurnRefundConfirmation绑定身份/消息/完整预览，旧bool不授权，103项最新相关T0及实际SQL非确认拒绝通过；预览等剩余状态仍待迁移"
+          "limit": "请求/证据/审查/工具观察/流程/计量/BusinessParameters及RefundPreview/同轮确认已有类型；预览统一scope/形状/镜像变更拒绝，106项最新相关T0含实际SQL损坏预览回执恢复通过。领域回执显示与其他改写/观察字段仍待迁移，保持PARTIAL"
         }
       ]
     },
@@ -2804,6 +2804,6 @@
       "evidence": []
     }
   ],
-  "m4_evidence_refresh_reference": "3f1b2b95625fe72df098b7a7b7aa6d4ad8777449",
+  "m4_evidence_refresh_reference": "ba3643898115ce092fb24083b052832cab25eea5",
   "m4_supplier_authorization_requests_used": 660
 }

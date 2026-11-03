@@ -101,3 +101,5 @@ SQL轮次恢复切片新增：`tests/test_m4_sql_turn_reset.py`；修改AgentSta
 确认绑定切片新增：`app/agent/confirmation_contracts.py`、`tests/test_m4_confirmation_binding.py`；修改AgentState与工具/确认节点，旧bool不作为授权来源。
 
 真实提议边界切片新增：`tests/test_m4_proposal_probe.py`、`acceptance/m4/unsafe-proposal-replay.json`；修改有界评测脚本proposal-boundary分支、README额度与证据，生产执行代码无变化。
+
+退款预览切片新增：`app/agent/refund_preview_contracts.py`、`tests/test_m4_refund_preview.py`；修改AgentState、意图/工具节点、统一理解、SQL恢复/Run关联，以及原回执恢复测试的损坏投影变体。

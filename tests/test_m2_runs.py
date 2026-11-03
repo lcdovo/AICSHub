@@ -225,7 +225,8 @@ async def test_cancelled_accepted_run_cannot_write_user_message(tmp_path):
             assert (await db.get(Session,run.session_id)).lease_token is None
 
 
-async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,monkeypatch):
+@pytest.mark.parametrize("corrupt_preview", [False, True])
+async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,monkeypatch,corrupt_preview):
     from app.models.models import Order,RefundApplication
     from app.services.refund_actions import prepare
     from app.services.refund_application import submit
@@ -240,7 +241,8 @@ async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,
                 action_id=action["action_id"],action_version=action["version"],client_message_id="refund-crash"))
         claimed,_=await runs._claim(factory,run.id,"old-refund-worker",None)
         async with factory() as db:
-            (await db.get(Session,run.session_id)).context_data={"collected_info":{"refund_preview":{"action_id":action["action_id"]}},"pending_confirmations":["apply_refund"]}
+            preview = "legacy-invalid-preview" if corrupt_preview else {"action_id":action["action_id"]}
+            (await db.get(Session,run.session_id)).context_data={"collected_info":{"refund_preview":preview},"pending_confirmations":["apply_refund"]}
             await db.commit()
         result=await submit(factory,{**payload,"action_id":action["action_id"],"action_version":action["version"],
             "idempotency_key":"refund-action:"+action["action_id"]},claimed.user_message_id,101)

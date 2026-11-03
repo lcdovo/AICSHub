@@ -11,6 +11,7 @@ from app.agent.flow_contracts import FlowFlag, TurnFlow
 from app.agent.generation_contracts import GenerationMetadata
 from app.agent.business_contracts import BusinessParameters
 from app.agent.confirmation_contracts import TurnRefundConfirmation
+from app.agent.refund_preview_contracts import RefundPreview
 from app.agent.tool_contracts import ToolObservation, BusinessToolName, TOOL_RESULT_COMPAT_KEYS, TOOL_IDENTIFIER_PROJECTIONS
 
 
@@ -58,6 +59,9 @@ class AgentState(BaseModel):
     business_parameters: BusinessParameters = Field(default_factory=BusinessParameters)
     business_parameter_errors: List[str] = Field(default_factory=list)
     refund_confirmation: Optional[TurnRefundConfirmation] = None
+    refund_preview: Optional[RefundPreview] = None
+    refund_preview_established: bool = False
+    refund_preview_error: Optional[str] = None
     read_plan: List[ReadTask] = Field(default_factory=list)
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
@@ -184,6 +188,12 @@ class AgentState(BaseModel):
                 context.pop(key, None)
             else:
                 context[key] = value
+        preview = self.current_refund_preview()
+        if self.refund_preview_established:
+            if preview is None:
+                context.pop("refund_preview", None)
+            else:
+                context["refund_preview"] = preview.model_dump(exclude_none=True)
         return context
 
     def merge_extracted_business_parameters(self, extracted: Dict[str, Any], *, model_selected_order: bool) -> bool:
@@ -209,7 +219,7 @@ class AgentState(BaseModel):
         payload = {
             "session_id": self.session_id, "user_id": self.user_id, "actor_id": self.actor_id,
             "source_message_id": self.source_message_id, "message": self.user_message,
-            "preview": self.collected_info.get("refund_preview"),
+            "preview": self.refund_preview_data() or None,
         }
         return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
 
@@ -217,6 +227,9 @@ class AgentState(BaseModel):
         from app.agent.refund_authorization import CONFIRMATIONS
         if origin == "current_message" and self.user_message.strip() not in CONFIRMATIONS:
             raise ValueError("current_message_not_confirmation")
+        self.current_refund_preview()
+        if self.refund_preview_error:
+            raise ValueError("refund_preview_invalid")
         self.refund_confirmation = TurnRefundConfirmation(
             origin=origin, context_digest=self._refund_confirmation_digest()
         )
@@ -225,6 +238,47 @@ class AgentState(BaseModel):
     def has_current_refund_confirmation(self) -> bool:
         return bool(self.refund_confirmation and
                     self.refund_confirmation.context_digest == self._refund_confirmation_digest())
+
+    def set_refund_preview(self, raw: Dict[str, Any] | None) -> None:
+        parsed = RefundPreview.model_validate(raw) if raw is not None else None
+        if parsed is not None and (parsed.user_id not in (None, self.user_id)
+                                   or parsed.session_id not in (None, self.session_id)):
+            raise ValueError("refund_preview_scope_mismatch")
+        self.refund_preview = parsed
+        self.refund_preview_established = True
+        self.refund_preview_error = None
+        self.refund_confirmation = None
+        self.collected_info.pop("confirm_refund", None)
+        if parsed is None:
+            self.collected_info.pop("refund_preview", None)
+        else:
+            self.collected_info["refund_preview"] = parsed.model_dump(exclude_none=True)
+
+    def current_refund_preview(self) -> Optional[RefundPreview]:
+        if self.refund_preview_established:
+            if self.refund_preview is not None and (self.refund_preview.user_id not in (None, self.user_id)
+                                                     or self.refund_preview.session_id not in (None, self.session_id)):
+                self.refund_preview_error = "refund_preview_scope_changed"
+                self.refund_confirmation = None
+                return None
+            if self.refund_preview is not None and self.collected_info.get("refund_preview") != self.refund_preview.model_dump(exclude_none=True):
+                self.refund_preview_error = "refund_preview_projection_changed"
+                self.refund_confirmation = None
+                return None
+            return self.refund_preview
+        if "refund_preview" not in self.collected_info:
+            return None
+        try:
+            self.set_refund_preview(self.collected_info["refund_preview"])
+        except (ValueError, TypeError):
+            self.refund_preview_established = True
+            self.refund_preview_error = "refund_preview_invalid"
+            self.refund_confirmation = None
+        return self.refund_preview
+
+    def refund_preview_data(self) -> Dict[str, Any]:
+        parsed = self.current_refund_preview()
+        return parsed.model_dump(exclude_none=True) if parsed is not None else {}
 
     def current_evidence(self) -> List[Dict[str, Any]]:
         """类型证据是主链权威；兼容旧内部调用时仅在尚无bundle时读取旧字段。"""
@@ -319,6 +373,12 @@ class AgentState(BaseModel):
 
     def for_next_turn(self, user_id: int, message: str) -> "AgentState":
         """Copy conversation facts and unfinished actions; reset every turn artifact."""
+        # 兼容字段导入会建立类型状态，必须在副本中进行，不能修改上轮缓存/调用方对象。
+        context_source = self.model_copy(deep=True)
+        context = context_source.business_context()
+        pending = list(self.pending_confirmations)
+        if context_source.refund_preview_error:
+            pending = [value for value in pending if value != "apply_refund"]
         state = AgentState(
             session_id=self.session_id,
             user_id=user_id,
@@ -328,9 +388,9 @@ class AgentState(BaseModel):
             detected_intent=self.detected_intent,
             intent_confidence=self.intent_confidence,
             needs_clarification=self.needs_clarification,
-            pending_confirmations=list(self.pending_confirmations),
+            pending_confirmations=pending,
             collected_info=self.carryover_context(
-                self.business_context(), unfinished=bool(self.missing_slots or self.pending_confirmations)
+                context, unfinished=bool(self.missing_slots or pending)
             ),
         )
         state.collected_info.update({"user_id": user_id, "session_id": self.session_id})

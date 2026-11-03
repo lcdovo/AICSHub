@@ -788,6 +788,54 @@
       "sha256": "22b4780bcf95d4aab6284850ea73e75b55e14100a636b68140b445e4940ec3cb",
       "bytes": 27921,
       "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-041104-520393/junit.xml",
+      "sha256": "1bd8347b38411a8251eed53a6c17a8e075dfc1095360e6236cedfdd860da4816",
+      "bytes": 26582,
+      "snapshot": "typed-refund-preview"
+    },
+    {
+      "path": "reports/offline/20261104-041104-520393/manifest.json",
+      "sha256": "e254693598c5c621b95f4c70c317fd4eac7c038605ead6f031983770ea94fbb1",
+      "bytes": 1270,
+      "snapshot": "typed-refund-preview"
+    },
+    {
+      "path": "reports/offline/20261104-041104-520393/source-start.json",
+      "sha256": "f951299000fd9aa412992bcbb8a5ec10b0b9886aadabfad3279e5346bb8e8d75",
+      "bytes": 28295,
+      "snapshot": "typed-refund-preview"
+    },
+    {
+      "path": "reports/offline/20261104-041104-520393/source-end.json",
+      "sha256": "f951299000fd9aa412992bcbb8a5ec10b0b9886aadabfad3279e5346bb8e8d75",
+      "bytes": 28295,
+      "snapshot": "typed-refund-preview"
+    },
+    {
+      "path": "reports/offline/20261104-041538-921678/junit.xml",
+      "sha256": "47a6523a1cdbfe647ef22c1d1c6a629ca83f2ca63b355e4e0a401ddb8f6e2900",
+      "bytes": 14718,
+      "snapshot": "typed-refund-preview"
+    },
+    {
+      "path": "reports/offline/20261104-041538-921678/manifest.json",
+      "sha256": "c08e456f2caec826a4d4a9fbd03bdccdfe0e5f4425fd8ded8204e0e6b9764904",
+      "bytes": 2612,
+      "snapshot": "typed-refund-preview"
+    },
+    {
+      "path": "reports/offline/20261104-041538-921678/source-start.json",
+      "sha256": "42aabd526aefaf5c9d06f886da515e9fc77fcdddb0f7de7dedc1819db349ed6c",
+      "bytes": 28706,
+      "snapshot": "typed-refund-preview"
+    },
+    {
+      "path": "reports/offline/20261104-041538-921678/source-end.json",
+      "sha256": "42aabd526aefaf5c9d06f886da515e9fc77fcdddb0f7de7dedc1819db349ed6c",
+      "bytes": 28706,
+      "snapshot": "typed-refund-preview"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

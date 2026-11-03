@@ -91,6 +91,10 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
             state.needs_clarification = True
             return AgentNode.RESPONSE_GENERATION
         return AgentNode.RESULT_VERIFICATION
+    state.current_refund_preview()
+    if state.refund_preview_error:
+        state.reply, state.needs_clarification = "退款预览无效或已变化，请重新核对并生成预览。", True
+        return AgentNode.RESPONSE_GENERATION
     state.collected_info["user_id"] = state.user_id
     state.collected_info["session_id"] = state.session_id
     extracted_info = dependencies.extract_info(state.user_message)
@@ -114,7 +118,7 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
             if state.source_message_id is not None:
                 from fastapi import HTTPException
                 try:
-                    previous = state.collected_info.get("refund_preview", {}).get("action_id")
+                    previous = state.refund_preview_data().get("action_id")
                     action = await dependencies.actions.prepare(state.actor_id or state.user_id,
                                            tools_to_execute[0][1] | {"session_id": state.session_id}, previous)
                     tools_to_execute[0][1].update(action_id=action["action_id"], action_version=action["version"],
@@ -124,9 +128,9 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
                     state.reply, state.needs_clarification = str(exc.detail), True
                     return AgentNode.RESPONSE_GENERATION
             state.pending_confirmations = ["apply_refund"]
-            state.collected_info["refund_preview"] = tools_to_execute[0][1]
+            state.set_refund_preview({**tools_to_execute[0][1], "session_id": state.session_id})
             return AgentNode.CONFIRMATION
-        preview = state.collected_info.get("refund_preview")
+        preview = state.refund_preview_data()
         if state.source_message_id is not None:
             pending_count = await dependencies.actions.pending_count(state.user_id, state.session_id)
             if pending_count > 1 and state.requested_action_id is None:
@@ -185,7 +189,7 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
 
             if result.success and result.data:
                 if tool_name == "apply_refund":
-                    state.collected_info.pop("refund_preview", None)
+                    state.set_refund_preview(None)
                     state.collected_info.pop("confirm_refund", None)
 
             if not result.success:
@@ -226,7 +230,10 @@ def refund_cancelled(state: AgentState) -> bool:
 
 
 async def confirm_action(dependencies: "ConfirmationDependencies", state: AgentState) -> str:
-    preview = state.collected_info.get("refund_preview", {})
+    preview = state.refund_preview_data()
+    if state.refund_preview_error:
+        state.reply, state.needs_clarification = "退款预览无效或已变化，请重新生成后确认。", True
+        return AgentNode.RESPONSE_GENERATION
     if dependencies.confirmed(state):
         if state.user_message.strip() in CONFIRMATIONS:
             state.record_refund_confirmation("current_message")

@@ -93,8 +93,12 @@ async def recognize_request(dependencies: "IntentDependencies", state: AgentStat
         )
         state.reply = SHADOW_NOTICE
         return AgentNode.RESPONSE_GENERATION
-    if state.collected_info.get("refund_preview") and dependencies.cancelled(state):
-        action_id = state.collected_info["refund_preview"].get("action_id")
+    preview = state.refund_preview_data()
+    if state.refund_preview_error:
+        state.reply, state.needs_clarification = "退款预览无效或已变化，请重新核对当前操作。", True
+        return AgentNode.RESPONSE_GENERATION
+    if preview and dependencies.cancelled(state):
+        action_id = preview.get("action_id")
         if action_id:
             await dependencies.actions.cancel(
                 state.actor_id or state.user_id, state.user_id, action_id
@@ -103,14 +107,14 @@ async def recognize_request(dependencies: "IntentDependencies", state: AgentStat
         state.intent_confidence = 1.0
         state.needs_clarification = False
         state.pending_confirmations = []
-        state.collected_info.pop("refund_preview", None)
+        state.set_refund_preview(None)
         state.collected_info.pop("confirm_refund", None)
         state.collected_info.pop("refund_action", None)
         state.reply = "已取消本次退款申请，未执行任何退款操作。"
         return AgentNode.RESPONSE_GENERATION
 
     # 确认回复通常只有两个字，优先沿用待确认动作的意图，避免被识别为 general。
-    if state.collected_info.get("refund_preview") and dependencies.confirmed(state):
+    if preview and dependencies.confirmed(state):
         state.detected_intent = IntentType.REFUND
         state.intent_confidence = 1.0
         state.needs_clarification = False
