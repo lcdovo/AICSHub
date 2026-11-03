@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import re
 import threading
@@ -224,6 +225,7 @@ class SensitiveDataRedactor:
     """最小化发送给外部模型的信息，并允许安全审计验证原文未泄露。"""
 
     PATTERNS = (
+        (re.compile(r'''(?i)(["'](?:password|passwd|token|access[_ -]?token|refresh[_ -]?token|api[_ -]?key|secret|authorization|address|phone|email|密码|口令|令牌|密钥|收货地址|地址|手机|电话|邮箱)["']\s*:\s*)(["'])(?:\\.|(?!\2)[^\\])*\2'''), r'\1\2[REDACTED]\2'),
         (re.compile(r"(?i)bearer\s+[A-Za-z0-9_.~+/-]+=*"), "Bearer [REDACTED]"),
         (re.compile(r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b"), "[TOKEN_REDACTED]"),
         (re.compile(r"(?i)(://)[^\s/@:]+:[^\s/@]+@"), r"\1[REDACTED]@"),
@@ -239,6 +241,20 @@ class SensitiveDataRedactor:
 
     def redact(self, value: str) -> str:
         result = str(value or "")
+        # 结构化模型输入必须按字段脱敏；文本正则不能可靠匹配带引号/Unicode转义的键。
+        if result.lstrip().startswith(("{", "[")):
+            try:
+                parsed = json.loads(result)
+            except json.JSONDecodeError:
+                pass
+            except RecursionError:
+                return "[REDACTED_UNPROCESSABLE_JSON]"
+            else:
+                if isinstance(parsed, (dict, list)):
+                    try:
+                        return json.dumps(self.redact_value(parsed), ensure_ascii=False)
+                    except RecursionError:
+                        return "[REDACTED_UNPROCESSABLE_JSON]"
         for pattern, replacement in self.PATTERNS:
             result = pattern.sub(replacement, result)
         for pattern, replacement in self.UNICODE_PATTERNS:
@@ -250,7 +266,7 @@ class SensitiveDataRedactor:
 
     def redact_value(self, value):
         if isinstance(value, dict):
-            return {key: ("[REDACTED]" if re.search(r"(?i)password|secret|access_token|refresh_token|^token$|authorization|api.?key|address|phone|email", str(key))
+            return {key: ("[REDACTED]" if re.search(r"(?i)password|passwd|secret|access.?token|refresh.?token|^token$|authorization|api.?key|address|phone|email|密码|口令|令牌|密钥|地址|手机|电话|邮箱", str(key))
                           else self.redact_value(item)) for key, item in value.items()}
         if isinstance(value, (list, tuple)):
             return [self.redact_value(item) for item in value]

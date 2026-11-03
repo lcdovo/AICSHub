@@ -105,8 +105,8 @@
       "evidence_and_limit": "每Run至多6次尝试、费用/截止时间约束；429/500多层重试故障矩阵未完整执行"
     },
     "AC-14-06": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "沿用LLM边界redactor与权限服务；新理解原始输入全类别真实供应商脱敏检查未完成"
+      "status": "PASS_C_L",
+      "evidence_and_limit": "JSON/嵌入片段凭据修复；58项相关T0通过，原预算内1次真实UINO出口脱敏检查PASS；工具权限依赖独立严格schema/白名单反例，不声称未知PII全覆盖"
     },
     "AC-14-07": {
       "status": "PASS_T1",
@@ -207,11 +207,11 @@
     "gate": false
   },
   "calls": {
-    "request_count": 656,
-    "reserved_input_tokens": 792091,
-    "reserved_output_tokens": 327288,
-    "input_tokens": 768452,
-    "output_tokens": 141362,
+    "request_count": 657,
+    "reserved_input_tokens": 792478,
+    "reserved_output_tokens": 327416,
+    "input_tokens": 768921,
+    "output_tokens": 141433,
     "max_requests": 660,
     "max_input_tokens": 1200000,
     "max_output_tokens": 330000,
@@ -228,6 +228,17 @@
     "evaluation": "5f0dbeb"
   },
   "verification": [
+    {
+      "layer": "T2 actual outbound privacy",
+      "path": "reports/m4-closeout/live/privacy.json",
+      "status": "PASS",
+      "actual_requests": 1
+    },
+    {
+      "layer": "T0 privacy slice",
+      "path": "reports/offline/20261104-010653-712289",
+      "passed": 58
+    },
     {
       "layer": "T0 entity provenance slice",
       "path": "reports/offline/20261104-010206-821519",
@@ -264,8 +275,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 23,
+    "partial": 22,
     "fail": 1,
-    "layer_limited_pass": 6
+    "layer_limited_pass": 7
   }
 }

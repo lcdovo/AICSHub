@@ -49,3 +49,5 @@
 - `tests/test_m4_evaluation.py`
 - `tests/test_m4_gateway.py`
 - `tests/test_m4_understanding.py`
+
+后续切片新增修改：`app/services/llm_governance.py`、`tests/test_m4_privacy.py`；实体来源切片沿用request_understanding.py及其测试。

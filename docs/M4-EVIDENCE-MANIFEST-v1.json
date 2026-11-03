@@ -80,6 +80,24 @@
       "path": "reports/offline/20261104-004024-230822/manifest.json",
       "sha256": "8a19f57dff215514f0d808aad0eb5846000ff80d4efa62f9b46a018815ee060c",
       "bytes": 604
+    },
+    {
+      "path": "reports/m4-closeout/live/privacy.json",
+      "sha256": "f667b9cc17e39321ae9df88289f8fe84eb9902dc778f4498c0f69e4d37aadeb7",
+      "bytes": 754,
+      "snapshot": "privacy-slice-657-calls"
+    },
+    {
+      "path": "reports/m4-closeout/live/authorization-ledger.json",
+      "sha256": "3dd4245069f134f28004d8adde9d4fe2b27457fc65a4d5e8e5c9d58b8433b370",
+      "bytes": 346,
+      "snapshot": "privacy-slice-657-calls"
+    },
+    {
+      "path": "reports/offline/20261104-010653-712289/junit.xml",
+      "sha256": "dc9f52d080a0fc084290b82141b36ab2586214e3a3d1048824982f1d61977f7f",
+      "bytes": 8551,
+      "snapshot": "privacy-slice-657-calls"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",
