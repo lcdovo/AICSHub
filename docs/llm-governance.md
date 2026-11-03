@@ -34,3 +34,5 @@ M4故障补验：同执行上下文并行预留共享锁，跨实例仍依赖SQL
 当前候选身份补齐：独立图/聊天（含整个供应商回退链）/流式/RAG问答/兼容摘要通过可信应用入口建立实际用户唯一scope，正式Run继承原Run/factory。结构化调用无上下文时不再默认为user0，而是拒绝请求；不能从模型输出建立主体。RAG使用认证用户且临时客户端总是关闭，兼容摘要修复原错误单例导入并关闭实例。主栈后台rules-v1摘要仍无模型费用；历史user0账本保留原状。
 
 模型SDK客户端现在显式使用服务自有sync/async httpx池（每池连接数受LLM_MAX_CONCURRENCY约束），不共享库默认base/timeout全局缓存，临时服务关闭不会关闭聊天图的底层池。close尝试所有去重客户端并清缓存，失败不跳过其他池。FastAPI退出finally清理健康/聊天图各实例及MCP/Redis。260次本机合成协议请求验证资源归零，不能替代多小时真实供应商压力验收。
+
+生成节点与持久评测/Trace使用严格GenerationMetadata观察头，服务last_call_metadata中的structured_output/输入摘要/额外字段不复制到状态。partial/unknown usage明确区分，缺失output不按0计算实际费用；未知头不缓存回答，SQL ModelCallRecord保持计费事实。该头和LLMService展示tokens估算均不替代供应商账单。

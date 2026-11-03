@@ -246,3 +246,15 @@ e887c05流程类型与3f507ef来源执行器生产实现全量离线751 passed�
 复核发现响应组件的缓存失效夹具在accept_retrieval建立类型结论后，仍通过旧字典写rag_grounded=True；新契约下该写入不会生效，会使缓存不写的断言可能在未进入缓存分支时就通过。改用正式set_flow(rag_grounded=True)，并增加cache.aget确实await一次的分支断言，仍保留生成期间版本失效、回答换成更新提示、证据清空和缓存不写全部断言。生产代码不变。69项响应/证据/流程/聊天复验通过（reports/offline/20261104-031327-412000），该次开始/结束指纹也一致、来源完整；编译和测试文件F401/F821通过。
 
 751项全量在此测试夹具加强之前，69项覆盖改动后的夹具；二者分别报告，不称后者已全量重跑。T0用例、T1真实依赖、T2供应商和195项项目完整验收仍不互相代替。M4未完成、项目目标未完成，当前业务rules/灰度0及658/660授权计数均未变化。
+
+## 后续切片：类型化生成计量观察头（2026-11-04）
+
+OPT-07/14/04，AC-07-01局部迁移、关联AC-14-01/03。核实原generate_response_with_llm把服务last_call_metadata整体写入llm_governance，包括structured_output完整回答与输入摘要，契约声称“仅计量版本”却无严格边界；无效数值/降级类型也可进入观察头。原11项反例全部失败（reports/offline/20261104-031658-462250），不是因供应商真实调用失败。
+
+新增GenerationMetadata/ProviderTokenUsage严格冻结外壳，声明模型/版本、用途、有限非负费用、非负计数与耗时、布尔降级/预算。from_service_metadata只选择明确允许字段，完整回答/自检草稿、输入摘要、注入原文、额外凭据不进入类型头或兼容投影。标识字符串经既有脱敏。provider_usage只选择input/output/total计数且完整总数须自洽；usage_basis由计数完整性推导，partial/unknown不填缺失输出为0，SQL ModelCallRecord继续是费用事实源。
+
+无效观察头不让类型异常破坏回答审查，而是unknown/degraded、记录generation_metadata_invalid、禁止回答缓存；实际文本仍过原独立校验。评测落库与Trace读类型头，兼容字典不可覆盖已建立模型/版本。下一轮清空类型头。LLMService在SQL网关模式下也仅在完整合法input/output usage时计算观察费用，部分usage费用为None并明确partial_provider_usage_see_model_calls，原SQL预留/结算未变。
+
+15项专项+相关回归共82 passed（reports/offline/20261104-031913-619566），开始/结束源码指纹一致且快照完整。包括完整/部分/缺失usage、不补零、负数/字符串/布尔/NaN/总数冲突拒绝、正文/凭据剥离、类型/兼容对象隔离、类型序列化与下一轮、未知头不缓存，以及实际隔离SQL评测/Trace模型版本不能被旧字典伪造。compileall与新增模块/测试/ChatService F401/F821通过；model_version字段受保护命名警告已通过只保护实际Pydantic方法名消除，未屏蔽业务错误。
+
+无新增供应商调用/部署/数据库迁移/业务数据写入。legacy len(reply)//4展示估算仍不冒充provider usage；所有价格均是配置估算而非账户账单。业务槽位、改写等状态尚未全面类型化，AC-07-01仍PARTIAL，M4实体质量失败与658/660真实调用不变。

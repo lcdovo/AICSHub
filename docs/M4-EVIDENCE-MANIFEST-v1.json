@@ -452,6 +452,36 @@
       "sha256": "ab4cbff4afeb861477f47c730168c9db1322b961c2ea667d95f2fc19bbbcdb94",
       "bytes": 27081,
       "snapshot": "source-stable-flow-full-and-fixture-correction"
+    },
+    {
+      "path": "reports/offline/20261104-031658-462250/junit.xml",
+      "sha256": "21f939b7bf1acae2d3ddc0be8c3164b372569afd1554461a5df83b4ca0597118",
+      "bytes": 33683,
+      "snapshot": "typed-generation-metadata"
+    },
+    {
+      "path": "reports/offline/20261104-031913-619566/junit.xml",
+      "sha256": "a5697b457eccb091d0a28b473f72e33e1a93a559b69fdcd1fef90391d562ed0e",
+      "bytes": 11147,
+      "snapshot": "typed-generation-metadata"
+    },
+    {
+      "path": "reports/offline/20261104-031913-619566/manifest.json",
+      "sha256": "403a8535c9816bce948f3e0442065170dadc986fbe5b37889502a0cbc57f8a93",
+      "bytes": 2039,
+      "snapshot": "typed-generation-metadata"
+    },
+    {
+      "path": "reports/offline/20261104-031913-619566/source-start.json",
+      "sha256": "2a49d394cc2ac9702ec1ce64f6db20ce5e6511c83903c6f676ac22040e120bd7",
+      "bytes": 27485,
+      "snapshot": "typed-generation-metadata"
+    },
+    {
+      "path": "reports/offline/20261104-031913-619566/source-end.json",
+      "sha256": "2a49d394cc2ac9702ec1ce64f6db20ce5e6511c83903c6f676ac22040e120bd7",
+      "bytes": 27485,
+      "snapshot": "typed-generation-metadata"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

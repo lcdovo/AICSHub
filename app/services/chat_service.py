@@ -138,7 +138,7 @@ class ChatService:
             db.add(assistant_message)
             await db.flush()
 
-        governance = state.collected_info.get("llm_governance", {})
+        governance = state.current_generation_metadata()
         evaluation = get_answer_evaluator().evaluate(
             response=state.reply or "",
             user_query=user_query,
@@ -167,10 +167,10 @@ class ChatService:
             is_low_score=evaluation.is_low_score,
             failure_reason=evaluation.failure_reason,
             evaluator="heuristic",
-            model_name=governance.get("model", "heuristic"),
-            prompt_version=governance.get("prompt_version", settings.LLM_PROMPT_VERSION),
-            schema_version=governance.get("schema_version", settings.LLM_SCHEMA_VERSION),
-            route_version=governance.get("route_version", settings.LLM_ROUTE_VERSION),
+            model_name=governance.model or ("unknown" if state.generation_metadata else "heuristic"),
+            prompt_version=governance.prompt_version or settings.LLM_PROMPT_VERSION,
+            schema_version=governance.schema_version or settings.LLM_SCHEMA_VERSION,
+            route_version=governance.route_version or settings.LLM_ROUTE_VERSION,
             latency_ms=state.execution_time_ms,
             token_usage={"total_tokens": state.total_tokens},
             user_query=report_query,
@@ -221,10 +221,10 @@ class ChatService:
                 output_data=trace_entry.get("output"),
                 duration_ms=trace_entry.get("duration_ms", 0),
                 token_usage={"total_tokens": state.total_tokens},
-                model_name=governance.get("model", "mock"),
-                prompt_version=governance.get("prompt_version", settings.LLM_PROMPT_VERSION),
-                schema_version=governance.get("schema_version", settings.LLM_SCHEMA_VERSION),
-                route_version=governance.get("route_version", settings.LLM_ROUTE_VERSION),
+                model_name=governance.model or ("unknown" if state.generation_metadata else "mock"),
+                prompt_version=governance.prompt_version or settings.LLM_PROMPT_VERSION,
+                schema_version=governance.schema_version or settings.LLM_SCHEMA_VERSION,
+                route_version=governance.route_version or settings.LLM_ROUTE_VERSION,
                 success=True,
             ))
 

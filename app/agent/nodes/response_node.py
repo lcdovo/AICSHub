@@ -252,7 +252,7 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
     if (generated_by_llm and answer_cache_key and state.flow_value(FlowFlag.VALIDATED)
             and state.flow_value(FlowFlag.GROUNDED) and state.current_evidence()
             and not state.need_human and not state.flow_value(FlowFlag.REFUSED)
-            and not state.collected_info.get("llm_governance", {}).get("degraded")):
+            and not state.current_generation_metadata().degraded):
         await self._answer_cache_set(answer_cache_key, state.reply)
 
     state.messages.append({
@@ -512,14 +512,17 @@ async def generate_response_with_llm(self: "ResponseContext", state: AgentState)
                 chunks.append(chunk)
             reply = "".join(chunks)
             metadata = model.get_last_call_metadata()
-            token_count = int(metadata.get("tokens", max(1, len(reply) // 4)))
+            state.record_generation_metadata(metadata)
+            token_count = state.current_generation_metadata().tokens
+            if token_count is None:
+                token_count = max(1, len(reply) // 4)  # 兼容展示估算，不能冒充SQL provider usage。
         else:
             # chat() 返回的 intent 仅供日志/元数据展示；路由意图唯一由
             # intent.py 规则 + classify_intent 兜底决定，不再回写 state。
             reply, _model_intent, token_count, metadata = await self.llm_runnable.ainvoke(payload)
+            state.record_generation_metadata(metadata)
         state.total_tokens += token_count
         # 治理元数据只包含摘要、版本和预算结果，不保存发送给模型的敏感原文。
-        state.collected_info["llm_governance"] = metadata
 
         logger.info(
             f"LLM 响应生成成功: intent={state.detected_intent}, tokens={token_count}, "

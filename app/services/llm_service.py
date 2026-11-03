@@ -604,16 +604,19 @@ class LLMService:
     ) -> None:
         if settings.LLM_GATEWAY_ENABLED:
             usage = self.last_call_metadata.get("provider_usage", {})
-            input_tokens = usage.get("input_tokens", 0)
-            output_tokens = usage.get("output_tokens", 0)
+            input_tokens = usage.get("input_tokens")
+            output_tokens = usage.get("output_tokens")
+            complete_usage = (type(input_tokens) is int and type(output_tokens) is int
+                              and input_tokens >= 0 and output_tokens >= 0)
             cost = (
                 self.budget_manager.estimator.estimate(input_tokens, output_tokens)
-                if usage
+                if complete_usage
                 else None
             )
             self.last_call_metadata["cost_basis"] = (
                 "provider_usage_configured_rates"
-                if usage
+                if complete_usage
+                else "partial_provider_usage_see_model_calls" if usage
                 else "unknown_reserved_see_model_calls"
             )
         else:

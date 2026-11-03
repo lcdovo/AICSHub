@@ -8,6 +8,7 @@ from copy import deepcopy
 from datetime import datetime
 from app.agent.read_plan import ReadTask
 from app.agent.flow_contracts import FlowFlag, TurnFlow
+from app.agent.generation_contracts import GenerationMetadata
 from app.agent.tool_contracts import ToolObservation, BusinessToolName, TOOL_RESULT_COMPAT_KEYS, TOOL_IDENTIFIER_PROJECTIONS
 
 
@@ -50,6 +51,8 @@ class AgentState(BaseModel):
     strategy_version: Optional[str] = None
     node_steps: int = 0
     flow: TurnFlow = Field(default_factory=TurnFlow)
+    generation_metadata: Optional[GenerationMetadata] = None
+    generation_metadata_error: Optional[str] = None
     read_plan: List[ReadTask] = Field(default_factory=list)
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
@@ -107,6 +110,25 @@ class AgentState(BaseModel):
             self.set_flow(**{flag.value: legacy})
             return legacy
         return None
+
+    def record_generation_metadata(self, metadata: Dict[str, Any]) -> bool:
+        try:
+            parsed = GenerationMetadata.from_service_metadata(metadata)
+        except (ValueError, TypeError):
+            parsed = GenerationMetadata(degraded=True, degraded_reason="generation_metadata_invalid")
+            self.generation_metadata_error = "generation_metadata_invalid"
+            accepted = False
+        else:
+            self.generation_metadata_error = None
+            accepted = True
+        self.generation_metadata = parsed
+        self.collected_info["llm_governance"] = parsed.model_dump(exclude_none=True)
+        return accepted
+
+    def current_generation_metadata(self) -> GenerationMetadata:
+        if self.generation_metadata is None and "llm_governance" in self.collected_info:
+            self.record_generation_metadata(self.collected_info["llm_governance"])
+        return self.generation_metadata or GenerationMetadata()
 
     def set_flow(self, **values: bool | None) -> None:
         # 不使用model_copy(update=...)，它不会验证类型/额外键。

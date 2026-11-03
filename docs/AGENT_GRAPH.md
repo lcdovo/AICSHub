@@ -149,3 +149,5 @@ Run和模型不能仅依赖asyncio.timeout抛异常：依赖若吞取消或阻�
 业务工具/只读计划/人工回执通过record_tool_observation进入ToolObservation，data不再展开到collected_info控制键；只投影明确允许的业务编号，完整回执与ToolCall独立复制。最新失败不留该工具旧成功投影，下一轮清空观察。完整状态类型迁移进度见M4-STATE-CONTRACT-v1.md，尚未完成。
 
 本轮smalltalk/grounded/refused/validated/cache-hit/handoff-attempted六项流程结论现由严格TurnFlow和FlowFlag管理，None/False/True分开。旧字典仅兼容镜像，已有或显式清空结论不能被字典复活；新轮次清空。其他状态/计量/槽位类型迁移仍见M4-STATE-CONTRACT-v1.md未完成范围。
+
+生成计量头现在由GenerationMetadata/ProviderTokenUsage选择并验证，完整回答和输入摘要不入llm_governance兼容投影。unknown/partial usage不补缺失输出为0；无效头明确degraded、禁止缓存，回答仍独立审查。评测/Trace读取类型模型版本，SQL调用账本是费用事实。更广泛槽位类型化仍未完成。

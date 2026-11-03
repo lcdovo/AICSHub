@@ -89,3 +89,5 @@ RAG节点依赖切片新增：`tests/test_m4_node_dependencies.py`、`docs/M4-NO
 全项目需求审计新增：`docs/PROJECT-AC-INDEX-v1.md`、`docs/PROJECT-AC-INDEX-v1.json`，覆盖原195项AC并保留标准哈希与分层证据限度。
 
 类型状态夹具补验：`tests/test_m4_response_dependencies.py`改用正式set_flow并断言实际缓存读取，生产代码无新变更；全量751及强化后69项分别封存。
+
+生成元数据切片新增：`app/agent/generation_contracts.py`、`tests/test_m4_generation_metadata.py`；修改AgentState、响应节点、ChatService与LLMService观察计量。

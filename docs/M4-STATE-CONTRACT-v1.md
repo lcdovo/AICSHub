@@ -12,7 +12,7 @@
 | 回答审查 | ReviewResult(passed, evidence_version) | validation、answer_validated、llm_judge、inline_self_check | 本轮结果；独立校验和证据指纹绑定，不收工具自报的通过 |
 | 工具观察 | ToolObservation与tool_observations[BusinessToolName] | 明确枚举的xxx_result | 本轮严格外壳、完整回执嵌套保留；data为不透明业务数据，不是权限或控制字段 |
 | 工具审计 | ToolCall列表 | 原统一工具执行链与回执 | 参数/结果深复制，完整历史不被最新观察覆盖；不是当前确认来源 |
-| 生成计量 | 当前仍为llm_governance字典，SQL ModelCallRecord是费用事实 | reply_source、query_rewrite、user_memory等 | 全面类型化尚待完成；供应商估算不冒充账单 |
+| 生成计量 | GenerationMetadata / ProviderTokenUsage严格类型观察头，SQL ModelCallRecord是费用事实 | llm_governance仅允许字段的兼容投影 | 不保存structured_output、输入摘要或额外凭据；partial/unknown usage不补0算实际费用，下一轮清空 |
 | 发布/流程标记 | TurnFlow严格冻结模型+FlowFlag枚举，6项bool/None结论 | smalltalk/rag_grounded/rag_refused/answer_validated/answer_from_cache/handoff_attempted仅兼容投影 | 节点通过flow_value/set_flow读写；真实bool旧字段仅首次导入，已有/明确清空结论不被字典改写，不跨轮保留 |
 
 ## 工具观察入口
@@ -28,3 +28,5 @@ record_tool_observation只接受注册的8种业务工具名字，工具身份�
 仍需给业务槽位、待办投影、生成计量、改写元数据和流程标记建立统一的全面类型接口，并移除未声明字符串键的主链依赖。保留兼容字典不能当作最终完成；工具外壳有类型也不代表业务data内容可信。权限/资格/幂等/确认仍必须由领域服务检查，模型最终输出仍必须走响应审查。
 
 流程类型迁移：TurnFlow以None代表未执行/无结论，与False明确区分。set_flow完整验证strict bool与额外键后原子替换不可变模型，不使用绕过验证的model_copy(update=...)。旧Graph直调无结论时可一次性导入真实bool，字符串/数值不是结论；正式Run的clean next-turn及SQL versioned session snapshot不携带旧流程状态。intent_source/reply_source、模型计量和业务槽位仍待进一步声明。
+
+生成观察头迁移：模型/版本/降级/预算/tokens/耗时/有限价格字段明确声明并严格验证，计数非负、费用有限且非负、usage总数须自洽。usage_basis由计数字段完整性推导，不能用自报标签伪造真实usage。无效元数据转unknown+degraded禁止缓存，不代替回答审查；只对允许的标识字符串脱敏，不复制正文/输入摘要。评测和Trace读取类型头，旧兼容字典首次导入后不覆盖已建立类型记录。业务槽位、改写和其他标记仍未全部声明，AC-07-01仍未完成。
