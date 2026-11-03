@@ -130,22 +130,33 @@ def configure_kb():
     from app.services.knowledge_base import KnowledgeBaseService
     from app.repositories.knowledge_repository import KnowledgeRepository
     from app.services.knowledge_base.vector_index import VersionedVectorIndex
-    from acceptance.m3.real_services import SyntheticEmbedding
+    from app.services.embedding_service import EmbeddingService
+    from app.config.config import settings
+    from app.services.reranker_service import RerankerService
     import app.services.knowledge_base as module
 
-    class UiEmbedding(SyntheticEmbedding):
-        def encode_batch(self, texts):
-            if (runtime / "fail-synthetic-embedding").exists():
-                raise RuntimeError("synthetic fault injection")
-            return super().encode_batch(texts)
-
     repo = KnowledgeRepository()
+    local_index = json.loads(
+        (runtime / "local-model-index.json").read_text(encoding="utf-8")
+    )
     index = VersionedVectorIndex(
-        "127.0.0.1", int(state["ports"]["milvus"]), prefix=ui["database"]
+        "127.0.0.1", int(local_index["port"]), prefix=ui["database"]
+    )
+    settings.EMBEDDING_API_BASE = "http://127.0.0.1:8012/v1"
+    settings.EMBEDDING_API_KEY = "local-only"
+    settings.EMBEDDING_MODEL = "qwen3-embedding:0.6b"
+    settings.EMBEDDING_DIM = 1024
+    settings.EMBEDDING_BATCH_SIZE = 20
+    embedding = EmbeddingService(dim=1024)
+    reranker = RerankerService(
+        local_base="http://127.0.0.1:7997",
+        local_model="BAAI/bge-reranker-large",
+        timeout=30,
     )
     module._knowledge_base = KnowledgeBaseService(
-        repository=repo, embedding=UiEmbedding(), vector_store=index
+        repository=repo, embedding=embedding, vector_store=index
     )
+    module._knowledge_base._reranker = reranker
     module._knowledge_base.initialize()
 
 
