@@ -225,9 +225,19 @@
     "local_switch": "4593346",
     "model_gateway": "fb35bae",
     "typed_understanding": "c3d5a2a",
-    "evaluation": "5f0dbeb"
+    "evaluation": "5f0dbeb",
+    "read_plan": "033bb4d",
+    "stage_boundaries": "584404f"
   },
   "verification": [
+    {
+      "layer": "T0 full production code at 033bb4d",
+      "path": "reports/offline/20261104-012526-767528",
+      "passed": 648,
+      "failures": 0,
+      "errors": 0,
+      "limitation": "does not include later stage_boundaries tests; those separately passed in 22-test run"
+    },
     {
       "layer": "T0 stage retry and termination",
       "path": "reports/offline/20261104-013027-458520",
