@@ -49,8 +49,8 @@
       "evidence_and_limit": "300条独立留出实体287/300=0.956667<0.97；规则Macro-F1=0.775588；标签未经人工复核，条件完整计分仍缺"
     },
     "AC-06-12": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "shadow在确认/取消前拦截；实际策略回滚故障组合尚未齐全"
+      "status": "PASS_I_F_ISOLATED",
+      "evidence_and_limit": "完整图影子可信通知不会审查失败转人工；实际Run/SQL冻结模式与回滚，持久预览pending及0业务写入，新rules Run取消使用原可信服务，取消审计仅1条；模型替身，无线上策略部署"
     },
     "AC-07-01": {
       "status": "PARTIAL",
@@ -113,8 +113,8 @@
       "evidence_and_limit": "SQL共享槽跨真实进程竞争，非单例进程内宣称"
     },
     "AC-14-08": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "每Run保存mode/version、稳定用户灰度；在线回滚/重放动作矩阵待补"
+      "status": "PASS_I_F_ISOLATED",
+      "evidence_and_limit": "7项策略集成：接受后配置改变不影响原Run、回放固定版本、灰度0/100和50%同用户12会话稳定、完成Run不重执行；真实SQLite/执行器/图，未改业务默认模式"
     },
     "AC-14-09": {
       "status": "PASS_T1",
@@ -229,6 +229,16 @@
   },
   "verification": [
     {
+      "layer": "T0 full at 911fb6b before gateway/policy followup",
+      "path": "reports/offline/20261104-010817-633888",
+      "passed": 618
+    },
+    {
+      "layer": "T0 real Run/graph policy integration",
+      "path": "reports/offline/20261104-011816-634005",
+      "passed": 7
+    },
+    {
       "layer": "T1 real MySQL multi-process",
       "path": "reports/m4-closeout/real-20261104-011307",
       "passed": 2
@@ -285,8 +295,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 21,
+    "partial": 19,
     "fail": 1,
-    "layer_limited_pass": 8
+    "layer_limited_pass": 10
   }
 }

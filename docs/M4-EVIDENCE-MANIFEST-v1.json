@@ -110,6 +110,24 @@
       "sha256": "b610a2914c09f959363b05a5317d013c36ec1ae50392cb58e29d639b8b1d8640",
       "bytes": 503,
       "snapshot": "shared-budget-fault-matrix"
+    },
+    {
+      "path": "reports/offline/20261104-011816-634005/junit.xml",
+      "sha256": "44cc8db99024b6968d0e2b8b70baafa6f49b060d17c53abba3af89a6657dbf1d",
+      "bytes": 1156,
+      "snapshot": "policy-rollback-slice"
+    },
+    {
+      "path": "reports/offline/20261104-011654-946582/junit.xml",
+      "sha256": "11d2a13676c382517926ee3cf4e545371e4271e1266ee5f018ba7882c2809d77",
+      "bytes": 11479,
+      "snapshot": "policy-rollback-slice"
+    },
+    {
+      "path": "reports/offline/20261104-010817-633888/junit.xml",
+      "sha256": "4ffdadf6b480bc1d42aa3e76ead24f0e6ae7e4036d8e5f25f5ce64141990e9c6",
+      "bytes": 80154,
+      "snapshot": "policy-rollback-slice"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

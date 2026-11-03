@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 async def intent_recognition_node(self: "AgentGraph", state: AgentState) -> str:
     mode = state.understanding_mode or settings.REQUEST_UNDERSTANDING_MODE
     if mode == "shadow":
-        from app.agent.request_understanding import understand
+        from app.agent.request_understanding import understand, SHADOW_NOTICE
 
         result = await understand(self.llm_service, state)
         state.collected_info["shadow_understanding"] = (
             result.model_dump() if result else {"status": "unavailable"}
         )
-        state.reply = "影子理解已记录，本轮不执行申请、确认或取消。"
+        state.reply = SHADOW_NOTICE
         return AgentNode.RESPONSE_GENERATION
     if state.collected_info.get("refund_preview") and self._refund_cancelled(state):
         action_id = state.collected_info["refund_preview"].get("action_id")

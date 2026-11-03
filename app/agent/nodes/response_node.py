@@ -88,6 +88,13 @@ async def validate_candidate(self: "AgentGraph", state: AgentState) -> bool:
 
 
 async def response_generation_node(self: "AgentGraph", state: AgentState) -> str:
+    is_shadow = (state.understanding_mode or settings.REQUEST_UNDERSTANDING_MODE) == "shadow"
+    if is_shadow:
+        # 影子只发布可信流程通知，不生成业务草稿或因审查失败转入写入型人工流程。
+        from app.agent.request_understanding import SHADOW_NOTICE
+        state.reply = SHADOW_NOTICE
+        state.need_human = False
+        state.collected_info["reply_source"] = "shadow_notice"
     if state.need_human and not state.reply:
         state.reply = f"非常抱歉，正在为您转接人工客服。{state.human_reason or ''}"
     if state.collected_info.get("smalltalk") and not state.reply:
@@ -101,7 +108,7 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
             state.collected_info["rag_grounded"]=False
             state.reply="知识版本已变化，请重新提问以读取最新发布内容。"
     has_business_tool = any(tc.tool_name != "hybrid_search" for tc in state.tool_calls)
-    grounded = bool(state.collected_info.get("rag_grounded") and state.collected_info.get("kb_results"))
+    grounded = bool(not is_shadow and state.collected_info.get("rag_grounded") and state.collected_info.get("kb_results"))
     answer_cache_key = None
     generated_by_llm = False
     if not state.reply:
@@ -134,7 +141,7 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
         tc.tool_name == "escalate_to_human" for tc in state.tool_calls
     )
     workflow_reply = bool(
-        state.missing_slots or state.needs_clarification
+        is_shadow or state.missing_slots or state.needs_clarification
         or state.collected_info.get("smalltalk")
         or state.collected_info.get("rag_grounded") is False or handoff_done
     )

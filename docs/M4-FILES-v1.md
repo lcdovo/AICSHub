@@ -53,3 +53,5 @@
 后续切片新增修改：`app/services/llm_governance.py`、`tests/test_m4_privacy.py`；实体来源切片沿用request_understanding.py及其测试。
 
 预算故障切片新增：`tests/test_m4_fault_matrix.py`；修改model_gateway.py、llm_service.py及相关验收/接口文档。
+
+策略切片新增：`tests/test_m4_policy.py`，影子通知常量及意图/响应节点；完整图审查失败不得使影子写入人工请求。

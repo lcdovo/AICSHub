@@ -20,6 +20,8 @@ RequestType = Literal[
     "greeting",
 ]
 
+SHADOW_NOTICE = "影子理解已记录，本轮不执行申请、确认或取消。"
+
 
 class Entities(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
