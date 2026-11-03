@@ -87,3 +87,5 @@ RAG节点依赖切片新增：`tests/test_m4_node_dependencies.py`、`docs/M4-NO
 测试来源切片新增：`scripts/test_provenance.py`、`tests/test_test_provenance.py`、`docs/TEST-EVIDENCE-v1.md`；修改T0执行器使源码漂移的绿色用例不被误当有效证据。
 
 全项目需求审计新增：`docs/PROJECT-AC-INDEX-v1.md`、`docs/PROJECT-AC-INDEX-v1.json`，覆盖原195项AC并保留标准哈希与分层证据限度。
+
+类型状态夹具补验：`tests/test_m4_response_dependencies.py`改用正式set_flow并断言实际缓存读取，生产代码无新变更；全量751及强化后69项分别封存。

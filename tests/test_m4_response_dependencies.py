@@ -66,6 +66,7 @@ async def test_component_buffers_rejected_provider_stream_and_publishes_only_val
 async def test_injected_snapshot_checker_still_invalidates_during_generation_and_does_not_cache(monkeypatch):
     monkeypatch.setattr("app.agent.nodes.response_node.settings.USER_MEMORY_ENABLED", False)
     cache = Cache()
+    cache.aget = AsyncMock(wraps=cache.aget)
     knowledge = SimpleNamespace(evidence_is_current=Mock(side_effect=[True, False]))
     model = SimpleNamespace(chat=AsyncMock(return_value=("合成原证据草稿", "technical", 3)),
                             get_last_call_metadata=lambda: {"degraded": False})
@@ -73,9 +74,10 @@ async def test_injected_snapshot_checker_still_invalidates_during_generation_and
     node = ResponseNode(dependencies)
     state = AgentState(session_id="s", user_id=101, user_message="合成问题")
     assert state.accept_retrieval(retrieval_result())
-    state.collected_info["rag_grounded"] = True
+    state.set_flow(rag_grounded=True)
     assert await node(state) == AgentNode.END
     assert "知识版本已变化" in state.reply and not state.current_evidence()
+    cache.aget.assert_awaited_once()
     assert cache.values == {}
 
 

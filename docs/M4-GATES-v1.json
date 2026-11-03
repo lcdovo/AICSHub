@@ -233,6 +233,27 @@
   },
   "verification": [
     {
+      "layer": "T0 full source-stable flow and evidence-runner implementation",
+      "path": "reports/offline/20261104-030831-183797",
+      "passed": 751,
+      "failures": 0,
+      "errors": 0,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "c9cdb0697c27efe3d34d638ec32db110868dcb329be8fd38f89fc00f95c3ff16",
+      "commit_at_start": "3f507effaac2c697e7df7ff2d1ceb4076fee6f0f",
+      "commit_at_end": "cdf25ae3af2dc08dd6f37dd8dfa90b9dc798ccbd",
+      "limitation": "after this full run only cache fixture was strengthened; 69 related tests independently passed"
+    },
+    {
+      "layer": "T0 actual cache-invalidating fixture after typed-flow correction",
+      "path": "reports/offline/20261104-031327-412000",
+      "passed": 69,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "f27fa790d5d8390c90fe121e8c92f22ff0908184ae51032625fb672f541a506c"
+    },
+    {
       "layer": "T0 evidence provenance with actual child runner and flow regression",
       "path": "reports/offline/20261104-030630-601855",
       "passed": 18,
