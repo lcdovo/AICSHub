@@ -160,9 +160,9 @@ class BaseTool:
                     continue
 
             except Exception as e:
-                last_error = str(e)
+                last_error = "工具依赖或执行服务异常，请按原请求核查结果"
                 self._consecutive_failures += 1
-                logger.error(f"工具 {self.name} 执行异常: {e}")
+                logger.error("工具 %s 执行异常: %s", self.name, type(e).__name__)
                 if attempt < self.max_retries - 1:
                     continue
 
@@ -193,8 +193,16 @@ class QueryOrderTool(BaseTool):
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
-        order_id = kwargs.get("order_id", "").strip().upper()
-        user_id = kwargs.get("user_id")
+        from app.agent.read_authorization import OrderReadInput, verify_read
+        values = dict(kwargs)
+        authorization = values.pop("authorization", "")
+        try:
+            payload = OrderReadInput.model_validate(values).model_dump()
+            await verify_read(self.name, payload, authorization)
+        except (ValidationError, ValueError, TypeError):
+            return {"success": False, "error": "订单查询参数或身份授权无效", "error_type": "permission"}
+        order_id = payload["order_id"].strip().upper()
+        user_id = payload["user_id"]
 
         if not order_id:
             return {
@@ -220,14 +228,16 @@ class QueryOrderTool(BaseTool):
                 order = {
                     "order_id": order_row.order_id, "status": order_row.status,
                     "status_code": order_row.status_code, "items": order_row.items or [],
-                    "total_amount": float(order_row.total_amount), "shipping": order_row.shipping,
+                    "total_amount": format(order_row.total_amount, ".2f"), "shipping": order_row.shipping,
                     "created_at": order_row.created_at.isoformat() if order_row.created_at else "",
                     "pay_method": order_row.pay_method, "address": order_row.address,
                 }
-                can_refund = order_row.status_code in {"shipped", "delivered", "completed"}
+                deadline = order_row.received_at + timedelta(days=7) if order_row.received_at else None
+                can_refund = (order_row.status_code in {"shipped", "delivered", "completed"}
+                              and deadline is not None and order_row.received_at <= datetime.utcnow() <= deadline)
                 return {
                     "success": True, "data": order, "can_refund": can_refund,
-                    "refund_deadline": (datetime.now() + timedelta(days=7)).isoformat() if can_refund else None,
+                    "refund_deadline": deadline.isoformat() if deadline else None,
                 }
 
         # No in-code order fallback: missing rows are reported to the caller.
@@ -608,10 +618,15 @@ class GetUserHistoryTool(BaseTool):
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
-        user_id = kwargs.get("user_id", 0)
-        limit = max(1, int(kwargs.get("limit", 10) or 10))
-        query = str(kwargs.get("query", "") or "").strip()
-        session_id = str(kwargs.get("session_id", "") or "")
+        from app.agent.read_authorization import HistoryReadInput, verify_read
+        values = dict(kwargs)
+        authorization = values.pop("authorization", "")
+        try:
+            payload = HistoryReadInput.model_validate(values).model_dump()
+            await verify_read(self.name, payload, authorization)
+        except (ValidationError, ValueError, TypeError):
+            return {"success": False, "error": "历史查询参数或身份授权无效", "error_type": "permission"}
+        user_id, limit, query, session_id = (payload[k] for k in ("user_id", "limit", "query", "session_id"))
 
         if not user_id or user_id <= 0:
             return {"success": False, "error": "请提供有效的用户ID", "hint": "用户ID应为正整数"}
@@ -647,7 +662,7 @@ class GetUserHistoryTool(BaseTool):
                 },
             }
         except Exception as exc:
-            logger.warning("用户历史查询失败: %s", exc)
+            logger.warning("用户历史查询失败: %s", type(exc).__name__)
             return {
                 "success": False,
                 "error": "用户历史查询失败",

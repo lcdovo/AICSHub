@@ -53,6 +53,7 @@ class TraceSpan:
         self._otel: Any = None
 
     def set_attribute(self, key: str, value: Any):
+        value = SensitiveDataRedactor().redact_value({key: value})[key]
         self.attributes[key] = value
         if self._otel is not None:
             try:
@@ -61,6 +62,8 @@ class TraceSpan:
                 pass
 
     def add_event(self, name: str, attributes: Optional[Dict[str, Any]] = None):
+        name = SensitiveDataRedactor().redact(name)
+        attributes = SensitiveDataRedactor().redact_value(attributes or {})
         self.events.append({
             "name": name,
             "timestamp": time.time(),
@@ -73,6 +76,7 @@ class TraceSpan:
                 pass
 
     def end(self, status: str = "ok", error_message: Optional[str] = None):
+        error_message = SensitiveDataRedactor().redact(error_message) if error_message else None
         self.end_time = time.time()
         self.duration_ms = int((self.end_time - self.start_time) * 1000)
         self.status = status
@@ -414,10 +418,7 @@ class StructuredLogger:
 
     def _clean(self, **kwargs) -> dict:
         """日志落地前对字符串值做敏感信息脱敏。"""
-        return {
-            key: self._redactor.redact(str(value)) if isinstance(value, str) else value
-            for key, value in kwargs.items()
-        }
+        return self._redactor.redact_value(kwargs)
 
     def log_request(self, trace_id: str, method: str, path: str, **kwargs):
         self.logger.info(

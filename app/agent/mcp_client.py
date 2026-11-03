@@ -7,9 +7,8 @@
   进程隔离更强，适合容器化部署时与主进程解耦。
 
 两种模式都走标准 MCP 协议（list_tools / call_tool），工具实现与参数
-仍来自 ``app.agent.tools.TOOL_REGISTRY``，行为一致；MCP 未启用、连接
-失败或单次调用异常时自动回退到进程内直调。该回退保证工具执行链路
-永远可用，MCP 只是“协议接入层”。
+仍来自 ``app.agent.tools.TOOL_REGISTRY``。派发前连接失败可进程内回退；
+写调用派发后异常只查持久回执，无法确定时返回unknown，不能盲目重做。
 """
 import asyncio
 import json
@@ -85,7 +84,7 @@ class _McpToolClient:
             except Exception as exc:  # MCP 初始化失败：降级直调，不阻断主链路
                 logger.warning(
                     "MCP client unavailable (%s), fallback to direct tool calls: %s",
-                    _TRANSPORT, exc,
+                    _TRANSPORT, type(exc).__name__,
                 )
                 self._failed = True
             return self._ready
@@ -102,8 +101,7 @@ class _McpToolClient:
             raw = json.loads(_extract_text_content(res)) if _extract_text_content(res) else {}
             return ToolExecutionResult.model_validate(raw)
         except Exception as exc:
-            logger.warning("MCP tool call %s failed, fallback to direct call: %s", tool_name,
-                           type(exc).__name__ if tool_name in {"create_ticket", "update_ticket_status", "escalate_to_human", "apply_refund"} else exc)
+            logger.warning("MCP tool call %s failed: %s", tool_name, type(exc).__name__)
             if tool_name in {"create_ticket", "apply_refund", "update_ticket_status", "escalate_to_human"}:
                 return ToolExecutionResult(success=False, error="工具执行结果尚不确定，请核查原请求", error_type="outcome_unknown")
             return None
@@ -138,7 +136,7 @@ def _get_client() -> _McpToolClient:
 async def invoke_tool(tool_name: str, **kwargs: Any) -> Optional[ToolExecutionResult]:
     """统一工具执行入口：MCP 协议优先，进程内直调兜底。
 
-    返回 None 表示工具不存在（调用方按“跳过”处理），与原有行为一致。
+    未注册工具明确失败；写结果缺少业务回执时不能返回成功。
     """
     if tool_name not in TOOL_REGISTRY:
         return ToolExecutionResult(success=False, error="工具不存在", error_type="not_found")

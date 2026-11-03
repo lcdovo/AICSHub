@@ -16,6 +16,7 @@
 """
 import logging
 from typing import Any, Dict
+from pydantic import StrictInt, StrictStr
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ mcp = FastMCP(
 )
 
 
-async def _invoke(tool_name: str, **kwargs: Any) -> Dict[str, Any]:
+async def _invoke(tool_name: StrictStr, **kwargs: Any) -> Dict[str, Any]:
     """统一执行入口：复用注册表的重试/熔断/校验契约。"""
     tool = TOOL_REGISTRY.get(tool_name)
     if tool is None:
@@ -45,13 +46,13 @@ async def _invoke(tool_name: str, **kwargs: Any) -> Dict[str, Any]:
 
 
 @mcp.tool(name="query_order", description="根据订单号查询订单状态、物流信息、订单详情")
-async def query_order(order_id: str, user_id: int = 0) -> Dict[str, Any]:
-    return await _invoke("query_order", order_id=order_id, user_id=user_id)
+async def query_order(order_id: StrictStr, user_id: StrictInt = 0, authorization: StrictStr = "") -> Dict[str, Any]:
+    return await _invoke("query_order", order_id=order_id, user_id=user_id, authorization=authorization)
 
 
 @mcp.tool(name="create_ticket", description="创建客服工单，用于处理用户投诉、咨询等问题")
-async def create_ticket(user_id: int, category: str, content: str, priority: str = "medium",
-                        session_id: str = "", idempotency_key: str = "", authorization: str = "") -> Dict[str, Any]:
+async def create_ticket(user_id: StrictInt, category: StrictStr, content: StrictStr, priority: StrictStr = "medium",
+                        session_id: StrictStr = "", idempotency_key: StrictStr = "", authorization: StrictStr = "") -> Dict[str, Any]:
     return await _invoke(
         "create_ticket", user_id=user_id, category=category, content=content, priority=priority,
         session_id=session_id, idempotency_key=idempotency_key, authorization=authorization,
@@ -60,15 +61,15 @@ async def create_ticket(user_id: int, category: str, content: str, priority: str
 
 @mcp.tool(name="apply_refund", description="登记模拟待审核退换货申请，需要本轮确认与执行凭据；不执行真实支付")
 async def apply_refund(
-    order_id: str,
-    reason: str,
-    type: str = "refund",  # noqa: A002 - 与既有工具参数名保持一致
-    user_id: int = 0,
-    idempotency_key: str = "",
-    session_id: str = "",
-    authorization: str = "",
-    action_id: str | None = None,
-    action_version: int | None = None,
+    order_id: StrictStr,
+    reason: StrictStr,
+    type: StrictStr = "refund",  # noqa: A002 - 与既有工具参数名保持一致
+    user_id: StrictInt = 0,
+    idempotency_key: StrictStr = "",
+    session_id: StrictStr = "",
+    authorization: StrictStr = "",
+    action_id: StrictStr | None = None,
+    action_version: StrictInt | None = None,
 ) -> Dict[str, Any]:
     return await _invoke(
         "apply_refund",
@@ -84,19 +85,19 @@ async def apply_refund(
 
 
 @mcp.tool(name="search_kb", description="从知识库中检索相关问题的答案，支持关键词匹配和语义搜索")
-async def search_kb(query: str, top_k: int = 3) -> Dict[str, Any]:
+async def search_kb(query: StrictStr, top_k: StrictInt = 3) -> Dict[str, Any]:
     return await _invoke("search_kb", query=query, top_k=top_k)
 
 
 @mcp.tool(name="escalate_to_human", description="登记可查询的人工处理请求；登记不代表已接通客服")
 async def escalate_to_human(
-    reason: str,
-    priority: str = "normal",
-    context: str = "",
-    user_id: int = 0,
-    session_id: str = "",
-    idempotency_key: str = "",
-    authorization: str = "",
+    reason: StrictStr,
+    priority: StrictStr = "normal",
+    context: StrictStr = "",
+    user_id: StrictInt = 0,
+    session_id: StrictStr = "",
+    idempotency_key: StrictStr = "",
+    authorization: StrictStr = "",
 ) -> Dict[str, Any]:
     return await _invoke(
         "escalate_to_human",
@@ -111,20 +112,20 @@ async def escalate_to_human(
 
 
 @mcp.tool(name="send_notification", description="通知发送入口；当前未接入投递适配器，返回能力不可用")
-async def send_notification(channel: str, content: str, user_id: int = 0) -> Dict[str, Any]:
+async def send_notification(channel: StrictStr, content: StrictStr, user_id: StrictInt = 0) -> Dict[str, Any]:
     return await _invoke("send_notification", channel=channel, content=content, user_id=user_id)
 
 
 @mcp.tool(name="update_ticket_status", description="更新工单的处理状态，用于工单流转和状态同步")
-async def update_ticket_status(ticket_id: str, status: str, note: str = "",
-                               idempotency_key: str = "", authorization: str = "") -> Dict[str, Any]:
+async def update_ticket_status(ticket_id: StrictStr, status: StrictStr, note: StrictStr = "",
+                               idempotency_key: StrictStr = "", authorization: StrictStr = "") -> Dict[str, Any]:
     return await _invoke("update_ticket_status", ticket_id=ticket_id, status=status, note=note,
                          idempotency_key=idempotency_key, authorization=authorization)
 
 
 @mcp.tool(name="get_user_history", description="获取用户的历史咨询记录、工单历史、偏好标签等（跨会话长期记忆/用户画像）")
-async def get_user_history(user_id: int, limit: int = 10, query: str = "") -> Dict[str, Any]:
-    return await _invoke("get_user_history", user_id=user_id, limit=limit, query=query)
+async def get_user_history(user_id: StrictInt, limit: StrictInt = 10, query: StrictStr = "", session_id: StrictStr = "", authorization: StrictStr = "") -> Dict[str, Any]:
+    return await _invoke("get_user_history", user_id=user_id, limit=limit, query=query, session_id=session_id, authorization=authorization)
 
 
 def main() -> None:

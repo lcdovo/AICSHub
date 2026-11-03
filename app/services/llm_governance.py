@@ -224,6 +224,9 @@ class SensitiveDataRedactor:
     """最小化发送给外部模型的信息，并允许安全审计验证原文未泄露。"""
 
     PATTERNS = (
+        (re.compile(r"(?i)bearer\s+[A-Za-z0-9_.~+/-]+=*"), "Bearer [REDACTED]"),
+        (re.compile(r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b"), "[TOKEN_REDACTED]"),
+        (re.compile(r"(?i)(://)[^\s/@:]+:[^\s/@]+@"), r"\1[REDACTED]@"),
         (re.compile(r"(?i)(password|passwd|token|api[_ -]?key|secret|密码|口令|令牌|密钥)\s*[:=：]\s*[^\s,;，；。]+"), r"\1=[REDACTED]"),
         (re.compile(r"(?<!\d)(1[3-9]\d{9})(?!\d)"), "[PHONE_REDACTED]"),
         (re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"), "[EMAIL_REDACTED]"),
@@ -244,6 +247,14 @@ class SensitiveDataRedactor:
 
     # Stable aliases used by integrations and security tests.
     redact_text = redact
+
+    def redact_value(self, value):
+        if isinstance(value, dict):
+            return {key: ("[REDACTED]" if re.search(r"(?i)password|secret|access_token|refresh_token|^token$|authorization|api.?key|address|phone|email", str(key))
+                          else self.redact_value(item)) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [self.redact_value(item) for item in value]
+        return self.redact(value) if isinstance(value, str) else value
 
     def sanitize_messages(self, messages: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         return [{**dict(message), "content": self.redact(str(message.get("content", "")))} for message in messages]

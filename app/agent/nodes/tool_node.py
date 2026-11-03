@@ -74,7 +74,14 @@ async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
     for tool_name, tool_args in tools_to_execute:
         logged_args = dict(tool_args)
         try:
-            if tool_name == "create_ticket":
+            if tool_name in {"query_order", "get_user_history"}:
+                from app.agent.read_authorization import authorize_read, HistoryReadInput
+                tool_args["user_id"] = state.user_id
+                if tool_name == "get_user_history":
+                    tool_args = HistoryReadInput.model_validate(tool_args).model_dump()
+                logged_args = dict(tool_args)
+                tool_args["authorization"] = authorize_read(tool_name, tool_args, state.actor_id or state.user_id)
+            elif tool_name == "create_ticket":
                 tool_args.update(user_id=state.user_id, session_id=state.session_id,
                                  idempotency_key=f"chat-ticket:{state.session_id}:{state.source_message_id}")
                 logged_args = dict(tool_args)

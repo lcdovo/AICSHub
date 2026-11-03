@@ -47,10 +47,10 @@ async def lifespan(app: FastAPI):
         app.state.dependency_health["database"] = {"status": "healthy", "backend": settings.DATABASE_URL.split(":", 1)[0]}
     except Exception as e:
         # 数据库是必需依赖：记录明确状态，但保留进程运行以便 /health 暴露原因。
-        logger.error("Database initialization failed: %s", e, exc_info=True)
+        logger.error("Database initialization failed: %s", type(e).__name__)
         app.state.dependency_health["database"] = {
             "status": "unhealthy", "backend": settings.DATABASE_URL.split(":", 1)[0],
-            "reason": str(e),
+            "reason": type(e).__name__,
         }
 
     app.state.dependency_health["llm"] = {
@@ -150,7 +150,7 @@ async def tracing_middleware(request: Request, call_next):
         return response
     except Exception as exc:
         duration_ms = int((time.time() - request.state.start_time) * 1000)
-        tracer.end_span(request_span, status="error", error_message=str(exc))
+        tracer.end_span(request_span, status="error", error_message=type(exc).__name__)
         tracer.end_trace(trace_id)
         structured_logger.log_error(
             trace_id=trace_id,

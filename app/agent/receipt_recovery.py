@@ -22,6 +22,9 @@ async def recover(tool_name: str, arguments: dict) -> ToolExecutionResult | None
         if claims["purpose"] != PURPOSE[tool_name]:
             return None
         payload = {k: v for k, v in arguments.items() if k != "authorization"}
+        from app.agent.ticket_authorization import request_hash
+        if claims["request_hash"] != request_hash(payload):
+            return None
         actor_id = claims.get("actor_id", int(claims["sub"]))
         owner_id = payload.get("user_id")
         key = payload.get("idempotency_key")
@@ -51,6 +54,20 @@ async def recover(tool_name: str, arguments: dict) -> ToolExecutionResult | None
             if (tool_name == "update_ticket_status" or actor_id != owner_id) and actor.role != "admin":
                 return None
             audit = await db.scalar(select(OperationAudit).where(OperationAudit.idempotency_key == scoped))
+            if audit is None and tool_name == "apply_refund":
+                from app.models.models import RefundAction
+                action = await db.get(RefundAction, payload.get("action_id"))
+                if (action is None or action.user_id != owner_id or action.session_id != payload.get("session_id")
+                        or action.version != payload.get("action_version") or action.status != "submitted"
+                        or action.order_id != payload["order_id"] or action.type != payload["type"]
+                        or action.reason != payload["reason"]):
+                    return None
+                audit = await db.scalar(select(OperationAudit).where(
+                    OperationAudit.operation == "apply_refund", OperationAudit.resource_id == action.application_id))
+                item = await db.get(RefundApplication, action.application_id)
+                if audit is not None and audit.status == "succeeded" and item is not None and item.user_id == owner_id:
+                    return ToolExecutionResult(success=True, data=audit.result_payload)
+                return None
             if (audit is None or audit.operation != operation or audit.status != "succeeded"
                     or (audit.request_payload or {}).get("request_hash") != digest):
                 return None
@@ -71,7 +88,7 @@ async def recover(tool_name: str, arguments: dict) -> ToolExecutionResult | None
                 item = await db.get(RefundApplication, audit.resource_id)
                 if item is None or item.user_id != owner_id:
                     return None
-                data = receipt(item)
+                data = audit.result_payload or receipt(item)
             else:
                 saved = audit.result_payload
                 data = {**saved["ticket"], "old_status": saved["old_status"], "new_status": saved["new_status"],

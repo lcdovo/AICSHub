@@ -107,11 +107,14 @@ class ChatService:
             tool_results=[{"success": tc.success, "data": tc.result} for tc in state.tool_calls],
             response_time_ms=state.execution_time_ms,
         )
+        from app.services.llm_governance import SensitiveDataRedactor
+        redactor = SensitiveDataRedactor()
+        report_query, report_response = redactor.redact(user_query), redactor.redact(state.reply or "")
         get_answer_evaluator().add_feedback_sample({
             "sample_id": str(assistant_message.id),
             "trace_id": trace_id,
-            "query": user_query,
-            "response": state.reply or "",
+            "query": report_query,
+            "response": report_response,
             "score": evaluation.to_dict(),
         })
         db.add(EvaluationResult(
@@ -132,8 +135,8 @@ class ChatService:
             route_version=governance.get("route_version", settings.LLM_ROUTE_VERSION),
             latency_ms=state.execution_time_ms,
             token_usage={"total_tokens": state.total_tokens},
-            user_query=user_query,
-            response=state.reply or "",
+            user_query=report_query,
+            response=report_response,
             categories=[],
             processed=False,
         ))
@@ -147,8 +150,8 @@ class ChatService:
             get_low_score_pool().add_sample(
                 sample_id=str(assistant_message.id),
                 session_id=session.id,
-                user_query=user_query,
-                response=state.reply or "",
+                user_query=report_query,
+                response=report_response,
                 score=evaluation.overall_score,
                 failure_reason=evaluation.failure_reason,
                 metadata={"trace_id": trace_id},
@@ -165,6 +168,8 @@ class ChatService:
                 )
 
         for index, trace_entry in enumerate(state.trace):
+            from app.services.llm_governance import SensitiveDataRedactor
+            trace_entry = SensitiveDataRedactor().redact_value(trace_entry)
             span_id = str(uuid.uuid4())
             db.add(AgentTrace(
                 trace_id=f"{trace_id}:{span_id}",
