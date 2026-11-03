@@ -326,6 +326,18 @@
       "sha256": "73f5ac969672094b2ab358dc76e6fe2efe6e8cbe361917c102eee3e5d682286f",
       "bytes": 16321,
       "snapshot": "response-node-composition-boundary"
+    },
+    {
+      "path": "reports/m4-closeout/live/current-schema-e0ec0c358e6a401abd9012a492fefff2.json",
+      "sha256": "9fe51e063343b01198f635ed840039a37c7004dd8d9e4a1ff4d4d246f87945dd",
+      "bytes": 1482,
+      "snapshot": "current-schema-658-calls"
+    },
+    {
+      "path": "reports/m4-closeout/live/authorization-ledger.json",
+      "sha256": "51b745fa2f067d06cb8e9fb25840f9c9c6a5cbdc422398dcf79be99b8f543f9a",
+      "bytes": 346,
+      "snapshot": "current-schema-658-calls"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

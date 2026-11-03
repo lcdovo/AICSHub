@@ -125,6 +125,7 @@ async def main():
             "contracts",
             "e2e",
             "privacy",
+            "current-schema",
         ],
         required=True,
     )
@@ -234,6 +235,40 @@ async def main():
     completed = {r["id"] for r in existing}
     rules = EnhancedIntentRecognizer()
     try:
+        if args.split == "current-schema":
+            state = AgentState(session_id="synthetic-current-schema", user_id=990001,
+                               user_message="请查询订单ORD950009的当前状态，同时回看我本人的历史咨询记录。只读取，不做任何申请或修改。")
+            before = ledger["request_count"]
+            parsed = None
+            error = None
+            async with model_context(990001, "m4-current-schema-probe", factory=factory):
+                try:
+                    value = await service.run_structured(
+                        PROMPT, input_payload(state), RequestUnderstanding,
+                        tags=["current_schema_probe"], max_tokens=500,
+                    )
+                    if value:
+                        parsed = validate_semantics(value, state).model_dump()
+                except Exception as exc:
+                    error = type(exc).__name__
+            tasks = (parsed or {}).get("read_tasks", [])
+            complete = bool(parsed and parsed["request_type"] == "query"
+                            and parsed["entities"]["order_id"] == "ORD950009"
+                            and {task["tool"] for task in tasks} == {"query_order", "get_user_history"})
+            report = {
+                "status": "PASS" if complete else "FAIL",
+                "scope": "single real supplier current RequestUnderstanding schema contract; not full graph or quality holdout",
+                "parsed": parsed, "error": error,
+                "requests": ledger["request_count"] - before,
+                "synthetic_only": True, "automatic_retry": False,
+                "business_tools_executed": False, "authorized_ledger": ledger,
+            }
+            path = OUT / ("current-schema-" + __import__("uuid").uuid4().hex + ".json")
+            path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(json.dumps({"artifact": str(path), **report}, ensure_ascii=False), flush=True)
+            if not complete:
+                raise SystemExit(1)
+            return
         if args.split == "privacy":
             from app.services.llm_service import IntentClassification
 

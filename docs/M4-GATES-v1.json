@@ -74,7 +74,7 @@
     },
     "AC-07-06": {
       "status": "PARTIAL",
-      "evidence_and_limit": "主图白名单及schema拒绝写工具/任意代码/user_id，计划订单与可见实体绑定，实际授权工具拒绝他人订单；真实模型恶意计划与新schema未验证"
+      "evidence_and_limit": "主图白名单/schema拒绝写工具/任意代码/user_id，订单与可见实体绑定且实际授权拒绝他人订单；当前新版schema两任务输出已1次真实UINO通过，但真实模型恶意计划尚未验证，保持PARTIAL"
     },
     "AC-07-07": {
       "status": "PASS_F_P_ISOLATED",
@@ -207,11 +207,11 @@
     "gate": false
   },
   "calls": {
-    "request_count": 657,
-    "reserved_input_tokens": 792478,
-    "reserved_output_tokens": 327416,
-    "input_tokens": 768921,
-    "output_tokens": 141433,
+    "request_count": 658,
+    "reserved_input_tokens": 793931,
+    "reserved_output_tokens": 327916,
+    "input_tokens": 770312,
+    "output_tokens": 141725,
     "max_requests": 660,
     "max_input_tokens": 1200000,
     "max_output_tokens": 330000,
@@ -230,6 +230,12 @@
     "stage_boundaries": "584404f"
   },
   "verification": [
+    {
+      "layer": "T2 current RequestUnderstanding schema single synthetic supplier call",
+      "path": "reports/m4-closeout/live/current-schema-e0ec0c358e6a401abd9012a492fefff2.json",
+      "status": "PASS",
+      "actual_requests": 1
+    },
     {
       "layer": "T0 response dependencies and complete node composition contracts",
       "path": "reports/offline/20261104-023928-960258",
