@@ -337,18 +337,18 @@ class ApplyRefundTool(BaseTool):
                     }
                 refundable_amount = float(order_row.total_amount)
         except Exception:
-            # 数据库不可用时回退到示例订单校验
-            valid_orders = ["ORD20260801", "ORD20260802"]
-            if order_id not in valid_orders:
-                return {
-                    "success": False,
-                    "error": f"订单 {order_id} 不支持退换货",
-                    "hint": "仅已发货/已完成的订单可申请退换货。待付款或已取消的订单无法申请。",
-                }
-            refundable_amount = 299.0
+            # 无法读取权威订单时，既不能校验归属/资格，也不能构造申请回执。
+            # 不透传连接异常；本分支尚未执行提交，交由调用方明确处理失败。
+            return {
+                "success": False,
+                "error": "订单服务暂时不可用，未提交退换货申请",
+                "hint": "请稍后重试或联系人工客服",
+                "error_type": "dependency_unavailable",
+                "retryable": False,
+            }
 
         # 订单归属已在数据库查询（Order.user_id == user_id）中校验；
-        # 数据库不可用时的降级路径无法做归属校验，但不应硬编码拒绝合法用户。
+        # 只有完成查询与资格校验后才能继续后续处理。
         refund_type_labels = {"refund": "仅退款", "return": "退货退款", "exchange": "换货"}
 
         return {
