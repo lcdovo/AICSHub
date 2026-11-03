@@ -206,6 +206,30 @@
       "sha256": "cf5733fe2cfc7a83d5d0ff850a8fa75f8056669b05e158f5b1ad4ec9e9a1da60",
       "bytes": 604,
       "snapshot": "model-identity-entrypoints"
+    },
+    {
+      "path": "reports/offline/20261104-015246-320159/junit.xml",
+      "sha256": "847e31906cc920dcb198d42a9700ef5f79544bb03c592d5214cf1a6fd20e3f87",
+      "bytes": 9963,
+      "snapshot": "typed-evidence-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-015623-452543/junit.xml",
+      "sha256": "0bbcf61a4e904cc2de608081921e08e740e36a6d5a4bf1c11d6904b54f49a1f8",
+      "bytes": 2670,
+      "snapshot": "typed-evidence-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-015642-987258/junit.xml",
+      "sha256": "48d7921243a209223c262ad28c081c7daad9c3cdac6e1490cf56483f27d85a04",
+      "bytes": 10748,
+      "snapshot": "typed-evidence-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-015114-663605/junit.xml",
+      "sha256": "45a7119890e7ee786dc96ce26053b79c04c2f7a34369ebaca3d783634a2189c9",
+      "bytes": 88343,
+      "snapshot": "typed-evidence-boundary"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

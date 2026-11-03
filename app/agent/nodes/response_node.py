@@ -40,12 +40,11 @@ STRONG_EMOTION_MARKERS = ("气死", "垃圾", "太气人", "打不通", "敷衍"
 
 async def validate_candidate(self: "AgentGraph", state: AgentState) -> bool:
     """The same gate checks every generated draft, including regeneration."""
-    if state.collected_info.get("kb_results") and any(item.get("version_id") for item in state.collected_info["kb_results"]):
+    if state.current_evidence() and any(item.get("version_id") for item in state.current_evidence()):
         import asyncio
         from app.services.knowledge_base import get_knowledge_base
-        if not await asyncio.to_thread(get_knowledge_base().evidence_is_current,state.collected_info["kb_results"]):
-            state.collected_info["rag_grounded"]=False
-            state.collected_info["kb_results"]=[]
+        if not await asyncio.to_thread(get_knowledge_base().evidence_is_current,state.current_evidence()):
+            state.invalidate_evidence("knowledge_version_changed")
             state.reply="知识版本已变化，请重新提问以读取最新发布内容。"
     state.collected_info.pop("llm_judge", None)
     state.collected_info.pop("inline_self_check", None)
@@ -61,7 +60,7 @@ async def validate_candidate(self: "AgentGraph", state: AgentState) -> bool:
     if self._rag_judge_applicable(state) and not state.collected_info.get("answer_from_cache"):
         judgement = await self.llm_judge.judge(
             response=body, user_query=state.user_message,
-            kb_context=state.collected_info.get("kb_results", []),
+            kb_context=state.current_evidence(),
             tool_evidence=self._tool_evidence_text(state),
         )
         if judgement is not None:
@@ -80,7 +79,7 @@ async def validate_candidate(self: "AgentGraph", state: AgentState) -> bool:
                 report["issues"].append({"type": "evidence_rejected", "severity": "error"})
             state.collected_info["rag_refused"] = refused
     from app.agent.request_understanding import ReviewResult
-    state.review_result=ReviewResult(passed=passed)
+    state.review_result=ReviewResult(passed=passed, evidence_version=(state.evidence_bundle.fingerprint() if state.evidence_bundle else None))
     report["passed"] = passed
     state.collected_info["validation"] = report
     state.collected_info["answer_validated"] = passed
@@ -100,15 +99,14 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
     if state.collected_info.get("smalltalk") and not state.reply:
         state.reply = self._get_default_reply(IntentType.GENERAL, state.user_message)
 
-    if state.collected_info.get("kb_results") and any(item.get("version_id") for item in state.collected_info["kb_results"]):
+    if state.current_evidence() and any(item.get("version_id") for item in state.current_evidence()):
         import asyncio
         from app.services.knowledge_base import get_knowledge_base
-        if not await asyncio.to_thread(get_knowledge_base().evidence_is_current,state.collected_info["kb_results"]):
-            state.collected_info["kb_results"]=[]
-            state.collected_info["rag_grounded"]=False
+        if not await asyncio.to_thread(get_knowledge_base().evidence_is_current,state.current_evidence()):
+            state.invalidate_evidence("knowledge_version_changed")
             state.reply="知识版本已变化，请重新提问以读取最新发布内容。"
     has_business_tool = any(tc.tool_name != "hybrid_search" for tc in state.tool_calls)
-    grounded = bool(not is_shadow and state.collected_info.get("rag_grounded") and state.collected_info.get("kb_results"))
+    grounded = bool(not is_shadow and state.collected_info.get("rag_grounded") and state.current_evidence())
     answer_cache_key = None
     generated_by_llm = False
     if not state.reply:
@@ -169,9 +167,10 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
                 state.human_reason = "生成后回答校验未通过"
                 return AgentNode.HUMAN_HANDOFF
 
-    if grounded and not state.collected_info.get("rag_refused") and not handoff_done:
-        state.reply = self._add_rag_citations(state.reply, state.collected_info["kb_results"])
+    if grounded and state.collected_info.get("rag_grounded") and not state.collected_info.get("rag_refused") and not handoff_done:
+        state.reply = self._add_rag_citations(state.reply, state.current_evidence())
     if (generated_by_llm and answer_cache_key and state.collected_info.get("answer_validated")
+            and state.collected_info.get("rag_grounded") and state.current_evidence()
             and not state.need_human and not state.collected_info.get("rag_refused")
             and not state.collected_info.get("llm_governance", {}).get("degraded")):
         await self._answer_cache_set(answer_cache_key, state.reply)
@@ -228,7 +227,7 @@ def build_answer_cache_key(self: "AgentGraph", state: AgentState) -> str:
     """Scope reuse to the user, semantic context, current evidence and policy."""
     evidence = [
         {key: item.get(key) for key in ("id", "title", "content", "source", "version")}
-        for item in state.collected_info.get("kb_results", [])[:3]
+        for item in state.current_evidence()[:3]
     ]
     payload = {
         "user_id": state.user_id, "intent": state.detected_intent,
@@ -236,6 +235,7 @@ def build_answer_cache_key(self: "AgentGraph", state: AgentState) -> str:
         "prompt": self._build_llm_prompt(state),
         "history": [{"role": m.get("role"), "content": m.get("content")} for m in state.messages],
         "summary": state.conversation_summary, "evidence": evidence,
+        "evidence_snapshot": state.evidence_bundle.fingerprint() if state.evidence_bundle else None,
         "versions": [settings.LLM_PROMPT_VERSION, settings.LLM_MODEL_VERSION,
                      settings.LLM_SCHEMA_VERSION, settings.LLM_ROUTE_VERSION],
         "model": [settings.LLM_API_BASE, settings.LLM_MODEL, settings.LLM_BACKUP_BASE,
@@ -395,7 +395,7 @@ def rag_judge_applicable(self: "AgentGraph", state: AgentState) -> bool:
     return (
         bool(state.collected_info.get("rag_grounded"))
         and not state.missing_slots
-        and bool(state.collected_info.get("kb_results"))
+        and bool(state.current_evidence())
     )
 
 
@@ -546,7 +546,7 @@ def build_llm_prompt(self: "AgentGraph", state: AgentState) -> str:
         for tc in failed_tools:
             parts.append(f"  - {tc.tool_name}: {tc.error_message or '未知错误'}")
 
-    kb_results = state.collected_info.get("kb_results", [])
+    kb_results = state.current_evidence()
     if kb_results:
         parts.append("【知识库检索结果】")
         for i, result in enumerate(kb_results[:3], 1):

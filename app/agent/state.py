@@ -42,6 +42,8 @@ class AgentState(BaseModel):
     action_intent: Optional[ActionIntent] = None
     review_result: Optional[ReviewResult] = None
     evidence_bundle: Optional[EvidenceBundle] = None
+    retrieval_metadata: Dict[str, Any] = Field(default_factory=dict)
+    retrieval_error: Optional[str] = None
     understanding_mode: Optional[str] = None
     strategy_version: Optional[str] = None
     node_steps: int = 0
@@ -88,6 +90,61 @@ class AgentState(BaseModel):
 
     # 用户情绪
     user_emotion: str = "neutral"  # neutral, positive, negative, angry
+
+    def current_evidence(self) -> List[Dict[str, Any]]:
+        """类型证据是主链权威；兼容旧内部调用时仅在尚无bundle时读取旧字段。"""
+        if self.evidence_bundle is not None:
+            return deepcopy(self.evidence_bundle.items)
+        return deepcopy(self.collected_info.get("kb_results", []))
+
+    def invalidate_evidence(self, reason: str) -> None:
+        epoch = self.evidence_bundle.knowledge_epoch if self.evidence_bundle else None
+        self.evidence_bundle = EvidenceBundle(knowledge_epoch=epoch, items=[], support="unsupported")
+        self.retrieval_error = reason
+        self.review_result = None
+        self.collected_info.update(kb_results=[], rag_grounded=False, rag_fallback_reason=reason)
+        for key in ("best_match_score", "validation", "answer_validated", "answer_from_cache", "llm_judge"):
+            self.collected_info.pop(key, None)
+        for call in self.tool_calls:
+            if call.tool_name == "hybrid_search":
+                call.success = False
+                call.result = {"success": False, "results": [], "error": reason,
+                               "evidence_bundle": self.evidence_bundle.model_dump()}
+
+    def accept_retrieval(self, result: Dict[str, Any]) -> bool:
+        """单一入口核实检索契约并独立复制，失败或双投影冲突都不能作为证据。"""
+        metadata = result.get("meta") or {}
+        if not isinstance(metadata, dict):
+            self.retrieval_metadata = {}
+            self.invalidate_evidence("retrieval_contract_invalid")
+            return False
+        self.retrieval_metadata = deepcopy(metadata)
+        self.collected_info["kb_search_meta"] = deepcopy(self.retrieval_metadata)
+        if result.get("success") is not True:
+            self.invalidate_evidence("retrieval_failed")
+            return False
+        try:
+            bundle = EvidenceBundle.model_validate(result.get("evidence_bundle") or {
+                "items": result.get("results", []),
+                "knowledge_epoch": self.retrieval_metadata.get("knowledge_epoch"),
+            })
+            if bundle.items != result.get("results", []):
+                raise ValueError("evidence_projection_mismatch")
+            epoch = self.retrieval_metadata.get("knowledge_epoch")
+            if epoch is not None and epoch != bundle.knowledge_epoch:
+                raise ValueError("evidence_epoch_mismatch")
+        except (ValueError, TypeError):
+            self.invalidate_evidence("retrieval_contract_invalid")
+            return False
+        bundle.support = "unknown"
+        self.evidence_bundle = bundle.model_copy(deep=True)
+        self.retrieval_error = None
+        self.review_result = None
+        self.collected_info["kb_results"] = deepcopy(bundle.items)
+        self.collected_info.pop("best_match_score", None)
+        for key in ("validation", "answer_validated", "answer_from_cache", "llm_judge"):
+            self.collected_info.pop(key, None)
+        return True
 
     def for_next_turn(self, user_id: int, message: str) -> "AgentState":
         """Copy conversation facts and unfinished actions; reset every turn artifact."""

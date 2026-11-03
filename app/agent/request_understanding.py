@@ -81,10 +81,19 @@ class ActionIntent(BaseModel):
 
 
 class EvidenceBundle(BaseModel):
-    schema_version: int = 1
-    knowledge_epoch: int | None = None
+    model_config = ConfigDict(extra="forbid", strict=True)
+    schema_version: Literal[1] = 1
+    knowledge_epoch: int | None = Field(default=None, ge=0)
     items: list[dict] = Field(default_factory=list)
     support: Literal["supported", "partial", "unsupported", "unknown"] = "unknown"
+
+    def fingerprint(self) -> str:
+        import hashlib
+        # 绑定完整内容、版本、来源与epoch；排名不等于证据支持度。
+        payload = {"schema_version": self.schema_version, "knowledge_epoch": self.knowledge_epoch,
+                   "items": self.items}
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False,
+                                         default=str).encode()).hexdigest()
 
 
 class ReviewResult(BaseModel):

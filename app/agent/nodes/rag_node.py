@@ -55,17 +55,19 @@ async def rag_retrieval_node(self: "AgentGraph", state: AgentState) -> str:
     else:
         search_result = await asyncio.to_thread(knowledge_base.search, query=query, top_k=top_k)
 
+    if not isinstance(search_result, dict):
+        search_result = {"success": False, "results": [], "meta": {}}
+    contract_ok = state.accept_retrieval(search_result)
+    recorded_result = search_result if contract_ok else {
+        "success": False, "results": [], "meta": state.retrieval_metadata,
+        "error": state.retrieval_error, "evidence_bundle": state.evidence_bundle.model_dump(),
+    }
     state.add_tool_call(
         tool_name="hybrid_search",
         arguments={"query": query, "top_k": top_k},
-        result=search_result,
-        success=search_result.get("success", False),
+        result=recorded_result,
+        success=contract_ok,
     )
-
-    from app.agent.request_understanding import EvidenceBundle
-    state.evidence_bundle=EvidenceBundle.model_validate(search_result.get("evidence_bundle") or {"items":search_result.get("results",[])})
-    state.collected_info["kb_results"] = search_result.get("results", [])
-    state.collected_info["kb_search_meta"] = search_result.get("meta", {})
 
     if state.collected_info["kb_results"]:
         best_match = state.collected_info["kb_results"][0]
@@ -74,11 +76,11 @@ async def rag_retrieval_node(self: "AgentGraph", state: AgentState) -> str:
         )
 
     score = float(state.collected_info.get("best_match_score") or 0)
-    score_type=search_result.get("meta",{}).get("score_type")
+    score_type=state.retrieval_metadata.get("score_type")
     if not state.collected_info["kb_results"] or (score_type != "rrf" and score < self.RAG_MIN_SCORE):
         state.collected_info["rag_grounded"] = False
         state.collected_info["rag_fallback_reason"] = (
-            "no_results" if not state.collected_info["kb_results"] else "low_score"
+            state.retrieval_error or ("no_results" if not state.collected_info["kb_results"] else "low_score")
         )
         state.reply = (
             "我暂时没有在知识库中找到足够可靠的答案。"
