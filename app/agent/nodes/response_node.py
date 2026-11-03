@@ -160,9 +160,14 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
                 "为避免误导，建议您补充更具体的信息，或回复“转人工”由客服协助确认。"
             )
         elif not passed:
-            state.need_human = True
-            state.human_reason = "生成后回答校验未通过"
-            return AgentNode.HUMAN_HANDOFF
+            if state.read_plan:
+                # 只读计划审查失败仍须只读终止，不能隐式创建人工请求。
+                state.reply = "本轮查询结果未通过校验，请核对查询对象后重试；没有执行后续业务操作。"
+                state.needs_clarification = True
+            else:
+                state.need_human = True
+                state.human_reason = "生成后回答校验未通过"
+                return AgentNode.HUMAN_HANDOFF
 
     if grounded and not state.collected_info.get("rag_refused") and not handoff_done:
         state.reply = self._add_rag_citations(state.reply, state.collected_info["kb_results"])

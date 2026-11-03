@@ -18,7 +18,7 @@
     },
     "AC-06-04": {
       "status": "PARTIAL",
-      "evidence_and_limit": "条件先读路由T0通过；真实多轮前置/写入全链未补齐"
+      "evidence_and_limit": "条件先读路由T0通过；真实多轮前置/写入全链未补齐；主图并行只读条件计划已验证0预览/申请，独立模型条件理解未全量重验"
     },
     "AC-06-05": {
       "status": "PARTIAL",
@@ -69,12 +69,12 @@
       "evidence_and_limit": "沿用M2 SQL持久action和回执；本次未补全部checkpoint错位组合"
     },
     "AC-07-05": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "双只读白名单并行T0通过；尚未接入主图执行多诉求计划"
+      "status": "PASS_C_P_ISOLATED",
+      "evidence_and_limit": "主图最大2个只读任务并行、既有签名/实时owner授权、条件动作只查不写；失败/父取消回收、审查失败澄清，91项相关检查通过；模型/历史为合成替身，新schema真实模型未验"
     },
     "AC-07-06": {
       "status": "PARTIAL",
-      "evidence_and_limit": "只读白名单拒绝写工具/任意代码/user_id；主图完整恶意计划真实模型验收未执行"
+      "evidence_and_limit": "主图白名单及schema拒绝写工具/任意代码/user_id，计划订单与可见实体绑定，实际授权工具拒绝他人订单；真实模型恶意计划与新schema未验证"
     },
     "AC-07-07": {
       "status": "PARTIAL",
@@ -229,6 +229,16 @@
   },
   "verification": [
     {
+      "layer": "T0 full at b28fc49 before read-plan slice",
+      "path": "reports/offline/20261104-011954-438273",
+      "passed": 634
+    },
+    {
+      "layer": "T0 main graph read-plan integration",
+      "path": "reports/offline/20261104-012357-560348",
+      "passed": 91
+    },
+    {
       "layer": "T0 full at 911fb6b before gateway/policy followup",
       "path": "reports/offline/20261104-010817-633888",
       "passed": 618
@@ -295,8 +305,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 19,
+    "partial": 18,
     "fail": 1,
-    "layer_limited_pass": 10
+    "layer_limited_pass": 11
   }
 }

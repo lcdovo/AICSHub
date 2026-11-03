@@ -6,6 +6,7 @@ from typing import Any, List, Dict, Optional, Literal
 from pydantic import BaseModel, Field
 from copy import deepcopy
 from datetime import datetime
+from app.agent.read_plan import ReadTask
 
 
 class ToolCall(BaseModel):
@@ -44,6 +45,7 @@ class AgentState(BaseModel):
     understanding_mode: Optional[str] = None
     strategy_version: Optional[str] = None
     node_steps: int = 0
+    read_plan: List[ReadTask] = Field(default_factory=list)
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
     actor_id: Optional[int] = None

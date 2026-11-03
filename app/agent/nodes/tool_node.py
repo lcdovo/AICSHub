@@ -15,6 +15,32 @@ logger = logging.getLogger(__name__)
 
 
 async def tool_execution_node(self: "AgentGraph", state: AgentState) -> str:
+    if state.read_plan:
+        from app.agent.read_plan import ReadPrincipal, run_authorized_reads, summarize_reads
+        # 即使内部调用绕过理解节点，也必须重新验证计划，模型不能提供Principal。
+        from app.agent.request_understanding import validate_semantics
+        try:
+            if not state.understanding or state.read_plan != state.understanding.read_tasks:
+                raise ValueError("read_plan_without_understanding")
+            validate_semantics(state.understanding, state)
+            results = await run_authorized_reads(state.read_plan, ReadPrincipal(
+                actor_id=state.actor_id or state.user_id, user_id=state.user_id,
+                session_id=state.session_id,
+            ))
+            for task, (payload, result) in zip(state.read_plan, results):
+                if result is None:
+                    result = ToolExecutionResult(success=False, error="只读服务不可用", error_type="unavailable")
+                state.add_tool_call(task.tool, payload, result.model_dump(), result.success,
+                                    result.error, result.error_type)
+                if result.success:
+                    state.collected_info[f"{task.tool}_result"] = result.data
+            state.reply = summarize_reads(state.read_plan, results,
+                                          has_conditions=bool(state.understanding.conditions))
+        except (ValueError, TypeError, TimeoutError):
+            state.reply = "本轮只读查询未完成，请核对查询对象后重试；后续业务操作尚未执行。"
+            state.needs_clarification = True
+            return AgentNode.RESPONSE_GENERATION
+        return AgentNode.RESULT_VERIFICATION
     state.collected_info["user_id"] = state.user_id
     state.collected_info["session_id"] = state.session_id
     extracted_info = self._extract_info_from_message(state.user_message)

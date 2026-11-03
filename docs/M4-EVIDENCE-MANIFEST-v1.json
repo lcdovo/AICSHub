@@ -128,6 +128,18 @@
       "sha256": "4ffdadf6b480bc1d42aa3e76ead24f0e6ae7e4036d8e5f25f5ce64141990e9c6",
       "bytes": 80154,
       "snapshot": "policy-rollback-slice"
+    },
+    {
+      "path": "reports/offline/20261104-012357-560348/junit.xml",
+      "sha256": "d575bd92fd2354b9fca8c4c771ec2da2149657013150b47698978ccbb9345d88",
+      "bytes": 13157,
+      "snapshot": "main-graph-read-plan"
+    },
+    {
+      "path": "reports/offline/20261104-011954-438273/junit.xml",
+      "sha256": "b9ed75774d6f53ef9eab42db687decb4fe635af0d8b522a84a2bd5f7e448d6dd",
+      "bytes": 82298,
+      "snapshot": "main-graph-read-plan"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",
