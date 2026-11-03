@@ -85,3 +85,5 @@ RAG节点依赖切片新增：`tests/test_m4_node_dependencies.py`、`docs/M4-NO
 流程结论切片新增：`app/agent/flow_contracts.py`、`tests/test_m4_flow_contract.py`；修改AgentState、统一理解及意图/检索/响应/人工节点。
 
 测试来源切片新增：`scripts/test_provenance.py`、`tests/test_test_provenance.py`、`docs/TEST-EVIDENCE-v1.md`；修改T0执行器使源码漂移的绿色用例不被误当有效证据。
+
+全项目需求审计新增：`docs/PROJECT-AC-INDEX-v1.md`、`docs/PROJECT-AC-INDEX-v1.json`，覆盖原195项AC并保留标准哈希与分层证据限度。

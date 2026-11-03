@@ -1,0 +1,2807 @@
+{
+  "date": "2026-11-04",
+  "purpose": "whole project requirement index, not a completion claim",
+  "complete": false,
+  "reference_head": "3f507effaac2c697e7df7ff2d1ceb4076fee6f0f",
+  "normative_files": [
+    {
+      "path": "docs/优化验收规范-v1.md",
+      "sha256": "55651b3084a958ba17e600b6be6aad647fe6b807007a3a04be8e148803c54053",
+      "original_user_untracked_file": true
+    },
+    {
+      "path": "docs/整体优化方案-v1.md",
+      "sha256": "4a2686819142488a99a3fed871afd1382c724745f6f395b8741e207215300e2f",
+      "original_user_untracked_file": true
+    }
+  ],
+  "requirements": 195,
+  "priorities": {
+    "P0": 105,
+    "P1": 90
+  },
+  "states": {
+    "NO_GATE_MAPPING_REQUIRES_AUDIT": 78,
+    "HISTORICAL_ACCEPTED_REVALIDATION_DUE": 87,
+    "PARTIAL_CURRENT": 29,
+    "FAIL": 1
+  },
+  "rules": [
+    "all 195 P0/P1 assertions retained verbatim",
+    "historical stage acceptance is not current integrated acceptance",
+    "no gate mapping does not prove implementation absent",
+    "T0/T1/T2/browser/deployment evidence cannot substitute one another",
+    "M4 quality fail retained; M5/M6/M7 not completed by incidental supporting work"
+  ],
+  "items": [
+    {
+      "ac": "AC-01-01",
+      "priority_and_layers": "P0/C+B",
+      "procedure": "合成用户咨询→查单→申请退款→确认→查看记录",
+      "required_assertion": "每个成功动作都有同用户持久记录；说明申请待审，未冒充实际打款",
+      "spec_line": 114,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-01-02",
+      "priority_and_layers": "P1/B",
+      "procedure": "从用户提交工单到管理员处理，再回到用户刷新",
+      "required_assertion": "同一工单ID和真实状态贯穿两端，处理结果可查询",
+      "spec_line": 115,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-01-03",
+      "priority_and_layers": "P1/B",
+      "procedure": "发起人工请求、分配、处理",
+      "required_assertion": "UI准确区分请求受理与真人接通；没有实时聊天时不显示已接通",
+      "spec_line": 116,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-01-04",
+      "priority_and_layers": "P0/C+B",
+      "procedure": "关闭真实通知/支付渠道，仅保留模拟适配器",
+      "required_assertion": "所有回执标记模拟或未配置，不能显示真实发送/到账",
+      "spec_line": 117,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-01-05",
+      "priority_and_layers": "P1/B",
+      "procedure": "空数据库打开用户/管理员各页面",
+      "required_assertion": "数量与状态真实，无虚构在线、队列、SLA或假演示记录",
+      "spec_line": 118,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-01-06",
+      "priority_and_layers": "P1/C",
+      "procedure": "对照能力矩阵逐项演示，不支持操作也尝试",
+      "required_assertion": "不支持能力有明确提示；文档、页面和API行为一致",
+      "spec_line": 119,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-01",
+      "priority_and_layers": "P1/B",
+      "procedure": "分别登录A、M，直接输入管理员路由",
+      "required_assertion": "A无法得到管理数据；M可按授权操作；未知路由安全回退",
+      "spec_line": 125,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-02",
+      "priority_and_layers": "P0/B",
+      "procedure": "SA生成中切到SB，再返回SA",
+      "required_assertion": "消息、token、Trace和操作卡不串会话，不把迟到响应写入当前会话",
+      "spec_line": 126,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-03",
+      "priority_and_layers": "P1/B",
+      "procedure": "启动慢生成/Judge",
+      "required_assertion": "阶段进度可见，未审查草稿不可见，最终消息只出现一次",
+      "spec_line": 127,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-04",
+      "priority_and_layers": "P0/B",
+      "procedure": "双击确认、快速重复提交、按Enter同时点按钮",
+      "required_assertion": "同一action只产生一次业务写入，按钮状态与真实执行一致",
+      "spec_line": 128,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-05",
+      "priority_and_layers": "P1/B+F",
+      "procedure": "提交后断网，恢复网络并点击恢复",
+      "required_assertion": "先查run；不自动重新创建动作；已完成结果补回页面",
+      "spec_line": 129,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-06",
+      "priority_and_layers": "P1/B",
+      "procedure": "工单/知识编辑提交失败后重试",
+      "required_assertion": "表单输入保留，相同请求沿用幂等键；改参数后生成新请求身份",
+      "spec_line": 130,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-07",
+      "priority_and_layers": "P1/B",
+      "procedure": "打开历史回答引用及已更新文档",
+      "required_assertion": "显示回答使用的版本/片段；当前版本变化不会篡改历史依据",
+      "spec_line": 131,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-08",
+      "priority_and_layers": "P1/B",
+      "procedure": "360/390/768/1280/1440宽度运行主要页面",
+      "required_assertion": "无页面级横向溢出；确认和取消可达；长引用/表格在局部处理",
+      "spec_line": 132,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-09",
+      "priority_and_layers": "P1/B",
+      "procedure": "键盘打开弹窗、Tab、Esc、提交后返回",
+      "required_assertion": "焦点受控且恢复，字段标签/错误可读，不能被遮挡而误确认",
+      "spec_line": 133,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-02-10",
+      "priority_and_layers": "P0/B",
+      "procedure": "A打开私有数据后退出，再登录B",
+      "required_assertion": "Zustand、Query、历史、下载链接和未完成卡片不泄露A数据",
+      "spec_line": 134,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-03-01",
+      "priority_and_layers": "P0/I",
+      "procedure": "REST与WS对相同独立fixture执行咨询/退款/工单",
+      "required_assertion": "业务记录、授权、状态与持久化结果等价，差别仅在传输",
+      "spec_line": 140,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-03-02",
+      "priority_and_layers": "P0/I",
+      "procedure": "通过所有兼容会话创建入口创建会话后立刻聊天",
+      "required_assertion": "所有者正确，Redis状态schema一致，无整数/对象冲突",
+      "spec_line": 141,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-03-03",
+      "priority_and_layers": "P0/I",
+      "procedure": "M显式为A代建会话",
+      "required_assertion": "owner为A，actor为M；若产品不允许则明确拒绝，不能悄悄建给M",
+      "spec_line": 142,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-03-04",
+      "priority_and_layers": "P1/I",
+      "procedure": "WS发送非法JSON、message=null/数字、user_id非法、超长消息",
+      "required_assertion": "返回稳定错误码，未新增消息或动作；后续合法帧仍按定义处理",
+      "spec_line": 143,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-03-05",
+      "priority_and_layers": "P1/I",
+      "procedure": "关闭SA后分别REST/WS发送",
+      "required_assertion": "两种传输一致拒绝，除非经过显式且授权的重开接口",
+      "spec_line": 144,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-03-06",
+      "priority_and_layers": "P1/I",
+      "procedure": "请求负分页、过大page_size、无效status与游标",
+      "required_assertion": "参数边界明确，错误不成为500，无无界查询",
+      "spec_line": 145,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-03-07",
+      "priority_and_layers": "P1/I+P",
+      "procedure": "一页20会话查询最后消息，记录SQL数量",
+      "required_assertion": "不随会话数执行逐行额外查询；排序和游标稳定",
+      "spec_line": 146,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-03-08",
+      "priority_and_layers": "P1/I",
+      "procedure": "旧协议客户端消费新后端事件",
+      "required_assertion": "兼容期旧事件可正确完成；新字段不破坏旧处理器，弃用有记录",
+      "spec_line": 147,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-03-09",
+      "priority_and_layers": "P1/I",
+      "procedure": "制造冲突、忙锁、超限、依赖失败",
+      "required_assertion": "HTTP/WS映射一致；error_code/retryable/run_id明确，响应不泄露栈与连接串",
+      "spec_line": 148,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-04-01",
+      "priority_and_layers": "P0/I",
+      "procedure": "A对B的会话/消息/Run/工单/退款/证据逐项读取与写入",
+      "required_assertion": "全部拒绝；无B数据片段、状态变化或侧信道回执",
+      "spec_line": 154,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-02",
+      "priority_and_layers": "P0/I",
+      "procedure": "伪造请求user_id、模型entities.user_id和工具owner",
+      "required_assertion": "可信Principal不变，不能冒用B；管理员代操作显式审计",
+      "spec_line": 155,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-03",
+      "priority_and_layers": "P0/I",
+      "procedure": "B先用K建工单，A随后用相同K",
+      "required_assertion": "A得到自己的作用域结果或冲突，绝不返回B工单；覆盖E04",
+      "spec_line": 156,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-04",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "同主体同K并发10次创建，另一次改参数",
+      "required_assertion": "相同输入仅一记录；改参数返回409/明确冲突，不能返回旧成功",
+      "spec_line": 157,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-05",
+      "priority_and_layers": "P0/I",
+      "procedure": "撤销/注销Access Token后新建WS并在旧连接发送",
+      "required_assertion": "新动作被拒绝；版本撤销策略跨HTTP/WS一致",
+      "spec_line": 158,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-06",
+      "priority_and_layers": "P0/I",
+      "procedure": "用户已连WS后禁用/删除账号或撤销角色",
+      "required_assertion": "下一轮重新授权，禁止继续执行动作或读取管理数据",
+      "spec_line": 159,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-07",
+      "priority_and_layers": "P0/I",
+      "procedure": "Access Token到期、错误签名、refresh当access使用",
+      "required_assertion": "明确拒绝，不执行工具；刷新轮换不能重用已撤销refresh",
+      "spec_line": 160,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-08",
+      "priority_and_layers": "P1/I+B",
+      "procedure": "使用一次性WS票据连接后重放、跨用途、过期连接",
+      "required_assertion": "按票据契约拒绝；日志不含长期Token；Cookie方案同时测Origin/CSRF",
+      "spec_line": 161,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-04-09",
+      "priority_and_layers": "P0/I+L",
+      "procedure": "文档/历史/工具字段包含越权注入文本",
+      "required_assertion": "仅作为数据处理，不能改变Principal、工具策略或确认状态",
+      "spec_line": 162,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-10",
+      "priority_and_layers": "P1/I",
+      "procedure": "上传超限、伪扩展、乱码、解析超时、恶意文件名",
+      "required_assertion": "有界读取/处理，错误文件不发布，临时资源清理且无路径越界",
+      "spec_line": 163,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-04-11",
+      "priority_and_layers": "P0/I",
+      "procedure": "检查日志、Trace、报告、指标及错误输出",
+      "required_assertion": "无密钥/Token/完整个人资料；脱敏错误不破坏业务事实核验",
+      "spec_line": 164,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-04-12",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "删除合成会话后检查库、缓存、摘要、checkpoint与引用策略",
+      "required_assertion": "按保留策略删除/失效；迟到任务不复活会话，必要审计仅保留受控信息",
+      "spec_line": 165,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-05-01",
+      "priority_and_layers": "P0/U+C",
+      "procedure": "上轮有证据、草稿、校验、工具结果，进入下一轮",
+      "required_assertion": "仅必要历史/槽位/未完成action引用保留，所有本轮产物清空",
+      "spec_line": 171,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-02",
+      "priority_and_layers": "P0/I",
+      "procedure": "新建会话，读取Redis状态再聊天",
+      "required_assertion": "快照是带schema对象，不覆盖元数据；E06不再出现",
+      "spec_line": 172,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-03",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "有历史与待确认action后清空本次验收缓存",
+      "required_assertion": "从数据库恢复上下文和action；不丢历史、不自动确认",
+      "spec_line": 173,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-04",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "分别重启app和Redis，再继续未完成申请",
+      "required_assertion": "可恢复来源与状态一致；已执行结果不被遗忘或再次执行",
+      "spec_line": 174,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-05",
+      "priority_and_layers": "P1/I",
+      "procedure": "消息超摘要阈值后再新增消息",
+      "required_assertion": "summary_cursor准确，不遗漏/重复已覆盖历史，版本可查询",
+      "spec_line": 175,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-06",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "两worker交错续聊，给旧worker延迟快照",
+      "required_assertion": "新版本不被旧写覆盖，第二轮读到第一轮已提交结果",
+      "spec_line": 176,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-07",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "持锁中租约丢失或旧令牌释放新锁",
+      "required_assertion": "旧worker停止提交，不能删新锁；动作按回执恢复",
+      "spec_line": 177,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-08",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "Redis不可用，分别单worker与双worker运行",
+      "required_assertion": "单worker声明降级；双worker拒绝不安全写入或使用验收过的替代协调",
+      "spec_line": 178,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-09",
+      "priority_and_layers": "P0/I",
+      "procedure": "A/B召回长期记忆；A历史含“确认退款”",
+      "required_assertion": "记忆不串用户、不授权新action、不作为当前订单事实",
+      "spec_line": 179,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-05-10",
+      "priority_and_layers": "P1/P+F",
+      "procedure": "创建/关闭大量合成会话并等待回收",
+      "required_assertion": "内存状态/摘要/锁注册表有界；回收不清除数据库事实",
+      "spec_line": 180,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-01",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "“退款多久到账”，分别无订单/有历史订单/显式订单",
+      "required_assertion": "均识别咨询或进度查询，不因订单号存在创建申请",
+      "spec_line": 186,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "T0 REST/WS六用例、T2两条真实理解图链；完整历史组合未逐条真实验证"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-02",
+      "priority_and_layers": "P1/C+L",
+      "procedure": "“怎样减少耳机的底噪”及同义改写",
+      "required_assertion": "技术问题，不因单字“减”归促销；检索查询保持耳机对象",
+      "spec_line": 187,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "独立留出technical50条；完整对象保留/检索质量未逐条标注"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-03",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "“不要退款”“不是申请，只问政策”“客服说能退是真的吗”",
+      "required_assertion": "否定/转述正确，request_type不误设提交动作",
+      "spec_line": 188,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "否定/转述替身及真实留出；最新否定防线修复仅T0验证；补齐退款/投诉/人工各自否定范围，101项相关T0通过，未重验真实全量"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-04",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "“先查物流，没发货就退款”",
+      "required_assertion": "输出条件与顺序，先查询；不跳过独立确认或无条件申请",
+      "spec_line": 189,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "条件先读路由T0通过；真实多轮前置/写入全链未补齐；主图并行只读条件计划已验证0预览/申请，独立模型条件理解未全量重验"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-05",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "“垃圾耳机，我想问保修”与“我要投诉并申请退款”",
+      "required_assertion": "情绪独立，区分咨询与明确申请，多个诉求有序呈现",
+      "spec_line": 190,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "情绪咨询T0双传输、T2图验证；多个诉求完整完成率未验证"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-06",
+      "priority_and_layers": "P1/C+L",
+      "procedure": "上轮讨论产品/退款，当前“它呢”“多久”“换一个”",
+      "required_assertion": "模型实际收到必要上下文，歧义不足则澄清，不机械沿用错误对象",
+      "spec_line": 191,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "必要历史实际送入结构化调用替身；实体总门槛失败；补齐实际7条/600字可见上下文、known_order与实体来源交叉校验，70项T0通过，真实全量未重验；模型所选订单贯穿旧路由/工具节点不再被首个regex订单覆盖，未确定新订单不复用旧槽位"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-07",
+      "priority_and_layers": "P1/C+L",
+      "procedure": "“你好”“嗯”“退”“有个问题”",
+      "required_assertion": "确定问候可快捷回应；无信息输入澄清；冻结策略与测试一致",
+      "spec_line": 192,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "保留问候快捷及clarify契约；真实模型无信息子集未独立验收"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-08",
+      "priority_and_layers": "P1/C+L",
+      "procedure": "无关问题、未知产品、未支持动作",
+      "required_assertion": "标记范围外/缺信息，不编造业务能力或伪造参数",
+      "spec_line": 193,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "严格枚举与未支持动作澄清；一般类留出仍有schema失败"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-09",
+      "priority_and_layers": "P0/C+F",
+      "procedure": "模型返回非法枚举、额外权限、错误类型或缺字段",
+      "required_assertion": "schema拒绝，至多一次修复；未通过前无工具副作用",
+      "spec_line": 194,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_T0",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "严格schema拒绝额外权限/类型/枚举；至多一次修复且无副作用"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-10",
+      "priority_and_layers": "P1/C+F",
+      "procedure": "分类超时、预算不足、模型不可用",
+      "required_assertion": "有界结束并澄清/只读降级，不回退成假成功或无保护动作",
+      "spec_line": 195,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_T0",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "模型不可用澄清、网关SQL失败关闭、截止时间阻止迟到回复"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-11",
+      "priority_and_layers": "P1/L+P",
+      "procedure": "冻结留出集对比规则版与模型版",
+      "required_assertion": "满足第5章理解门槛，按类别报告混淆、时延和每轮成本",
+      "spec_line": 196,
+      "state": "FAIL",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "FAIL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "300条独立留出实体287/300=0.956667<0.97；规则Macro-F1=0.775588；标签未经人工复核，条件完整计分仍缺"
+        }
+      ]
+    },
+    {
+      "ac": "AC-06-12",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "影子运行与策略版本回滚",
+      "required_assertion": "影子只读、不重复动作；回滚仍使用同一可信业务服务",
+      "spec_line": 197,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_I_F_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "完整图影子可信通知不会审查失败转人工；实际Run/SQL冻结模式与回滚，持久预览pending及0业务写入，新rules Run取消使用原可信服务，取消审计仅1条；模型替身，无线上策略部署"
+        }
+      ]
+    },
+    {
+      "ac": "AC-07-01",
+      "priority_and_layers": "P1/U+C",
+      "procedure": "校验各节点输入输出与依赖",
+      "required_assertion": "不依赖未声明collected_info键；证据/动作/模型元数据类型分离",
+      "spec_line": 203,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "证据/审查/工具观察/6项TurnFlow流程结论分区已有类型，主节点枚举读写布尔结论，兼容字典不覆盖已有结论；最新87项相关T0通过。仍有业务槽位、计量/其他状态未全面类型化，保持PARTIAL"
+        }
+      ]
+    },
+    {
+      "ac": "AC-07-02",
+      "priority_and_layers": "P0/C",
+      "procedure": "回答重生成一次，观察工具执行计数",
+      "required_assertion": "仅重生成/审查，无重复工单或退款",
+      "spec_line": 204,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_C_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "完整Run/图+实际工单/退款SQL提交：回答生成两次、提交工具各1次、业务及审计各1条，退款审计绑定本轮确认；生成审查替身，22项专项相关检查通过"
+        }
+      ]
+    },
+    {
+      "ac": "AC-07-03",
+      "priority_and_layers": "P1/C+F",
+      "procedure": "转人工失败、审查失败、模型循环提出工具",
+      "required_assertion": "有最大步数与终止状态，不出现无限转接/审查循环",
+      "spec_line": 205,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_C_F_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "完整图连续两次审查失败后单次人工尝试终止、人工失败终止、重复工具节点第25次拒绝（实际24次），22项专项相关检查通过；故障与模型为替身"
+        }
+      ]
+    },
+    {
+      "ac": "AC-07-04",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "checkpoint与数据库action状态不同步",
+      "required_assertion": "以持久action与执行回执核验，旧checkpoint不能重复确认或执行",
+      "spec_line": 206,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_I_F_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "5项旧缓存/实际LangGraph checkpoint与SQL动作错位反例先红后绿；取消/过期/不存在不能恢复待确认，旧confirm_refund删除，有效SQL参数权威；69项相关回归通过，SQLite/内存checkpoint，M2真实依赖证据仍独立"
+        }
+      ]
+    },
+    {
+      "ac": "AC-07-05",
+      "priority_and_layers": "P1/C+P",
+      "procedure": "两个独立只读子任务与一个依赖写任务",
+      "required_assertion": "允许只读并行，写任务等待真实前置，不按模型猜测并发执行",
+      "spec_line": 207,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_C_P_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "主图最大2个只读任务并行、既有签名/实时owner授权、条件动作只查不写；失败/父取消回收、审查失败澄清，91项相关检查通过；模型/历史为合成替身，新schema真实模型未验"
+        }
+      ]
+    },
+    {
+      "ac": "AC-07-06",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "模型提出未登记工具/跨权限工具/任意代码",
+      "required_assertion": "白名单和策略拒绝，参数不可绕过Principal",
+      "spec_line": 208,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "主图白名单/schema拒绝写工具/任意代码/user_id，订单与可见实体绑定且实际授权拒绝他人订单；当前新版schema两任务输出已1次真实UINO通过，但真实模型恶意计划尚未验证，保持PARTIAL"
+        }
+      ]
+    },
+    {
+      "ac": "AC-07-07",
+      "priority_and_layers": "P1/F+P",
+      "procedure": "超整轮deadline时模型仍返回或线程仍结束",
+      "required_assertion": "拒绝迟到状态写入，任务回收；已提交副作用进入恢复流程",
+      "spec_line": 209,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_F_P_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "返回后/每流chunk及Run提交前复核deadline，9项吞取消/阻塞/实际线程迟到/已提交回执恢复，46项相关T0通过；迟到内容不写入/发布、线程完成后结果拒绝，不能强杀任意永不返回线程；M2 SQLfence范围保留"
+        }
+      ]
+    },
+    {
+      "ac": "AC-07-08",
+      "priority_and_layers": "P1/C",
+      "procedure": "模块依赖审查与图路由契约测试",
+      "required_assertion": "图仅编排，事务/资格在共享服务；新节点不迫使修改所有self助手",
+      "spec_line": 210,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_C_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "13主图节点显式依赖组件/独立state函数注册，无绑定Graph业务节点；响应域助手局部化、共享流通道独立、领域SQL/资格仍在服务；依赖清单与模块引用审查完成，117项相关T0通过。旧内部兼容别名保留，状态键全类型化另属AC-07-01且仍未完成"
+        }
+      ]
+    },
+    {
+      "ac": "AC-08-01",
+      "priority_and_layers": "P0/I",
+      "procedure": "通过聊天和API分别创建工单、申请人工",
+      "required_assertion": "调同一服务与表，结果在两端可查，状态规则一致",
+      "spec_line": 216,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-08-02",
+      "priority_and_layers": "P0/C+I",
+      "procedure": "无数据库/发送适配器时调用四类动作工具",
+      "required_assertion": "不返回成功或生成虚假ID；覆盖E01/E02",
+      "spec_line": 217,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-08-03",
+      "priority_and_layers": "P0/C",
+      "procedure": "参数含布尔代整数、金额字符串、非法枚举、未知权限字段",
+      "required_assertion": "类型校验拒绝，工具不运行；可信身份不被覆盖",
+      "spec_line": 218,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-08-04",
+      "priority_and_layers": "P1/C+F",
+      "procedure": "注入参数/权限错误、429、500、网络中断",
+      "required_assertion": "仅明确瞬时且可安全重试错误重试，次数/退避有界",
+      "spec_line": 219,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-08-05",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "工具执行并提交后丢失响应，再调用同幂等键",
+      "required_assertion": "返回原回执，只一条业务写入",
+      "spec_line": 220,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-08-06",
+      "priority_and_layers": "P0/C+F",
+      "procedure": "MCP执行后回包丢失，客户端准备直调",
+      "required_assertion": "先查execution；未知不得盲目直调，确定安全才回退",
+      "spec_line": 221,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-08-07",
+      "priority_and_layers": "P1/C+I",
+      "procedure": "inprocess/stdio/直调运行相同契约集",
+      "required_assertion": "错误结构、权限、业务结果一致，工具不可用明确暴露",
+      "spec_line": 222,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-08-08",
+      "priority_and_layers": "P0/C",
+      "procedure": "调用不存在工具或成功结构缺回执",
+      "required_assertion": "返回明确失败/unknown，不静默跳过，不生成成功话术",
+      "spec_line": 223,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-08-09",
+      "priority_and_layers": "P1/P+F",
+      "procedure": "高重复工具调用、重启与缓存过期",
+      "required_assertion": "幂等持久且内存有界，进程重启不产生新的重复业务资源",
+      "spec_line": 224,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": []
+    },
+    {
+      "ac": "AC-09-01",
+      "priority_and_layers": "P0/I",
+      "procedure": "A查询/申请OB，包括直接工具入口",
+      "required_assertion": "资源校验拒绝，不暴露金额地址，不创建申请",
+      "spec_line": 230,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-02",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "数据库查询抛异常，使用旧示例订单号",
+      "required_assertion": "不回退硬编码资格/299元成功；覆盖E02",
+      "spec_line": 231,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-03",
+      "priority_and_layers": "P0/I",
+      "procedure": "可退/不可退/过期/已退订单分别预览与提交",
+      "required_assertion": "使用真实状态/时间，金额不超过剩余可退，规则一致",
+      "spec_line": 232,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-04",
+      "priority_and_layers": "P0/I",
+      "procedure": "金额0.10、0.20、币种和部分退款边界",
+      "required_assertion": "Decimal/定点正确，回执/数据库/页面一致，无浮点账务误差",
+      "spec_line": 233,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-05",
+      "priority_and_layers": "P0/I+B",
+      "procedure": "有完整参数但未确认，查看数据库",
+      "required_assertion": "仅有待确认action，无已提交退款；页面展示准确预览",
+      "spec_line": 234,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-06",
+      "priority_and_layers": "P0/I",
+      "procedure": "旧历史含确认；当前仅“谢谢/好的/算了”",
+      "required_assertion": "历史不授权，模糊不提交，取消持久化且无副作用",
+      "spec_line": 235,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-07",
+      "priority_and_layers": "P0/I",
+      "procedure": "预览后变更订单/类型/原因/金额或到期",
+      "required_assertion": "旧action版本不能确认；重新预览并要求新确认",
+      "spec_line": 236,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-08",
+      "priority_and_layers": "P0/I",
+      "procedure": "两个待确认action，用户只说“确认”",
+      "required_assertion": "澄清目标；不能随机确认或全部确认",
+      "spec_line": 237,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-09",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "两会话同时确认同订单同类型申请",
+      "required_assertion": "业务去重与唯一约束生效，按冻结规则仅允许合法数量",
+      "spec_line": 238,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-10",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "提交成功后断线、重启，再点击确认",
+      "required_assertion": "只返回已有回执；申请ID不变、记录数不增加",
+      "spec_line": 239,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-11",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "外部退款适配器超时且无法知道是否执行",
+      "required_assertion": "状态reconciling/unknown；没有“失败后直接再打款”",
+      "spec_line": 240,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-09-12",
+      "priority_and_layers": "P0/B+I",
+      "procedure": "提交后用户和管理员查询申请及审核",
+      "required_assertion": "回执与审核事件真实持久，模拟/真实清楚，未支付不显示到账",
+      "spec_line": 241,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M1基础剩余要求及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-10-01",
+      "priority_and_layers": "P0/I+B",
+      "procedure": "聊天创建工单后管理员列表查看并重启app",
+      "required_assertion": "同ID持久存在，内容/owner一致，不依赖进程字典",
+      "spec_line": 247,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-10-02",
+      "priority_and_layers": "P0/I",
+      "procedure": "更新不存在工单或非法状态跳转",
+      "required_assertion": "明确404/业务错误，无假“已更新”",
+      "spec_line": 248,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-10-03",
+      "priority_and_layers": "P0/I",
+      "procedure": "A修改B工单，普通用户尝试管理员状态变更",
+      "required_assertion": "归属和角色双重保护，无状态变化",
+      "spec_line": 249,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-10-04",
+      "priority_and_layers": "P1/I",
+      "procedure": "转人工创建→分配→处理→解决",
+      "required_assertion": "全部使用统一持久记录和事件，用户可见进度",
+      "spec_line": 250,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-10-05",
+      "priority_and_layers": "P0/I",
+      "procedure": "分配不存在、禁用或满负载座席",
+      "required_assertion": "拒绝且不改变请求；错误不掩盖为分配成功",
+      "spec_line": 251,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-10-06",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "多请求并发分配仅剩一个名额的座席",
+      "required_assertion": "不超额分配，负载与有效指派记录一致",
+      "spec_line": 252,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": [
+        {
+          "stage": "M1",
+          "status": "PASS",
+          "document": "docs/M1-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-10-07",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "解决/重新分配后重复请求及进程重启",
+      "required_assertion": "状态幂等，负载正确释放，审计完整",
+      "spec_line": 253,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-10-08",
+      "priority_and_layers": "P1/B",
+      "procedure": "请求尚未受理、没有实时聊天",
+      "required_assertion": "文案不声称真人已接通、不编排队人数与等待时间",
+      "spec_line": 254,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-10-09",
+      "priority_and_layers": "P1/I",
+      "procedure": "对不同优先级生成SLA并推进模拟时间",
+      "required_assertion": "统一时区/规则，超期记录真实，不靠页面随机值",
+      "spec_line": 255,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-10-10",
+      "priority_and_layers": "P1/B+I",
+      "procedure": "管理员处理后用户刷新/恢复连接",
+      "required_assertion": "真实结果可见，权限和历史记录正确；通知失败不撤销已解决状态",
+      "spec_line": 256,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-11-01",
+      "priority_and_layers": "P0/I",
+      "procedure": "创建D1，重启后读取再编辑",
+      "required_assertion": "stable_document_id不变，版本单独递增，旧引用可解析",
+      "spec_line": 262,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-02",
+      "priority_and_layers": "P0/I",
+      "procedure": "MySQL与SQLite分别新增、修改、发布、删除",
+      "required_assertion": "外部契约一致，MySQL旧版本停用也真实持久",
+      "spec_line": 263,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-03",
+      "priority_and_layers": "P0/I",
+      "procedure": "创建同名D2/D3，只更新/删除D2",
+      "required_assertion": "D3正文、版本、chunks和索引不受影响",
+      "spec_line": 264,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-04",
+      "priority_and_layers": "P1/I+B",
+      "procedure": "保存草稿、开始索引、失败、重试、发布",
+      "required_assertion": "每阶段状态真实，不把持久化/索引失败计为成功",
+      "spec_line": 265,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-05",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "D1-v2向量化或索引写入失败",
+      "required_assertion": "v1继续可检索，v2不成为活动发布版，不混合两个版本",
+      "spec_line": 266,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-06",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "发布切换中并发检索与两个编辑者更新",
+      "required_assertion": "每个EvidenceBundle版本自洽，版本CAS防覆盖",
+      "spec_line": 267,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-07",
+      "priority_and_layers": "P1/U+I",
+      "procedure": "FAQ、标题、表格、长句、例外条款分块",
+      "required_assertion": "策略边界有明确定义，表头/单位/必要条件可追溯，不无声丢正文",
+      "spec_line": 268,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-08",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "Embedding返回乱序、缺项、空向量、错维度",
+      "required_assertion": "按index映射或失败；不补零/截断后发布，不错配chunk",
+      "spec_line": 269,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS_LOCAL_REAL_OLLAMA",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-09",
+      "priority_and_layers": "P0/I+L",
+      "procedure": "模型变更但维度相同，再检索旧collection",
+      "required_assertion": "指纹不一致阻止混用；走重建/显式切换流程",
+      "spec_line": 270,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS_LOCAL_REAL_OLLAMA_AND_REVISION_ISOLATION",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-10",
+      "priority_and_layers": "P1/I+P",
+      "procedure": "批量导入100个合成chunk，记录API批次",
+      "required_assertion": "真正按批处理，数量核对正确，失败可从任务恢复",
+      "spec_line": 271,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-11",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "两worker缓存了v1，发布v2或删除D1",
+      "required_assertion": "在冻结传播窗口内所有worker不再召回旧活动内容",
+      "spec_line": 272,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-11-12",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "中断导入任务、重复提交同一任务、清理临时文件",
+      "required_assertion": "幂等恢复，无重复版本/孤儿活动chunk；逐文件报告真实结果",
+      "spec_line": 273,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-01",
+      "priority_and_layers": "P0/I",
+      "procedure": "构造关键词独有命中和向量独有命中，真实Milvus检索",
+      "required_assertion": "两路确实执行并贡献候选；保存schema、index、逐路命中，不以注释代替证据",
+      "spec_line": 279,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-02",
+      "priority_and_layers": "P0/C+I+F",
+      "procedure": "Embedding失败但BM25可用",
+      "required_assertion": "仍有关键词结果并显式降级；覆盖E13",
+      "spec_line": 280,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-03",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "Milvus超时、全文索引缺失、单路为空",
+      "required_assertion": "实际fallback与metadata一致，不虚报hybrid/degraded=false",
+      "spec_line": 281,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-04",
+      "priority_and_layers": "P0/U+C",
+      "procedure": "同候选两路第一的RRF、纯向量和BM25分分别进入证据判定",
+      "required_assertion": "分数类型保留；0.0328不因与0.35混比直接拒绝，未知分不冒充概率",
+      "spec_line": 282,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-05",
+      "priority_and_layers": "P1/C+L",
+      "procedure": "模型Reranker成功、超时、无配置三种情况",
+      "required_assertion": "provider和回退准确；候选不凭空增删；单次耗时不被旧缓存值替代",
+      "spec_line": 283,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-06",
+      "priority_and_layers": "P1/U+I",
+      "procedure": "候选正确答案排在11～20，改变recall/rerank/evidence_k",
+      "required_assertion": "参数独立生效，可测量截断损失；关闭重排也返回规定数量",
+      "spec_line": 284,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-07",
+      "priority_and_layers": "P0/U+I",
+      "procedure": "两个chunk前100字相同、后半条件不同",
+      "required_assertion": "去重保留不同事实；按ID/hash去重不误删例外",
+      "spec_line": 285,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-08",
+      "priority_and_layers": "P0/I+L",
+      "procedure": "退款政策例外在后半部，用户对象命中例外",
+      "required_assertion": "证据包含适用条件，不因前缀裁剪生成相反结论",
+      "spec_line": 286,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-09",
+      "priority_and_layers": "P0/I",
+      "procedure": "检索候选包含草稿、已删除、旧版本和无权文档",
+      "required_assertion": "进入生成前过滤，不能被高排名或缓存绕过",
+      "spec_line": 287,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-10",
+      "priority_and_layers": "P1/C+L",
+      "procedure": "多轮“它能退吗”、精确型号、数字、否定、两问",
+      "required_assertion": "查询补全保留实体/否定；多问证据覆盖可单独判断",
+      "spec_line": 288,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-11",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "改知识版本、权限、Embedding或Reranker配置后重复查询",
+      "required_assertion": "旧缓存不复用；新键含必要版本/范围，冷/热来源明确",
+      "spec_line": 289,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-12",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "无答案问题和仅部分相关候选",
+      "required_assertion": "supported/partial/unsupported/unknown区分，不能靠高排名硬答",
+      "spec_line": 290,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-13",
+      "priority_and_layers": "P1/I+P",
+      "procedure": "比较阶段metadata与实际调用计时",
+      "required_assertion": "query编码、召回、融合、重排和总耗时可对齐；meta/顶层字段统一",
+      "spec_line": 291,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": [
+        {
+          "stage": "M3",
+          "status": "PASS",
+          "document": "docs/M3-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-12-14",
+      "priority_and_layers": "P1/L+P",
+      "procedure": "冻结留出集跑BM25/dense/hybrid/rerank/改写消融",
+      "required_assertion": "满足第5章检索门槛；报告逐样本、未知问题、冷/热和费用",
+      "spec_line": 292,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M3正确性 / M5效果",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-01",
+      "priority_and_layers": "P0/U+C",
+      "procedure": "证据已发货，候选回答还没发货",
+      "required_assertion": "拒绝/修复后复核，不能以0.9事实分放行；覆盖E11",
+      "spec_line": 298,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-02",
+      "priority_and_layers": "P0/U+C",
+      "procedure": "证据299元，回答改为399元或换币种",
+      "required_assertion": "阻断错误关键事实，单位/金额类型匹配",
+      "spec_line": 299,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-03",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "正确订单信息后追加赔偿1000元、终身换新",
+      "required_assertion": "无证据承诺被识别并移除/拒绝，不能靠字段复述通过",
+      "spec_line": 300,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-04",
+      "priority_and_layers": "P0/U+C",
+      "procedure": "无证据或所有工具失败仍声称退款成功",
+      "required_assertion": "unknown/rejected，不给事实满分，不发布成功",
+      "spec_line": 301,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-05",
+      "priority_and_layers": "P0/I",
+      "procedure": "两工具结果互相冲突或最后一个无关成功",
+      "required_assertion": "不只检查最后成功结果，按问题相关性核对全部关键事实",
+      "spec_line": 302,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-06",
+      "priority_and_layers": "P1/C+L",
+      "procedure": "生成/Judge使用含完整条件的同EvidenceBundle",
+      "required_assertion": "审查引用同版本同片段，不因不同裁剪误判",
+      "spec_line": 303,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-07",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "候选引用不存在ID、错误版本或不支持该论断的片段",
+      "required_assertion": "校验拒绝；引用列表不能替代论断支持关系",
+      "spec_line": 304,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-08",
+      "priority_and_layers": "P1/U+C+L",
+      "procedure": "“警惕诈骗/不要转账”等正常防骗回答",
+      "required_assertion": "不因敏感词直接拒绝，保留正常安全建议",
+      "spec_line": 305,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-09",
+      "priority_and_layers": "P0/C+F",
+      "procedure": "Judge超时/结构无效/预算耗尽",
+      "required_assertion": "明确unknown；可信模板可发，未核实政策不当作通过",
+      "spec_line": 306,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-10",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "首稿拒绝，修复稿正确；检查发送事件与业务计数",
+      "required_assertion": "首稿零外发，修复稿完整复核，只一次业务执行",
+      "spec_line": 307,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-11",
+      "priority_and_layers": "P0/C+I",
+      "procedure": "转人工/澄清模板含虚假已接通、时间、隐私信息",
+      "required_assertion": "基础事实/安全检查仍生效，workflow不能绕过",
+      "spec_line": 308,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-12",
+      "priority_and_layers": "P1/L+P",
+      "procedure": "人工标注反例与正确集运行审查",
+      "required_assertion": "满足错误放行/误拒门槛，分别报告程序核验、Judge与整体",
+      "spec_line": 309,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M5",
+      "evidence": []
+    },
+    {
+      "ac": "AC-14-01",
+      "priority_and_layers": "P1/C+I",
+      "procedure": "分类、改写、生成、Judge、摘要各调用一次",
+      "required_assertion": "全部经过网关，有user/run/call/purpose与版本/耗时记录",
+      "spec_line": 315,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_C_I_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "图/聊天整条回退链/流/RAG/兼容摘要继承或建立实际用户唯一scope，缺可信身份结构化调用关闭；5用途真实隔离SQL账本，89项相关回归通过。正式Run继承实际Run/策略；历史system0记录保留不重写。模型替身，非所有入口新真实调用"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-02",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "同用户并发请求使预估总量超日预算",
+      "required_assertion": "原子预留限制通过数；释放/结算正确，无无限并发超额",
+      "spec_line": 316,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_T1",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "隔离MySQL两个真实进程20轮竞争预算/槽，原子预留限制赢家"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-03",
+      "priority_and_layers": "P1/C+L",
+      "procedure": "有usage、无usage、部分usage、调用失败分别执行",
+      "required_assertion": "真实/估算/未知清楚，费用不重复归集，供应商账单与估算分开",
+      "spec_line": 317,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "真实usage/缺失/部分/未知及幂等结算验证；账户组倍率和实际账单未对账；价格验证来源固定为预留持久快照，配置变化不篡改历史标签"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-04",
+      "priority_and_layers": "P1/L",
+      "procedure": "当前供应商普通/结构化/流式最小合成输入",
+      "required_assertion": "schema、thinking、function_calling兼容；不能仅配置检查即通过",
+      "spec_line": 318,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_T2",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "当前UINO普通/结构化/function_calling/流式实测均通过"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-05",
+      "priority_and_layers": "P1/F+P",
+      "procedure": "429/500/超时在多层同时触发重试",
+      "required_assertion": "整轮尝试/费用/截止时间有上限，日志可还原所有尝试",
+      "spec_line": 319,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_F_P_SYNTHETIC",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "真实SDK+MockTransport 429/500/超时，多层回退与修复共享6尝试；Run费用并行锁、普通/流式发出前deadline及not_sent退款；40项T0与2项真实SQL通过，无真实供应商故障请求"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-06",
+      "priority_and_layers": "P0/C+L",
+      "procedure": "输入含合成Token、邮箱、电话、地址与注入文本",
+      "required_assertion": "边界脱敏可检查，工具权限不靠注入扫描单独保证",
+      "spec_line": 320,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_C_L",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "JSON/嵌入片段凭据修复；58项相关T0通过，原预算内1次真实UINO出口脱敏检查PASS；工具权限依赖独立严格schema/白名单反例，不声称未知PII全覆盖"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-07",
+      "priority_and_layers": "P1/I+P",
+      "procedure": "并发多个服务实例/worker运行模型调用",
+      "required_assertion": "并发限额含实例作用域说明，不因重复单例突破宣称上限",
+      "spec_line": 321,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_T1",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "SQL共享槽跨真实进程竞争，非单例进程内宣称"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-08",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "模型策略激活、灰度、回滚",
+      "required_assertion": "每轮固定策略版本，回放可追溯；回滚不重执行动作",
+      "spec_line": 322,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_I_F_ISOLATED",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "7项策略集成：接受后配置改变不影响原Run、回放固定版本、灰度0/100和50%同用户12会话稳定、完成Run不重执行；真实SQLite/执行器/图，未改业务默认模式"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-09",
+      "priority_and_layers": "P1/C+F",
+      "procedure": "Redis预算存储故障、供应商请求已发但回包丢失",
+      "required_assertion": "降级和保守计量明确，未知费用可对账，不无条件免记",
+      "spec_line": 323,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PASS_T1",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "SQL独立于Redis；旧slot过期精确标unknown，未知预留保留，重启检查通过"
+        }
+      ]
+    },
+    {
+      "ac": "AC-14-10",
+      "priority_and_layers": "P1/I+P",
+      "procedure": "app关闭、重启与长时间多次调用",
+      "required_assertion": "客户端/连接池正确关闭，无泄漏；Embedding/Reranker独立配置不被误替换",
+      "spec_line": 324,
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M4",
+      "evidence": [
+        {
+          "stage": "M4",
+          "status": "PARTIAL",
+          "document": "docs/M4-GATES-v1.json",
+          "limit": "修复LangChain全局共享HTTP池跨实例关闭及主lifespan遗漏聊天图池；38项T0通过；真实本机HTTP/SDK/MySQL260请求、12生命周期、68 SDK客户端关闭、活动TCP0峰值3、20连续请求1连接，Embedding/Reranker配置独立；仅约40秒，未证明多小时/真实供应商持续负载，保持PARTIAL"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-01",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "同client_message_id相同内容并发提交",
+      "required_assertion": "同一run/消息结果，业务执行一次；改内容明确冲突",
+      "spec_line": 330,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-02",
+      "priority_and_layers": "P1/I",
+      "procedure": "检查每条事件与终态",
+      "required_assertion": "run/session/sequence/schema齐全，sequence单调，终态不倒退",
+      "spec_line": 331,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-03",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "用户消息保存后、执行前杀进程",
+      "required_assertion": "恢复run为可解释失败/重试，只读可恢复；无遗失或重复用户消息",
+      "spec_line": 332,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-04",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "动作提交后、最终消息保存前杀进程",
+      "required_assertion": "恢复读取原回执并补齐消息，动作计数不增加",
+      "spec_line": 333,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-05",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "最终事务已提交、完成事件发送前断线",
+      "required_assertion": "重连查询/重放同一最终消息，不能生成第二答案/动作",
+      "spec_line": 334,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-06",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "数据库最终提交失败",
+      "required_assertion": "不发布已持久化完成；保留可恢复run和已完成动作事实",
+      "spec_line": 335,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-07",
+      "priority_and_layers": "P1/I+B",
+      "procedure": "重连带旧游标、重复帧、乱序帧",
+      "required_assertion": "客户端去重/有序恢复，不拼接重复token或错误会话",
+      "spec_line": 336,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-08",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "关闭socket时动作已进入提交阶段",
+      "required_assertion": "不能推定取消；独立完成/对账，后续可查",
+      "spec_line": 337,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-09",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "取消未执行只读run或等待确认run",
+      "required_assertion": "取消边界明确；无迟到外发，无隐式执行action",
+      "spec_line": 338,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-10",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "会话关闭/删除同时存在迟到worker",
+      "required_assertion": "CAS/tombstone阻止复活，审计与回执按策略保留",
+      "spec_line": 339,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-11",
+      "priority_and_layers": "P1/F+P",
+      "procedure": "慢客户端不消费事件，制造大量输出",
+      "required_assertion": "队列有界、背压或断开明确，其他用户不被拖垮",
+      "spec_line": 340,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-15-12",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "锁租约丢失后旧worker回写，同时恢复扫描运行",
+      "required_assertion": "只有有效所有者可提交，孤儿run有明确状态，不自动重放不确定写",
+      "spec_line": 341,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-01",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "业务事务回滚与成功各一次",
+      "required_assertion": "回滚无可消费通知；成功业务与Outbox同事务存在",
+      "spec_line": 347,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-02",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "worker发送完成后确认前崩溃，再恢复消费",
+      "required_assertion": "外部幂等或对账避免重复，不能以至少一次冒充exactly-once",
+      "spec_line": 348,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-03",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "两worker抢同Job，租约到期后接管",
+      "required_assertion": "所有权正确；旧worker不能确认新租约任务",
+      "spec_line": 349,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-04",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "解析/通知连续失败到最大尝试",
+      "required_assertion": "退避、next_run、失败队列与人工重试可查，非无限循环",
+      "spec_line": 350,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-05",
+      "priority_and_layers": "P0/C+I",
+      "procedure": "未配置渠道、模拟渠道和真实替身回执分别调用",
+      "required_assertion": "queued/sent/failed/unknown准确，模拟不伪装真实发送",
+      "spec_line": 351,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-06",
+      "priority_and_layers": "P1/I",
+      "procedure": "重复入队相同事件，不同事件相同资源",
+      "required_assertion": "相同事件去重，不误吞合法不同事件",
+      "spec_line": 352,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-07",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "app与worker重启后恢复索引/摘要任务",
+      "required_assertion": "任务可继续或明确失败，状态不永久running",
+      "spec_line": 353,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-08",
+      "priority_and_layers": "P1/I+P",
+      "procedure": "长索引任务与聊天同时运行",
+      "required_assertion": "资源预算隔离，聊天延迟不因无界后台并发失控",
+      "spec_line": 354,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-16-09",
+      "priority_and_layers": "P0/I",
+      "procedure": "检查任务payload、失败日志、管理重试权限",
+      "required_assertion": "不泄露密钥/用户全文；普通用户不能重放他人通知或索引任务",
+      "spec_line": 355,
+      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
+      "next_scope": "M2补齐及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M2",
+          "status": "PASS",
+          "document": "docs/M2-GATES-v1.json",
+          "meaning": "historical frozen scope only; final current integration audit still required"
+        }
+      ]
+    },
+    {
+      "ac": "AC-17-01",
+      "priority_and_layers": "P1/I+B",
+      "procedure": "一次会话两轮、一个动作、一个异步任务",
+      "required_assertion": "可从message/run追溯到各Trace/Action/Job，不混成同一WS连接Trace",
+      "spec_line": 361,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-17-02",
+      "priority_and_layers": "P1/C+I",
+      "procedure": "节点成功、失败、取消与降级各一次",
+      "required_assertion": "Span真实success/status/error，父子关系和时长合理",
+      "spec_line": 362,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-17-03",
+      "priority_and_layers": "P1/I",
+      "procedure": "一轮多模型调用，汇总节点与整轮Token/费用",
+      "required_assertion": "无重复相加；使用ModelCall归集，缺usage标估算/未知",
+      "spec_line": 363,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-17-04",
+      "priority_and_layers": "P0/I",
+      "procedure": "工具声称成功但业务回执未提交的故障fixture",
+      "required_assertion": "业务成功率不增加，未知/失败计数增加",
+      "spec_line": 364,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-17-05",
+      "priority_and_layers": "P1/I",
+      "procedure": "空时间范围/无匹配模型筛选分析",
+      "required_assertion": "返回0/空，不回退成全局内存历史",
+      "spec_line": 365,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-17-06",
+      "priority_and_layers": "P1/I+P",
+      "procedure": "两worker多轮请求与进程重启",
+      "required_assertion": "指标作用域明确，历史曲线有真实时间样本，不能画伪趋势",
+      "spec_line": 366,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-17-07",
+      "priority_and_layers": "P0/I",
+      "procedure": "扫描日志/指标标签/Trace/审计",
+      "required_assertion": "脱敏且无高基数用户全文标签，安全事件仍可定位",
+      "spec_line": 367,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-17-08",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "制造持续索引失败/未知动作与瞬时抖动",
+      "required_assertion": "告警按窗口聚合和去重，可定位run；非每次请求刷屏",
+      "spec_line": 368,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-17-09",
+      "priority_and_layers": "P0/I",
+      "procedure": "管理员代A操作并尝试修改审计",
+      "required_assertion": "actor/subject/前后状态完整，审计按追加策略不可普通修改",
+      "spec_line": 369,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M6（保留M1已验P0）",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-01",
+      "priority_and_layers": "P1/C",
+      "procedure": "检查数据集schema、hash、划分与语义重复",
+      "required_assertion": "训练/开发/留出分离，近义簇不跨集合泄漏，无答案有标注",
+      "spec_line": 375,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-02",
+      "priority_and_layers": "P0/C+I",
+      "procedure": "E01～E25逐项映射到复现/修复测试",
+      "required_assertion": "每个已确认缺陷有回归；待验证风险保留真实依赖用例",
+      "spec_line": 376,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-03",
+      "priority_and_layers": "P1/L",
+      "procedure": "当前策略与旧策略跑同一冻结集",
+      "required_assertion": "参数/模型/索引可追溯，输出逐样本差异，不替换难题掩盖下降",
+      "spec_line": 377,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-04",
+      "priority_and_layers": "P1/L+P",
+      "procedure": "检索组件消融与冷/热缓存分开运行",
+      "required_assertion": "报告各组件质量、P95和费用，缓存命中不冒充模型快",
+      "spec_line": 378,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-05",
+      "priority_and_layers": "P1/C",
+      "procedure": "CI执行离线回归、前端测试与构建",
+      "required_assertion": "无真实网络依赖、失败退出非0，skip/xfail有原因且不计通过",
+      "spec_line": 379,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-06",
+      "priority_and_layers": "P1/I",
+      "procedure": "MySQL唯一冲突/事务与Redis双worker用例",
+      "required_assertion": "真实环境执行，SQLite或单进程替身不能替代",
+      "spec_line": 380,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-07",
+      "priority_and_layers": "P0/C+I",
+      "procedure": "测试失败、无样本、无延迟、空报告输入门禁",
+      "required_assertion": "FAIL/NOT_RUN，不允许“无样本”默认PASS",
+      "spec_line": 381,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-08",
+      "priority_and_layers": "P1/C",
+      "procedure": "复核人工标注的冲突样本和Judge评分",
+      "required_assertion": "争议有裁决；评审者不以模型自评分替代事实",
+      "spec_line": 382,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-18-09",
+      "priority_and_layers": "P1/C",
+      "procedure": "根据报告在独立环境重复一次关键评测",
+      "required_assertion": "样本/配置一致，随机波动与差异解释清楚，证据无敏感资料",
+      "spec_line": 383,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-01",
+      "priority_and_layers": "P1/I",
+      "procedure": "默认启动与各可选profile，检查真实调用地址",
+      "required_assertion": "只启动需要的服务；健康区分configured/available，未用模型不宣称接入",
+      "spec_line": 389,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-02",
+      "priority_and_layers": "P1/I+F",
+      "procedure": "镜像网络、端口冲突、配置缺失分别阻断启动",
+      "required_assertion": "指出准确阶段，不自动更改系统代理/占用无关项目资源",
+      "spec_line": 390,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-03",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "旧schema启动、迁移失败、并发启动",
+      "required_assertion": "应用不接业务直到迁移成功；生产请求路径不做DDL/seed",
+      "spec_line": 391,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-04",
+      "priority_and_layers": "P0/I",
+      "procedure": "用生产样式合成旧数据执行新增/回填/切换",
+      "required_assertion": "消息、订单、工单数量与所有者保持，旧ID映射准确",
+      "spec_line": 392,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-05",
+      "priority_and_layers": "P0/I",
+      "procedure": "旧聊天含假退款成功文本，执行迁移",
+      "required_assertion": "不据此生成已完成退款；标legacy_unverified并保留审计",
+      "spec_line": 393,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-06",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "新索引发布后回滚到旧索引，代码策略回滚",
+      "required_assertion": "活动版本正确，已有动作不删除不重做；不回退到危险写实现",
+      "spec_line": 394,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-07",
+      "priority_and_layers": "P0/I+F",
+      "procedure": "从独立备份恢复关系库、知识原文与索引",
+      "required_assertion": "满足冻结RPO/RTO，记录数/hash/历史引用与回执核对成功",
+      "spec_line": 395,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-08",
+      "priority_and_layers": "P1/I",
+      "procedure": "检查生产端口、健康响应、配置模板与镜像",
+      "required_assertion": "无演示凭据、明确CORS、非公开内部存储端口；无密钥/连接串泄露",
+      "spec_line": 396,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-09",
+      "priority_and_layers": "P1/C+B",
+      "procedure": "在干净隔离环境按README启动并跑五分钟演示",
+      "required_assertion": "命令/路径存在，步骤可复现，演示与实际验收范围一致",
+      "spec_line": 397,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    },
+    {
+      "ac": "AC-19-10",
+      "priority_and_layers": "P1/C",
+      "procedure": "审查变更文件、依赖、发布说明与缺口表",
+      "required_assertion": "无数据库/日志/构建产物/密钥误提交；文档与代码一致，剩余限制明确",
+      "spec_line": 398,
+      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "next_scope": "M7",
+      "evidence": []
+    }
+  ]
+}
