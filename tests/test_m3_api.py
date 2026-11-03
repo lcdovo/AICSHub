@@ -1,11 +1,10 @@
-import io
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.security import require_admin, require_user
-from app.models.models import User, BackgroundJob
+from app.models.models import User
 from app.routers.knowledge import router
-from tests.test_m3_lifecycle import kb, execute
+from tests.test_m3_lifecycle import execute
 
 
 @pytest.fixture

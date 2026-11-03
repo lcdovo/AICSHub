@@ -1,7 +1,7 @@
 """仅用户明确授权后运行：最多2个Embedding请求/合成短文本，无重试/聊天模型调用。"""
 
 from pathlib import Path
-import sys, json, hashlib, uuid, subprocess, os
+import sys, json, hashlib, uuid, subprocess
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 

@@ -14,7 +14,7 @@ from app.models.models import (
     KnowledgeVersion,
     KnowledgeEpoch,
 )
-from app.repositories.knowledge_repository import KnowledgeRepository, KnowledgeConflict
+from app.repositories.knowledge_repository import KnowledgeRepository
 from app.services.knowledge_base import KnowledgeBaseService
 from app.services.knowledge_base.vector_index import VersionedVectorIndex
 from app.services.knowledge_base.index_worker import index_job

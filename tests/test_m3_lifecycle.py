@@ -138,8 +138,6 @@ def test_repeated_index_is_same_version_same_chunks_and_true_batch(kb):
 
 
 def test_index_write_partial_failure_and_expired_fence_never_publish(kb):
-    from app.models.models import KnowledgeVersion, KnowledgeDoc
-
     result = kb.add_document("原发布", "原发布内容")
     execute(kb, result)
     updated = kb.update_document(
