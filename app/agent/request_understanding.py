@@ -119,18 +119,30 @@ def input_payload(state):
 
 
 def validate_semantics(result, state):
-    text = state.user_message
+    # 校验与供应商实际输入共用同一有界快照；未发送的旧消息不是本轮证据。
+    context = json.loads(input_payload(state))
+    text = context["current_message"]
     history = " ".join(
-        str(m.get("content", ""))
-        for m in state.messages
-        if m.get("content") != state.user_message
+        m["content"] for m in context["history"]
     )
-    for value in [result.entities.order_id, result.entities.product]:
-        if value and value not in text and value not in history:
+    values = result.entities.model_dump()
+
+    def in_context(field, value):
+        # 已知订单单独作为结构化背景发送，只能证明订单号，不能证明产品名。
+        return value in history or (field == "order_id" and value == context["known_order"])
+
+    for field, value in values.items():
+        if value and value not in text and not in_context(field, value):
             raise ValueError("unobserved_entity")
     if result.entity_source == "current_message" and any(
-        v and v not in text for v in [result.entities.order_id, result.entities.product]
+        v and v not in text for v in values.values()
     ):
+        raise ValueError("incorrect_entity_source")
+    if result.entity_source == "history" and any(
+        v and not in_context(field, v) for field, v in values.items()
+    ):
+        raise ValueError("incorrect_entity_source")
+    if result.entity_source == "none" and any(values.values()):
         raise ValueError("incorrect_entity_source")
     if result.request_type == "apply" and re.search(
         r"(?:不要|不想|不需要|别)(?:给我|帮我|现在|立即|直接)?(?:退款|退货)|不是申请|不申请(?:退款|退货)",

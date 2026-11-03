@@ -26,7 +26,7 @@
     },
     "AC-06-06": {
       "status": "PARTIAL",
-      "evidence_and_limit": "必要历史实际送入结构化调用替身；实体总门槛失败"
+      "evidence_and_limit": "必要历史实际送入结构化调用替身；实体总门槛失败；补齐实际7条/600字可见上下文、known_order与实体来源交叉校验，70项T0通过，真实全量未重验"
     },
     "AC-06-07": {
       "status": "PARTIAL",
@@ -228,6 +228,11 @@
     "evaluation": "5f0dbeb"
   },
   "verification": [
+    {
+      "layer": "T0 entity provenance slice",
+      "path": "reports/offline/20261104-010206-821519",
+      "passed": 70
+    },
     {
       "layer": "T0 final full",
       "path": "reports/offline/20261104-004024-230822",

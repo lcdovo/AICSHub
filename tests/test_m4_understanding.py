@@ -214,3 +214,63 @@ def test_negated_refund_is_still_rejected(message):
             ),
             AgentState(session_id="s", user_id=101, user_message=message),
         )
+
+
+@pytest.mark.parametrize("source", ["none", "history"])
+def test_entity_source_must_match_model_visible_context(source):
+    from app.agent.request_understanding import validate_semantics
+
+    state = AgentState(session_id="s", user_id=101, user_message="耳机 ORD940001")
+    with pytest.raises(ValueError, match="entity_source"):
+        validate_semantics(result(entity_source=source), state)
+
+
+@pytest.mark.parametrize("history", [
+    [{"role": "user", "content": "耳机 ORD940001"}]
+    + [{"role": "user", "content": "别的背景"}] * 7,
+    [{"role": "user", "content": "背景" * 300 + "耳机 ORD940001"}],
+])
+def test_entities_omitted_from_actual_model_input_cannot_validate(history):
+    from app.agent.request_understanding import validate_semantics
+
+    state = AgentState(session_id="s", user_id=101, user_message="它呢", messages=history)
+    with pytest.raises(ValueError, match="unobserved_entity"):
+        validate_semantics(result(entity_source="history"), state)
+
+
+def test_known_order_actually_sent_to_model_can_validate_as_context_entity():
+    from app.agent.request_understanding import validate_semantics
+
+    state = AgentState(session_id="s", user_id=101, user_message="多久",
+                       collected_info={"order_id": "ORD940001"})
+    value = result(entity_source="history", entities={"order_id": "ORD940001", "product": None})
+    assert validate_semantics(value, state) is value
+
+
+def test_known_order_cannot_supply_an_unobserved_product():
+    from app.agent.request_understanding import validate_semantics
+
+    state = AgentState(session_id="s", user_id=101, user_message="多久",
+                       collected_info={"order_id": "ORD940001"})
+    value = result(entity_source="history", entities={"order_id": "ORD940001", "product": "ORD940001"})
+    with pytest.raises(ValueError, match="unobserved_entity"):
+        validate_semantics(value, state)
+
+
+async def test_unseen_order_output_repairs_once_then_clarifies_without_action(monkeypatch):
+    from app.agent.nodes.intent_node import intent_recognition_node
+    from app.config.config import settings
+
+    monkeypatch.setattr(settings, "REQUEST_UNDERSTANDING_MODE", "model")
+    service = SimpleNamespace(
+        run_structured=AsyncMock(return_value=result(request_type="apply", entity_source="history")),
+        is_available=lambda: True,
+    )
+    graph = SimpleNamespace(_is_smalltalk=lambda _: False, llm_service=service)
+    state = AgentState(session_id="s", user_id=101, user_message="我要退款",
+                       messages=[{"role": "user", "content": "耳机 ORD940001"}]
+                       + [{"role": "user", "content": "其他背景"}] * 7)
+    assert await intent_recognition_node(graph, state) == AgentNode.RESPONSE_GENERATION
+    assert service.run_structured.await_count == 2
+    assert state.needs_clarification and not state.pending_confirmations and not state.tool_calls
+    assert "order_id" not in state.collected_info
