@@ -69,3 +69,5 @@
 类型化证据切片新增：`tests/test_m4_evidence_contract.py`；修改state.py、request_understanding.py、RAG/response节点。
 
 订单路由/否定范围切片新增：`tests/test_m4_entity_routing.py`；修改request_understanding.py与intent/tool节点的旧提取兼容边界。
+
+连接生命周期切片新增：`acceptance/m4/local_gateway_soak.py`、`tests/test_m4_shutdown.py`；修改llm_service.py、main.py及网关/故障测试和真实依赖执行入口。

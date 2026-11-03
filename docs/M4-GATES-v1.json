@@ -122,7 +122,7 @@
     },
     "AC-14-10": {
       "status": "PARTIAL",
-      "evidence_and_limit": "客户端去重关闭T0、应用重启与独立模型配置；长期连接泄漏/压力未验收"
+      "evidence_and_limit": "修复LangChain全局共享HTTP池跨实例关闭及主lifespan遗漏聊天图池；38项T0通过；真实本机HTTP/SDK/MySQL260请求、12生命周期、68 SDK客户端关闭、活动TCP0峰值3、20连续请求1连接，Embedding/Reranker配置独立；仅约40秒，未证明多小时/真实供应商持续负载，保持PARTIAL"
     }
   },
   "quality": {
@@ -230,6 +230,29 @@
     "stage_boundaries": "584404f"
   },
   "verification": [
+    {
+      "layer": "T0 full at 363a12e before later slices",
+      "path": "reports/offline/20261104-015800-817526",
+      "passed": 689,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "layer": "T1 local HTTP and multi-process SQL complete suite",
+      "path": "reports/m4-closeout/real-20261104-021134",
+      "passed": 3
+    },
+    {
+      "layer": "T1 real local HTTP/SDK/MySQL, synthetic provider",
+      "path": "reports/m4-closeout/real-20261104-021303",
+      "passed": 1,
+      "actual_local_requests": 260
+    },
+    {
+      "layer": "T0 client ownership and FastAPI lifespan",
+      "path": "reports/offline/20261104-021030-659141",
+      "passed": 38
+    },
     {
       "layer": "T0 model entity routing and scoped negation",
       "path": "reports/offline/20261104-020047-559213",

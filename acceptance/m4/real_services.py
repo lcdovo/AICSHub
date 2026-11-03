@@ -30,6 +30,9 @@ def real_case():
 
 from app.config.config import settings
 from app.models.models import ModelBudgetDay, ModelCallRecord, ModelConcurrencySlot
+from acceptance.m4.local_gateway_soak import (
+    test_local_http_sdk_pool_reuse_close_and_restart_260_calls as test_local_http_sdk_pool_reuse_close_and_restart_260_calls,
+)
 
 
 def budget_worker(url, barrier, queue, worker_index):

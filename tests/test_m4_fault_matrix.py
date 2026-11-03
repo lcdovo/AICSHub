@@ -156,7 +156,8 @@ async def test_sdk_fallback_and_understanding_repair_share_six_attempts(factory,
 
     def chat_model(**kwargs):
         assert kwargs["max_retries"] == 0
-        return original(**kwargs, http_async_client=client)
+        kwargs["http_async_client"] = client
+        return original(**kwargs)
 
     monkeypatch.setattr(llm, "ChatOpenAI", chat_model)
     service = LLMService()

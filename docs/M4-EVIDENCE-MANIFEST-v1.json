@@ -242,6 +242,42 @@
       "sha256": "a945f3ab28ac160410f2bae7131106d76ec0b37e26d2ca16c83b5b0d438d1e2e",
       "bytes": 15175,
       "snapshot": "entity-routing-negation"
+    },
+    {
+      "path": "reports/offline/20261104-021030-659141/junit.xml",
+      "sha256": "b0c93e7a0d6391c1b757a09ce33e38584a985294d3b693fb291d8de361fc8652",
+      "bytes": 5283,
+      "snapshot": "owned-http-pools-lifecycle"
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-021303/junit.xml",
+      "sha256": "c6e696c173cc0cd828477ac5f3ca60e799077abfde282ab932d161831c00142d",
+      "bytes": 352,
+      "snapshot": "owned-http-pools-lifecycle"
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-021303/local-http-soak.json",
+      "sha256": "a8b93c59bca9df58b90ef7483f2d1190ea289faaa0ca3be9d85f212b1dcdbecc",
+      "bytes": 674,
+      "snapshot": "owned-http-pools-lifecycle"
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-021134/junit.xml",
+      "sha256": "afef90ab799d0fddf83f7be698b56e37ca56e758127afc2736604b9ca1e351a9",
+      "bytes": 635,
+      "snapshot": "owned-http-pools-lifecycle"
+    },
+    {
+      "path": "reports/offline/20261104-015800-817526/junit.xml",
+      "sha256": "aef23a5e4a951eded5896d35470ec36a99aef901d2087e750cc04a2aeae203bd",
+      "bytes": 90071,
+      "snapshot": "owned-http-pools-lifecycle"
+    },
+    {
+      "path": "reports/offline/20261104-020752-543693/junit.xml",
+      "sha256": "c0d5ab37fe91d87ad0e850c47d3088b3d0c21c6a0431f7c425884e3aa048013e",
+      "bytes": 3741,
+      "snapshot": "owned-http-pools-lifecycle"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

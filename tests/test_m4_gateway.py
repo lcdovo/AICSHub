@@ -213,6 +213,38 @@ async def test_clients_close_once_even_shared_across_models(monkeypatch):
     assert not service._chat_models
 
 
+async def test_one_client_close_failure_does_not_skip_other_clients():
+    from app.services.llm_service import LLMService
+    from unittest.mock import AsyncMock
+
+    service = LLMService()
+    broken = SimpleNamespace(close=AsyncMock(side_effect=RuntimeError("synthetic-close-failure")))
+    remaining = SimpleNamespace(close=AsyncMock())
+    service._chat_models = {"one": SimpleNamespace(root_client=None, root_async_client=broken),
+                           "two": SimpleNamespace(root_client=None, root_async_client=remaining)}
+    with pytest.raises(RuntimeError, match="synthetic-close-failure"):
+        await service.close()
+    broken.close.assert_awaited_once()
+    remaining.close.assert_awaited_once()
+    assert not service._chat_models
+
+
+async def test_closing_one_llm_service_does_not_close_another_services_pool(monkeypatch):
+    from app.services.llm_service import LLMService
+
+    one, two = LLMService(), LLMService()
+    model = ModelConfig("synthetic", api_base="http://synthetic.invalid/v1",
+                        api_key="synthetic-key", model="synthetic")
+    first, second = one._get_chat_model(model), two._get_chat_model(model)
+    try:
+        assert first.root_async_client._client is not second.root_async_client._client
+        await one.close()
+        assert not second.root_async_client.is_closed()
+    finally:
+        await one.close()
+        await two.close()
+
+
 async def test_stream_uses_remaining_run_deadline_and_records_unknown(factory, monkeypatch):
     import time
     from app.services.llm_service import LLMService

@@ -77,15 +77,34 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
 
-    yield
+    try:
+        yield
+    finally:
+        await shutdown_resources()
 
+
+async def shutdown_resources():
+    """聊天图与健康检查服务各自拥有连接池；单项失败不能跳过其余资源。"""
     logger.info("Shutting down...")
-    shutdown_langfuse()
+    try:
+        shutdown_langfuse()
+    except Exception as exc:
+        logger.error("Shutdown langfuse failed: %s", type(exc).__name__)
     from app.agent.mcp_client import shutdown_mcp_client
+    from app.services.chat_service import chat_service
 
-    await shutdown_mcp_client()
-    await llm_service.close()
-    await close_redis()
+    closers = [("mcp", shutdown_mcp_client), ("redis", close_redis)]
+    services = [llm_service, getattr(chat_service.agent_graph, "llm_service", None)]
+    seen = set()
+    for service in services:
+        if service is not None and id(service) not in seen:
+            seen.add(id(service))
+            closers.insert(-1, ("model", service.close))
+    for name, close in closers:
+        try:
+            await close()
+        except Exception as exc:
+            logger.error("Shutdown %s failed: %s", name, type(exc).__name__)
     logger.info("Shutdown complete")
 
 

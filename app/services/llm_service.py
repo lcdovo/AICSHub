@@ -183,6 +183,7 @@ class LLMService:
         self.local_model: Optional[ModelConfig] = None
         self.circuit_breaker = CircuitBreaker()
         self._chat_models: Dict[str, ChatOpenAI] = {}
+        self._http_clients: list[Any] = []
         self.call_stats: Dict[str, Dict[str, int]] = {}
         self.registry = build_default_registry(
             settings.LLM_PROMPT_VERSION,
@@ -284,7 +285,12 @@ class LLMService:
 
     async def close(self):
         seen = set()
-        for model in self._chat_models.values():
+        models = list(self._chat_models.values())
+        self._chat_models.clear()
+        owned_http = self._http_clients
+        self._http_clients = []
+        failure = None
+        for model in models:
             for name in ("root_async_client", "root_client"):
                 client = getattr(model, name, None)
                 if client is None or id(client) in seen:
@@ -292,10 +298,28 @@ class LLMService:
                 seen.add(id(client))
                 close = getattr(client, "close", None)
                 if callable(close):
-                    result = close()
-                    if __import__("inspect").isawaitable(result):
-                        await result
-        self._chat_models.clear()
+                    try:
+                        result = close()
+                        if __import__("inspect").isawaitable(result):
+                            await result
+                    except BaseException as exc:
+                        # 继续回收其他独立客户端，最后仍向调用方报告关闭失败。
+                        if failure is None:
+                            failure = exc
+        # SDK正常关闭会同时关闭其httpx池；构造失败或SDK关闭失败时仍回收本服务自有池。
+        for client in owned_http:
+            if client.is_closed:
+                continue
+            try:
+                if hasattr(client, "aclose"):
+                    await client.aclose()
+                else:
+                    client.close()
+            except BaseException as exc:
+                if failure is None:
+                    failure = exc
+        if failure is not None:
+            raise failure
 
     def detect_intent(self, message: str) -> str:
         """粗粒度意图标注（仅用于元数据/日志展示，不参与路由决策）。
@@ -891,12 +915,21 @@ class LLMService:
         if cached is not None:
             return cached
 
+        # 不使用LangChain按base/timeout缓存的全局HTTP池：临时服务关闭不能关掉其他实例。
+        import httpx
+        limits = httpx.Limits(max_connections=settings.LLM_MAX_CONCURRENCY,
+                              max_keepalive_connections=settings.LLM_MAX_CONCURRENCY)
+        http_client = httpx.Client(timeout=self.TIMEOUT, limits=limits)
+        http_async_client = httpx.AsyncClient(timeout=self.TIMEOUT, limits=limits)
+        self._http_clients.extend((http_client, http_async_client))
         chat_model = ChatOpenAI(
             model=model.model,
             api_key=model.api_key or "local",
             base_url=model.api_base,
             temperature=temperature,
             timeout=self.TIMEOUT,
+            http_client=http_client,
+            http_async_client=http_async_client,
             max_retries=0,
             max_completion_tokens=max_tokens,
             streaming=streaming,
