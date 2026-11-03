@@ -16,3 +16,12 @@ manifest字段：commit是启动时HEAD，commit_at_end是结束时HEAD；它们
 验证：临时Git仓库核验dirty/新文件纳入、中文路径、新增/删除检测、.env/报告排除、提交后同内容指纹不变。另用真实执行器子进程运行一个会修改源码的通过用例，确认pytest_exit_code=0但exit_code=2、差异精确列app/main.py。项目自身18项流程+来源检查通过，源码开始/结束稳定，详见M4-EVIDENCE-v1.md对应记录。
 
 局限：这是允许范围内开始/结束快照，不是不可变checkout或持续监控；中途改后又恢复相同字节可能无法检测，也不证明未纳入的系统库/硬件/外部依赖未变。软件关键版本另记manifest（含模型SDK/httpx/Pydantic），锁文件有摘要；T1真实SQL/HTTP、T2供应商、UI/部署需要各自证据，不能拿T0指纹证明其完整。旧历史报告没有这些字段，保留当时范围，不补造历史源码。
+
+
+## M1真实业务用例的显式资源复用
+
+`python scripts/test_m1_real.py --reuse-m3 -k 'mysql_real_rest_ws_and_refund_review or mysql_injected_evidence_cannot_change_identity_or_confirm'`可在明确选择的已运行M3测试MySQL/Redis上执行原M1用例，仍每例创建独立aicshub_m1_case_*合成库。默认不带标志时仍只使用M1环境，不自动回落；不会连接业务库或启动/清空任何数据卷。
+
+执行器严格核对对应acceptance prefix、每个容器test.owner标签，以及MySQL/Redis必须running、实际127.0.0.1映射端口与状态文件相符。记录错端口、停止容器或错误归属均在数据库访问前拒绝。基础管理连接也使用对应测试环境的固定基础库名，不能以复用标志选择任意业务库。manifest标明实际owner/runtime/base_database/复用状态。
+
+M1执行器也写源码起止清单与指纹，绿用例发生源码漂移时外层证据仍非0；如启动HEAD不是完整工作区来源，应以hash和dirty列表解释，不伪称干净提交验证。5项守卫专项与实际MySQL/Redis的2项REST/WS/审核/注入测试已执行，详情见M4-EVIDENCE-v1.md。该两项不等于原全部11项或其他里程碑已整体复验。

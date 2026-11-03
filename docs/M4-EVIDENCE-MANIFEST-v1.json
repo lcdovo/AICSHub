@@ -836,6 +836,66 @@
       "sha256": "42aabd526aefaf5c9d06f886da515e9fc77fcdddb0f7de7dedc1819db349ed6c",
       "bytes": 28706,
       "snapshot": "typed-refund-preview"
+    },
+    {
+      "path": "reports/offline/20261104-043238-172346/junit.xml",
+      "sha256": "b8b37f617e861560e392ee2e521b67d855476f34a3eef238c10ca808f3e7681b",
+      "bytes": 1031,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/offline/20261104-043238-172346/manifest.json",
+      "sha256": "16770b02f35d4f469cfac2a5215cf7a5a4983fbf96a897df7b6f7a2050215fa0",
+      "bytes": 1572,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-042819/junit.xml",
+      "sha256": "d32bceb2e2965bd199b4b438649bd67dd0e242f24b2f1ebb2a813272ae23d980",
+      "bytes": 12364,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-042819/manifest.json",
+      "sha256": "8fe0b5dba9724c64900a1b0116ff1c8ffd50479e5b2e994e6fb8bca2293bfa07",
+      "bytes": 344,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043014/junit.xml",
+      "sha256": "2392ad8639ad0507175c26f7e6764656add31342098b5a551286b395ec40a619",
+      "bytes": 13650,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043014/manifest.json",
+      "sha256": "ce689d187dbf3aee6b94f28da35b0994eeaa13cb48b335fae35912e918b9ae5f",
+      "bytes": 843,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043243/junit.xml",
+      "sha256": "733829e19fa4c6f17d48ba3a7bd8e0f73d04723dd5962b580342ab60e9a1aa12",
+      "bytes": 469,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043243/manifest.json",
+      "sha256": "ae5fd0d04b93720508555739e69ed5ff3ebd2327e34ca3f31afede580418e28b",
+      "bytes": 1608,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043243/source-start.json",
+      "sha256": "cb3d96e7eaa81208928438c78f3225b8a34442524fabff6b16f8c38c597bb405",
+      "bytes": 29044,
+      "snapshot": "explicit-verified-test-runtime-reuse"
+    },
+    {
+      "path": "reports/m1-closeout/real-20261104-043243/source-end.json",
+      "sha256": "cb3d96e7eaa81208928438c78f3225b8a34442524fabff6b16f8c38c597bb405",
+      "bytes": 29044,
+      "snapshot": "explicit-verified-test-runtime-reuse"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",
