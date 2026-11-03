@@ -1,0 +1,266 @@
+{
+  "date": "2026-11-04",
+  "scope": "M4 frozen 30 criteria",
+  "status": "INCOMPLETE_FAIL_QUALITY_GATE",
+  "business_default": "rules",
+  "acceptance": {
+    "AC-06-01": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "T0 REST/WS六用例、T2两条真实理解图链；完整历史组合未逐条真实验证"
+    },
+    "AC-06-02": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "独立留出technical50条；完整对象保留/检索质量未逐条标注"
+    },
+    "AC-06-03": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "否定/转述替身及真实留出；最新否定防线修复仅T0验证"
+    },
+    "AC-06-04": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "条件先读路由T0通过；真实多轮前置/写入全链未补齐"
+    },
+    "AC-06-05": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "情绪咨询T0双传输、T2图验证；多个诉求完整完成率未验证"
+    },
+    "AC-06-06": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "必要历史实际送入结构化调用替身；实体总门槛失败"
+    },
+    "AC-06-07": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "保留问候快捷及clarify契约；真实模型无信息子集未独立验收"
+    },
+    "AC-06-08": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "严格枚举与未支持动作澄清；一般类留出仍有schema失败"
+    },
+    "AC-06-09": {
+      "status": "PASS_T0",
+      "evidence_and_limit": "严格schema拒绝额外权限/类型/枚举；至多一次修复且无副作用"
+    },
+    "AC-06-10": {
+      "status": "PASS_T0",
+      "evidence_and_limit": "模型不可用澄清、网关SQL失败关闭、截止时间阻止迟到回复"
+    },
+    "AC-06-11": {
+      "status": "FAIL",
+      "evidence_and_limit": "300条独立留出实体287/300=0.956667<0.97；规则Macro-F1=0.775588；标签未经人工复核，条件完整计分仍缺"
+    },
+    "AC-06-12": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "shadow在确认/取消前拦截；实际策略回滚故障组合尚未齐全"
+    },
+    "AC-07-01": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "新增五类边界类型，仍保留旧collected_info字段；尚未完成全图键依赖审查"
+    },
+    "AC-07-02": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "已有聊天/退款回归通过；重生成一次的所有工具计数未形成M4专门证据"
+    },
+    "AC-07-03": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "节点步数上限24及Run30秒；转人工/审查循环组合未完整故障注入"
+    },
+    "AC-07-04": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "沿用M2 SQL持久action和回执；本次未补全部checkpoint错位组合"
+    },
+    "AC-07-05": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "双只读白名单并行T0通过；尚未接入主图执行多诉求计划"
+    },
+    "AC-07-06": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "只读白名单拒绝写工具/任意代码/user_id；主图完整恶意计划真实模型验收未执行"
+    },
+    "AC-07-07": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "模型deadline/迟到流拒绝T0通过；已提交业务副作用恢复仍依赖M2范围"
+    },
+    "AC-07-08": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "新理解节点与共享业务服务分离；全图模块依赖重构尚未完成"
+    },
+    "AC-14-01": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "用途级T0账本+真实普通/结构化/流式；旧直接调用归system user0，不能声称所有用途已有真实终端用户归属"
+    },
+    "AC-14-02": {
+      "status": "PASS_T1",
+      "evidence_and_limit": "隔离MySQL两个真实进程20轮竞争预算/槽，原子预留限制赢家"
+    },
+    "AC-14-03": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "真实usage/缺失/部分/未知及幂等结算验证；账户组倍率和实际账单未对账"
+    },
+    "AC-14-04": {
+      "status": "PASS_T2",
+      "evidence_and_limit": "当前UINO普通/结构化/function_calling/流式实测均通过"
+    },
+    "AC-14-05": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "每Run至多6次尝试、费用/截止时间约束；429/500多层重试故障矩阵未完整执行"
+    },
+    "AC-14-06": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "沿用LLM边界redactor与权限服务；新理解原始输入全类别真实供应商脱敏检查未完成"
+    },
+    "AC-14-07": {
+      "status": "PASS_T1",
+      "evidence_and_limit": "SQL共享槽跨真实进程竞争，非单例进程内宣称"
+    },
+    "AC-14-08": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "每Run保存mode/version、稳定用户灰度；在线回滚/重放动作矩阵待补"
+    },
+    "AC-14-09": {
+      "status": "PASS_T1",
+      "evidence_and_limit": "SQL独立于Redis；旧slot过期精确标unknown，未知预留保留，重启检查通过"
+    },
+    "AC-14-10": {
+      "status": "PARTIAL",
+      "evidence_and_limit": "客户端去重关闭T0、应用重启与独立模型配置；长期连接泄漏/压力未验收"
+    }
+  },
+  "quality": {
+    "samples": 300,
+    "macro_f1": 0.9351981576254641,
+    "request_type_accuracy": 0.9766666666666667,
+    "entities_accuracy": 0.9566666666666667,
+    "confusion": {
+      "complaint": {
+        "complaint": 29,
+        "general": 0,
+        "human": 0,
+        "promotion": 0,
+        "query_order": 0,
+        "refund": 0,
+        "technical": 0,
+        "invalid": 1
+      },
+      "general": {
+        "complaint": 0,
+        "general": 28,
+        "human": 0,
+        "promotion": 0,
+        "query_order": 0,
+        "refund": 0,
+        "technical": 0,
+        "invalid": 2
+      },
+      "human": {
+        "complaint": 0,
+        "general": 0,
+        "human": 28,
+        "promotion": 0,
+        "query_order": 0,
+        "refund": 0,
+        "technical": 0,
+        "invalid": 2
+      },
+      "promotion": {
+        "complaint": 0,
+        "general": 2,
+        "human": 0,
+        "promotion": 37,
+        "query_order": 0,
+        "refund": 1,
+        "technical": 0,
+        "invalid": 0
+      },
+      "query_order": {
+        "complaint": 0,
+        "general": 0,
+        "human": 0,
+        "promotion": 0,
+        "query_order": 39,
+        "refund": 1,
+        "technical": 0,
+        "invalid": 0
+      },
+      "refund": {
+        "complaint": 0,
+        "general": 4,
+        "human": 0,
+        "promotion": 0,
+        "query_order": 1,
+        "refund": 65,
+        "technical": 8,
+        "invalid": 2
+      },
+      "technical": {
+        "complaint": 0,
+        "general": 1,
+        "human": 0,
+        "promotion": 0,
+        "query_order": 0,
+        "refund": 0,
+        "technical": 49,
+        "invalid": 0
+      }
+    },
+    "p95_ms": 1911.02,
+    "schema_failures": 7,
+    "gate": false
+  },
+  "calls": {
+    "request_count": 656,
+    "reserved_input_tokens": 792091,
+    "reserved_output_tokens": 327288,
+    "input_tokens": 768452,
+    "output_tokens": 141362,
+    "max_requests": 660,
+    "max_input_tokens": 1200000,
+    "max_output_tokens": 330000,
+    "last_http_status": 200,
+    "additional_300_authorized": true,
+    "additional_start_request": 347
+  },
+  "labels": "assistant authored synthetic labels; not human reviewed",
+  "complete_acceptance": false,
+  "code_commits": {
+    "local_switch": "4593346",
+    "model_gateway": "fb35bae",
+    "typed_understanding": "c3d5a2a",
+    "evaluation": "5f0dbeb"
+  },
+  "verification": [
+    {
+      "layer": "T0 final full",
+      "path": "reports/offline/20261104-004024-230822",
+      "passed": 593,
+      "failures": 0,
+      "errors": 0,
+      "network_allowed": false
+    },
+    {
+      "layer": "T0",
+      "path": "reports/offline/20261104-003125-344224",
+      "passed": 587,
+      "limitation": "before final stream/new scoring and switch tests"
+    },
+    {
+      "layer": "T0 affected",
+      "path": "reports/offline/20261104-003919-147866",
+      "passed": 13
+    },
+    {
+      "layer": "T1 real MySQL multi-process",
+      "path": "reports/m4-closeout/real-20261104-002924",
+      "passed": 2
+    },
+    {
+      "layer": "frontend",
+      "passed": 28,
+      "build": "PASS"
+    }
+  ],
+  "scope_status_counts": {
+    "partial": 23,
+    "fail": 1,
+    "layer_limited_pass": 6
+  }
+}

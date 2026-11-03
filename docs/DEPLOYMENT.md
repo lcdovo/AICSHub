@@ -83,3 +83,11 @@ M2真实验收入口 `python scripts/test_m2_real.py` 校验专属容器标签/�
 保存知识只排队Job；独立 `python scripts/run_worker.py --kind knowledge_index` 消费，运行/费用必须另行安排。worker严格批量向量化，指纹命名的新collection使用dense索引；应用层SQL快照BM25与RRF融合，不声称原生FULLTEXT。索引错误保留原发布版；失败Job可由管理员审计重试。清理历史chunk/collection不在本次执行范围。
 
 隔离入口 `python scripts/setup_m3_test.py` 只创建aicshub.test.owner=m3-closeout专属MySQL/Redis/etcd/minio/Milvus；`python scripts/test_m3_real.py`核对标签后每例建合成库。runtime密码在忽略目录，不能改指向业务资源。真实模型入口有独立2请求预算账本，已授权额度用尽，禁止自行再次运行。供应商FreeTierOnly免费额度耗尽导致真实接入未验收，详见证据文档。
+
+## 本机本地知识模型与M4候选（2026-11-04）
+
+业务容器Embedding指向`http://embedding-local:11434/v1`、`qwen3-embedding:0.6b`、1024维、revision `ollama-ac6da0dfba84`；Reranker指向`http://reranker:7997`、`BAAI/bge-reranker-large`，聊天仍为UINO。不随聊天模型替换知识空间。24文档新指纹索引验证后原子切换；旧版本/collection/卷保留。详细证据和备份见LOCAL-MODEL-SWITCH-v1.md。
+
+Embedding批量2、导入HTTP时限90秒（检索调用仍有独立5秒外层边界）。Infinity CPU线程2、batch4，禁用torch compile/全尺寸启动warmup；健康后必须实际推理核验，不能只看进程。旧模型权重卷复用，不下载替代模型。主栈迁移到0011；0010新增模型预算/调用/槽，0011补版本/价格快照，升级前备份。
+
+业务显式LLM_GATEWAY_ENABLED=true，REQUEST_UNDERSTANDING_MODE=rules，percentage=0；M4未过门槛时保持此模式。新环境默认网关false为兼容开关，不能宣称已有SQL预算保证；启用前先迁移。旧实例/未升级进程不在新SQL网关并发保证范围。账号实际扣费尚未对账，LLM_PRICE_VERIFIED=false。

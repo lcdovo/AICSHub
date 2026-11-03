@@ -22,3 +22,9 @@ pytest tests/test_llm_governance.py
 预算单价来自 `LLM_INPUT_PRICE_PER_1K_USD`/`LLM_OUTPUT_PRICE_PER_1K_USD`，成本明确标记为
 `configured_token_rates_estimate`，不冒充供应商账单。生产部署继续由代码执行 RBAC、
 资源归属、订单/退款资格、状态流转和最终副作用确认。
+
+## M4 SQL网关候选（2026-11-04）
+
+显式启用网关时，普通/结构化/流式每次实际尝试先预留SQL日tokens/估算费用、共享并发槽，Run最多6尝试且共享费用/deadline。完整消息和schema以保守字节上界预估输入；真实usage结算，缺失/部分usage保留预留，失联或worker中断标unknown。价格快照/模型revision保留，管理员可按用途核对。旧Redis预算不再重复扣费；无Run的兼容调用归system user0，不能声称终端用户归属完整。SQL槽按同数据库实例协调，不覆盖未启用网关的旧进程。
+
+当前业务rules，model实体质量门槛失败；公开价格为基础tier估算，账户倍率/实际账单未验收。656次真实合成请求结果及未验范围见M4-EVIDENCE-v1.md，不能用旧商品变体矩阵代替300条独立语义留出。

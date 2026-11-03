@@ -217,3 +217,7 @@ MCP派发前无法连接可回退进程内同一工具；写调用派发后失�
 POST /search支持独立recall_k/rerank_k/top_k，结果含逐路ID、score_type、knowledge_epoch、冷/热来源和本次耗时；RRF不是概率。当前所有已认证用户共享已发布知识，未新增文档级ACL业务规则。草稿/删除/旧发布版不能经缓存或高排名绕过SQL过滤。批量上传逐文件报告排队/失败；单文件64KiB分段读取并限总大小，解析10秒超时。
 
 完整契约及验证边界见M3-IMPLEMENTATION-v1.md与M3-EVIDENCE-v1.md。
+
+## M4候选模型账本（2026-11-04）
+
+管理员GET `/api/v1/model-calls/`返回最近100次调用的用途、user/run/call、版本、真实tokens或未知基准、耗时和错误类别；GET `/api/v1/model-calls/summary`按purpose/usage_basis汇总。需要管理员认证，正文/prompt/凭据不返回，estimated_cost_usd不是供应商账单。策略在Run受理时固化，业务目前rules；详见M4-EVIDENCE-v1.md，未完整验收。

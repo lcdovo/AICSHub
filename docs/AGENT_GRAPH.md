@@ -121,3 +121,7 @@ M2最终结果及真实依赖/替身边界见 `M2-EVIDENCE-v1.md`。
 每请求独立取SQL发布快照，真实Milvus dense与SQL BM25独立执行并应用层RRF；Embedding异常仍返回关键词降级。recall/rerank/evidence数量独立；score_type保留，RRF不与余弦阈值混比。完整有界chunk与FAQ/表头上下文进入生成/Judge，不再按300/200字前缀裁剪；证据覆盖校准仍属M5，EvidenceBundle.support保持unknown。缓存按epoch/模型/策略/权限范围隔离，生成及校验前复核活动版本。
 
 M3实现、逐项21项范围、隔离真实依赖证据与供应商额度阻塞见M3-CLOSEOUT-v1.md、M3-IMPLEMENTATION-v1.md、M3-EVIDENCE-v1.md；不能以合成向量证明真实模型效果或生产部署完成。
+
+## M4候选理解边界（2026-11-04）
+
+Run固定rules/shadow/model与策略版本。model对非确定问候执行RequestUnderstanding，严格schema和来源验证、无效至多修复一次；咨询送检索，条件先订单查询，不直接准备写动作，失败澄清。shadow在确认/取消前拦截，本轮不写。新理解查询复用到RAG不重复改写；Context/ActionIntent/EvidenceBundle/ReviewResult每轮清理，图最大24步。只读双任务计划为独立能力，尚未接主图；多诉求完整执行未验收。当前业务rules/灰度0，原因是独立留出实体95.67%低于97%；不要把候选代码存在当作已激活或M4通过。

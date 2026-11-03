@@ -75,3 +75,9 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
 - `.env.example` 仅保存无密钥模板；生产要求强 `AUTH_SECRET_KEY`、明确 CORS origins、关闭演示账号并使用非演示凭据。不要新增数据库、日志或构建产物到提交中。
 - 提交保持单一主题，沿用 `fix:`、`chore:`、`perf:`、`refactor(rag):` 等前缀，摘要可用中文。PR 说明行为/配置变化、验证命令，以及迁移、种子数据和外部服务影响。
 - 架构变更同步相关文档，优先参考 `docs/AGENT_GRAPH.md`、`docs/API.md`、`docs/DEPLOYMENT.md`、`docs/SECURITY.md` 和 `docs/llm-governance.md`；文档与代码冲突时先核实实际实现。
+
+## M4当前验收状态（2026-11-04）
+
+- 本机业务知识配置已切向Ollama `qwen3-embedding:0.6b`（1024维、revision `ollama-ac6da0dfba84`）和Infinity `BAAI/bge-reranker-large`；是否推理成功仍以检索metadata为准。
+- M4为候选，独立留出实体95.67%未达97%，保持REQUEST_UNDERSTANDING_MODE=rules/灰度0。未通过项见docs/M4-GATES-v1.json，不得把实现或替身通过写成完整验收。
+- 当前业务SQL迁移0011、LLM_GATEWAY_ENABLED=true。新SQL网关保证仅覆盖启用网关且同SQL数据库的调用；旧入口system身份、长期泄漏及全故障矩阵仍有未验范围。

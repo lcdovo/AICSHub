@@ -1,0 +1,87 @@
+{
+  "date": "2026-11-04",
+  "artifacts": [
+    {
+      "path": "reports/m4-closeout/live/authorization-ledger.json",
+      "sha256": "e5a68aa8deef2209803a9624a9eb619ee804e70d23f65c16db5bcecad4dab1db",
+      "bytes": 346
+    },
+    {
+      "path": "reports/m4-closeout/live/results.jsonl",
+      "sha256": "dbcb65c79d7a60090e19bc4b0dd3d72deea2b808059b71b2239234c1fd213187",
+      "bytes": 470805
+    },
+    {
+      "path": "reports/m4-closeout/live/repairs.jsonl",
+      "sha256": "4b45f938e8a40e4ce01e2dbe65d9c4b5d0da046d885431eae91d2ee283c794e2",
+      "bytes": 4868
+    },
+    {
+      "path": "reports/m4-closeout/live/final-corrected-summary.json",
+      "sha256": "d8b21a88c44ddf58024f64ade9f0584a8bc4fcbec8ff02e8605698c663c36a5c",
+      "bytes": 5749
+    },
+    {
+      "path": "reports/m4-closeout/live/contracts.json",
+      "sha256": "ced9f2ef4cb1405c758bae1ca775b25c13a3844bb5c33c75ca0aa7dd15159450",
+      "bytes": 63
+    },
+    {
+      "path": "reports/m4-closeout/live/e2e.json",
+      "sha256": "28e117d10352248232a3a7f50fe4026f2c13d9d90bf1ae185281a6306a156c85",
+      "bytes": 763
+    },
+    {
+      "path": "reports/m4-closeout/live/cost-estimate.json",
+      "sha256": "f6ef5042392f8007e2bc9f8a709fdb23b96f71bed2e3438febf6ddaf1968038a",
+      "bytes": 334
+    },
+    {
+      "path": "reports/m4-closeout/supplier-price-evidence.json",
+      "sha256": "58525af4fdcc8e11239f86002449a0ff8fc7d2d9efabb55c7df3c01c421ee0c2",
+      "bytes": 1318
+    },
+    {
+      "path": "reports/m4-closeout/real-20261104-002924/junit.xml",
+      "sha256": "de4113ce8aff7b00022fe020c8fa5d2c37762bec3a6798e11344e8e9e30c0c8a",
+      "bytes": 504
+    },
+    {
+      "path": "reports/m4-closeout/lint-baseline.json",
+      "sha256": "e3735b898385769c3ff6ddacb035af4e7aac498f65c97bbbce878fa557770561",
+      "bytes": 1306
+    },
+    {
+      "path": "reports/offline/20261104-003919-147866/junit.xml",
+      "sha256": "3dac8e9a30984be94c94da10856200aec36c1a46f8c028ac042b027039a6fe57",
+      "bytes": 1827
+    },
+    {
+      "path": "reports/local-model-switch/20261103-233645/business-final-counts.json",
+      "sha256": "2a79271eaedca8ebc568a36d2ab4dd37f0c38deb3d23c1840a6d6c7041c09f0a",
+      "bytes": 295
+    },
+    {
+      "path": "reports/local-model-switch/20261103-233645/business-minimal-verification.log",
+      "sha256": "2b03508174d6b8c87408221d695b1d9413ba31c8731eace2d1b31e27774841c8",
+      "bytes": 318
+    },
+    {
+      "path": "reports/local-model-switch/20261103-233645/business-final-verification.log",
+      "sha256": "ecaac26d051d9b015cd4a4ffc6d852d679bbc234a3cf79b151bada0b7382362f",
+      "bytes": 544
+    },
+    {
+      "path": "reports/offline/20261104-004024-230822/junit.xml",
+      "sha256": "4c4f0f5435d6743aff176f78773cb03db8aa6483a764b4214046d75cd66f3361",
+      "bytes": 76503
+    },
+    {
+      "path": "reports/offline/20261104-004024-230822/manifest.json",
+      "sha256": "8a19f57dff215514f0d808aad0eb5846000ff80d4efa62f9b46a018815ee060c",
+      "bytes": 604
+    }
+  ],
+  "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",
+  "business_image": "sha256:3297a167f1bbb2549c48fc0d57f84ffabc1c3423909efc58e0b7a6721f4544b3"
+}
