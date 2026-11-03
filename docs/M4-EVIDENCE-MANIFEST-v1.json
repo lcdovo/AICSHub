@@ -722,6 +722,72 @@
       "sha256": "bc0f963aa9ef77594e9d1dfdd8a3d33043b6e6b37c5d3cf01cdc0425e9d123ea",
       "bytes": 27695,
       "snapshot": "bound-current-turn-confirmation"
+    },
+    {
+      "path": "reports/m4-closeout/live/proposal-boundary-6261a88637cc49e486a5f9b93af4251a.json",
+      "sha256": "5e01e767e74dea883f84bcb8563586e57592cbe79f30758fc198485a89582910",
+      "bytes": 1450,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/m4-closeout/live/proposal-boundary-6261a88637cc49e486a5f9b93af4251a-call-details.json",
+      "sha256": "0d11b7f7dc336a4de6133ec07e207e5c1a54ea6b887359ea3a4fa7f3ab49b417",
+      "bytes": 1405,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/m4-closeout/live/authorization-ledger.json",
+      "sha256": "5eda8ae6676d0c1f6e41b0e6b2b353806f1b601b18261a5476c7028953488ce6",
+      "bytes": 346,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-040500-610380/junit.xml",
+      "sha256": "a66e3439077220adc37ae640ee62a555339d3e1fb5f4b16c69ebcedbba135974",
+      "bytes": 7011,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-040500-610380/manifest.json",
+      "sha256": "03d46565be01e3c573a520018cc07515f9d47c9a9b551fa216ed43443952437a",
+      "bytes": 1846,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-040500-610380/source-start.json",
+      "sha256": "aad5b0e4ce0d85ca156bfd365571e40ca5dbeebbb6bcd263960953802295b332",
+      "bytes": 28305,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-040500-610380/source-end.json",
+      "sha256": "aad5b0e4ce0d85ca156bfd365571e40ca5dbeebbb6bcd263960953802295b332",
+      "bytes": 28305,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-035354-427828/junit.xml",
+      "sha256": "c5253e19a3ca6e2c1e2894c51ef80249b150688419ee32d485658982cc5dd429",
+      "bytes": 107301,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-035354-427828/manifest.json",
+      "sha256": "91fbae499d4ce47a718bd4abaf500a54aa6676f3b57a21df3c817e18b68db85e",
+      "bytes": 1203,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-035354-427828/source-start.json",
+      "sha256": "22b4780bcf95d4aab6284850ea73e75b55e14100a636b68140b445e4940ec3cb",
+      "bytes": 27921,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
+    },
+    {
+      "path": "reports/offline/20261104-035354-427828/source-end.json",
+      "sha256": "22b4780bcf95d4aab6284850ea73e75b55e14100a636b68140b445e4940ec3cb",
+      "bytes": 27921,
+      "snapshot": "660-authorized-calls-unsafe-proposal-boundary"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

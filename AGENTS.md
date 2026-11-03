@@ -81,3 +81,5 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
 - 本机业务知识配置已切向Ollama `qwen3-embedding:0.6b`（1024维、revision `ollama-ac6da0dfba84`）和Infinity `BAAI/bge-reranker-large`；是否推理成功仍以检索metadata为准。
 - M4为候选，独立留出实体95.67%未达97%，保持REQUEST_UNDERSTANDING_MODE=rules/灰度0。未通过项见docs/M4-GATES-v1.json，不得把实现或替身通过写成完整验收。
 - 当前业务SQL迁移0011、LLM_GATEWAY_ENABLED=true。新SQL网关保证仅覆盖启用网关且同SQL数据库的调用；候选代码已补齐直接图/聊天/RAG/兼容摘要的可信主体scope，无身份结构化请求关闭；历史system0保留，长期泄漏及部分真实模型故障仍有未验范围。
+
+- M4原授权真实供应商评测已用660/660请求；禁止通过换报告目录/删账本或自动重跑扩大额度。新增批量付费调用需新授权；继续本地/离线验收不受此费用额度影响。

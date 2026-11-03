@@ -99,3 +99,5 @@ SQL轮次恢复切片新增：`tests/test_m4_sql_turn_reset.py`；修改AgentSta
 模型重绑定切片新增：`tests/test_m4_model_rebinding.py`；修改Graph.llm_service属性以同步其原共享解析组件，保留显式独立Judge。
 
 确认绑定切片新增：`app/agent/confirmation_contracts.py`、`tests/test_m4_confirmation_binding.py`；修改AgentState与工具/确认节点，旧bool不作为授权来源。
+
+真实提议边界切片新增：`tests/test_m4_proposal_probe.py`、`acceptance/m4/unsafe-proposal-replay.json`；修改有界评测脚本proposal-boundary分支、README额度与证据，生产执行代码无变化。

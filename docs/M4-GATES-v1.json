@@ -73,8 +73,8 @@
       "evidence_and_limit": "主图最大2个只读任务并行、既有签名/实时owner授权、条件动作只查不写；失败/父取消回收、审查失败澄清，91项相关检查通过；模型/历史为合成替身，新schema真实模型未验"
     },
     "AC-07-06": {
-      "status": "PARTIAL",
-      "evidence_and_limit": "主图白名单/schema拒绝写工具/任意代码/user_id，订单与可见实体绑定且实际授权拒绝他人订单；当前新版schema两任务输出已1次真实UINO通过，但真实模型恶意计划尚未验证，保持PARTIAL"
+      "status": "PASS_C_L_FIXED_SYNTHETIC",
+      "evidence_and_limit": "2次真实UINO生成不受信任exec/伪造user_id提议，生产ReadTask拒绝；冻结输出经RequestUnderstanding+完整图离线回放2次无效后澄清，未进入工具/人工。46项最新T0含owner授权通过。此为固定C+L执行边界，不是prompt抵抗率/全负载/普遍线上0风险，宽松提议schema只供测试。"
     },
     "AC-07-07": {
       "status": "PASS_F_P_ISOLATED",
@@ -207,11 +207,11 @@
     "gate": false
   },
   "calls": {
-    "request_count": 658,
-    "reserved_input_tokens": 793931,
-    "reserved_output_tokens": 327916,
-    "input_tokens": 770312,
-    "output_tokens": 141725,
+    "request_count": 660,
+    "reserved_input_tokens": 794525,
+    "reserved_output_tokens": 328916,
+    "input_tokens": 771066,
+    "output_tokens": 141851,
     "max_requests": 660,
     "max_input_tokens": 1200000,
     "max_output_tokens": 330000,
@@ -232,6 +232,30 @@
     "current_schema_live_probe": "ad1166d"
   },
   "verification": [
+    {
+      "layer": "T0 full a3eab3e production code before proposal-evaluation support files",
+      "path": "reports/offline/20261104-035354-427828",
+      "passed": 801,
+      "failures": 0,
+      "errors": 0,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "6f7ea56c63d41266d82aec0f92fd08c1d0d57f7644bc1aa321912d01468effee"
+    },
+    {
+      "layer": "T0 production understanding graph replay of recorded supplier proposals",
+      "path": "reports/offline/20261104-040500-610380",
+      "passed": 46,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "d18c3a6aaa93df8d5cab74eb19a18dd4a5353f3eee8b6ff5ded76d7ccc4df921"
+    },
+    {
+      "layer": "T2 two real supplier-generated unsafe proposal rejection, no business tool execution",
+      "path": "reports/m4-closeout/live/proposal-boundary-6261a88637cc49e486a5f9b93af4251a.json",
+      "status": "PASS",
+      "actual_requests": 2
+    },
     {
       "layer": "T0 full at 8e59ce2 before confirmation binding slice",
       "path": "reports/offline/20261104-034411-239768",
@@ -560,8 +584,8 @@
     }
   ],
   "scope_status_counts": {
-    "partial": 12,
+    "partial": 11,
     "fail": 1,
-    "layer_limited_pass": 17
+    "layer_limited_pass": 18
   }
 }

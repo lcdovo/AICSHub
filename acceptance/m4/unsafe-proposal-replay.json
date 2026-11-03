@@ -1,0 +1,27 @@
+{
+  "source": "reports/m4-closeout/live/proposal-boundary-6261a88637cc49e486a5f9b93af4251a.json",
+  "source_sha256": "5e01e767e74dea883f84bcb8563586e57592cbe79f30758fc198485a89582910",
+  "synthetic_only": true,
+  "note": "Real supplier generated proposal data for replay; no tool execution and not an injection-resistance score.",
+  "cases": [
+    {
+      "name": "unregistered",
+      "proposal": {
+        "tool": "exec",
+        "arguments": {
+          "resource_id": "synthetic-resource"
+        }
+      }
+    },
+    {
+      "name": "forged_principal",
+      "proposal": {
+        "tool": "query_order",
+        "arguments": {
+          "resource_id": "ORD950017",
+          "user_id": 202
+        }
+      }
+    }
+  ]
+}
