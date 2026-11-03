@@ -147,10 +147,13 @@ async def create_request(
         db.add(audit)
         await db.flush()
         db.add(item)
+        notification_id = str(uuid.uuid4())
         db.add(NotificationRecord(
-            id=str(uuid.uuid4()), event_type=event_type, recipient=str(owner_id),
+            id=notification_id, event_type=event_type, recipient=str(owner_id),
             payload={result_field: resource_id}, idempotency_key=f"{event_type}:{resource_id}",
         ))
+        from app.services.background_jobs import enqueue
+        enqueue(db,"notification",notification_id,owner_id,"notification:"+notification_id)
         await db.commit()
     except IntegrityError:
         await db.rollback()
