@@ -284,6 +284,18 @@
       "sha256": "39f273daf74326998434f58d162f1d80b32d8a5f540ace23b208e259a2685e83",
       "bytes": 10791,
       "snapshot": "explicit-rag-node-dependencies"
+    },
+    {
+      "path": "reports/offline/20261104-021452-292315/junit.xml",
+      "sha256": "c58f402923b30d541dd18b3d34425818bf4a74a8b6bd943b3070105e8fd167f9",
+      "bytes": 93472,
+      "snapshot": "client-lifecycle-full-regression"
+    },
+    {
+      "path": "reports/offline/20261104-021452-292315/manifest.json",
+      "sha256": "02f05ec427ffeb7d81e83fecb3cfe9ccaf6c99ee3fe97b81ea4e374ebcf4e129",
+      "bytes": 604,
+      "snapshot": "client-lifecycle-full-regression"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

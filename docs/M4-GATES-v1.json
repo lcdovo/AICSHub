@@ -231,6 +231,13 @@
   },
   "verification": [
     {
+      "layer": "T0 full at 9816871 before node dependency slice",
+      "path": "reports/offline/20261104-021452-292315",
+      "passed": 709,
+      "failures": 0,
+      "errors": 0
+    },
+    {
       "layer": "T0 explicit RAG node dependencies and graph route",
       "path": "reports/offline/20261104-021717-335812",
       "passed": 79
