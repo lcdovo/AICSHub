@@ -44,9 +44,12 @@ async def identity(db: AsyncSession, actor_id: int, owner_id: int, session_id: s
         raise HTTPException(403, "操作人已失效")
     ensure_owner_or_admin(actor, owner_id)
     if session_id is not None:
-        session = await db.get(Session, session_id, populate_existing=True)
-        if session is None or session.user_id != owner_id:
+        session = await db.scalar(select(Session).where(Session.id == session_id).with_for_update()
+                                  .execution_options(populate_existing=True))
+        if session is None or session.user_id != owner_id or session.deleted_at is not None:
             raise HTTPException(404, "会话不存在")
+        if session.status == "closed":
+            raise HTTPException(409, "会话已关闭")
     return actor
 
 

@@ -44,6 +44,7 @@ class LogoutRequest(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    client_message_id: Optional[str] = Field(default=None, min_length=1, max_length=128, strict=True)
     user_id: int
     session_id: Optional[str] = None
     message: str = Field(..., min_length=1, max_length=5000)
@@ -52,6 +53,8 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
+    run_id: Optional[str] = None
+    run_status: Optional[str] = None
     message_id: int
     session_id: str
     reply: str

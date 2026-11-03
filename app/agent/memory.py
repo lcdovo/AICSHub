@@ -72,6 +72,14 @@ class SessionLeaseError(RuntimeError):
 
 
 _RELEASE_LOCK = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end"
+_SAVE_VERSIONED_STATE = """
+local old = redis.call('get', KEYS[1])
+if old then
+ local ok, value = pcall(cjson.decode, old)
+ if not ok or tonumber(value.session_version or -1) >= tonumber(ARGV[1]) then return 0 end
+end
+redis.call('setex', KEYS[1], ARGV[2], ARGV[3]); return 1
+"""
 _RENEW_LOCK = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('expire', KEYS[1], ARGV[2]) else return 0 end"
 
 
@@ -196,6 +204,8 @@ class SessionManager:
                 if not owned:
                     raise SessionLeaseError("会话锁已失效，本轮处理中止，请重试")
 
+            assert_owner.redis_lock_token = token if shared_acquired else None
+
             try:
                 yield assert_owner
             except asyncio.CancelledError:
@@ -224,11 +234,15 @@ class SessionManager:
         if await self._is_redis_available():
             try:
                 redis = await get_redis()
-                data = await redis.get(f"session:{session_id}")
+                data = await redis.get(f"session_state:v2:{session_id}")
+                if data is None:
+                    data = await redis.get(f"session:{session_id}")
                 if data:
                     state = self._deserialize_state(json.loads(data))
                     if state.session_id != session_id:
                         raise ValueError("Snapshot session identity mismatch")
+                    if len(self._state_cache)>=1024 and session_id not in self._state_cache:
+                        self._state_cache.pop(next(iter(self._state_cache)))
                     self._state_cache[session_id] = (state.model_copy(deep=True), time.time())
                     return state
                 self._state_cache.pop(session_id, None)
@@ -252,6 +266,25 @@ class SessionManager:
             )
 
     async def save_state(self, state: AgentState):
+        old = self._state_cache.get(state.session_id)
+        if state.session_version is not None and old and old[0].session_version is not None and old[0].session_version >= state.session_version:
+            return
+        if len(self._state_cache) >= 1024:
+            expired = [key for key,value in self._state_cache.items() if time.time()-value[1] >= SESSION_TTL_SECONDS]
+            for key in expired:
+                self._state_cache.pop(key,None)
+            if len(self._state_cache) >= 1024:
+                self._state_cache.pop(next(iter(self._state_cache)))
+        if state.session_version is not None and await self._is_redis_available():
+            try:
+                redis = await get_redis()
+                saved = await redis.eval(_SAVE_VERSIONED_STATE,1,f"session_state:v2:{state.session_id}",
+                    state.session_version,SESSION_TTL_SECONDS,json.dumps(self._serialize_state(state)))
+                if saved:
+                    self._state_cache[state.session_id]=(state.model_copy(deep=True),time.time())
+                return
+            except Exception as exc:
+                raise SessionLeaseError("无法保存共享会话投影") from exc
         self._state_cache[state.session_id] = (state.model_copy(deep=True), time.time())
 
         if await self._is_redis_available():
@@ -282,6 +315,8 @@ class SessionManager:
             return False
 
         summary = self._summarize_messages(state.messages[:-MIN_MESSAGES_AFTER_COMPRESSION])
+        if len(self._summaries)>=1024 and session_id not in self._summaries:
+            self._summaries.pop(next(iter(self._summaries)))
         self._summaries[session_id] = summary
         state.conversation_summary = summary.summary_text
         # 摘要持久化到 Redis，进程重启后不丢失
@@ -465,7 +500,7 @@ class SessionManager:
     async def get_summary(self, session_id: str) -> Optional[ConversationSummary]:
         """获取摘要：内存缓存 → Redis → state.conversation_summary。"""
         # 1. 内存缓存
-        if session_id in self._summaries:
+        if not await self._is_redis_available() and session_id in self._summaries:
             return self._summaries[session_id]
 
         # 2. Redis 持久化摘要
@@ -475,6 +510,7 @@ class SessionManager:
                 data = await redis.get(f"session_summary:{session_id}")
                 if data:
                     summary = ConversationSummary.from_dict(json.loads(data))
+                    if len(self._summaries)>=1024: self._summaries.pop(next(iter(self._summaries)))
                     self._summaries[session_id] = summary
                     return summary
             except Exception as e:
@@ -491,6 +527,12 @@ class SessionManager:
         return None
 
     def _serialize_state(self, state: AgentState) -> Dict[str, Any]:
+        if state.session_version is not None:
+            clean = state.for_next_turn(state.user_id, "")
+            return {"schema_version":2,"session_version":state.session_version,"session_id":state.session_id,
+                    "user_id":state.user_id,"messages":state.messages[-20:],"collected_info":clean.collected_info,
+                    "pending_confirmations":clean.pending_confirmations,"missing_slots":state.missing_slots,
+                    "needs_clarification":state.needs_clarification,"conversation_summary":state.conversation_summary}
         return {
             "schema_version": 1,
             "session_id": state.session_id,
@@ -518,12 +560,15 @@ class SessionManager:
     def _deserialize_state(self, data: Dict[str, Any]) -> AgentState:
         # 旧无version对象兼容读取；整数元数据/未知schema不可当作空历史转换。
         if (not isinstance(data, dict) or type(data.get("schema_version", 1)) is not int
-                or data.get("schema_version", 1) != 1):
+                or data.get("schema_version", 1) not in (1,2)):
             raise ValueError("Unsupported session snapshot schema")
         if (not isinstance(data.get("session_id"), str) or not data["session_id"]
                 or type(data.get("user_id")) is not int or data["user_id"] <= 0):
             raise ValueError("Invalid session snapshot identity")
+        if data.get("schema_version")==2 and (type(data.get("session_version")) is not int or data["session_version"]<0):
+            raise ValueError("Invalid session version")
         return AgentState(
+            session_version=data.get("session_version"),
             session_id=data.get("session_id", ""),
             user_id=data.get("user_id", 0),
             user_message=data.get("user_message", ""),

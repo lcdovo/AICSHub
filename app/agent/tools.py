@@ -287,6 +287,8 @@ class CreateTicketTool(BaseTool):
                         or session is None or session.user_id != payload["user_id"]
                         or source is None or source.session_id != session.id or source.role != MessageRole.USER):
                     return {"success": False, "error": "无权执行此工单请求", "error_type": "permission", "retryable": False}
+                from app.services.run_execution import guard_write
+                await guard_write(db, source)
                 key = payload.pop("idempotency_key")
                 item, _ = await create_request(db, actor, "create_ticket", payload, key)
                 receipt = ticket_receipt(item)
@@ -505,6 +507,8 @@ class EscalateToHumanTool(BaseTool):
                         or session is None or session.user_id != payload["user_id"]
                         or source is None or source.session_id != session.id or source.role != MessageRole.USER):
                     return {"success": False, "error": "无权执行此人工请求", "error_type": "permission", "retryable": False}
+                from app.services.run_execution import guard_write
+                await guard_write(db, source)
                 key = payload.pop("idempotency_key")
                 payload["context"] = {"context": payload["context"]} if payload["context"] else {}
                 item, _ = await create_request(db, actor, "request_handoff", payload, key)

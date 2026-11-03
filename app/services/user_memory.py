@@ -43,13 +43,13 @@ class UserMemoryService:
             await self._load_profile(profile, user_id)
             history = await self._load_history(user_id, session_id)
             profile["history"] = history[-self.max_items:] if self.max_items > 0 else []
-            profile["memory_source"] = "sqlite"
+            profile["memory_source"] = "sql_history"
             if query and self.max_items > 0:
                 recalled, recall_backend = await self._recall(query, history)
                 profile["recalled"] = recalled
                 self._record_recall_metrics(profile, recall_backend)
         except Exception as exc:  # 数据库不可用等
-            logger.warning("用户记忆加载失败(user=%s): %s", user_id, exc)
+            logger.warning("用户记忆加载失败(user=%s): %s", user_id, type(exc).__name__)
             profile["memory_source"] = "degraded"
         return profile
 
@@ -67,7 +67,7 @@ class UserMemoryService:
                 profile["tags"] = list(user.tags or [])
             profile["total_sessions"] = (
                 await session.scalar(
-                    select(func.count()).select_from(Session).where(Session.user_id == user_id)
+                    select(func.count()).select_from(Session).where(Session.user_id == user_id, Session.deleted_at.is_(None))
                 )
             ) or 0
             profile["total_tickets"] = (
@@ -95,7 +95,7 @@ class UserMemoryService:
             stmt = (
                 select(Message, Session)
                 .join(Session, Message.session_id == Session.id)
-                .where(Session.user_id == user_id)
+                .where(Session.user_id == user_id, Session.deleted_at.is_(None))
                 .order_by(desc(Message.created_at), desc(Message.id))
                 .limit(60)
             )
@@ -106,6 +106,8 @@ class UserMemoryService:
                     continue
                 history.append({
                     "session_id": message.session_id,
+                    "message_id": message.id,
+                    "source_type": "historical_user_statement" if message.role.value=="user" else "historical_assistant_response",
                     "current": message.session_id == session_id,
                     "role": message.role.value,
                     "content": message.content,
@@ -192,12 +194,15 @@ class UserMemoryService:
                     {
                         "content": scored_candidates[i]["content"],
                         "role": scored_candidates[i]["role"],
+                        "message_id": scored_candidates[i]["message_id"],
+                        "session_id": scored_candidates[i]["session_id"],
+                        "source_type": scored_candidates[i]["source_type"],
                         "semantic": round(self._cosine(q, vecs[i]), 3),
                     }
                     for i in top
                 ], "vector"
         except Exception as exc:
-            logger.warning("向量记忆召回不可用，回退关键词: %s", exc)
+            logger.warning("向量记忆召回不可用，回退关键词: %s", type(exc).__name__)
 
         scored = sorted(
             candidates,
@@ -205,7 +210,7 @@ class UserMemoryService:
             reverse=True,
         )
         return [
-            {"content": h["content"], "role": h["role"], "semantic": None}
+            {**h, "semantic": None}
             for h in scored[: self.max_items]
         ], "keyword"
 

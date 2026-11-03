@@ -22,6 +22,14 @@ class SnapshotRedis(FakeRedis):
     async def setex(self, key, ttl, value):
         self.values[key] = value
 
+    async def eval(self, script, count, key, token, *args):
+        if key.startswith("session_state:v2:"):
+            old=json.loads(self.values[key]) if key in self.values else {}
+            if old.get("session_version",-1)>=int(token): return 0
+            self.values[key]=args[1]
+            return 1
+        return await super().eval(script,count,key,token,*args)
+
 
 @pytest.fixture
 def session_api(tmp_path, monkeypatch):
@@ -46,6 +54,8 @@ def session_api(tmp_path, monkeypatch):
     manager = SessionManager()
     manager._redis_available = True
     monkeypatch.setattr("app.agent.memory.get_redis", AsyncMock(return_value=redis))
+    # MCP/业务提交与会话管理读取同一Redis，包含真实租约所有权检查。
+    monkeypatch.setattr("app.utils.database.get_redis", AsyncMock(return_value=redis))
     monkeypatch.setattr(chat, "session_manager", manager)
     monkeypatch.setattr("app.services.chat_service.session_manager", manager)
     monkeypatch.setattr("app.utils.database.async_session", factory)

@@ -21,6 +21,7 @@ from app.services.chat_service import chat_service
 from app.services.session_creation import create_session as create_session_record
 
 router = APIRouter(prefix="/api/v1/chat", tags=["对话管理"])
+WS_SEND_TIMEOUT_SECONDS = 5
 
 agent_graph = AgentGraph()
 chat_service.agent_graph = agent_graph
@@ -87,12 +88,14 @@ async def close_session(
 ):
     """关闭会话"""
     session = await db.get(Session, session_id)
-    if not session:
+    if not session or session.deleted_at is not None:
         raise HTTPException(status_code=404, detail="会话不存在")
     ensure_owner_or_admin(current_user, session.user_id)
 
     session.status = SessionStatus.CLOSED
     session.closed_at = datetime.utcnow()
+    session.version += 1
+    session.lease_token, session.lease_expires_at = None, None
     await db.commit()
 
     return APIResponse(
@@ -112,22 +115,15 @@ async def delete_session(
     from sqlalchemy import delete as sql_delete
     
     session = await db.get(Session, session_id)
-    if not session:
+    if not session or session.deleted_at is not None:
         raise HTTPException(status_code=404, detail="会话不存在")
     ensure_owner_or_admin(current_user, session.user_id)
 
-    # 先删除关联的AgentTrace记录
-    await db.execute(
-        sql_delete(AgentTrace).where(AgentTrace.session_id == session_id)
-    )
-    
-    # 再删除关联的EvaluationResult记录
-    await db.execute(
-        sql_delete(EvaluationResult).where(EvaluationResult.session_id == session_id)
-    )
-    
-    # 删除会话（会级联删除messages）
-    await db.delete(session)
+    session.deleted_at = datetime.utcnow()
+    session.status = SessionStatus.CLOSED
+    session.closed_at = datetime.utcnow()
+    session.version += 1
+    session.lease_token, session.lease_expires_at = None, None
     await db.commit()
 
     return APIResponse(
@@ -147,7 +143,7 @@ async def get_user_sessions(
     current_user: User = Depends(get_current_user),
 ):
     ensure_owner_or_admin(current_user, user_id)
-    query = select(Session).where(Session.user_id == user_id)
+    query = select(Session).where(Session.user_id == user_id, Session.deleted_at.is_(None))
     if not include_closed:
         query = query.where(Session.status == SessionStatus.ACTIVE)
     query = query.order_by(Session.updated_at.desc())
@@ -191,78 +187,15 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    request_trace_id = getattr(getattr(request, "state", None), "trace_id", None) or generate_trace_id()
+    from app.services.run_execution import accept, start, wait
+    from sqlalchemy.ext.asyncio import async_sessionmaker
     enforce_rate_limit(f"chat:{current_user.id}", settings.CHAT_RATE_LIMIT_PER_MINUTE)
-    ensure_owner_or_admin(current_user, chat_data.user_id)
-    user = await db.get(User, chat_data.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
-
-    session_id = chat_data.session_id
-    if session_id:
-        session = await db.get(Session, session_id)
-        if not session:
-            raise HTTPException(status_code=404, detail="会话不存在")
-        ensure_owner_or_admin(current_user, session.user_id)
-        if session.status == SessionStatus.CLOSED:
-            raise HTTPException(status_code=400, detail="会话已关闭")
-    else:
-        session_id = str(uuid.uuid4())
-        session = Session(
-            id=session_id,
-            user_id=chat_data.user_id,
-            status=SessionStatus.ACTIVE,
-        )
-        db.add(session)
-        await db.commit()
-
-    # End the pre-lock read transaction so refresh sees the previous turn's commit.
-    await db.commit()
-    try:
-        async with session_manager.session_lock(session_id) as assert_owner:
-            # 生产请求已通过get_current_user；重新验证等待期间的撤销/到期与角色变化。
-            # 离线用例可显式覆盖认证依赖，此时没有HTTP Bearer凭据。
-            scheme, _, credential = request.headers.get("authorization", "").partition(" ")
-            if scheme.lower() == "bearer" and credential.strip():
-                current_user = await authenticate_access_token(credential.strip(), db)
-                ensure_owner_or_admin(current_user, chat_data.user_id)
-            await db.refresh(session)
-            ensure_owner_or_admin(current_user, session.user_id)
-            if session.status == SessionStatus.CLOSED:
-                raise HTTPException(status_code=400, detail="会话已关闭")
-            user_message = Message(session_id=session_id, role=MessageRole.USER, content=chat_data.message)
-            db.add(user_message)
-            session.message_count += 1
-            session.updated_at = datetime.utcnow()
-            await db.commit()
-            await assert_owner()
-            agent_state = await chat_service.hydrate_state(session_id, chat_data.user_id, chat_data.message, action_id=chat_data.action_id, recover_from_db=True)
-            agent_state.source_message_id = user_message.id
-            agent_state.actor_id = current_user.id
-            agent_state.requested_action_id = chat_data.action_id
-            agent_state.requested_action_version = chat_data.action_version
-            agent_state = await chat_service.process(agent_state)
-            await assert_owner()
-            assistant_message, _evaluation = await chat_service.persist_result(
-                db, session, agent_state, chat_data.message, request_trace_id,
-            )
-            if session.message_count >= 10:
-                recent = (await db.execute(select(Message).where(Message.session_id == session_id).order_by(Message.id.desc()).limit(12))).scalars().all()
-                session.summary = _build_rule_summary(list(reversed(recent)), agent_state.detected_intent)
-                await db.commit()
-    except SessionBusyError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except SessionLeaseError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    return ChatResponse(
-        message_id=assistant_message.id,
-        session_id=session_id,
-        reply=agent_state.reply,
-        intent=agent_state.detected_intent,
-        response_time_ms=agent_state.execution_time_ms,
-        trace_id=request_trace_id,
-    )
+    run, _ = await accept(db, current_user, chat_data)
+    factory = async_sessionmaker(db.bind, expire_on_commit=False)
+    scheme, _, credential = request.headers.get("authorization", "").partition(" ")
+    start(factory, run, chat_service, session_manager, credential.strip() if scheme.lower()=="bearer" else None, False)
+    result = await wait(factory, run.id)
+    return ChatResponse(**result)
 
 
 @router.get("/history/{session_id}", response_model=APIResponse)
@@ -273,7 +206,7 @@ async def get_chat_history(
     current_user: User = Depends(get_current_user),
 ):
     session = await db.get(Session, session_id)
-    if not session:
+    if not session or session.deleted_at is not None:
         raise HTTPException(status_code=404, detail="会话不存在")
     ensure_owner_or_admin(current_user, session.user_id)
 
@@ -347,234 +280,151 @@ async def get_intent_types(_: User = Depends(require_user)):
 
 @router.websocket("/stream")
 async def websocket_chat_stream(websocket: WebSocket):
-    """WebSocket 实时对话流式接口"""
-    auth_header = websocket.headers.get("authorization", "")
-    scheme, _, credential = auth_header.partition(" ")
-    token = credential.strip() if scheme.lower() == "bearer" else None
-    token = token or websocket.query_params.get("access_token")
-    if not token:
-        await websocket.close(code=4401, reason="请先登录")
-        return
+    """传输只订阅持久Run事件；socket断开不会取消已接受的执行。"""
+    import asyncio
+    from pydantic import ValidationError
+    from app.services.run_execution import accept, start, wait, public_event, FINAL
+    from app.models.models import ChatRun, RunEvent
     from app.utils.database import async_session
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    scheme, _, credential = websocket.headers.get("authorization", "").partition(" ")
+    token = credential.strip() if scheme.lower()=="bearer" else websocket.query_params.get("access_token")
     try:
-        async with async_session() as auth_db:
-            authenticated_user_id = (await authenticate_access_token(token, auth_db)).id
+        async with async_session() as db:
+            await authenticate_access_token(token or "",db)
     except HTTPException:
-        await websocket.close(code=4401, reason="Token 无效")
+        await websocket.close(code=4401,reason="身份已失效")
         return
     except SQLAlchemyError:
-        await websocket.close(code=1013, reason="认证服务暂时不可用")
+        await websocket.close(code=1013,reason="认证服务暂时不可用")
         return
     await websocket.accept()
-    trace_id = generate_trace_id()
-    structured_logger.log_request(
-        trace_id=trace_id,
-        method="WS",
-        path="/api/v1/chat/stream",
-        detail="WebSocket connected",
-    )
-
-    db = None
+    async def emit(payload):
+        await asyncio.wait_for(websocket.send_json(payload),timeout=WS_SEND_TIMEOUT_SECONDS)
     try:
         while True:
-            raw_data = await websocket.receive_text()
-            # 每条消息都重新验证到期、撤销、禁用和数据库角色；握手身份不是长连接授权。
+            raw = await websocket.receive_text()
             try:
-                async with async_session() as auth_db:
-                    await authenticate_access_token(token, auth_db)
+                async with async_session() as db:
+                    actor = await authenticate_access_token(token,db)
             except HTTPException as exc:
-                await websocket.send_json({"type": "error", "code": 401, "message": exc.detail,
-                                           "timestamp": datetime.now().isoformat()})
-                await websocket.close(code=4401, reason="身份已失效")
-                return
-            except SQLAlchemyError:
-                await websocket.send_json({"type": "error", "code": 503, "message": "认证服务暂时不可用",
-                                           "timestamp": datetime.now().isoformat()})
-                await websocket.close(code=1013, reason="认证服务暂时不可用")
+                await emit({"type":"error","code":401,"message":exc.detail})
+                await websocket.close(code=4401)
                 return
             try:
-                data = json.loads(raw_data)
-            except json.JSONDecodeError:
-                await websocket.send_json(
-                    {"type": "error", "code": 400, "message": "JSON 格式错误", "timestamp": datetime.now().isoformat()}
-                )
-                continue
-
-            if not isinstance(data, dict) or not isinstance(data.get("message"), str):
-                await websocket.send_json({"type": "error", "code": 400, "message": "消息格式无效"})
-                continue
-            user_id = data.get("user_id")
-            if user_id is not None and (type(user_id) is not int or user_id <= 0):
-                await websocket.send_json({"type": "error", "code": 400, "message": "用户标识无效"})
-                continue
-            message = data["message"].strip()
-            session_id = data.get("session_id")
-            if ((session_id is not None and (not isinstance(session_id, str) or len(session_id) > 36))
-                    or (data.get("action_id") is not None and (not isinstance(data["action_id"], str) or not 1 <= len(data["action_id"]) <= 36))
-                    or (data.get("action_version") is not None and (type(data["action_version"]) is not int or data["action_version"] <= 0))):
-                await websocket.send_json({"type": "error", "code": 400, "message": "会话或动作标识无效"})
-                continue
-
-            if user_id and int(user_id) != authenticated_user_id:
-                await websocket.send_json({"type": "error", "code": 403, "message": "无权使用其他用户身份", "timestamp": datetime.now().isoformat()})
-                continue
-            user_id = authenticated_user_id
-            enforce_rate_limit(f"chat:{authenticated_user_id}", settings.CHAT_RATE_LIMIT_PER_MINUTE)
-
-            if not user_id:
-                await websocket.send_json(
-                    {"type": "error", "code": 400, "message": "缺少 user_id", "timestamp": datetime.now().isoformat()}
-                )
-                continue
-
-            if not message:
-                await websocket.send_json(
-                    {"type": "error", "code": 400, "message": "消息内容不能为空", "timestamp": datetime.now().isoformat()}
-                )
-                continue
-            if len(message) > settings.CHAT_MESSAGE_MAX_LENGTH:
-                await websocket.send_json({"type": "error", "code": 413, "message": "消息长度超出限制", "timestamp": datetime.now().isoformat()})
-                continue
-
-            async with async_session() as db:
-                if session_id:
-                    session = await db.get(Session, session_id)
-                    if not session:
-                        await websocket.send_json({"type": "error", "code": 404, "message": "会话不存在", "timestamp": datetime.now().isoformat()})
-                        continue
-                    elif session.user_id != authenticated_user_id:
-                        await websocket.send_json({"type": "error", "code": 403, "message": "无权访问该会话", "timestamp": datetime.now().isoformat()})
-                        continue
-                else:
-                    session_id = str(uuid.uuid4())
-                    session = Session(id=session_id, user_id=user_id, status=SessionStatus.ACTIVE)
-                    db.add(session)
-
-                await db.commit()
-                try:
-                    async with session_manager.session_lock(session_id) as assert_owner:
-                        # 等锁期间可能已注销；前面已结束读事务，避免沿用旧SQL快照。
-                        await authenticate_access_token(token, db)
-                        await db.refresh(session)
-                        if session.user_id != authenticated_user_id:
-                            raise HTTPException(status_code=403, detail="无权访问该会话")
-                        if session.status == SessionStatus.CLOSED:
-                            raise HTTPException(status_code=400, detail="会话已关闭")
-                        user_message = Message(
-                            session_id=session_id,
-                            role=MessageRole.USER,
-                            content=message,
-                        )
-                        db.add(user_message)
-                        session.message_count += 1
-                        await db.commit()
-
-                        await assert_owner()
-                        agent_state = await chat_service.hydrate_state(session_id, user_id, message, action_id=data.get("action_id"), recover_from_db=True)
-                        agent_state.source_message_id = user_message.id
-                        agent_state.actor_id = authenticated_user_id
-                        agent_state.requested_action_id = data.get("action_id")
-                        agent_state.requested_action_version = data.get("action_version")
-
-                        structured_logger.log_agent(
-                            trace_id=trace_id,
-                            node="stream",
-                            intent="stream_start",
-                            session_id=session_id,
-                            detail=f"user_id={user_id}, message={message[:50]}",
-                        )
-
-                        await websocket.send_json({
-                            "type": "stream_start",
-                            "session_id": session_id,
-                            "trace_id": trace_id,
-                            "timestamp": datetime.now().isoformat(),
-                        })
-
-                        full_reply = ""
-                        stream_agen = chat_service.process_stream(agent_state)
-                        try:
-                            async for event in stream_agen:
-                                if event["type"] == "token":
-                                    full_reply += event["content"]
-                                elif event["type"] == "done":
-                                    full_reply = event.get("reply", full_reply)
-
-                                await websocket.send_json(event)
-                        finally:
-                            # 断开/异常时显式关闭生成器，触发 run_stream 取消 producer，
-                            # 终止仍在进行的 LLM 生成，避免空烧调用与多余日志。
-                            await stream_agen.aclose()
-
-                        agent_state.reply = agent_state.reply or full_reply
-                        await assert_owner()
-                        assistant_message, stream_evaluation = await chat_service.persist_result(
-                            db, session, agent_state, message, trace_id
-                        )
-
-                        get_tracer().record_response(agent_state.execution_time_ms, True)
-
-                        stream_end_event = {
-                            "type": "stream_end",
-                            "message_id": assistant_message.id,
-                            "session_id": session_id,
-                            "timestamp": datetime.now().isoformat(),
-                        }
-
-                        structured_logger.log_agent(
-                            trace_id=trace_id,
-                            node="stream",
-                            intent="stream_end",
-                            session_id=session_id,
-                            detail=f"intent={agent_state.detected_intent}, time={agent_state.execution_time_ms}ms",
-                        )
-
-                    # 完成事件只在数据库提交且会话锁释放后发布；客户端此时可安全重连。
-                    await websocket.send_json(stream_end_event)
-
-                except HTTPException as exc:
-                    await db.rollback()
-                    await websocket.send_json({"type": "error", "code": exc.status_code,
-                                               "message": exc.detail, "timestamp": datetime.now().isoformat()})
-                    if exc.status_code == 401:
-                        await websocket.close(code=4401, reason="身份已失效")
-                        return
-                    continue
-                except (SessionBusyError, SessionLeaseError) as exc:
-                    await db.rollback()
-                    await websocket.send_json({
-                        "type": "error", "code": 409 if isinstance(exc, SessionBusyError) else 503,
-                        "message": str(exc), "timestamp": datetime.now().isoformat(),
-                    })
-                    continue
-
-    except WebSocketDisconnect:
-        structured_logger.log_agent(
-            trace_id=trace_id,
-            node="stream",
-            intent="ws_disconnect",
-            session_id="unknown",
-            detail="Client disconnected",
-        )
-    except Exception as e:
-        structured_logger.log_error(
-            trace_id=trace_id,
-            error_type="ws_error",
-            error_message=type(e).__name__,
-            method="WS",
-            path="/api/v1/chat/stream",
-        )
-        try:
-            await websocket.send_json({
-                "type": "error",
-                "code": 500,
-                "message": "服务器内部错误，请稍后重试",
-                "timestamp": datetime.now().isoformat(),
-            })
-        except Exception:
-            pass
+                data=json.loads(raw)
+                if not isinstance(data,dict) or not isinstance(data.get("message"),str):
+                    raise ValueError("invalid message")
+                if data.get("user_id") is not None and (type(data["user_id"]) is not int or data["user_id"]<=0):
+                    raise ValueError("invalid identity")
+                if data.get("user_id",actor.id)!=actor.id:
+                    raise HTTPException(403,"无权使用其他用户身份")
+                body=ChatRequest.model_validate({**data,"user_id":actor.id})
+                if body.session_id is not None and not isinstance(data.get("session_id"),str):
+                    raise ValueError("invalid session")
+                enforce_rate_limit(f"chat:{actor.id}",settings.CHAT_RATE_LIMIT_PER_MINUTE)
+                async with async_session() as db:
+                    run,_=await accept(db,actor,body)
+                    factory=async_sessionmaker(db.bind,expire_on_commit=False)
+                start(factory,run,chat_service,session_manager,token,True)
+                # 取得执行资格前的拒绝保持旧协议首帧error，不把授权拒绝当已开始。
+                while True:
+                    async with factory() as db:
+                        current=await db.get(ChatRun,run.id)
+                        phase=current.status
+                    if phase in FINAL:
+                        await wait(factory,run.id)
+                        break
+                    if phase != "accepted": break
+                    await asyncio.sleep(0.01)
+                async with factory() as db:
+                    initial=await db.scalar(select(RunEvent).where(RunEvent.run_id==run.id,RunEvent.sequence==1))
+                    await emit(public_event(initial))
+                result=await wait(factory,run.id)
+                async with factory() as db:
+                    events=(await db.execute(select(RunEvent).where(RunEvent.run_id==run.id,RunEvent.sequence>1)
+                                            .order_by(RunEvent.sequence))).scalars().all()
+                    for event in events:
+                        await emit(public_event(event))
+            except (json.JSONDecodeError,ValidationError,ValueError):
+                await emit({"type":"error","code":400,"message":"消息参数无效"})
+            except (SessionBusyError,SessionLeaseError) as exc:
+                await emit({"type":"error","code":409 if isinstance(exc,SessionBusyError) else 503,"message":"会话协调服务暂时不可用"})
+            except HTTPException as exc:
+                await emit({"type":"error","code":exc.status_code,"message":exc.detail})
+                if exc.status_code==401:
+                    await websocket.close(code=4401)
+                    return
+    except (WebSocketDisconnect, asyncio.TimeoutError, OSError):
+        pass
+    except SQLAlchemyError:
+        with __import__("contextlib").suppress(Exception):
+            await emit({"type":"error","code":503,"message":"数据库暂时不可用，请查询原Run"})
     finally:
-        try:
+        with __import__("contextlib").suppress(Exception):
             await websocket.close()
-        except Exception:
-            pass
+
+
+@router.get("/runs/{run_id}")
+async def get_run(run_id: str, db: AsyncSession=Depends(get_db), current_user: User=Depends(get_current_user)):
+    from app.models.models import ChatRun
+    from app.services.run_execution import recover
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    run=await db.get(ChatRun,run_id)
+    if run is None: raise HTTPException(404,"Run不存在")
+    ensure_owner_or_admin(current_user,run.user_id)
+    session=await db.get(Session,run.session_id)
+    if session is None or session.deleted_at is not None: raise HTTPException(404,"会话不存在")
+    await db.commit()
+    await recover(async_sessionmaker(db.bind,expire_on_commit=False),run_id)
+    await db.refresh(run)
+    return {"code":0,"data":{"run_id":run.id,"session_id":run.session_id,"status":run.status,
+            "sequence":run.sequence,"result":run.result,"error_code":run.error_code}}
+
+
+@router.get("/sessions/{session_id}/runs/{client_message_id}")
+async def resolve_run(session_id: str, client_message_id: str, db: AsyncSession=Depends(get_db),
+                      current_user: User=Depends(get_current_user)):
+    from app.models.models import ChatRun
+    session=await db.get(Session,session_id)
+    if session is None or session.deleted_at is not None: raise HTTPException(404,"会话不存在")
+    ensure_owner_or_admin(current_user,session.user_id)
+    run=await db.scalar(select(ChatRun).where(ChatRun.session_id==session_id,ChatRun.user_id==session.user_id,
+                                            ChatRun.client_message_id==client_message_id))
+    if run is None: raise HTTPException(404,"尚未接受该客户端消息")
+    return {"code":0,"data":{"run_id":run.id,"status":run.status}}
+
+
+@router.get("/runs/{run_id}/events")
+async def run_events(run_id: str, after: int=0, db: AsyncSession=Depends(get_db), current_user: User=Depends(get_current_user)):
+    from app.models.models import ChatRun,RunEvent
+    from app.services.run_execution import public_event
+    run=await db.get(ChatRun,run_id)
+    if run is None: raise HTTPException(404,"Run不存在")
+    ensure_owner_or_admin(current_user,run.user_id)
+    session=await db.get(Session,run.session_id)
+    if session is None or session.deleted_at is not None: raise HTTPException(404,"会话不存在")
+    if after<0: raise HTTPException(400,"游标必须非负")
+    rows=(await db.execute(select(RunEvent).where(RunEvent.run_id==run_id,RunEvent.sequence>after)
+                          .order_by(RunEvent.sequence).limit(100))).scalars().all()
+    return {"code":0,"data":[public_event(row) for row in rows]}
+
+
+@router.post("/runs/{run_id}/cancel")
+async def cancel_run(run_id: str, db: AsyncSession=Depends(get_db), current_user: User=Depends(get_current_user)):
+    from sqlalchemy import update
+    from app.models.models import ChatRun,RefundAction
+    from app.services.run_execution import append_event
+    run=await db.scalar(select(ChatRun).where(ChatRun.id==run_id).with_for_update())
+    if run is None: raise HTTPException(404,"Run不存在")
+    ensure_owner_or_admin(current_user,run.user_id)
+    if run.status not in {"accepted","awaiting_confirmation","cancelled"}:
+        raise HTTPException(409,"执行已开始或已完成，断线不能推定取消，请查询回执")
+    if run.status != "cancelled":
+        if run.status=="awaiting_confirmation":
+            await db.execute(update(RefundAction).where(RefundAction.id==run.action_id,RefundAction.session_id==run.session_id,
+                RefundAction.user_id==run.user_id,RefundAction.status=="pending").values(status="cancelled"))
+        run.status="cancelled"
+        append_event(db,run,"run_status",{"status":"cancelled"})
+        await db.commit()
+    return {"code":0,"data":{"run_id":run.id,"status":run.status}}

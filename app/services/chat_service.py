@@ -29,9 +29,16 @@ class ChatService:
 
     async def hydrate_state(self, session_id: str, user_id: int, message: str, *, action_id: str | None = None,
                             recover_from_db: bool = False) -> AgentState:
-        saved = await session_manager.get_state(session_id)
+        try:
+            saved = await session_manager.get_state(session_id)
+        except SessionLeaseError:
+            if not recover_from_db:
+                raise
+            saved = None
         if saved is not None and (saved.session_id != session_id or saved.user_id != user_id):
-            raise SessionLeaseError("共享会话状态归属不一致，请联系管理员核查")
+            if not recover_from_db:
+                raise SessionLeaseError("共享会话状态归属不一致，请联系管理员核查")
+            saved = None
         source = saved or AgentState(session_id=session_id, user_id=user_id, user_message="")
         state = source.for_next_turn(user_id, message)
         # 动作及历史以数据库恢复，Redis快照缺失不能遗忘已提交申请或待确认预览。
@@ -41,13 +48,24 @@ class ChatService:
         from sqlalchemy import select
         if recover_from_db:
             async with async_session() as db:
-                if saved is None:
-                    history = (await db.execute(select(Message).where(Message.session_id == session_id)
-                                                .order_by(Message.id.desc()).limit(40))).scalars().all()
-                    transcript = [{"role": m.role.value, "content": m.content} for m in reversed(history)]
-                    if transcript and transcript[-1] == {"role": "user", "content": message}:
-                        transcript.pop()
-                    state.messages = transcript + [{"role": "user", "content": message}]
+                persisted = await db.get(Session, session_id)
+                if persisted is None or persisted.deleted_at is not None:
+                    raise SessionLeaseError("会话已删除或不存在")
+                if persisted.user_id != user_id:
+                    raise SessionLeaseError("会话归属不匹配")
+                state.session_version = persisted.version
+                projection = persisted.context_data or {}
+                state.collected_info = dict(projection.get("collected_info") or {})
+                state.pending_confirmations = list(projection.get("pending_confirmations") or [])
+                state.missing_slots = list(projection.get("missing_slots") or [])
+                state.needs_clarification = bool(projection.get("needs_clarification"))
+                state.conversation_summary = persisted.summary
+                history = (await db.execute(select(Message).where(Message.session_id == session_id, Message.id > persisted.summary_cursor)
+                                            .order_by(Message.id.desc()).limit(40))).scalars().all()
+                transcript = [{"role": m.role.value, "content": m.content} for m in reversed(history)]
+                if transcript and transcript[-1] == {"role": "user", "content": message}:
+                    transcript.pop()
+                state.messages = transcript + [{"role": "user", "content": message}]
                 query = select(RefundAction).where(RefundAction.session_id == session_id, RefundAction.user_id == user_id)
                 query = query.where(RefundAction.id == action_id) if action_id else query.where(RefundAction.status == "pending")
                 action = await db.scalar(query.order_by(RefundAction.created_at.desc()).limit(1))
@@ -57,7 +75,7 @@ class ChatService:
                         refund_action=action_receipt(action), refund_preview={"order_id": action.order_id,
                         "reason": action.reason, "type": action.type, "user_id": user_id, "session_id": session_id,
                         "action_id": action.id, "action_version": action.version, "idempotency_key": f"refund-action:{action.id}"})
-        if saved:
+        if saved and not recover_from_db:
             summary = await session_manager.get_summary(session_id)
             if summary and summary.intent_history and not state.collected_info.get("intent_history"):
                 state.collected_info["intent_history"] = list(summary.intent_history)
@@ -81,6 +99,7 @@ class ChatService:
         trace_id: str,
         *,
         assistant_message: Optional[Message] = None,
+        commit: bool = True,
     ) -> tuple[Message, Any]:
         """Persist the assistant result and common evaluation/trace records."""
         # An interrupt returns its preview before response_generation can append it.
@@ -193,6 +212,8 @@ class ChatService:
         session.message_count += 1
         session.last_intent = state.detected_intent
         session.updated_at = datetime.utcnow()
+        if not commit:
+            return assistant_message, evaluation
         await db.commit()
         await db.refresh(assistant_message)
         await session_manager.save_state(state)

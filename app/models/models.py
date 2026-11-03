@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean, Enum, Float,
-    Index, ForeignKey, JSON, Numeric
+    Index, ForeignKey, JSON, Numeric, UniqueConstraint
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 import enum
@@ -75,6 +75,14 @@ class Session(Base):
     message_count = Column(Integer, default=0)
     last_intent = Column(String(50), nullable=True)
     summary = Column(Text, nullable=True)
+    summary_cursor = Column(Integer, nullable=False, default=0)
+    summary_version = Column(Integer, nullable=False, default=0)
+    summary_policy = Column(String(40), nullable=False, default="rules-v1")
+    version = Column(Integer, nullable=False, default=0)
+    context_data = Column(JSON, nullable=True)
+    lease_token = Column(String(36), nullable=True)
+    lease_expires_at = Column(DateTime, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     closed_at = Column(DateTime, nullable=True)
@@ -100,6 +108,7 @@ class Message(Base):
     token_count = Column(Integer, default=0)
     response_time_ms = Column(Integer, nullable=True)
     tool_calls = Column(JSON, nullable=True)
+    run_id = Column(String(36), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     session = relationship("Session", back_populates="messages")
@@ -245,6 +254,8 @@ class HandoffRequestRecord(Base):
 
 
 class NotificationStatus(str, enum.Enum):
+    SENDING = "sending"
+    UNKNOWN = "unknown"
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
@@ -260,6 +271,8 @@ class NotificationRecord(Base):
     recipient = Column(String(200), nullable=False)
     payload = Column(JSON, nullable=False)
     status = Column(Enum(NotificationStatus), nullable=False, default=NotificationStatus.PENDING, index=True)
+    is_simulated = Column(Boolean, nullable=False, default=False)
+    provider_receipt = Column(String(128), nullable=True)
     attempts = Column(Integer, nullable=False, default=0)
     last_error = Column(Text, nullable=True)
     idempotency_key = Column(String(128), nullable=False, unique=True, index=True)
@@ -395,3 +408,67 @@ class EvaluationResult(Base):
     processing_note = Column(Text, nullable=True)
     processed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ChatRun(Base):
+    """轮次事实；最终消息和最终事件原子提交，独立于Redis。"""
+    __tablename__ = "chat_runs"
+    __table_args__ = (UniqueConstraint("user_id", "session_id", "client_message_id", name="uq_run_client_message"),)
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    actor_id = Column(Integer, nullable=False)
+    session_id = Column(String(36), nullable=False, index=True)
+    client_message_id = Column(String(128), nullable=False)
+    request_hash = Column(String(64), nullable=False)
+    request_data = Column(JSON, nullable=False)
+    action_id = Column(String(36), nullable=True)
+    status = Column(String(30), nullable=False, default="accepted", index=True)
+    lease_token = Column(String(36), nullable=True)
+    redis_lock_token = Column(String(36), nullable=True)
+    lease_expires_at = Column(DateTime, nullable=True, index=True)
+    user_message_id = Column(Integer, nullable=True)
+    assistant_message_id = Column(Integer, nullable=True)
+    sequence = Column(Integer, nullable=False, default=0)
+    result = Column(JSON, nullable=True)
+    error_code = Column(String(50), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class RunEvent(Base):
+    __tablename__ = "run_events"
+    __table_args__ = (UniqueConstraint("run_id", "sequence", name="uq_run_event_sequence"),)
+    id = Column(String(36), primary_key=True)
+    run_id = Column(String(36), nullable=False, index=True)
+    session_id = Column(String(36), nullable=False)
+    sequence = Column(Integer, nullable=False)
+    schema_version = Column(Integer, nullable=False, default=1)
+    event_type = Column(String(40), nullable=False)
+    payload = Column(JSON, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class BackgroundJob(Base):
+    __tablename__ = "background_jobs"
+    id = Column(String(36), primary_key=True)
+    event_key = Column(String(128), nullable=False, unique=True)
+    kind = Column(String(40), nullable=False, index=True)
+    resource_id = Column(String(100), nullable=False)
+    user_id = Column(Integer, nullable=True, index=True)
+    status = Column(String(30), nullable=False, default="queued", index=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    max_attempts = Column(Integer, nullable=False, default=3)
+    next_run = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    lease_token = Column(String(36), nullable=True)
+    lease_expires_at = Column(DateTime, nullable=True)
+    last_error = Column(String(100), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class SimulatedDelivery(Base):
+    """模拟供应商幂等回执，与业务事务分离，绝不声明真实发送。"""
+    __tablename__ = "simulated_deliveries"
+    event_id = Column(String(36), primary_key=True)
+    receipt_id = Column(String(128), nullable=False, unique=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

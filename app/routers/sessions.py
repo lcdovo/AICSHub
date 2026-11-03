@@ -43,7 +43,7 @@ async def list_sessions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    query = select(Session)
+    query = select(Session).where(Session.deleted_at.is_(None))
     if current_user.role != UserRole.ADMIN.value:
         user_id = current_user.id
     if user_id:
@@ -78,7 +78,7 @@ async def list_sessions(
 @router.get("/{session_id}", response_model=APIResponse)
 async def get_session(session_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     session = await db.get(Session, session_id)
-    if not session:
+    if not session or session.deleted_at is not None:
         raise HTTPException(status_code=404, detail="会话不存在")
     ensure_owner_or_admin(current_user, session.user_id)
 
@@ -106,12 +106,14 @@ async def close_session(
     current_user: User = Depends(get_current_user),
 ):
     session = await db.get(Session, session_id)
-    if not session:
+    if not session or session.deleted_at is not None:
         raise HTTPException(status_code=404, detail="会话不存在")
     ensure_owner_or_admin(current_user, session.user_id)
 
     session.status = SessionStatus.CLOSED
     session.closed_at = datetime.utcnow()
+    session.version += 1
+    session.lease_token, session.lease_expires_at = None, None
     await db.commit()
 
     return APIResponse(code=0, message="会话已关闭", data={"id": session_id})
@@ -125,7 +127,7 @@ async def score_session(
     current_user: User = Depends(get_current_user),
 ):
     session = await db.get(Session, session_id)
-    if not session:
+    if not session or session.deleted_at is not None:
         raise HTTPException(status_code=404, detail="会话不存在")
     ensure_owner_or_admin(current_user, session.user_id)
 

@@ -23,6 +23,7 @@ class AgentState(BaseModel):
     session_id: str
     user_id: int
     user_message: str
+    session_version: Optional[int] = None
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
     actor_id: Optional[int] = None

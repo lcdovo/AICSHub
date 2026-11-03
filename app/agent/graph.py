@@ -278,7 +278,7 @@ class AgentGraph:
         yield {"type": "stream_mode", "mode": "updates", "token_stream": "validated", "timestamp": datetime.now().isoformat()}
         first_update = True
         token_index = 0
-        event_queue: asyncio.Queue = asyncio.Queue()
+        event_queue: asyncio.Queue = asyncio.Queue(maxsize=64)
 
         async def produce_updates():
             try:
@@ -294,7 +294,9 @@ class AgentGraph:
             except Exception as exc:
                 await event_queue.put(("error", exc))
             finally:
-                await event_queue.put(("graph_done", None))
+                # 被取消且队列已满时不能在finally等待消费者，否则aclose会永久阻塞。
+                if not asyncio.current_task().cancelling():
+                    await event_queue.put(("graph_done", None))
 
         queue_token = _stream_event_queue.set(event_queue)
         producer = asyncio.create_task(produce_updates())

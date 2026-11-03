@@ -32,6 +32,8 @@ async def context(db: AsyncSession, payload: dict[str, Any], message_id: int, ac
             or source is None or source.role != MessageRole.USER or source.content.strip() not in CONFIRMATIONS
             or source.session_id != payload["session_id"] or session is None or session.user_id != payload["user_id"]):
         raise HTTPException(status_code=403, detail="退款提交缺少本轮明确确认或有效身份")
+    from app.services.run_execution import guard_write
+    await guard_write(db, source)
     ensure_owner_or_admin(actor, payload["user_id"])
     return actor
 
