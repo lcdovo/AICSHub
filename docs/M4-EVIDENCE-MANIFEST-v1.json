@@ -278,6 +278,12 @@
       "sha256": "c0d5ab37fe91d87ad0e850c47d3088b3d0c21c6a0431f7c425884e3aa048013e",
       "bytes": 3741,
       "snapshot": "owned-http-pools-lifecycle"
+    },
+    {
+      "path": "reports/offline/20261104-021717-335812/junit.xml",
+      "sha256": "39f273daf74326998434f58d162f1d80b32d8a5f540ace23b208e259a2685e83",
+      "bytes": 10791,
+      "snapshot": "explicit-rag-node-dependencies"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

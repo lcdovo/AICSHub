@@ -1,19 +1,58 @@
 """RAG 链路节点：查询改写与混合检索。"""
 import asyncio
 import logging
+from dataclasses import dataclass
+from typing import Callable, Protocol, Any
 
 from app.agent.state import AgentState, AgentNode
 from app.config.config import settings
 
-# 经 graph 模块转发取知识库工厂：graph.py 保持模块级 get_knowledge_base
-# 再导出（兼容既有测试 monkeypatch 路径），本节点在调用时动态解析该名字，
-# 使测试/调用方能替换工厂实现。
-import app.agent.graph as _graph_module
+from app.agent.query_rewrite import QueryRewriteResult
 
 logger = logging.getLogger(__name__)
 
 
-async def query_rewrite_node(self: "AgentGraph", state: AgentState) -> str:
+class Rewriter(Protocol):
+    async def rewrite(self, *, query: str, messages: list[dict], collected_info: dict) -> QueryRewriteResult: ...
+
+
+class AsyncKnowledgeSearch(Protocol):
+    async def async_search(self, *, query: str, top_k: int) -> dict[str, Any]: ...
+
+
+class SyncKnowledgeSearch(Protocol):
+    def search(self, *, query: str, top_k: int) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class QueryRewriteDependencies:
+    rewriter: Rewriter
+
+
+@dataclass(frozen=True)
+class RetrievalDependencies:
+    knowledge_factory: Callable[[], AsyncKnowledgeSearch | SyncKnowledgeSearch]
+    top_k: Callable[[], int]
+    minimum_score: float
+
+
+@dataclass(frozen=True)
+class QueryRewriteNode:
+    dependencies: QueryRewriteDependencies
+
+    async def __call__(self, state: AgentState) -> str:
+        return await rewrite_query(self.dependencies, state)
+
+
+@dataclass(frozen=True)
+class RetrievalNode:
+    dependencies: RetrievalDependencies
+
+    async def __call__(self, state: AgentState) -> str:
+        return await retrieve_evidence(self.dependencies, state)
+
+
+async def rewrite_query(dependencies: QueryRewriteDependencies, state: AgentState) -> str:
     """为 RAG 补全多轮上下文，不修改用户原文或工具参数。
 
     组合改写：保守规则优先，规则未命中且 LLM 可用时由模型做语义改写。
@@ -22,7 +61,7 @@ async def query_rewrite_node(self: "AgentGraph", state: AgentState) -> str:
         state.rewritten_query=state.understanding.retrieval_query
         state.query_rewrite_reason="unified_understanding"
         return AgentNode.RAG_RETRIEVAL
-    result = await self.llm_rewriter.rewrite(
+    result = await dependencies.rewriter.rewrite(
         query=state.user_message,
         messages=state.messages,
         collected_info=state.collected_info,
@@ -42,14 +81,14 @@ async def query_rewrite_node(self: "AgentGraph", state: AgentState) -> str:
     return AgentNode.RAG_RETRIEVAL
 
 
-async def rag_retrieval_node(self: "AgentGraph", state: AgentState) -> str:
+async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentState) -> str:
     query = state.rewritten_query or state.user_message
-    top_k = settings.RAG_TOP_K
+    top_k = dependencies.top_k()
 
     # The chat path and the admin knowledge APIs must share one source of truth.
     # KnowledgeBaseService loads published documents from SQLite/Milvus and keeps
     # the in-memory fallback when external services are unavailable.
-    knowledge_base = await asyncio.to_thread(_graph_module.get_knowledge_base)
+    knowledge_base = await asyncio.to_thread(dependencies.knowledge_factory)
     if hasattr(knowledge_base, "async_search"):
         search_result = await knowledge_base.async_search(query=query, top_k=top_k)
     else:
@@ -77,7 +116,7 @@ async def rag_retrieval_node(self: "AgentGraph", state: AgentState) -> str:
 
     score = float(state.collected_info.get("best_match_score") or 0)
     score_type=state.retrieval_metadata.get("score_type")
-    if not state.collected_info["kb_results"] or (score_type != "rrf" and score < self.RAG_MIN_SCORE):
+    if not state.collected_info["kb_results"] or (score_type != "rrf" and score < dependencies.minimum_score):
         state.collected_info["rag_grounded"] = False
         state.collected_info["rag_fallback_reason"] = (
             state.retrieval_error or ("no_results" if not state.collected_info["kb_results"] else "low_score")
@@ -95,3 +134,16 @@ async def rag_retrieval_node(self: "AgentGraph", state: AgentState) -> str:
     )
 
     return AgentNode.RESPONSE_GENERATION
+
+
+# 仅供原私有方法/旧内部调用兼容。主图注册的节点直接接收显式依赖，不导入graph。
+async def query_rewrite_node(graph, state: AgentState) -> str:
+    return await rewrite_query(QueryRewriteDependencies(graph.llm_rewriter), state)
+
+
+async def rag_retrieval_node(graph, state: AgentState) -> str:
+    from app.agent.graph import get_knowledge_base
+    return await retrieve_evidence(RetrievalDependencies(
+        knowledge_factory=get_knowledge_base, top_k=lambda: settings.RAG_TOP_K,
+        minimum_score=graph.RAG_MIN_SCORE,
+    ), state)
