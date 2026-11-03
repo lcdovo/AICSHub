@@ -55,14 +55,14 @@ async def test_response_regeneration_never_reenters_committed_tool_stage(tmp_pat
         handoff = AsyncMock(return_value=ToolExecutionResult(success=False, error="synthetic unavailable"))
         monkeypatch.setattr(handoff_node, "invoke_tool", handoff)
         # 强制进入实际生成分支（正常有回执模板可快捷），模拟第一次生成被审查拒绝。
-        monkeypatch.setattr(graph, "_try_templated_tool_reply", lambda _: None)
+        monkeypatch.setattr(graph.nodes[AgentNode.RESPONSE_GENERATION], "tool_reply", lambda _: None)
         drafts = []
 
         async def generate(state):
             drafts.append(state.collected_info["create_ticket_result"]["ticket_id"])
             return "合成生成结果" + str(len(drafts))
 
-        monkeypatch.setattr(graph, "_generate_response_with_llm", generate)
+        monkeypatch.setattr(graph.nodes[AgentNode.RESPONSE_GENERATION], "generate", generate)
         validations = []
 
         def review(**kwargs):
@@ -133,7 +133,7 @@ async def test_refund_confirmation_commits_once_even_when_answer_regenerates(tmp
         action = await prepare(factory, 101, dict(user_id=101, session_id="session-101",
                                                 order_id="ORD950004", type="refund", reason="合成商品严重破损"))
         graph = graph_with_memory()
-        monkeypatch.setattr(graph, "_try_templated_tool_reply", lambda _: None)
+        monkeypatch.setattr(graph.nodes[AgentNode.RESPONSE_GENERATION], "tool_reply", lambda _: None)
         calls = []
 
         async def invoke(name, **payload):
@@ -149,7 +149,7 @@ async def test_refund_confirmation_commits_once_even_when_answer_regenerates(tmp
             drafts.append(state.collected_info["apply_refund_result"]["refund_id"])
             return "合成模拟退款申请回执" + str(len(drafts))
 
-        monkeypatch.setattr(graph, "_generate_response_with_llm", generate)
+        monkeypatch.setattr(graph.nodes[AgentNode.RESPONSE_GENERATION], "generate", generate)
         reviews = []
 
         def review(**kwargs):

@@ -1,15 +1,16 @@
 """响应生成节点：LLM 生成、回答缓存、工具模板、RAG 引用与 LLM judge 校验。
 
-自 graph.py 拆分迁移（原 AgentGraph._node_response_generation 及其全部私有助手），
-逻辑保持原样。寒暄词表、回答缓存 TTL、动作模板标记等常量随本模块一并迁出，
-并通过 graph.py 的类属性绑定供 `self.xxx` 访问。
+ResponseNode在组件内部组织生成、审查、引用和缓存助手，主图仅注入服务。
+保留旧Graph私有方法的结构兼容，常量与纯模板属于本响应域；校验标准不因注入改变。
 """
 import json
 import hashlib
 import logging
 import re
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, Callable, Protocol, Awaitable
+from dataclasses import dataclass
+from langchain_core.runnables import RunnableLambda
 from datetime import datetime
 
 from app.agent.state import AgentState, AgentNode, IntentType
@@ -38,12 +39,90 @@ EXPLAIN_MARKERS = ("为什么", "怎么回事", "咋回事", "怎么办", "怎�
 STRONG_EMOTION_MARKERS = ("气死", "垃圾", "太气人", "打不通", "敷衍", "坑惨", "真服了", "不回消息", "拖延")
 
 
-async def validate_candidate(self: "AgentGraph", state: AgentState) -> bool:
+class AnswerModel(Protocol):
+    async def chat(self, **payload) -> tuple[str, str, int]: ...
+    def stream_chat(self, **payload) -> Any: ...
+    def get_last_call_metadata(self) -> dict: ...
+
+
+class AnswerCache(Protocol):
+    async def aget(self, key: str) -> Any: ...
+    async def aset(self, key: str, value: Any, *, ttl: float) -> None: ...
+
+
+class AnswerValidator(Protocol):
+    def validate(self, **payload) -> Any: ...
+
+
+class AnswerJudge(Protocol):
+    DEFAULT_THRESHOLD: float
+    async def judge(self, **payload) -> dict | None: ...
+
+
+class KnowledgeSnapshot(Protocol):
+    def evidence_is_current(self, items: list[dict]) -> bool: ...
+
+
+class UserMemoryProfile(Protocol):
+    async def get_user_profile(self, **payload) -> dict: ...
+
+
+@dataclass(frozen=True)
+class ResponseServices:
+    model_factory: Callable[[], AnswerModel]
+    validator_factory: Callable[[], AnswerValidator]
+    judge_factory: Callable[[], AnswerJudge]
+    cache_factory: Callable[[], AnswerCache]
+    knowledge_factory: Callable[[], KnowledgeSnapshot]
+    memory_factory: Callable[[], UserMemoryProfile]
+
+
+class ResponseContext(Protocol):
+    """组件内局部助手契约；旧Graph兼容适配器也满足该结构。"""
+    @property
+    def llm_service(self) -> AnswerModel: ...
+    @property
+    def validator(self) -> AnswerValidator: ...
+    @property
+    def llm_judge(self) -> AnswerJudge: ...
+    llm_runnable: Any
+    @property
+    def _answer_cache(self) -> AnswerCache: ...
+    _ANSWER_CACHE_TTL: float
+    _EXPLAIN_MARKERS: tuple[str, ...]
+    _STRONG_EMOTION_MARKERS: tuple[str, ...]
+    _clean_chunk: Callable[[str, str], tuple[str, str, str]]
+    _build_llm_prompt: Callable[[AgentState], str]
+    _build_context_messages: Callable[[AgentState], list]
+    _add_rag_citations: Callable[[str, list], str]
+    _answer_cache_get: Callable[[str], Awaitable[str | None]]
+    _answer_cache_set: Callable[[str, str], Awaitable[None]]
+    _build_answer_cache_key: Callable[[AgentState], str]
+    _generate_response_with_llm: Callable[[AgentState], Awaitable[str | None]]
+    _get_default_reply: Callable[[str, str], str]
+    _try_templated_tool_reply: Callable[[AgentState], str | None]
+    _build_order_reply_template: Callable[[dict], str]
+    _try_action_reply_template: Callable[[AgentState, str, dict | None], str | None]
+    _build_refund_reply_template: Callable[[dict], str]
+    _build_ticket_status_reply_template: Callable[[dict], str]
+    _build_escalate_reply_template: Callable[[dict], str]
+    _rag_judge_applicable: Callable[[AgentState], bool]
+    _tool_evidence_text: Callable[[AgentState], str]
+
+
+async def current_knowledge_evidence(context: ResponseContext, items: list[dict]) -> bool:
+    import asyncio
+    factory = getattr(context, "knowledge_factory", None)
+    if factory is None:  # 仅供旧Graph私有方法兼容。
+        from app.services.knowledge_base import get_knowledge_base
+        factory = get_knowledge_base
+    return await asyncio.to_thread(lambda: factory().evidence_is_current(items))
+
+
+async def validate_candidate(self: "ResponseContext", state: AgentState) -> bool:
     """The same gate checks every generated draft, including regeneration."""
     if state.current_evidence() and any(item.get("version_id") for item in state.current_evidence()):
-        import asyncio
-        from app.services.knowledge_base import get_knowledge_base
-        if not await asyncio.to_thread(get_knowledge_base().evidence_is_current,state.current_evidence()):
+        if not await current_knowledge_evidence(self, state.current_evidence()):
             state.invalidate_evidence("knowledge_version_changed")
             state.reply="知识版本已变化，请重新提问以读取最新发布内容。"
     state.collected_info.pop("llm_judge", None)
@@ -86,7 +165,7 @@ async def validate_candidate(self: "AgentGraph", state: AgentState) -> bool:
     return passed
 
 
-async def response_generation_node(self: "AgentGraph", state: AgentState) -> str:
+async def response_generation_node(self: "ResponseContext", state: AgentState) -> str:
     is_shadow = (state.understanding_mode or settings.REQUEST_UNDERSTANDING_MODE) == "shadow"
     if is_shadow:
         # 影子只发布可信流程通知，不生成业务草稿或因审查失败转入写入型人工流程。
@@ -100,9 +179,7 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
         state.reply = self._get_default_reply(IntentType.GENERAL, state.user_message)
 
     if state.current_evidence() and any(item.get("version_id") for item in state.current_evidence()):
-        import asyncio
-        from app.services.knowledge_base import get_knowledge_base
-        if not await asyncio.to_thread(get_knowledge_base().evidence_is_current,state.current_evidence()):
+        if not await current_knowledge_evidence(self, state.current_evidence()):
             state.invalidate_evidence("knowledge_version_changed")
             state.reply="知识版本已变化，请重新提问以读取最新发布内容。"
     has_business_tool = any(tc.tool_name != "hybrid_search" for tc in state.tool_calls)
@@ -117,7 +194,8 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
     if not state.reply:
         if settings.USER_MEMORY_ENABLED:
             try:
-                state.collected_info["user_memory"] = await get_user_memory_service().get_user_profile(
+                memory_factory = getattr(self, "memory_factory", get_user_memory_service)
+                state.collected_info["user_memory"] = await memory_factory().get_user_profile(
                     user_id=state.user_id, query=state.user_message, session_id=state.session_id,
                 )
             except Exception:
@@ -181,7 +259,7 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
         "timestamp": datetime.now().isoformat(timespec="milliseconds"),
     })
     # Buffer provider tokens until the final answer has passed the gate.
-    from app.agent.graph import _stream_event_queue
+    from app.agent.stream_context import stream_event_queue as _stream_event_queue
     stream_queue = _stream_event_queue.get()
     if stream_queue is not None:
         for offset in range(0, len(state.reply), 64):
@@ -189,7 +267,7 @@ async def response_generation_node(self: "AgentGraph", state: AgentState) -> str
     return AgentNode.END
 
 
-def add_rag_citations(self: "AgentGraph", reply: str, results: list[dict[str, Any]]) -> str:
+def add_rag_citations(self: "ResponseContext", reply: str, results: list[dict[str, Any]]) -> str:
     """Expose the exact published chunks used by the answer."""
     # The server supplies references from current evidence, including on cache hits.
     reply = re.split(r"\n+\s*参考来源[：:]", reply, maxsplit=1)[0].rstrip()
@@ -223,7 +301,7 @@ def clean_chunk(content: str, fallback_title: str = "") -> tuple[str, str, str]:
     return title, chapter, body
 
 
-def build_answer_cache_key(self: "AgentGraph", state: AgentState) -> str:
+def build_answer_cache_key(self: "ResponseContext", state: AgentState) -> str:
     """Scope reuse to the user, semantic context, current evidence and policy."""
     evidence = [
         {key: item.get(key) for key in ("id", "title", "content", "source", "version")}
@@ -247,7 +325,7 @@ def build_answer_cache_key(self: "AgentGraph", state: AgentState) -> str:
     return f"validated-v2:{digest}"
 
 
-async def answer_cache_get(self: "AgentGraph", key: str) -> Optional[str]:
+async def answer_cache_get(self: "ResponseContext", key: str) -> Optional[str]:
     value = await self._answer_cache.aget(key)
     if isinstance(value, dict) and value.get("schema") == 2 and value.get("validated") is True:
         reply = value.get("reply")
@@ -255,13 +333,13 @@ async def answer_cache_get(self: "AgentGraph", key: str) -> Optional[str]:
     return None
 
 
-async def answer_cache_set(self: "AgentGraph", key: str, reply: str):
+async def answer_cache_set(self: "ResponseContext", key: str, reply: str):
     await self._answer_cache.aset(
         key, {"schema": 2, "validated": True, "reply": reply}, ttl=self._ANSWER_CACHE_TTL,
     )
 
 
-def try_templated_tool_reply(self: "AgentGraph", state: AgentState) -> Optional[str]:
+def try_templated_tool_reply(self: "ResponseContext", state: AgentState) -> Optional[str]:
     """工具成功后用模板拼接回复，跳过 LLM 生成（延迟优化）。"""
     if not state.tool_calls:
         return None
@@ -328,7 +406,7 @@ def build_order_reply_template(data: Dict[str, Any]) -> str:
 
 
 def try_action_reply_template(
-    self: "AgentGraph", state: AgentState, tool_name: str, data: Optional[Dict[str, Any]]
+    self: "ResponseContext", state: AgentState, tool_name: str, data: Optional[Dict[str, Any]]
 ) -> Optional[str]:
     """动作确认型工具（apply_refund / update_ticket_status / escalate_to_human）成功后拼模板回复。"""
     if not isinstance(data, dict) or not tool_name:
@@ -390,7 +468,7 @@ def build_escalate_reply_template(data: Dict[str, Any]) -> str:
     return handoff_message(data)
 
 
-def rag_judge_applicable(self: "AgentGraph", state: AgentState) -> bool:
+def rag_judge_applicable(self: "ResponseContext", state: AgentState) -> bool:
     """All grounded policy answers use the gate, regardless of their intent label."""
     return (
         bool(state.collected_info.get("rag_grounded"))
@@ -408,11 +486,10 @@ def tool_evidence_text(state: AgentState) -> str:
     return "\n".join(parts)
 
 
-async def generate_response_with_llm(self: "AgentGraph", state: AgentState) -> str:
+async def generate_response_with_llm(self: "ResponseContext", state: AgentState) -> str:
     """使用 LLM 生成响应，失败时返回 None 由调用方降级"""
-    # 延迟导入避免循环依赖：graph.py 在导入期加载本模块，此刻 graph 尚未
-    # 完全初始化；运行期（生成响应时）graph 已加载完毕，导入恒安全。
-    from app.agent.graph import _stream_event_queue
+    # 流式通道独立于图的装配，供应商草稿仍在组件内缓冲。
+    from app.agent.stream_context import stream_event_queue as _stream_event_queue
 
     try:
         prompt = self._build_llm_prompt(state)
@@ -428,10 +505,11 @@ async def generate_response_with_llm(self: "AgentGraph", state: AgentState) -> s
         if stream_queue is not None:
             # Collect provider output privately; response_generation publishes the final validated text.
             chunks = []
-            async for chunk in self.llm_service.stream_chat(**payload):
+            model = self.llm_service
+            async for chunk in model.stream_chat(**payload):
                 chunks.append(chunk)
             reply = "".join(chunks)
-            metadata = self.llm_service.get_last_call_metadata()
+            metadata = model.get_last_call_metadata()
             token_count = int(metadata.get("tokens", max(1, len(reply) // 4)))
         else:
             # chat() 返回的 intent 仅供日志/元数据展示；路由意图唯一由
@@ -447,18 +525,19 @@ async def generate_response_with_llm(self: "AgentGraph", state: AgentState) -> s
         )
         return reply
     except Exception as e:
-        logger.warning(f"LLM 调用失败: {e}")
+        logger.warning("LLM 调用失败: %s", type(e).__name__)
         return None
 
 
-async def invoke_llm_service(self: "AgentGraph", payload: Dict[str, Any]):
-    reply, intent, tokens = await self.llm_service.chat(**payload)
+async def invoke_llm_service(self: "ResponseContext", payload: Dict[str, Any]):
+    model = self.llm_service
+    reply, intent, tokens = await model.chat(**payload)
     # RunnableLambda executes in its own context. Return metadata explicitly so
     # task-local model information travels with this exact answer.
-    return reply, intent, tokens, self.llm_service.get_last_call_metadata()
+    return reply, intent, tokens, model.get_last_call_metadata()
 
 
-def build_llm_prompt(self: "AgentGraph", state: AgentState) -> str:
+def build_llm_prompt(self: "ResponseContext", state: AgentState) -> str:
     """构建发送给 LLM 的富上下文 prompt"""
     parts = []
     intent_labels = {
@@ -576,7 +655,7 @@ def build_llm_prompt(self: "AgentGraph", state: AgentState) -> str:
     return "\n".join(parts)
 
 
-def build_context_messages(self: "AgentGraph", state: AgentState) -> list:
+def build_context_messages(self: "ResponseContext", state: AgentState) -> list:
     """构建对话历史上下文"""
     context = []
     for msg in state.messages[-6:]:
@@ -600,7 +679,7 @@ def is_smalltalk(message: str) -> bool:
     )
 
 
-def get_default_reply(self: "AgentGraph", intent: str, message: str) -> str:
+def get_default_reply(self: "ResponseContext", intent: str, message: str) -> str:
     if intent == IntentType.GENERAL:
         msg = (message or "").strip().lower()
         if any(g in msg for g in SMALLTALK_PATTERNS["greeting"]):
@@ -618,3 +697,72 @@ def get_default_reply(self: "AgentGraph", intent: str, message: str) -> str:
         IntentType.PROMOTION: "我们目前有多种优惠活动。您可以在官网或 APP 首页查看最新的促销信息。",
     }
     return default_replies.get(intent, "我可以帮助您查询订单、处理退换货、解答产品问题等。请问有什么可以帮您的？")
+
+
+class ResponseNode:
+    """回答编排组件，服务与可替代生成器显式注入，最终审查不可被生成器绕过。"""
+
+    def __init__(self, services: ResponseServices, *,
+                 generate: Callable[[AgentState], Awaitable[str | None]] | None = None,
+                 tool_reply: Callable[[AgentState], str | None] | None = None):
+        self.services = services
+        self.generate = generate
+        self.tool_reply = tool_reply
+        self.llm_runnable = RunnableLambda(self._invoke_llm_service)
+
+    @property
+    def llm_service(self):
+        return self.services.model_factory()
+
+    @property
+    def validator(self):
+        return self.services.validator_factory()
+
+    @property
+    def llm_judge(self):
+        return self.services.judge_factory()
+
+    @property
+    def _answer_cache(self):
+        return self.services.cache_factory()
+
+    @property
+    def knowledge_factory(self):
+        return self.services.knowledge_factory
+
+    @property
+    def memory_factory(self):
+        return self.services.memory_factory
+
+    async def __call__(self, state: AgentState) -> str:
+        return await response_generation_node(self, state)
+
+    async def _generate_response_with_llm(self, state: AgentState) -> str | None:
+        if self.generate is not None:
+            return await self.generate(state)
+        return await generate_response_with_llm(self, state)
+
+    def _try_templated_tool_reply(self, state: AgentState) -> str | None:
+        if self.tool_reply is not None:
+            return self.tool_reply(state)
+        return try_templated_tool_reply(self, state)
+
+    _ANSWER_CACHE_TTL = ANSWER_CACHE_TTL
+    _EXPLAIN_MARKERS = EXPLAIN_MARKERS
+    _STRONG_EMOTION_MARKERS = STRONG_EMOTION_MARKERS
+    _clean_chunk = staticmethod(clean_chunk)
+    _build_llm_prompt = build_llm_prompt
+    _build_context_messages = build_context_messages
+    _add_rag_citations = add_rag_citations
+    _answer_cache_get = answer_cache_get
+    _answer_cache_set = answer_cache_set
+    _build_answer_cache_key = build_answer_cache_key
+    _get_default_reply = get_default_reply
+    _build_order_reply_template = staticmethod(build_order_reply_template)
+    _try_action_reply_template = try_action_reply_template
+    _build_refund_reply_template = staticmethod(build_refund_reply_template)
+    _build_ticket_status_reply_template = staticmethod(build_ticket_status_reply_template)
+    _build_escalate_reply_template = staticmethod(build_escalate_reply_template)
+    _rag_judge_applicable = rag_judge_applicable
+    _tool_evidence_text = staticmethod(tool_evidence_text)
+    _invoke_llm_service = invoke_llm_service

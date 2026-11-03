@@ -6,13 +6,13 @@ Agent 编排 - 基于官方 LangGraph 状态机的 13 节点业务编排（Phase
 执行入口、意图→节点路由表，以及观察（Langfuse）注入。
 
 13 个节点的业务编排实现已拆分到 app/agent/nodes/ 包（按域划分意图识别、RAG、
-工具执行、响应生成、人工转接等），并在本类底部通过类属性绑定引用，保持
+工具执行、响应生成、人工转接等），主图注册显式依赖组件及独立状态函数。
+类属性绑定仅保留旧内部兼容，保持
 ``self._node_xxx()`` 的既有调用契约不变，避免扩散修改调用方。
 """
 import time
 import asyncio
 import contextlib
-import contextvars
 import logging
 import random
 from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, TypedDict
@@ -89,9 +89,7 @@ logger = logging.getLogger(__name__)
 
 # run_stream and response_generation share a queue through ContextVar.
 # Provider drafts stay private; the response node queues only validated final text.
-_stream_event_queue: contextvars.ContextVar[Optional[asyncio.Queue]] = contextvars.ContextVar(
-    "agent_stream_event_queue", default=None
-)
+from app.agent.stream_context import stream_event_queue as _stream_event_queue
 
 
 class AgentGraph:
@@ -103,7 +101,7 @@ class AgentGraph:
 
     # ---------- 节点实现绑定（app/agent/nodes/ 包） ----------
     # 13 个 LangGraph 节点的业务编排已拆分至 nodes 包；此处通过类属性绑定，
-    # 让图装配（_register_nodes）与既有测试（_node_xxx 直调）的调用契约不变。
+    # 以下绑定仅保留旧内部直调契约，主图_register_nodes不使用这些私有方法。
     _node_start = start_node
     _node_end = end_node
     _node_intent_recognition = intent_recognition_node
@@ -241,6 +239,8 @@ class AgentGraph:
         return invoke
 
     def _register_nodes(self):
+        from app.agent.nodes.start_node import begin_turn, finish_turn
+        from app.agent.nodes.handoff_node import HandoffNode, HandoffDependencies, invoke_handoff_tool, authorize_current_handoff
         from app.agent.nodes.rag_node import (
             QueryRewriteNode, QueryRewriteDependencies, RetrievalNode, RetrievalDependencies,
         )
@@ -254,7 +254,7 @@ class AgentGraph:
             ClarificationNode, ClarificationDependencies, fill_slots,
             detect_escalation, is_refund_inquiry, is_complaint_inquiry, required_slots, intent_destination,
         )
-        self.nodes[AgentNode.START] = self._node_start
+        self.nodes[AgentNode.START] = begin_turn
         self.nodes[AgentNode.INTENT_RECOGNITION] = IntentNode(IntentDependencies(
             self.intent_recognizer, lambda: self.llm_service, is_refund_confirmed, refund_cancelled,
             is_smalltalk, detect_escalation, persistent_actions(),
@@ -274,9 +274,15 @@ class AgentGraph:
             extract_info, select_tools, is_refund_confirmed, invoke_registered_tool, persistent_actions(),
         ))
         self.nodes[AgentNode.RESULT_VERIFICATION] = verify_tool_result
-        self.nodes[AgentNode.RESPONSE_GENERATION] = self._node_response_generation
-        self.nodes[AgentNode.HUMAN_HANDOFF] = self._node_human_handoff
-        self.nodes[AgentNode.END] = self._node_end
+        from app.agent.nodes.response_node import ResponseNode, ResponseServices
+        from app.services.user_memory import get_user_memory_service
+        self.nodes[AgentNode.RESPONSE_GENERATION] = ResponseNode(ResponseServices(
+            model_factory=lambda: self.llm_service, validator_factory=lambda: self.validator,
+            judge_factory=lambda: self.llm_judge, cache_factory=lambda: self._answer_cache,
+            knowledge_factory=lambda: get_knowledge_base(), memory_factory=get_user_memory_service,
+        ))
+        self.nodes[AgentNode.HUMAN_HANDOFF] = HandoffNode(HandoffDependencies(invoke_handoff_tool, authorize_current_handoff))
+        self.nodes[AgentNode.END] = finish_turn
 
     def _route_by_intent(self, intent: str) -> str:
         from app.agent.nodes.intent_node import intent_destination

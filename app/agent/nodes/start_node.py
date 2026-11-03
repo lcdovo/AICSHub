@@ -2,9 +2,17 @@
 from app.agent.state import AgentState, AgentNode
 
 
-async def start_node(self: "AgentGraph", state: AgentState) -> str:
+async def begin_turn(state: AgentState) -> str:
     return AgentNode.INTENT_RECOGNITION
 
 
-async def end_node(self: "AgentGraph", state: AgentState) -> str:
+async def finish_turn(state: AgentState) -> str:
     return AgentNode.END
+
+
+async def start_node(graph, state: AgentState) -> str:
+    return await begin_turn(state)
+
+
+async def end_node(graph, state: AgentState) -> str:
+    return await finish_turn(state)

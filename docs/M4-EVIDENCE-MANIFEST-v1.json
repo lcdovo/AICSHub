@@ -320,6 +320,12 @@
       "sha256": "6668e12e6351c93f74647dbd77667733414ec6fd276c2701f4a13b381a48b690",
       "bytes": 604,
       "snapshot": "tool-dependencies-full-regression"
+    },
+    {
+      "path": "reports/offline/20261104-023928-960258/junit.xml",
+      "sha256": "73f5ac969672094b2ab358dc76e6fe2efe6e8cbe361917c102eee3e5d682286f",
+      "bytes": 16321,
+      "snapshot": "response-node-composition-boundary"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

@@ -77,3 +77,5 @@ RAG节点依赖切片新增：`tests/test_m4_node_dependencies.py`、`docs/M4-NO
 工具依赖切片新增：`tests/test_m4_tool_dependencies.py`；修改graph.py、tool_node.py、refund_actions.py及依赖清单/验收说明。
 
 意图依赖切片新增：`tests/test_m4_intent_dependencies.py`；修改graph.py、intent_node.py、退款领域取消门面及依赖/验收说明。
+
+响应装配切片新增：`app/agent/stream_context.py`、`tests/test_m4_response_dependencies.py`；修改响应/人工/开始结束节点、Graph装配、原阶段测试的注入位置和模块依赖文档。
