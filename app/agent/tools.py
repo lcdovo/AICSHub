@@ -616,6 +616,8 @@ class SendNotificationTool(BaseTool):
 class UpdateTicketStatusTool(BaseTool):
     """更新工单状态"""
     name = "update_ticket_status"
+    max_retries = 1
+    cache_success = False
     description = "更新工单的处理状态，用于工单流转和状态同步"
     parameters = [
         {"name": "ticket_id", "type": "string", "description": "工单ID", "required": True},
@@ -625,40 +627,41 @@ class UpdateTicketStatusTool(BaseTool):
     ]
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
-        ticket_id = kwargs.get("ticket_id", "")
-        status = kwargs.get("status", "")
-        note = kwargs.get("note", "")
+        from fastapi import HTTPException
+        from pydantic import ValidationError
+        from app.agent.ticket_authorization import TicketUpdateToolInput, verify_ticket_update_authorization
+        from app.models.models import User
+        from app.services.ticket_creation import resolve_idempotency_key
+        from app.services.ticket_update import update_ticket
+        from app.utils.database import async_session
 
-        if not ticket_id:
-            return {"success": False, "error": "请提供工单ID", "hint": "工单ID格式：UUID"}
-
-        if status not in ["pending", "processing", "resolved", "closed", "escalated"]:
-            return {
-                "success": False,
-                "error": f"无效的工单状态: {status}",
-                "hint": "有效状态：pending(待处理)、processing(处理中)、resolved(已解决)、closed(已关闭)、escalated(已升级)",
-            }
-
-        status_labels = {
-            "pending": "待处理",
-            "processing": "处理中",
-            "resolved": "已解决",
-            "closed": "已关闭",
-            "escalated": "已升级",
-        }
-
-        return {
-            "success": True,
-            "data": {
-                "ticket_id": ticket_id,
-                "old_status": "pending",
-                "new_status": status,
-                "new_status_label": status_labels.get(status, status),
-                "note": note,
-                "updated_at": datetime.now().isoformat(),
-                "message": f"工单状态已更新为：{status_labels.get(status, status)}",
-            },
-        }
+        values = dict(kwargs)
+        authorization = values.pop("authorization", "")
+        try:
+            payload = TicketUpdateToolInput.model_validate(values).model_dump()
+            resolve_idempotency_key(payload["idempotency_key"], None)
+            actor_id = verify_ticket_update_authorization(authorization, payload)
+        except (ValidationError, ValueError, TypeError, HTTPException):
+            return {"success": False, "error": "工单更新参数或执行授权无效", "error_type": "validation", "retryable": False}
+        try:
+            async with async_session() as db:
+                actor = await db.get(User, actor_id)
+                if actor is None:
+                    return {"success": False, "error": "操作人不存在", "error_type": "permission", "retryable": False}
+                receipt = await update_ticket(db, actor, payload["ticket_id"], {"status": payload["status"]},
+                                              note=payload["note"], key=payload["idempotency_key"])
+                labels = {"pending": "待处理", "processing": "处理中", "resolved": "已解决",
+                          "closed": "已关闭", "escalated": "已升级"}
+                return {"success": True, "data": {**receipt["ticket"], "old_status": receipt["old_status"],
+                        "new_status": receipt["new_status"], "new_status_label": labels[receipt["new_status"]],
+                        "note": receipt["note"], "message": f"本次工单更新已提交，状态：{labels[receipt['new_status']]}。"}}
+        except HTTPException as exc:
+            return {"success": False, "error": exc.detail,
+                    "error_type": {403: "permission", 404: "not_found", 409: "conflict"}.get(exc.status_code, "validation"),
+                    "retryable": False}
+        except Exception:
+            return {"success": False, "error": "工单更新服务暂时不可用，请使用原请求核查结果",
+                    "error_type": "dependency_unavailable", "retryable": False}
 
 
 class GetUserHistoryTool(BaseTool):

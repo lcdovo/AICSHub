@@ -105,8 +105,10 @@ async def send_notification(channel: str, content: str, user_id: int = 0) -> Dic
 
 
 @mcp.tool(name="update_ticket_status", description="更新工单的处理状态，用于工单流转和状态同步")
-async def update_ticket_status(ticket_id: str, status: str, note: str = "") -> Dict[str, Any]:
-    return await _invoke("update_ticket_status", ticket_id=ticket_id, status=status, note=note)
+async def update_ticket_status(ticket_id: str, status: str, note: str = "",
+                               idempotency_key: str = "", authorization: str = "") -> Dict[str, Any]:
+    return await _invoke("update_ticket_status", ticket_id=ticket_id, status=status, note=note,
+                         idempotency_key=idempotency_key, authorization=authorization)
 
 
 @mcp.tool(name="get_user_history", description="获取用户的历史咨询记录、工单历史、偏好标签等（跨会话长期记忆/用户画像）")

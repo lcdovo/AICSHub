@@ -14,6 +14,7 @@ from app.utils.database import get_db
 from app.models.models import Ticket, TicketStatus, TicketPriority, User, UserRole, HandoffRequestRecord, HandoffStatus
 from app.services.collaboration import get_collaboration_service
 from app.services.ticket_creation import create_request, resolve_idempotency_key, ticket_receipt as _ticket_dict
+from app.services.ticket_update import update_ticket as update_ticket_record
 from app.utils.tracking import get_tracer
 from app.security import get_current_user, ensure_owner_or_admin, require_admin
 
@@ -43,15 +44,6 @@ class HandoffRequest(BaseModel):
     priority: str = "normal"
     context: Optional[dict] = None
     idempotency_key: Optional[str] = None
-
-
-_ALLOWED_TRANSITIONS = {
-    TicketStatus.PENDING: {TicketStatus.PROCESSING, TicketStatus.ESCALATED},
-    TicketStatus.PROCESSING: {TicketStatus.RESOLVED, TicketStatus.ESCALATED},
-    TicketStatus.RESOLVED: {TicketStatus.CLOSED},
-    TicketStatus.ESCALATED: {TicketStatus.PROCESSING, TicketStatus.RESOLVED},
-    TicketStatus.CLOSED: set(),
-}
 
 
 def _handoff_dict(item: HandoffRequestRecord) -> dict:
@@ -164,30 +156,16 @@ async def update_ticket(
     request: TicketUpdateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin),
+    idempotency_header: Optional[str] = Header(default=None, alias="Idempotency-Key"),
 ):
     """更新工单"""
-    ticket = await db.get(Ticket, ticket_id)
-    if not ticket:
-        raise HTTPException(status_code=404, detail="工单不存在")
-    if request.status:
-        try: new_status = TicketStatus(request.status)
-        except ValueError as exc: raise HTTPException(status_code=400, detail="工单状态无效") from exc
-        if new_status != ticket.status and new_status not in _ALLOWED_TRANSITIONS.get(ticket.status, set()):
-            raise HTTPException(status_code=409, detail=f"不允许从 {ticket.status.value} 转换到 {new_status.value}")
-        ticket.status = new_status
-        if new_status in {TicketStatus.RESOLVED, TicketStatus.CLOSED}: ticket.resolved_at = datetime.utcnow()
-    if request.priority:
-        try: ticket.priority = TicketPriority(request.priority)
-        except ValueError as exc: raise HTTPException(status_code=400, detail="工单优先级无效") from exc
-    if request.assigned_to is not None: ticket.assigned_to = request.assigned_to
-    if request.resolution is not None: ticket.resolution = request.resolution
-    ticket.updated_at = datetime.utcnow()
-    await db.commit()
+    receipt = await update_ticket_record(db, current_user, ticket_id,
+                                         request.model_dump(exclude_none=True), key=idempotency_header)
 
     return {
         "code": 0,
         "message": "更新成功",
-        "data": _ticket_dict(ticket),
+        "data": receipt["ticket"],
     }
 
 

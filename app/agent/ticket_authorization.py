@@ -23,6 +23,38 @@ class TicketToolInput(BaseModel):
     idempotency_key: str = Field(min_length=1, max_length=128)
 
 
+class TicketUpdateToolInput(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    ticket_id: str = Field(min_length=1, max_length=36)
+    status: Literal["pending", "processing", "resolved", "closed", "escalated"]
+    note: str = Field(default="", max_length=10000)
+    idempotency_key: str = Field(min_length=1, max_length=128)
+
+
+def authorize_ticket_update(payload: dict, actor_id: int) -> str:
+    """仅由已认证管理员适配层签发；普通聊天不自动选择更新工具。"""
+    if type(actor_id) is not int or actor_id <= 0:
+        raise ValueError("Invalid actor")
+    return jwt.encode({"purpose": "update_ticket_status", "sub": str(actor_id),
+                       "request_hash": request_hash(payload),
+                       "exp": datetime.now(timezone.utc) + timedelta(minutes=2)},
+                      settings.AUTH_SECRET_KEY, algorithm="HS256")
+
+
+def verify_ticket_update_authorization(authorization: str, payload: dict) -> int:
+    try:
+        claims = jwt.decode(authorization, settings.AUTH_SECRET_KEY, algorithms=["HS256"],
+                            options={"require": ["exp", "sub", "purpose", "request_hash"]})
+        subject = claims["sub"]
+        if (claims["purpose"] != "update_ticket_status" or claims["request_hash"] != request_hash(payload)
+                or not isinstance(subject, str) or not subject.isascii() or not subject.isdecimal()
+                or int(subject) <= 0):
+            raise ValueError("Invalid update authorization")
+        return int(subject)
+    except jwt.InvalidTokenError as exc:
+        raise ValueError("Invalid update authorization") from exc
+
+
 def request_hash(payload: dict) -> str:
     return hashlib.sha256(json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
