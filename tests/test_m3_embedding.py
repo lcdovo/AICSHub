@@ -41,6 +41,7 @@ def test_out_of_order_indices_map_to_original_and_100_use_five_batches():
         vectors = embedding.encode_batch([str(i) for i in range(100)])
         assert [v[0] for v in vectors] == list(range(1, 101))
         assert len(calls) == 5 and all(len(c["input"]) == 20 for c in calls)
+        assert all(c["dimensions"]==3 for c in calls)
     finally:
         embedding.close()
 

@@ -182,6 +182,7 @@ class RerankerService:
                     continue
                 doc = dict(pool[index])
                 doc["rerank_score"] = round(score, 4)
+                doc["rerank_provider"] = provider.name
                 doc["final_score"] = doc["rerank_score"]
                 reranked.append(doc)
             reranked = reranked[:top_k]

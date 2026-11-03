@@ -98,6 +98,7 @@ def test_independent_candidate_limits_and_rank_preserving_reranker_failure(
 
         def rerank_sync(self, q, c, k):
             self.seen = len(c)
+            self.input_ids = [item["id"] for item in c]
             return list(reversed(c))[:k]
 
     reranker = Reranker()
@@ -105,6 +106,7 @@ def test_independent_candidate_limits_and_rank_preserving_reranker_failure(
     monkeypatch.setattr(settings, "RAG_USE_RERANKER", True)
     result = kb.search("政策", top_k=3, recall_k=20, rerank_k=20)
     assert reranker.seen == 20 and len(result["results"]) == 3
+    assert result["results"][0]["id"] == reranker.input_ids[19]
     assert result["meta"]["recall_k"] == 20 and result["meta"]["rerank_k"] == 20
     monkeypatch.setattr(settings, "RAG_USE_RERANKER", False)
     result = kb.search("政策", top_k=3, recall_k=20, rerank_k=10)
@@ -157,3 +159,35 @@ def test_milvus_timeout_fallback_metadata_and_model_pool_validation(kb, monkeypa
     assert changed["reranker"] == "rank_preserved" and all(
         c["id"] != "not-in-candidates" for c in changed["results"]
     )
+
+
+async def test_rrf_gate_and_generation_recheck_do_not_use_stale_evidence(
+    kb, monkeypatch
+):
+    from app.agent.graph import AgentGraph
+    from app.agent.state import AgentState
+    from app.agent.nodes.rag_node import rag_retrieval_node
+    from app.agent.nodes.response_node import validate_candidate
+    from app.agent.validation import create_validator
+
+    result = kb.add_document("规则", "ZXKEY 条款")
+    execute(kb, result)
+    monkeypatch.setattr("app.agent.graph.get_knowledge_base", lambda: kb)
+    state = AgentState(session_id="synthetic", user_id=101, user_message="ZXKEY")
+    await rag_retrieval_node(object.__new__(AgentGraph), state)
+    assert (
+        state.collected_info["rag_grounded"]
+        and state.collected_info["best_match_score"] < 0.35
+    )
+    state.reply = "ZXKEY 旧证据答案"
+    kb.delete_document(result["document_id"])
+    monkeypatch.setattr("app.services.knowledge_base.get_knowledge_base", lambda: kb)
+    graph = SimpleNamespace(
+        validator=create_validator(), _rag_judge_applicable=lambda s: False
+    )
+    await validate_candidate(graph, state)
+    assert (
+        state.collected_info["rag_grounded"] is False
+        and state.collected_info["kb_results"] == []
+    )
+    assert "知识版本已变化" in state.reply and "旧证据答案" not in state.reply

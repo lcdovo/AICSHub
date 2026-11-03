@@ -144,6 +144,7 @@ class APIEmbedding(BaseEmbedding):
                     "model": self.model,
                     "input": texts,
                     "encoding_format": "float",
+                    "dimensions": self.dim,
                 }
 
                 response = client.post(

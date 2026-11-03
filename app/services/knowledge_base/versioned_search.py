@@ -53,6 +53,8 @@ def search(
             "RERANKER_MODEL",
             "RERANKER_LOCAL_BASE",
             "RERANKER_LOCAL_MODEL",
+            "RERANKER_API_STYLE",
+            "RERANKER_TIMEOUT_SECONDS",
             "RAG_USE_RERANKER",
         )
     }
@@ -200,7 +202,7 @@ def search(
             reranked is not None
             and len(reranked) == min(top_k, len(selected))
             and len({c.get("id") for c in reranked}) == len(reranked)
-            and all(c.get("id") in merged for c in reranked)
+            and all(c.get("id") in {item["id"] for item in selected} for c in reranked)
         ):
             candidates = [
                 {
@@ -209,7 +211,11 @@ def search(
                 }
                 for c in reranked
             ]
-            reranker = service._reranker.last_used_provider or "model"
+            reranker = (
+                (reranked[0].get("rerank_provider") if reranked else None)
+                or service._reranker.last_used_provider
+                or "model"
+            )
         else:
             errors.append("reranker_failed_or_invalid")
             reranker = "rank_preserved"
