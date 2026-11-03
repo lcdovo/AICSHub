@@ -3,6 +3,8 @@
 ResponseNode在组件内部组织生成、审查、引用和缓存助手，主图仅注入服务。
 保留旧Graph私有方法的结构兼容，常量与纯模板属于本响应域；校验标准不因注入改变。
 """
+from app.agent.flow_contracts import FlowFlag
+
 import json
 import hashlib
 import logging
@@ -136,7 +138,7 @@ async def validate_candidate(self: "ResponseContext", state: AgentState) -> bool
     )
     report = validation.to_dict()
     passed = validation.passed
-    if self._rag_judge_applicable(state) and not state.collected_info.get("answer_from_cache"):
+    if self._rag_judge_applicable(state) and not state.flow_value(FlowFlag.CACHE_HIT):
         judgement = await self.llm_judge.judge(
             response=body, user_query=state.user_message,
             kb_context=state.current_evidence(),
@@ -156,12 +158,12 @@ async def validate_candidate(self: "ResponseContext", state: AgentState) -> bool
             if refused:
                 report["overall_score"] = min(report["overall_score"], judgement.get("fact_score", 0))
                 report["issues"].append({"type": "evidence_rejected", "severity": "error"})
-            state.collected_info["rag_refused"] = refused
+            state.set_flow(rag_refused=refused)
     from app.agent.request_understanding import ReviewResult
     state.review_result=ReviewResult(passed=passed, evidence_version=(state.evidence_bundle.fingerprint() if state.evidence_bundle else None))
     report["passed"] = passed
     state.collected_info["validation"] = report
-    state.collected_info["answer_validated"] = passed
+    state.set_flow(answer_validated=passed)
     return passed
 
 
@@ -175,7 +177,7 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
         state.collected_info["reply_source"] = "shadow_notice"
     if state.need_human and not state.reply:
         state.reply = f"非常抱歉，正在为您转接人工客服。{state.human_reason or ''}"
-    if state.collected_info.get("smalltalk") and not state.reply:
+    if state.flow_value(FlowFlag.SMALLTALK) and not state.reply:
         state.reply = self._get_default_reply(IntentType.GENERAL, state.user_message)
 
     if state.current_evidence() and any(item.get("version_id") for item in state.current_evidence()):
@@ -183,7 +185,7 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
             state.invalidate_evidence("knowledge_version_changed")
             state.reply="知识版本已变化，请重新提问以读取最新发布内容。"
     has_business_tool = any(tc.tool_name != "hybrid_search" for tc in state.tool_calls)
-    grounded = bool(not is_shadow and state.collected_info.get("rag_grounded") and state.current_evidence())
+    grounded = bool(not is_shadow and state.flow_value(FlowFlag.GROUNDED) and state.current_evidence())
     answer_cache_key = None
     generated_by_llm = False
     if not state.reply:
@@ -205,7 +207,7 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
             cached = await self._answer_cache_get(answer_cache_key)
             if cached is not None:
                 state.reply = cached
-                state.collected_info["answer_from_cache"] = True
+                state.set_flow(answer_from_cache=True)
         if not state.reply:
             state.reply = await self._generate_response_with_llm(state)
             generated_by_llm = bool(state.reply)
@@ -213,24 +215,24 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
                 state.reply = self._get_default_reply(state.detected_intent, state.user_message)
 
     # Workflow prompts and completed handoffs are terminal messages, not drafts.
-    handoff_done = bool(state.collected_info.get("handoff_attempted")) or any(
+    handoff_done = bool(state.flow_value(FlowFlag.HANDOFF_ATTEMPTED)) or any(
         tc.tool_name == "escalate_to_human" for tc in state.tool_calls
     )
     workflow_reply = bool(
         is_shadow or state.missing_slots or state.needs_clarification
-        or state.collected_info.get("smalltalk")
-        or state.collected_info.get("rag_grounded") is False or handoff_done
+        or state.flow_value(FlowFlag.SMALLTALK)
+        or state.flow_value(FlowFlag.GROUNDED) is False or handoff_done
     )
     if not workflow_reply:
         passed = await validate_candidate(self, state)
-        if not passed and generated_by_llm and not state.collected_info.get("rag_refused"):
+        if not passed and generated_by_llm and not state.flow_value(FlowFlag.REFUSED):
             # A replacement must pass the entire gate again, including the judge.
             state.collected_info.pop("inline_self_check", None)
             retry_reply = await self._generate_response_with_llm(state)
             if retry_reply:
                 state.reply = retry_reply
                 passed = await validate_candidate(self, state)
-        if state.collected_info.get("rag_refused"):
+        if state.flow_value(FlowFlag.REFUSED):
             state.reply = (
                 "抱歉，我暂时没有足够可靠的依据回答这个问题。"
                 "为避免误导，建议您补充更具体的信息，或回复“转人工”由客服协助确认。"
@@ -245,11 +247,11 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
                 state.human_reason = "生成后回答校验未通过"
                 return AgentNode.HUMAN_HANDOFF
 
-    if grounded and state.collected_info.get("rag_grounded") and not state.collected_info.get("rag_refused") and not handoff_done:
+    if grounded and state.flow_value(FlowFlag.GROUNDED) and not state.flow_value(FlowFlag.REFUSED) and not handoff_done:
         state.reply = self._add_rag_citations(state.reply, state.current_evidence())
-    if (generated_by_llm and answer_cache_key and state.collected_info.get("answer_validated")
-            and state.collected_info.get("rag_grounded") and state.current_evidence()
-            and not state.need_human and not state.collected_info.get("rag_refused")
+    if (generated_by_llm and answer_cache_key and state.flow_value(FlowFlag.VALIDATED)
+            and state.flow_value(FlowFlag.GROUNDED) and state.current_evidence()
+            and not state.need_human and not state.flow_value(FlowFlag.REFUSED)
             and not state.collected_info.get("llm_governance", {}).get("degraded")):
         await self._answer_cache_set(answer_cache_key, state.reply)
 
@@ -471,7 +473,7 @@ def build_escalate_reply_template(data: Dict[str, Any]) -> str:
 def rag_judge_applicable(self: "ResponseContext", state: AgentState) -> bool:
     """All grounded policy answers use the gate, regardless of their intent label."""
     return (
-        bool(state.collected_info.get("rag_grounded"))
+        bool(state.flow_value(FlowFlag.GROUNDED))
         and not state.missing_slots
         and bool(state.current_evidence())
     )

@@ -36,7 +36,7 @@ def authorize_current_handoff(arguments, message_id, actor_id):
 
 
 async def request_handoff(dependencies: HandoffDependencies, state: AgentState) -> str:
-    state.collected_info["handoff_attempted"] = True
+    state.set_flow(handoff_attempted=True)
     arguments = {"reason": (state.human_reason or "用户要求转人工")[:100],
                  "priority": "urgent" if state.need_human else "normal", "context": "",
                  "user_id": state.user_id, "session_id": state.session_id,

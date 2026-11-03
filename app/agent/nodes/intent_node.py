@@ -3,6 +3,8 @@
 自 graph.py 拆分迁移（原 AgentGraph._node_intent_recognition 等），逻辑保持原样：
 路由决策直接修改 state 后返回 next_node，图由 graph.py 统一装配。
 """
+from app.agent.flow_contracts import FlowFlag
+
 
 import logging
 from typing import Any, Dict, List, Optional, Callable, Protocol
@@ -153,7 +155,7 @@ async def recognize_request(dependencies: "IntentDependencies", state: AgentStat
     is_smalltalk = intent_result.intent == IntentType.GENERAL and dependencies.smalltalk(
         state.user_message
     )
-    state.collected_info["smalltalk"] = is_smalltalk
+    state.set_flow(smalltalk=is_smalltalk)
     if is_smalltalk:
         intent_result.needs_clarification = False
 
@@ -300,7 +302,7 @@ async def route_request(dependencies: "RoutingDependencies", state: AgentState) 
     # 其余泛问复用 technical/promotion 的改写→RAG 检索路径，由检索节点
     # 在无证据时兜底输出"建议转人工"话术。
     if state.detected_intent == IntentType.GENERAL:
-        if state.collected_info.get("smalltalk"):
+        if state.flow_value(FlowFlag.SMALLTALK):
             state.route_reason = "general:smalltalk->template"
             return AgentNode.RESPONSE_GENERATION
         state.route_reason = "general:rag_fallback"

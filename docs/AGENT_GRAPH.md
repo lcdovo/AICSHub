@@ -147,3 +147,5 @@ Run和模型不能仅依赖asyncio.timeout抛异常：依赖若吞取消或阻�
 当前13节点主图装配已收口：ResponseNode注入模型/Validator/Judge/缓存/快照/记忆六类服务，响应助手留在组件内部；HandoffNode注入授权与调用，开始/结束是状态函数。Graph旧私有别名仅兼容直调。流式通道独立于Graph，拒绝草稿仍不发布。完整模块与节点清单以M4-NODE-DEPENDENCIES-v1.md当前表为准；早期迁移进度段落为历史说明。collected_info状态键全面类型化仍未完成。
 
 业务工具/只读计划/人工回执通过record_tool_observation进入ToolObservation，data不再展开到collected_info控制键；只投影明确允许的业务编号，完整回执与ToolCall独立复制。最新失败不留该工具旧成功投影，下一轮清空观察。完整状态类型迁移进度见M4-STATE-CONTRACT-v1.md，尚未完成。
+
+本轮smalltalk/grounded/refused/validated/cache-hit/handoff-attempted六项流程结论现由严格TurnFlow和FlowFlag管理，None/False/True分开。旧字典仅兼容镜像，已有或显式清空结论不能被字典复活；新轮次清空。其他状态/计量/槽位类型迁移仍见M4-STATE-CONTRACT-v1.md未完成范围。

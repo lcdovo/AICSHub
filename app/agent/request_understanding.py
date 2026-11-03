@@ -218,7 +218,7 @@ def route_understanding(state, result):
     state.intent_confidence = 0.0
     state.user_emotion = result.emotion
     state.collected_info["intent_source"] = "model_understanding"
-    state.collected_info["smalltalk"] = result.request_type == "greeting"
+    state.set_flow(smalltalk=result.request_type == "greeting")
     if result.entities.order_id:
         state.collected_info["order_id"] = result.entities.order_id
     elif result.request_type in {"apply", "query", "change"}:

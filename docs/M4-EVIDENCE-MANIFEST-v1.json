@@ -362,6 +362,24 @@
       "sha256": "63569fcd54555ad80ae4b008aa1ecff3f552557b8537dc540a9d3dba756246f7",
       "bytes": 17038,
       "snapshot": "typed-tool-observation-quarantine"
+    },
+    {
+      "path": "reports/offline/20261104-025956-561217/junit.xml",
+      "sha256": "de2b1afc068021388a9921c0e07bf956c2859d372d0f484c0d91e0760bc14d79",
+      "bytes": 12511,
+      "snapshot": "typed-turn-flow-flags"
+    },
+    {
+      "path": "reports/offline/20261104-025449-456536/junit.xml",
+      "sha256": "9e59399de6e680061522aee366cd4723d3caa7bbe1ae56484565f83b59c24ecc",
+      "bytes": 96992,
+      "snapshot": "typed-turn-flow-flags"
+    },
+    {
+      "path": "reports/offline/20261104-025449-456536/manifest.json",
+      "sha256": "daf65a0f2461b2c3a8ec62c09cd992c65f90427453f6060b1652b125449c0d7b",
+      "bytes": 604,
+      "snapshot": "typed-turn-flow-flags"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

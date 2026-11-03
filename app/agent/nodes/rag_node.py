@@ -117,7 +117,7 @@ async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentSta
     score = float(state.collected_info.get("best_match_score") or 0)
     score_type=state.retrieval_metadata.get("score_type")
     if not state.collected_info["kb_results"] or (score_type != "rrf" and score < dependencies.minimum_score):
-        state.collected_info["rag_grounded"] = False
+        state.set_flow(rag_grounded=False)
         state.collected_info["rag_fallback_reason"] = (
             state.retrieval_error or ("no_results" if not state.collected_info["kb_results"] else "low_score")
         )
@@ -126,7 +126,7 @@ async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentSta
             "请补充更多细节，或回复“转人工”获取客服协助。"
         )
     else:
-        state.collected_info["rag_grounded"] = True
+        state.set_flow(rag_grounded=True)
 
     logger.info(
         f"混合检索完成: {len(search_result.get('results', []))} 条结果, "

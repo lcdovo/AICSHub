@@ -2,11 +2,12 @@
 Agent 状态定义 - 定义 Agent 在执行过程中需要追踪的所有状态
 """
 
-from typing import Any, List, Dict, Optional, Literal
+from typing import Any, List, Dict, Optional
 from pydantic import BaseModel, Field
 from copy import deepcopy
 from datetime import datetime
 from app.agent.read_plan import ReadTask
+from app.agent.flow_contracts import FlowFlag, TurnFlow
 from app.agent.tool_contracts import ToolObservation, BusinessToolName, TOOL_RESULT_COMPAT_KEYS, TOOL_IDENTIFIER_PROJECTIONS
 
 
@@ -48,6 +49,7 @@ class AgentState(BaseModel):
     understanding_mode: Optional[str] = None
     strategy_version: Optional[str] = None
     node_steps: int = 0
+    flow: TurnFlow = Field(default_factory=TurnFlow)
     read_plan: List[ReadTask] = Field(default_factory=list)
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
@@ -93,6 +95,28 @@ class AgentState(BaseModel):
     # 用户情绪
     user_emotion: str = "neutral"  # neutral, positive, negative, angry
 
+    def flow_value(self, flag: FlowFlag) -> bool | None:
+        if not isinstance(flag, FlowFlag):
+            raise TypeError("flow_flag_enum_required")
+        value = getattr(self.flow, flag.value)
+        if flag.value in self.flow.model_fields_set:
+            return value
+        # 无类型结论的旧内部调用可一次性导入真实bool；兼容字典后续不能覆盖已立结论。
+        legacy = self.collected_info.get(flag.value)
+        if type(legacy) is bool:
+            self.set_flow(**{flag.value: legacy})
+            return legacy
+        return None
+
+    def set_flow(self, **values: bool | None) -> None:
+        # 不使用model_copy(update=...)，它不会验证类型/额外键。
+        self.flow = TurnFlow.model_validate({**self.flow.model_dump(exclude_unset=True), **values})
+        for key, value in values.items():
+            if value is None:
+                self.collected_info.pop(key, None)
+            else:
+                self.collected_info[key] = value
+
     def current_evidence(self) -> List[Dict[str, Any]]:
         """类型证据是主链权威；兼容旧内部调用时仅在尚无bundle时读取旧字段。"""
         if self.evidence_bundle is not None:
@@ -122,7 +146,8 @@ class AgentState(BaseModel):
         self.evidence_bundle = EvidenceBundle(knowledge_epoch=epoch, items=[], support="unsupported")
         self.retrieval_error = reason
         self.review_result = None
-        self.collected_info.update(kb_results=[], rag_grounded=False, rag_fallback_reason=reason)
+        self.collected_info.update(kb_results=[], rag_fallback_reason=reason)
+        self.set_flow(rag_grounded=False, rag_refused=None, answer_validated=None, answer_from_cache=None)
         for key in ("best_match_score", "validation", "answer_validated", "answer_from_cache", "llm_judge"):
             self.collected_info.pop(key, None)
         for call in self.tool_calls:
@@ -161,6 +186,7 @@ class AgentState(BaseModel):
         self.retrieval_error = None
         self.review_result = None
         self.collected_info["kb_results"] = deepcopy(bundle.items)
+        self.set_flow(rag_grounded=None, rag_refused=None, answer_validated=None, answer_from_cache=None)
         self.collected_info.pop("best_match_score", None)
         for key in ("validation", "answer_validated", "answer_from_cache", "llm_judge"):
             self.collected_info.pop(key, None)
