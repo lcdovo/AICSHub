@@ -70,6 +70,7 @@ export function useConversation(userId: number, id?: string, limit = 50) {
     sessionId: string,
     persisted: Message[],
     rest = false,
+    action?: { action_id: string; action_version: number },
   ) {
     if (
       isBusy(useChat.getState().rooms[sessionId]?.phase || "idle") ||
@@ -102,7 +103,7 @@ export function useConversation(userId: number, id?: string, limit = 50) {
       );
       void cache.invalidateQueries({ queryKey: ["sessions"] });
     };
-    if (rest) {
+    if (rest && !action) {
       try {
         const data = await api.send(userId, text, sessionId);
         event({
@@ -125,7 +126,7 @@ export function useConversation(userId: number, id?: string, limit = 50) {
     const transport = new ChatTransport({ event, failed, completed: complete });
     transports.current.get(sessionId)?.close();
     transports.current.set(sessionId, transport);
-    transport.start({ user_id: userId, session_id: sessionId, message: text });
+    transport.start({ user_id: userId, session_id: sessionId, message: text, ...action });
   }
   return {
     room,

@@ -23,6 +23,7 @@ import { useConversation } from "../features/chat/useConversation";
 import { MessageList } from "../features/chat/MessageList";
 import { HandoffDialog } from "../features/chat/HandoffDialog";
 import { Diagnostics } from "../features/chat/Diagnostics";
+import { RefundPanel } from "../features/chat/RefundPanel";
 export default function ChatPage() {
   const user = useAuth((s) => s.user)!;
   const admin = user.role === "admin";
@@ -280,6 +281,8 @@ export default function ChatPage() {
               )}
             </MessageList>
           )}
+          {id && <RefundPanel sessionId={id} busy={conversation.busy} admin={admin}
+            confirm={(action_id, action_version) => conversation.send("确认", id, conversation.messages, false, { action_id, action_version })} />}
           {conversation.room?.error && (
             <Notice kind="error">
               {conversation.room.error}

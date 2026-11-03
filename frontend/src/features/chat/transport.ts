@@ -15,7 +15,7 @@ export class ChatTransport {
   private sent = false;
   private renewed = false;
   constructor(private callbacks: TurnCallbacks) {}
-  start(payload: { user_id: number; session_id: string; message: string }) {
+  start(payload: { user_id: number; session_id: string; message: string; action_id?: string; action_version?: number }) {
     if (this.stopped) return;
     this.socket = new WebSocket(websocketUrl());
     this.arm(15_000, "连接超时。消息尚未发送，请检查网络。");
