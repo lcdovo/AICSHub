@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.config.config import settings
 from app.agent.read_plan import ReadTask
+from app.agent.business_contracts import BusinessParameters
 
 Topic = Literal[
     "query_order", "refund", "complaint", "technical", "promotion", "human", "general"
@@ -126,7 +127,7 @@ def input_payload(state):
             "current_message": state.user_message,
             "source": "current_message",
             "history": history,
-            "known_order": state.collected_info.get("order_id"),
+            "known_order": state.current_business_parameters().order_id,
             "pending_action": bool(state.collected_info.get("refund_preview")),
         },
         ensure_ascii=False,
@@ -141,6 +142,8 @@ def validate_semantics(result, state):
         m["content"] for m in context["history"]
     )
     values = result.entities.model_dump()
+    if result.entities.order_id is not None:
+        BusinessParameters(order_id=result.entities.order_id)
 
     def in_context(field, value):
         # 已知订单单独作为结构化背景发送，只能证明订单号，不能证明产品名。
@@ -220,10 +223,10 @@ def route_understanding(state, result):
     state.collected_info["intent_source"] = "model_understanding"
     state.set_flow(smalltalk=result.request_type == "greeting")
     if result.entities.order_id:
-        state.collected_info["order_id"] = result.entities.order_id
+        state.set_business_parameters(order_id=result.entities.order_id)
     elif result.request_type in {"apply", "query", "change"}:
         # 本轮理解未确定订单时不能借旧槽位替模型选中上一轮订单。
-        state.collected_info.pop("order_id", None)
+        state.set_business_parameters(order_id=None)
     if (
         result.request_type in ["clarify", "out_of_scope", "change"]
         or result.clarification

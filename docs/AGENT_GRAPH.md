@@ -153,3 +153,5 @@ Run和模型不能仅依赖asyncio.timeout抛异常：依赖若吞取消或阻�
 生成计量头现在由GenerationMetadata/ProviderTokenUsage选择并验证，完整回答和输入摘要不入llm_governance兼容投影。unknown/partial usage不补缺失输出为0；无效头明确degraded、禁止缓存，回答仍独立审查。评测/Trace读取类型模型版本，SQL调用账本是费用事实。更广泛槽位类型化仍未完成。
 
 SQL会话恢复与内存新轮次使用同一carryover_context白名单，不能因历史SQL投影被视为“持久”就恢复旧证据/校验/计量/工具结果。当前退款动作仍独立从SQL核验，补参背景保留；不删除旧历史投影。
+
+订单/退款原因/退款类型/投诉内容统一BusinessParameters类型输入，路由/工具提取只接受声明字段；补槽/改写/known_order/提示词/跨轮上下文使用当前类型参数。已选或明确清空订单不能被旧字典改写。身份与确认不在业务参数模型内；领域资格/幂等/确认和原补槽策略保持，其他状态迁移仍未完成。

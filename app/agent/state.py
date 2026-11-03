@@ -9,6 +9,7 @@ from datetime import datetime
 from app.agent.read_plan import ReadTask
 from app.agent.flow_contracts import FlowFlag, TurnFlow
 from app.agent.generation_contracts import GenerationMetadata
+from app.agent.business_contracts import BusinessParameters
 from app.agent.tool_contracts import ToolObservation, BusinessToolName, TOOL_RESULT_COMPAT_KEYS, TOOL_IDENTIFIER_PROJECTIONS
 
 
@@ -53,6 +54,8 @@ class AgentState(BaseModel):
     flow: TurnFlow = Field(default_factory=TurnFlow)
     generation_metadata: Optional[GenerationMetadata] = None
     generation_metadata_error: Optional[str] = None
+    business_parameters: BusinessParameters = Field(default_factory=BusinessParameters)
+    business_parameter_errors: List[str] = Field(default_factory=list)
     read_plan: List[ReadTask] = Field(default_factory=list)
     # 当前轮已落库的用户消息；不能从collected_info/历史或模型实体取得。
     source_message_id: Optional[int] = None
@@ -139,6 +142,65 @@ class AgentState(BaseModel):
             else:
                 self.collected_info[key] = value
 
+    def set_business_parameters(self, **values: Any) -> None:
+        parsed = BusinessParameters.model_validate({
+            **self.business_parameters.model_dump(exclude_unset=True), **values,
+        })
+        self.business_parameters = parsed
+        self.business_parameter_errors = [key for key in self.business_parameter_errors if key not in values]
+        for key, value in values.items():
+            if value is None:
+                self.collected_info.pop(key, None)
+            else:
+                self.collected_info[key] = value
+
+    def current_business_parameters(self) -> BusinessParameters:
+        updates = {}
+        invalid = []
+        for key in BusinessParameters.model_fields:
+            if key in self.business_parameters.model_fields_set or key not in self.collected_info:
+                continue
+            try:
+                single = BusinessParameters.model_validate({key: self.collected_info[key]})
+            except (ValueError, TypeError):
+                updates[key] = None
+                invalid.append(key)
+            else:
+                updates[key] = getattr(single, key)
+        if updates:
+            self.set_business_parameters(**updates)
+        self.business_parameter_errors = sorted(set(self.business_parameter_errors) | set(invalid))
+        return self.business_parameters
+
+    def business_context(self) -> Dict[str, Any]:
+        """兼容上下文投影按已建立的类型参数覆盖，不能用后改字典换掉选定订单。"""
+        parsed = self.current_business_parameters()
+        context = deepcopy(self.collected_info)
+        for key in parsed.model_fields_set:
+            value = getattr(parsed, key)
+            if value is None:
+                context.pop(key, None)
+            else:
+                context[key] = value
+        return context
+
+    def merge_extracted_business_parameters(self, extracted: Dict[str, Any], *, model_selected_order: bool) -> bool:
+        self.current_business_parameters()
+        try:
+            parsed = BusinessParameters.model_validate(extracted)
+            changes = {}
+            for key in parsed.model_fields_set:
+                if key == "order_id" and model_selected_order:
+                    continue
+                if key == "order_id" or not getattr(self.business_parameters, key):
+                    changes[key] = getattr(parsed, key)
+            self.set_business_parameters(**changes)
+        except (ValueError, TypeError):
+            self.business_parameter_errors = sorted(set(self.business_parameter_errors) | {"extracted_parameters"})
+            return False
+        self.business_parameter_errors = [key for key in self.business_parameter_errors if key != "extracted_parameters"]
+        return not self.business_parameter_errors
+
     def current_evidence(self) -> List[Dict[str, Any]]:
         """类型证据是主链权威；兼容旧内部调用时仅在尚无bundle时读取旧字段。"""
         if self.evidence_bundle is not None:
@@ -159,9 +221,15 @@ class AgentState(BaseModel):
             value = observation.data.get(key)
             if not isinstance(value, str) or not value.strip():
                 continue
-            if key == "order_id" and self.collected_info.get(key) not in (None, "", value):
-                continue
-            self.collected_info[key] = value
+            if key == "order_id":
+                if self.current_business_parameters().order_id not in (None, "", value):
+                    continue
+                try:
+                    self.set_business_parameters(order_id=value)
+                except ValueError:
+                    continue
+            else:
+                self.collected_info[key] = value
 
     def invalidate_evidence(self, reason: str) -> None:
         epoch = self.evidence_bundle.knowledge_epoch if self.evidence_bundle else None
@@ -237,7 +305,7 @@ class AgentState(BaseModel):
             needs_clarification=self.needs_clarification,
             pending_confirmations=list(self.pending_confirmations),
             collected_info=self.carryover_context(
-                self.collected_info, unfinished=bool(self.missing_slots or self.pending_confirmations)
+                self.business_context(), unfinished=bool(self.missing_slots or self.pending_confirmations)
             ),
         )
         state.collected_info.update({"user_id": user_id, "session_id": self.session_id})

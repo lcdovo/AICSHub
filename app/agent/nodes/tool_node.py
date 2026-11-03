@@ -95,14 +95,13 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
     state.collected_info["session_id"] = state.session_id
     extracted_info = dependencies.extract_info(state.user_message)
 
-    for key, value in extracted_info.items():
-        if key == "order_id" and state.understanding is not None:
-            continue
-        if key == "order_id" or key not in state.collected_info or not state.collected_info[key]:
-            state.collected_info[key] = value
+    if not state.merge_extracted_business_parameters(extracted_info, model_selected_order=state.understanding is not None):
+        state.reply, state.needs_clarification = "本轮业务参数无效，请核对订单号、原因和申请类型。", True
+        return AgentNode.RESPONSE_GENERATION
 
     tools_to_execute = dependencies.select_tools(
-        state.detected_intent, state.collected_info
+        state.detected_intent, {**state.current_business_parameters().model_dump(exclude_none=True),
+                                "user_id": state.user_id, "session_id": state.session_id}
     )
 
     # 退款是不可逆副作用：第一次请求只生成预览，必须在独立确认节点中得到

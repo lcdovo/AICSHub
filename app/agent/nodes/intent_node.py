@@ -263,22 +263,16 @@ async def route_request(dependencies: "RoutingDependencies", state: AgentState) 
     state.collected_info["user_id"] = state.user_id
     state.collected_info["session_id"] = state.session_id
     extracted = dependencies.extract_info(state.user_message)
-    for key, value in extracted.items():
-        if key == "order_id" and state.understanding is not None:
-            continue
-        if (
-            key == "order_id"
-            or key not in state.collected_info
-            or not state.collected_info[key]
-        ):
-            state.collected_info[key] = value
+    if not state.merge_extracted_business_parameters(extracted, model_selected_order=state.understanding is not None):
+        state.reply, state.needs_clarification = "本轮业务参数无效，请明确订单号和希望办理的事项。", True
+        return AgentNode.RESPONSE_GENERATION
 
     # Answer reuse happens only after rewriting/retrieval, with current evidence.
 
     # 退款意图分流：政策咨询类（无订单号且询问流程/时效/规则）走 RAG，
     # 实际申请退款（有订单号+动作词）才走工具执行。
     if state.detected_intent == IntentType.REFUND and dependencies.refund_inquiry(
-        state.user_message, state.collected_info
+        state.user_message, state.current_business_parameters().model_dump(exclude_none=True)
     ):
         state.route_reason = "refund:policy_inquiry->rag"
         return AgentNode.QUERY_REWRITE
@@ -418,7 +412,7 @@ def is_complaint_inquiry(message: str) -> bool:
 
 
 def required_slots(state: AgentState) -> List[str]:
-    collected = state.collected_info
+    collected = state.current_business_parameters().model_dump(exclude_none=True)
     if state.detected_intent == IntentType.QUERY_ORDER:
         return ["order_id"] if not collected.get("order_id") else []
     if state.detected_intent == IntentType.REFUND:

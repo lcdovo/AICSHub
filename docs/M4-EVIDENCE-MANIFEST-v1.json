@@ -554,6 +554,54 @@
       "sha256": "d84f512f2db7d2423baef55c988ef19142cb339dc02a6817a62ce2d677bfdef0",
       "bytes": 674,
       "snapshot": "sql-clean-turn-filter-and-generation-full"
+    },
+    {
+      "path": "reports/offline/20261104-033922-596791/junit.xml",
+      "sha256": "94448809948c11964fa385755cb72ee7b54e9310ef2a5f9afac0bf1ad5ec0075",
+      "bytes": 19998,
+      "snapshot": "typed-business-parameters-and-sql-recovery-full"
+    },
+    {
+      "path": "reports/offline/20261104-033922-596791/manifest.json",
+      "sha256": "dd3daef805f5ffa0fbff68c46ee9815cfe6baf990fc312bb9bf3c0c9b3f12aeb",
+      "bytes": 2746,
+      "snapshot": "typed-business-parameters-and-sql-recovery-full"
+    },
+    {
+      "path": "reports/offline/20261104-033922-596791/source-start.json",
+      "sha256": "1e7efbd4e96251af0e09d8c7eb1ecf74c3949c04a5fa6c98d195032a0026b948",
+      "bytes": 27931,
+      "snapshot": "typed-business-parameters-and-sql-recovery-full"
+    },
+    {
+      "path": "reports/offline/20261104-033922-596791/source-end.json",
+      "sha256": "1e7efbd4e96251af0e09d8c7eb1ecf74c3949c04a5fa6c98d195032a0026b948",
+      "bytes": 27931,
+      "snapshot": "typed-business-parameters-and-sql-recovery-full"
+    },
+    {
+      "path": "reports/offline/20261104-033019-965289/junit.xml",
+      "sha256": "d2268caf0a93ac76161db883c9b2ecb4b23daf2e646e468be389fa4b70a1256f",
+      "bytes": 102519,
+      "snapshot": "typed-business-parameters-and-sql-recovery-full"
+    },
+    {
+      "path": "reports/offline/20261104-033019-965289/manifest.json",
+      "sha256": "1572914f6ae068b74599d4f48d6ed021c7a4e440c8a1bde65ab1139e5283f8ad",
+      "bytes": 1203,
+      "snapshot": "typed-business-parameters-and-sql-recovery-full"
+    },
+    {
+      "path": "reports/offline/20261104-033019-965289/source-start.json",
+      "sha256": "48cc4b76ef45f3155b4a05b315d74184228b70c3105e6e9bd823d7c6e0afad6a",
+      "bytes": 27365,
+      "snapshot": "typed-business-parameters-and-sql-recovery-full"
+    },
+    {
+      "path": "reports/offline/20261104-033019-965289/source-end.json",
+      "sha256": "48cc4b76ef45f3155b4a05b315d74184228b70c3105e6e9bd823d7c6e0afad6a",
+      "bytes": 27365,
+      "snapshot": "typed-business-parameters-and-sql-recovery-full"
     }
   ],
   "note": "local ignored evidence; contains no credentials or prompt bodies in this manifest",

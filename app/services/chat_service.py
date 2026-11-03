@@ -95,12 +95,13 @@ class ChatService:
                         refund_action=action_receipt(action), refund_preview={"order_id": action.order_id,
                         "reason": action.reason, "type": action.type, "user_id": user_id, "session_id": session_id,
                         "action_id": action.id, "action_version": action.version, "idempotency_key": f"refund-action:{action.id}"})
+                    state.set_business_parameters(order_id=action.order_id, reason=action.reason, refund_type=action.type)
         if saved and not recover_from_db:
             summary = await session_manager.get_summary(session_id)
             if summary and summary.intent_history and not state.collected_info.get("intent_history"):
                 state.collected_info["intent_history"] = list(summary.intent_history)
         from app.agent.request_understanding import ConversationContext
-        state.conversation_context=ConversationContext(messages=state.messages[-6:],known_order_id=state.collected_info.get("order_id"),pending_action_id=(state.collected_info.get("refund_preview",{}).get("action_id") if "apply_refund" in state.pending_confirmations else None))
+        state.conversation_context=ConversationContext(messages=state.messages[-6:],known_order_id=state.current_business_parameters().order_id,pending_action_id=(state.collected_info.get("refund_preview",{}).get("action_id") if "apply_refund" in state.pending_confirmations else None))
         return state
 
     async def process(self, state: AgentState) -> AgentState:

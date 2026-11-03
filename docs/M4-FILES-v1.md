@@ -93,3 +93,5 @@ RAG节点依赖切片新增：`tests/test_m4_node_dependencies.py`、`docs/M4-NO
 生成元数据切片新增：`app/agent/generation_contracts.py`、`tests/test_m4_generation_metadata.py`；修改AgentState、响应节点、ChatService与LLMService观察计量。
 
 SQL轮次恢复切片新增：`tests/test_m4_sql_turn_reset.py`；修改AgentState跨轮白名单与ChatService SQL hydrate复用，数据不删除。
+
+业务参数切片新增：`app/agent/business_contracts.py`、`tests/test_m4_business_parameters.py`；修改AgentState及意图/工具/RAG/响应、统一理解与SQL恢复的参数入口。

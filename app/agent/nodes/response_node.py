@@ -586,8 +586,9 @@ def build_llm_prompt(self: "ResponseContext", state: AgentState) -> str:
         "refund_preview": "退款预览",
     }
     slot_parts = []
+    slot_context = state.business_context()
     for key, label in _slot_labels.items():
-        value = state.collected_info.get(key)
+        value = slot_context.get(key)
         if value is None or value == "" or value == [] or value == {}:
             continue
         if isinstance(value, (dict, list)):

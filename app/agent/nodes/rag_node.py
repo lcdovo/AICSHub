@@ -64,7 +64,7 @@ async def rewrite_query(dependencies: QueryRewriteDependencies, state: AgentStat
     result = await dependencies.rewriter.rewrite(
         query=state.user_message,
         messages=state.messages,
-        collected_info=state.collected_info,
+        collected_info=state.current_business_parameters().model_dump(exclude_none=True),
     )
 
     state.rewritten_query = result.rewritten_query
