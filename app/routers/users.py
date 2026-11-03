@@ -13,7 +13,7 @@ from app.schemas.schemas import UserCreate, UserUpdate, APIResponse, RefreshRequ
 from app.security import (
     create_access_token, decode_token, ensure_owner_or_admin, enforce_rate_limit,
     get_current_user, hash_password, issue_refresh_token, token_digest, verify_password,
-    require_admin,
+    require_admin, user_for_token,
 )
 from app.utils.database import get_db
 
@@ -63,9 +63,7 @@ async def refresh_token(request: RefreshRequest, db: AsyncSession = Depends(get_
     now = datetime.utcnow()
     if not stored or stored.revoked_at or stored.expires_at <= now or str(payload.get("sub")) != str(stored.user_id):
         raise HTTPException(status_code=401, detail="Refresh Token 无效或已撤销")
-    user = await db.get(User, stored.user_id)
-    if not user or not user.status:
-        raise HTTPException(status_code=401, detail="用户已禁用或不存在")
+    user = await user_for_token(payload, db)
     stored.revoked_at = now
     access = create_access_token(user)
     new_refresh, replacement = await issue_refresh_token(db, user)

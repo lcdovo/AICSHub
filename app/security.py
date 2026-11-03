@@ -97,14 +97,35 @@ async def issue_refresh_token(db: AsyncSession, user: User) -> tuple[str, Refres
 
 def decode_token(token: str, expected_type: str) -> dict:
     try:
-        payload = jwt.decode(token, settings.AUTH_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(
+            token, settings.AUTH_SECRET_KEY, algorithms=[JWT_ALGORITHM],
+            options={"require": ["exp", "sub", "type", "ver"]},
+        )
     except jwt.ExpiredSignatureError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token 已过期") from exc
     except jwt.InvalidTokenError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token 无效") from exc
     if payload.get("type") != expected_type:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token 类型无效")
+    subject = payload.get("sub")
+    if (not isinstance(subject, str) or not subject.isascii() or not subject.isdecimal()
+            or int(subject) <= 0 or type(payload.get("ver")) is not int or payload["ver"] < 0):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token 无效")
     return payload
+
+
+async def user_for_token(payload: dict, db: AsyncSession) -> User:
+    """读取数据库最新身份，不信任JWT中的role或Session身份缓存。"""
+    user = await db.get(User, int(payload["sub"]), populate_existing=True)
+    if not user or not user.status or user.disabled_at is not None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户已禁用或不存在")
+    if payload["ver"] != user.token_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token 已失效")
+    return user
+
+
+async def authenticate_access_token(token: str, db: AsyncSession) -> User:
+    return await user_for_token(decode_token(token, "access"), db)
 
 
 async def get_current_user(
@@ -113,17 +134,7 @@ async def get_current_user(
 ) -> User:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")
-    payload = decode_token(credentials.credentials, "access")
-    try:
-        user_id = int(payload["sub"])
-    except (KeyError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token 无效") from exc
-    user = await db.get(User, user_id)
-    if not user or not user.status or user.disabled_at is not None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户已禁用或不存在")
-    if payload.get("ver") != user.token_version:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token 已失效")
-    return user
+    return await authenticate_access_token(credentials.credentials, db)
 
 
 async def require_user(current_user: User = Depends(get_current_user)) -> User:

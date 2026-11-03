@@ -25,6 +25,16 @@ Authorization: Bearer <access_token>
 
 服务端从数据库读取角色，客户端传入的 `role` 不参与授权。越权返回 `403`，未登录或 Token 无效返回 `401`。
 
+### REST / WebSocket 身份有效期（M1-04）
+
+Access Token必须包含`exp`、`sub`、`type`、`ver`，使用HS256签名；`sub`是正整数ID的ASCII数字字符串，`ver`是非负整数（布尔值无效），`type=access`。REST与WS共用数据库身份校验，拒绝不存在、status关闭、disabled_at非空、token_version不匹配的账号；权限使用数据库当前role。
+
+WS保持`Authorization: Bearer ...`或现有`access_token`查询参数的兼容入口，Bearer scheme大小写不敏感。握手时身份失效关闭4401；连接建立后每条消息先重新认证，失效发送`type=error, code=401`并关闭4401。REST聊天与WS在等待会话锁后、写用户消息/运行图之前再校验凭据及资源权限。等待期间撤销可阻断下一步消息和图执行；不保证取消已经开始的工具或撤回已提交动作。
+
+注销递增`token_version`会使该用户此前所有版本的Access及Refresh Token失效。刷新除检查存储摘要、过期和撤销记录外，也检查当前账号状态与版本；顺序轮换后的旧refresh不可复用。本轮未解决并发刷新竞争。降级管理员使用旧Token不能继续访问管理员HTTP接口，但仍可在当前角色允许的范围使用本人服务。WS继续只允许本人user_id和会话，不增加管理员代聊能力。
+
+认证数据库不可用时不执行图或回退示例身份。WS握手/逐消息认证的数据库异常关闭1013（已连接时先报503）；后续执行阶段的非业务异常使用脱敏500后关闭。本轮未实现短期WS票据/Cookie迁移，也未验证反向代理对握手拒绝和关闭码的实际处理；查询参数Token的代理日志风险仍待独立处理。
+
 ## 最小 OpenAPI 示例
 
 ```bash

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.utils.database import get_db
 from app.models.models import (
@@ -14,7 +15,7 @@ from app.schemas.schemas import ChatRequest, ChatResponse, APIResponse
 from app.agent.graph import AgentGraph
 from app.agent.memory import session_manager, SessionBusyError, SessionLeaseError
 from app.utils.tracking import structured_logger, generate_trace_id, get_tracer
-from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, decode_token
+from app.security import get_current_user, ensure_owner_or_admin, enforce_rate_limit, require_user, authenticate_access_token
 from app.config.config import settings
 from app.services.chat_service import chat_service
 from app.services.session_creation import create_session as create_session_record
@@ -219,7 +220,14 @@ async def send_message(
     await db.commit()
     try:
         async with session_manager.session_lock(session_id) as assert_owner:
+            # 生产请求已通过get_current_user；重新验证等待期间的撤销/到期与角色变化。
+            # 离线用例可显式覆盖认证依赖，此时没有HTTP Bearer凭据。
+            scheme, _, credential = request.headers.get("authorization", "").partition(" ")
+            if scheme.lower() == "bearer" and credential.strip():
+                current_user = await authenticate_access_token(credential.strip(), db)
+                ensure_owner_or_admin(current_user, chat_data.user_id)
             await db.refresh(session)
+            ensure_owner_or_admin(current_user, session.user_id)
             if session.status == SessionStatus.CLOSED:
                 raise HTTPException(status_code=400, detail="会话已关闭")
             db.add(Message(session_id=session_id, role=MessageRole.USER, content=chat_data.message))
@@ -336,15 +344,21 @@ async def get_intent_types(_: User = Depends(require_user)):
 async def websocket_chat_stream(websocket: WebSocket):
     """WebSocket 实时对话流式接口"""
     auth_header = websocket.headers.get("authorization", "")
-    token = auth_header.removeprefix("Bearer ").strip() or websocket.query_params.get("access_token")
+    scheme, _, credential = auth_header.partition(" ")
+    token = credential.strip() if scheme.lower() == "bearer" else None
+    token = token or websocket.query_params.get("access_token")
     if not token:
         await websocket.close(code=4401, reason="请先登录")
         return
+    from app.utils.database import async_session
     try:
-        payload = decode_token(token, "access")
-        authenticated_user_id = int(payload["sub"])
-    except (HTTPException, KeyError, TypeError, ValueError):
+        async with async_session() as auth_db:
+            authenticated_user_id = (await authenticate_access_token(token, auth_db)).id
+    except HTTPException:
         await websocket.close(code=4401, reason="Token 无效")
+        return
+    except SQLAlchemyError:
+        await websocket.close(code=1013, reason="认证服务暂时不可用")
         return
     await websocket.accept()
     trace_id = generate_trace_id()
@@ -359,6 +373,20 @@ async def websocket_chat_stream(websocket: WebSocket):
     try:
         while True:
             raw_data = await websocket.receive_text()
+            # 每条消息都重新验证到期、撤销、禁用和数据库角色；握手身份不是长连接授权。
+            try:
+                async with async_session() as auth_db:
+                    await authenticate_access_token(token, auth_db)
+            except HTTPException as exc:
+                await websocket.send_json({"type": "error", "code": 401, "message": exc.detail,
+                                           "timestamp": datetime.now().isoformat()})
+                await websocket.close(code=4401, reason="身份已失效")
+                return
+            except SQLAlchemyError:
+                await websocket.send_json({"type": "error", "code": 503, "message": "认证服务暂时不可用",
+                                           "timestamp": datetime.now().isoformat()})
+                await websocket.close(code=1013, reason="认证服务暂时不可用")
+                return
             try:
                 data = json.loads(raw_data)
             except json.JSONDecodeError:
@@ -392,15 +420,7 @@ async def websocket_chat_stream(websocket: WebSocket):
                 await websocket.send_json({"type": "error", "code": 413, "message": "消息长度超出限制", "timestamp": datetime.now().isoformat()})
                 continue
 
-            from app.utils.database import async_session
             async with async_session() as db:
-                user = await db.get(User, user_id)
-                if not user:
-                    await websocket.send_json(
-                        {"type": "error", "code": 404, "message": "用户不存在", "timestamp": datetime.now().isoformat()}
-                    )
-                    continue
-
                 if session_id:
                     session = await db.get(Session, session_id)
                     if not session:
@@ -417,7 +437,11 @@ async def websocket_chat_stream(websocket: WebSocket):
                 await db.commit()
                 try:
                     async with session_manager.session_lock(session_id) as assert_owner:
+                        # 等锁期间可能已注销；前面已结束读事务，避免沿用旧SQL快照。
+                        await authenticate_access_token(token, db)
                         await db.refresh(session)
+                        if session.user_id != authenticated_user_id:
+                            raise HTTPException(status_code=403, detail="无权访问该会话")
                         if session.status == SessionStatus.CLOSED:
                             session.status = SessionStatus.ACTIVE
                             session.closed_at = None
@@ -486,6 +510,14 @@ async def websocket_chat_stream(websocket: WebSocket):
                             detail=f"intent={agent_state.detected_intent}, time={agent_state.execution_time_ms}ms",
                         )
 
+                except HTTPException as exc:
+                    await db.rollback()
+                    await websocket.send_json({"type": "error", "code": exc.status_code,
+                                               "message": exc.detail, "timestamp": datetime.now().isoformat()})
+                    if exc.status_code == 401:
+                        await websocket.close(code=4401, reason="身份已失效")
+                        return
+                    continue
                 except (SessionBusyError, SessionLeaseError) as exc:
                     await db.rollback()
                     await websocket.send_json({
@@ -506,7 +538,7 @@ async def websocket_chat_stream(websocket: WebSocket):
         structured_logger.log_error(
             trace_id=trace_id,
             error_type="ws_error",
-            error_message=str(e),
+            error_message=type(e).__name__,
             method="WS",
             path="/api/v1/chat/stream",
         )
@@ -514,7 +546,7 @@ async def websocket_chat_stream(websocket: WebSocket):
             await websocket.send_json({
                 "type": "error",
                 "code": 500,
-                "message": f"服务器内部错误: {str(e)}",
+                "message": "服务器内部错误，请稍后重试",
                 "timestamp": datetime.now().isoformat(),
             })
         except Exception:
