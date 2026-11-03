@@ -59,10 +59,10 @@ export const api = {
       "/api/v1/chat/history/" + id + "?limit=" + limit,
       { signal },
     ),
-  send: (userId: number, message: string, sessionId: string) =>
+  send: (userId: number, message: string, sessionId: string, clientMessageId = crypto.randomUUID()) =>
     request<ChatResponse>(
       "/api/v1/chat/send",
-      json("POST", { user_id: userId, message, session_id: sessionId }),
+      json("POST", { user_id: userId, message, session_id: sessionId, client_message_id: clientMessageId }),
     ),
   tools: (signal?: AbortSignal) =>
     request<Tool[]>("/api/v1/chat/tools", { signal }),

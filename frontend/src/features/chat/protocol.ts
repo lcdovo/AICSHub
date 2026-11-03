@@ -1,6 +1,10 @@
 import type { Message } from "../../api/types";
 export type StreamEvent = {
   type: string;
+  run_id?: string;
+  sequence?: number;
+  event_id?: string;
+  schema_version?: number;
   session_id?: string;
   trace_id?: string;
   content?: string;

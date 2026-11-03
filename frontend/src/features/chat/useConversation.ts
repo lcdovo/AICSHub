@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api";
+import { request } from "../../api/client";
 import { errorText } from "../../api/client";
 import type { Message } from "../../api/types";
 import { useChat } from "../../state/chat";
@@ -17,6 +18,36 @@ export function useConversation(userId: number, id?: string, limit = 50) {
     enabled: !!id,
   });
   const messages = room?.messages ?? history.data?.messages ?? [];
+  useEffect(() => {
+    if (!id) return;
+    let pending = sessionStorage.getItem("aicshub-pending-run:" + id);
+    const pendingClient=sessionStorage.getItem("aicshub-pending-client:"+id);
+    if (!pending && !pendingClient) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        if (!pending) {
+          const resolved=await request<{run_id:string}>("/api/v1/chat/sessions/"+encodeURIComponent(id)+"/runs/"+encodeURIComponent(pendingClient!));
+          pending=resolved.run_id;
+          sessionStorage.setItem("aicshub-pending-run:"+id,pending);
+        }
+        const run = await request<{status: string}>("/api/v1/chat/runs/" + pending);
+        if (cancelled) return;
+        if (["succeeded", "awaiting_confirmation", "failed", "cancelled"].includes(run.status)) {
+          sessionStorage.removeItem("aicshub-pending-run:" + id);
+          sessionStorage.removeItem("aicshub-pending-client:"+id);
+          const saved = await api.history(id, limit);
+          if (!cancelled) {
+            useChat.getState().setRoom(id, {...emptyRoom(), messages: saved.messages});
+            cache.setQueryData(["history", id, limit], saved);
+          }
+        } else timer = setTimeout(poll, 1000);
+      } catch { /* 保留Run引用供下次显式刷新，不重发原消息。 */ }
+    };
+    void poll();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [id, limit, cache]);
   useEffect(() => {
     if (!id || !history.data) return;
     const current = useChat.getState().rooms[id];
