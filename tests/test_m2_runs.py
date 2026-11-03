@@ -200,9 +200,15 @@ async def test_slow_transport_is_bounded_and_does_not_cancel_detached_run(tmp_pa
             async def send_json(self,data): await asyncio.sleep(10)
             async def close(self,**kwargs): pass
         await asyncio.wait_for(chat.websocket_chat_stream(SlowSocket()),1)
+        async with factory() as db:
+            other,_=await runs.accept(db,await db.get(User,202),ChatRequest(user_id=202,session_id="session-202",
+                message="其他用户不受慢连接影响",client_message_id="other-user"))
+        runs.start(factory,other,chat.chat_service,manager,None,True)
+        second=await asyncio.wait_for(runs.wait(factory,other.id),1)
+        assert second["session_id"]=="session-202"
         for _ in range(100):
             async with factory() as db:
-                run=await db.scalar(select(ChatRun))
+                run=await db.scalar(select(ChatRun).where(ChatRun.client_message_id=="slow-one"))
                 if run and run.status=="succeeded": break
             await asyncio.sleep(0.02)
         assert run.status=="succeeded" and run.result["reply"]=="可查询的已持久结果"
