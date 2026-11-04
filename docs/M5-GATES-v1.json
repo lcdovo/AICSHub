@@ -719,5 +719,21 @@
     ],
     "endpoint_regression": "reports/offline/20261104-133641-981756",
     "conclusion": "GPU candidate only; mixed 2.501s/1.863s stage P95 and end-to-end P95 >2s; no business profile/config switched"
+  },
+  "gpu_pair_candidate": {
+    "document": "docs/GPU-PAIR-DEPLOYMENT-v1.md",
+    "report": "reports/m5/local-20261104-150838/report.json",
+    "concurrency_smoke": "reports/gpu-pair/20261104/compatibility-concurrency.json",
+    "runtime": "reports/gpu-pair/20261104/runtime.json",
+    "embedding": "qwen3-embedding:0.6b GPU Q8_0 1024",
+    "reranker": "BAAI/bge-reranker-v2-m3 CUDA FP16",
+    "cold_queries": 12,
+    "rerank_actual_local": 12,
+    "fallbacks": 0,
+    "rerank_p95_ms": 2713.665,
+    "end_to_end_p95_ms": 3839.074,
+    "business_route_changed": false,
+    "whole_m5_pass": false,
+    "vector_compatibility": "limited4 synthetic examples, not accepted for business index mixing"
   }
 }

@@ -100,3 +100,7 @@ CPU线程2/4及batch2/4/6/12服务级重复对照、GPU透传以及正确/作废
 真实默认5秒实验reports/m5/local-20261104-120224/report.json同一源码指纹、稳定完整：12冷+12热观测，冷8条local、4条超时rank_preserved，热均缓存命中；全冷重排阶段P95=5005.732ms、端到端P95=5989.6213ms，仍不满足原2秒候选目标，整体FAIL_LOCAL_RERANK_FALLBACK。语料小而Recall/nDCG=1不代表真实重排或独立质量通过；没有剔除失败、放宽截止或模型质量标准，未操作595候选调参、业务数据/配置/部署，外部/聊天调用0。M5性能和质量缺口继续保留。
 
 资源对照最终端点回归复验53 passed（reports/offline/20261104-134155-158519），compileall/Ruff/diff检查通过。只修改评测工具/测试与证据文档，未修改生产Python或部署。
+
+## 双GPU候选部署核验
+
+详见GPU-PAIR-DEPLOYMENT-v1.md。复用已存在owner=gpu-model-switch候选，固定镜像独立Compose清单通过配置检查但未重建现有容器。60项T0及12查询真实双GPU链路、4轮同时推理均完成；真实重排P95 2713.665ms未达2秒，Embedding同digest GPU/CPU相似但不完全等同，业务路由与旧索引保留。不得称完整部署切换或M5通过。

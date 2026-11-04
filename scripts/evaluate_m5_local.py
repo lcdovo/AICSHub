@@ -31,6 +31,20 @@ def local_reranker_base(value: str) -> str:
     return value.rstrip('/')
 
 
+def local_embedding_base(value: str) -> str:
+    parsed = urlsplit(value)
+    if (parsed.scheme != 'http' or parsed.hostname != '127.0.0.1' or parsed.username
+            or parsed.password or parsed.query or parsed.fragment or parsed.path != '/v1'):
+        raise argparse.ArgumentTypeError('only plain HTTP loopback /v1 embedding endpoints are allowed')
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError('invalid loopback port') from exc
+    if port is None:
+        raise argparse.ArgumentTypeError('explicit loopback port required')
+    return value.rstrip('/')
+
+
 @contextmanager
 def isolated_directory():
     previous=Path.cwd()
@@ -64,6 +78,9 @@ def main():
     parser.add_argument('--modes',nargs='+',choices=['bm25','dense','hybrid','rerank'],default=['bm25','dense','hybrid','rerank'])
     parser.add_argument('--provider-timeout',type=float,default=5.0)
     parser.add_argument('--reranker-base',type=local_reranker_base,default='http://127.0.0.1:7997')
+    parser.add_argument('--reranker-model',default='BAAI/bge-reranker-large')
+    parser.add_argument('--embedding-base',type=local_embedding_base,default='http://127.0.0.1:8012/v1')
+    parser.add_argument('--embedding-model',default='qwen3-embedding:0.6b')
     args=parser.parse_args()
     if not 0 < args.provider_timeout <= 30:
         parser.error('provider-timeout must be >0 and <=30; business default is5')
@@ -89,17 +106,18 @@ def main():
             os.chdir(temporary)
             os.environ.update(REDIS_ENABLED='false',USE_MILVUS='true',LANGFUSE_ENABLED='false',
                 LLM_API_KEY='',LLM_API_BASE='http://offline.invalid/v1',USER_MEMORY_ENABLED='false',
-                EMBEDDING_API_BASE='http://127.0.0.1:8012/v1',EMBEDDING_API_KEY='local-only',
-                EMBEDDING_MODEL='qwen3-embedding:0.6b',EMBEDDING_DIM='1024',EMBEDDING_REVISION='local-live-probe',
+                EMBEDDING_API_BASE=args.embedding_base,EMBEDDING_API_KEY='local-only',
+                EMBEDDING_MODEL=args.embedding_model,EMBEDDING_DIM='1024',EMBEDDING_REVISION='local-live-probe',
                 RERANKER_API_BASE='',RERANKER_API_KEY='',RERANKER_LOCAL_BASE=args.reranker_base,
-                RERANKER_LOCAL_MODEL='BAAI/bge-reranker-large',RAG_USE_RERANKER='false')
+                RERANKER_LOCAL_MODEL=args.reranker_model,RAG_USE_RERANKER='false')
             import httpx
             with httpx.Client(timeout=5,trust_env=False) as client:
-                tags=client.get('http://127.0.0.1:8012/api/tags').raise_for_status().json()
-                model=next(m for m in tags['models'] if m['name']=='qwen3-embedding:0.6b')
+                embedding_base=args.embedding_base.rsplit('/v1',1)[0]
+                tags=client.get(embedding_base+'/api/tags').raise_for_status().json()
+                model=next(m for m in tags['models'] if m['name']==args.embedding_model)
                 revision=model['digest']
                 models=client.get(args.reranker_base + '/models').raise_for_status().json()
-                if not any(m['id']=='BAAI/bge-reranker-large' for m in models['data']):
+                if not any(m['id']==args.reranker_model for m in models['data']):
                     raise RuntimeError('local reranker model mismatch')
             from app.config.config import settings
             settings.EMBEDDING_REVISION='ollama-'+revision[:12]
@@ -115,10 +133,11 @@ def main():
             report['experimental_provider_timeout_seconds']=args.provider_timeout
             report['business_default_provider_timeout_seconds']=5
             report['isolated_reranker_base']=args.reranker_base
+            report['isolated_embedding_base']=args.embedding_base
             from app.services.knowledge_base.index_worker import index_job
             from app.services.knowledge_base.vector_index import VersionedVectorIndex
             from scripts.evaluate_m5 import Dataset,ranking_metrics,Chunk,RelevantChunk
-            backend=APIEmbedding('http://127.0.0.1:8012/v1','local-only','qwen3-embedding:0.6b',
+            backend=APIEmbedding(args.embedding_base,'local-only',args.embedding_model,
                                  dim=1024,max_retries=0,timeout=60,batch_size=20)
             class Embedding:
                 _dim=1024
@@ -155,7 +174,7 @@ def main():
                 if len(current)!=1: raise RuntimeError('development label mapping requires exactly one chunk')
                 mapping[(doc['chunk_id'],doc['version_id'])]=(current[0]['id'],current[0]['version_id'])
             report.update(embedding_model=backend.model,embedding_revision=settings.EMBEDDING_REVISION,
-                reranker_model='BAAI/bge-reranker-large',dataset_sha256=hashlib.sha256(raw).hexdigest(),
+                reranker_model=args.reranker_model,dataset_sha256=hashlib.sha256(raw).hexdigest(),
                 chunks=len(corpus),corpus_sha256=hashlib.sha256((root/'acceptance/m5/corpus.json').read_bytes()).hexdigest())
             report['canonical_to_runtime_labels']=[{'canonical_chunk_id':key[0],'canonical_version_id':key[1],
                 'runtime_chunk_id':value[0],'runtime_version_id':value[1]} for key,value in mapping.items()]

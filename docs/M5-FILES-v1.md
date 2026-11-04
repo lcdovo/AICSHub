@@ -21,3 +21,5 @@
 后续重排预算切片：修改app/services/reranker_service.py、app/services/knowledge_base/versioned_search.py、scripts/evaluate_m5_local.py、tests/test_reranker.py；新增tests/test_m5_rerank_budget.py、docs/M5-RERANK-BUDGET-v1.md，更新验收证据/门禁/本文件及全局JSON索引。功能107项通过，实际5秒性能8/12local、4超时回退，仍未验收通过。
 
 资源对照切片：scripts/evaluate_m5_local.py隔离loopback端点；tests/test_m5_local_endpoint.py九项边界测试；更新M5设备对照、证据、验收门禁和本清单。业务生产代码与部署未修改。
+
+双GPU候选切片：新增compose.gpu-candidates.yaml与docs/GPU-PAIR-DEPLOYMENT-v1.md；修改scripts/evaluate_m5_local.py、tests/test_m5_local_endpoint.py、M5证据/门禁/清单。候选已运行，业务路由未切换；原文件和数据保留。
