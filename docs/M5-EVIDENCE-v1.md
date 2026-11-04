@@ -70,3 +70,9 @@ scripts/evaluate_m5_local.py清除宿主业务配置、工作目录临时SQLite�
 全部热次命中本测试实例缓存；冷次清本实例检索与文本缓存，不清业务Redis。语料仅12chunk，Recall@20可包含全部语料，1.0不证明大库召回质量；必要条件覆盖/无答案/真实回答支持没有用子串猜测填分。实验进程供应商上限30秒，业务默认5秒确已在前次真实链路回退，故不能标AC-12-05/14完整通过；改写消融、200独立运行/并发负载、真实聊天/Judge以及独立留出标注都未完成。Windows cleanup错误修复为先退出临时工作目录再销毁；未删除业务数据，新增测试collection保留不清理。
 
 本报告之后的显式BM25降级metadata修正仅39项T0复验，未声称其改变前一份真实来源指纹；实际本地推理结果按上述原指纹解释。
+
+## 综合回归中的截止时间用例校正
+
+本轮第二次全量961 passed/1 failed（reports/offline/20261104-112502-003338，549.32秒），失败为原test_stream_uses_remaining_run_deadline_and_records_unknown：先把整轮剩余设置50ms，再执行实际SQLite SQL预留，负载下SQL已超过截止，生产正确not_sent，测试错误期待unknown。没有放宽生产超时/计费逻辑，也不把not_sent或unknown混为成功。
+
+测试现在真实执行SQL预留后再冻结供应商剩余500ms，替身用Event确认实际进入astream，并等待至生产截止取消，必须unknown/unknown_reserved；另加派发前过期用例，必须零供应商调用、not_sent、input/output/预算tokens和cost均0。原未知保守计量断言完整保留，新增边界分别核验。网关/迟到/恢复/Judge相关45通过（reports/offline/20261104-113522-202851），compileall/Ruff通过。最终全量后续记录，不删除两个历史全量失败。

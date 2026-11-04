@@ -248,27 +248,70 @@ async def test_closing_one_llm_service_does_not_close_another_services_pool(monk
 async def test_stream_uses_remaining_run_deadline_and_records_unknown(factory, monkeypatch):
     import time
     from app.services.llm_service import LLMService
-    from app.services.model_gateway import CALL_CONTEXT
+    from app.services.model_gateway import CALL_CONTEXT, GATEWAY
 
     monkeypatch.setattr(settings, "LLM_MAX_TOKENS", 40)
     monkeypatch.setattr("app.services.llm_service.settings.LLM_MAX_TOKENS", 40)
     service = LLMService()
+    entered = asyncio.Event()
+    reserve = GATEWAY.reserve
+
+    async def reserve_then_apply_remaining_deadline(*args, **kwargs):
+        ticket = await reserve(*args, **kwargs)
+        # SQL预留耗时与供应商超时分开，避免慢盘使本例误测成派发前超时。
+        ticket["deadline"] = CALL_CONTEXT.get()["deadline"] = time.monotonic() + .5
+        return ticket
+
+    monkeypatch.setattr(GATEWAY, "reserve", reserve_then_apply_remaining_deadline)
 
     class SlowStream:
         async def astream(self, *args, **kwargs):
-            await asyncio.sleep(.2)
+            entered.set()
+            await asyncio.Event().wait()
             yield SimpleNamespace(content="late")
 
     async with model_context(101, "stream-deadline", factory=factory):
-        CALL_CONTEXT.get()["deadline"] = time.monotonic() + .05
         with pytest.raises(TimeoutError):
             async for _ in service._gateway_stream(
                 ModelConfig("synthetic", model="synthetic"), ["x"], SlowStream(), 101, "stream-deadline"
             ):
                 pytest.fail("late stream must not be published")
+    assert entered.is_set()
     async with factory() as db:
         record = await db.scalar(select(ModelCallRecord))
         assert record.status == "unknown" and record.usage_basis == "unknown_reserved"
+
+
+async def test_stream_expired_after_sql_reservation_never_dispatches_and_refunds_budget(factory, monkeypatch):
+    import time
+    from unittest.mock import Mock
+    from app.services.llm_service import LLMService
+    from app.services.model_gateway import GATEWAY
+
+    monkeypatch.setattr(settings, "LLM_MAX_TOKENS", 40)
+    service = LLMService()
+    reserve = GATEWAY.reserve
+
+    async def reserve_then_expire(*args, **kwargs):
+        ticket = await reserve(*args, **kwargs)
+        ticket["deadline"] = time.monotonic() - 1
+        return ticket
+
+    monkeypatch.setattr(GATEWAY, "reserve", reserve_then_expire)
+    provider = SimpleNamespace(astream=Mock(side_effect=AssertionError("expired call dispatched")))
+    async with model_context(101, "stream-before-dispatch", factory=factory):
+        with pytest.raises(TimeoutError):
+            async for _ in service._gateway_stream(
+                ModelConfig("synthetic", model="synthetic"), ["x"], provider, 101, "stream-before-dispatch"
+            ):
+                pytest.fail("expired stream published")
+    provider.astream.assert_not_called()
+    async with factory() as db:
+        record = await db.scalar(select(ModelCallRecord))
+        budget = await db.scalar(select(ModelBudgetDay))
+        assert record.status == "not_sent" and record.usage_basis == "not_sent"
+        assert record.input_tokens == record.output_tokens == 0 and budget.tokens == 0
+        assert budget.cost == record.cost == 0
 
 
 async def test_run_shared_cost_ceiling_and_price_snapshot(factory, monkeypatch):
