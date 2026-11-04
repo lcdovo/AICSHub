@@ -153,7 +153,7 @@ def compatibility(output: Path) -> dict:
 
 def run_case_scheduled(case: dict, whole_request=False) -> dict:
     """真正使用应用两个模型服务的同进程HTTP出口；繁忙不算成功。"""
-    from app.services.local_inference import inference_scope, LocalModelBusy
+    from app.services.local_inference import inference_scope, LocalModelBusy, LocalModelDeadline
     from app.services.local_admission import request_scope
     from app.services.embedding_service import APIEmbedding
     from app.services.reranker_service import RerankerService
@@ -183,6 +183,8 @@ def run_case_scheduled(case: dict, whole_request=False) -> dict:
     except Exception as exc:
         row["status"] = "BUSY" if isinstance(exc, LocalModelBusy) else "FAIL"
         row["error_type"] = type(exc).__name__
+        if isinstance(exc, (LocalModelBusy, LocalModelDeadline)):
+            row["error_code"] = str(exc)
     finally:
         embedding.close()
     row["total_ms"] = (time.perf_counter() - began) * 1000
