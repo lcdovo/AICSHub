@@ -4,9 +4,9 @@
 
 | 索引状态 | 数量 | 含义 |
 | --- | ---: | --- |
-| NO_GATE_MAPPING_REQUIRES_AUDIT | 75 | 阶段门禁尚无该编号对应，需核对代码与已有测试后实施/补验 |
-| HISTORICAL_ACCEPTED_REVALIDATION_DUE | 87 | M1～M3冻结子集历史通过，最终当前综合验收仍需复核 |
-| PARTIAL_CURRENT | 32 | 当前局部/分层证据（含M4及M5/M6支撑切片），整体尚未通过 |
+| NO_GATE_MAPPING_REQUIRES_AUDIT | 59 | 阶段门禁尚无该编号对应，需核对代码与已有测试后实施/补验 |
+| HISTORICAL_ACCEPTED_REVALIDATION_DUE | 78 | M1～M3冻结子集历史通过，最终当前综合验收仍需复核 |
+| PARTIAL_CURRENT | 57 | 当前局部/分层证据（含M4及M5/M6支撑切片），整体尚未通过 |
 | FAIL | 1 | 现有硬门槛失败，必须修复后独立复验 |
 
 ## 继续顺序与边界
@@ -135,32 +135,32 @@
 | AC-11-10 | P1/I+P | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3及M7综合复验 | [M3: PASS](M3-GATES-v1.json) |
 | AC-11-11 | P0/I+F | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3及M7综合复验 | [M3: PASS](M3-GATES-v1.json) |
 | AC-11-12 | P1/I+F | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3及M7综合复验 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-01 | P0/I | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-02 | P0/C+I+F | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-03 | P1/I+F | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-04 | P0/U+C | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-05 | P1/C+L | NO_GATE_MAPPING_REQUIRES_AUDIT | M3正确性 / M5效果 | 待核实，不当通过 |
-| AC-12-06 | P1/U+I | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-07 | P0/U+I | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-08 | P0/I+L | NO_GATE_MAPPING_REQUIRES_AUDIT | M3正确性 / M5效果 | 待核实，不当通过 |
-| AC-12-09 | P0/I | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-10 | P1/C+L | NO_GATE_MAPPING_REQUIRES_AUDIT | M3正确性 / M5效果 | 待核实，不当通过 |
-| AC-12-11 | P1/I+F | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-12 | P0/C+L | NO_GATE_MAPPING_REQUIRES_AUDIT | M3正确性 / M5效果 | 待核实，不当通过 |
-| AC-12-13 | P1/I+P | HISTORICAL_ACCEPTED_REVALIDATION_DUE | M3正确性 / M5效果 | [M3: PASS](M3-GATES-v1.json) |
-| AC-12-14 | P1/L+P | NO_GATE_MAPPING_REQUIRES_AUDIT | M3正确性 / M5效果 | 待核实，不当通过 |
-| AC-13-01 | P0/U+C | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-02 | P0/U+C | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-03 | P0/C+L | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-04 | P0/U+C | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-05 | P0/I | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-06 | P1/C+L | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-07 | P0/C+L | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-08 | P1/U+C+L | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-09 | P0/C+F | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-10 | P0/I+F | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
-| AC-13-11 | P0/C+I | PARTIAL_CURRENT | M5 | T0人工事实局部通过，未完成原项；见M4-EVIDENCE-v1.md |
-| AC-13-12 | P1/L+P | NO_GATE_MAPPING_REQUIRES_AUDIT | M5 | 待核实，不当通过 |
+| AC-12-01 | P0/I | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-02 | P0/C+I+F | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-03 | P1/I+F | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-04 | P0/U+C | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-05 | P1/C+L | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-06 | P1/U+I | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-07 | P0/U+I | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-08 | P0/I+L | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-09 | P0/I | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-10 | P1/C+L | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-11 | P1/I+F | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-12 | P0/C+L | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-13 | P1/I+P | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-12-14 | P1/L+P | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-01 | P0/U+C | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-02 | P0/U+C | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-03 | P0/C+L | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-04 | P0/U+C | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-05 | P0/I | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-06 | P1/C+L | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-07 | P0/C+L | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-08 | P1/U+C+L | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-09 | P0/C+F | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-10 | P0/I+F | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-11 | P0/C+I | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
+| AC-13-12 | P1/L+P | PARTIAL_CURRENT | M5及M7综合复验 | [M5局部证据，整体未通过](M5-GATES-v1.json) |
 | AC-14-01 | P1/C+I | PARTIAL_CURRENT | M4 | [M4: PASS_C_I_ISOLATED](M4-GATES-v1.json) |
 | AC-14-02 | P0/I+F | PARTIAL_CURRENT | M4 | [M4: PASS_T1](M4-GATES-v1.json) |
 | AC-14-03 | P1/C+L | PARTIAL_CURRENT | M4 | [M4: PARTIAL](M4-GATES-v1.json) |

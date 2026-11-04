@@ -21,9 +21,9 @@
     "P1": 90
   },
   "states": {
-    "NO_GATE_MAPPING_REQUIRES_AUDIT": 75,
-    "HISTORICAL_ACCEPTED_REVALIDATION_DUE": 87,
-    "PARTIAL_CURRENT": 32,
+    "NO_GATE_MAPPING_REQUIRES_AUDIT": 59,
+    "HISTORICAL_ACCEPTED_REVALIDATION_DUE": 78,
+    "PARTIAL_CURRENT": 57,
     "FAIL": 1
   },
   "rules": [
@@ -1687,14 +1687,20 @@
       "procedure": "构造关键词独有命中和向量独有命中，真实Milvus检索",
       "required_assertion": "两路确实执行并贡献候选；保存schema、index、逐路命中，不以注释代替证据",
       "spec_line": 279,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T1",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1704,14 +1710,20 @@
       "procedure": "Embedding失败但BM25可用",
       "required_assertion": "仍有关键词结果并显式降级；覆盖E13",
       "spec_line": 280,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1721,14 +1733,20 @@
       "procedure": "Milvus超时、全文索引缺失、单路为空",
       "required_assertion": "实际fallback与metadata一致，不虚报hybrid/degraded=false",
       "spec_line": 281,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1738,14 +1756,20 @@
       "procedure": "同候选两路第一的RRF、纯向量和BM25分分别进入证据判定",
       "required_assertion": "分数类型保留；0.0328不因与0.35混比直接拒绝，未知分不冒充概率",
       "spec_line": 282,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1755,9 +1779,16 @@
       "procedure": "模型Reranker成功、超时、无配置三种情况",
       "required_assertion": "provider和回退准确；候选不凭空增删；单次耗时不被旧缓存值替代",
       "spec_line": 283,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M3正确性 / M5效果",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_LOCAL_MODEL",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-12-06",
@@ -1765,14 +1796,20 @@
       "procedure": "候选正确答案排在11～20，改变recall/rerank/evidence_k",
       "required_assertion": "参数独立生效，可测量截断损失；关闭重排也返回规定数量",
       "spec_line": 284,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1782,14 +1819,20 @@
       "procedure": "两个chunk前100字相同、后半条件不同",
       "required_assertion": "去重保留不同事实；按ID/hash去重不误删例外",
       "spec_line": 285,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1799,9 +1842,16 @@
       "procedure": "退款政策例外在后半部，用户对象命中例外",
       "required_assertion": "证据包含适用条件，不因前缀裁剪生成相反结论",
       "spec_line": 286,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M3正确性 / M5效果",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-12-09",
@@ -1809,14 +1859,20 @@
       "procedure": "检索候选包含草稿、已删除、旧版本和无权文档",
       "required_assertion": "进入生成前过滤，不能被高排名或缓存绕过",
       "spec_line": 287,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T1",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1826,9 +1882,16 @@
       "procedure": "多轮“它能退吗”、精确型号、数字、否定、两问",
       "required_assertion": "查询补全保留实体/否定；多问证据覆盖可单独判断",
       "spec_line": 288,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M3正确性 / M5效果",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-12-11",
@@ -1836,14 +1899,20 @@
       "procedure": "改知识版本、权限、Embedding或Reranker配置后重复查询",
       "required_assertion": "旧缓存不复用；新键含必要版本/范围，冷/热来源明确",
       "spec_line": 289,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T1",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1853,9 +1922,16 @@
       "procedure": "无答案问题和仅部分相关候选",
       "required_assertion": "supported/partial/unsupported/unknown区分，不能靠高排名硬答",
       "spec_line": 290,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M3正确性 / M5效果",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-12-13",
@@ -1863,14 +1939,20 @@
       "procedure": "比较阶段metadata与实际调用计时",
       "required_assertion": "query编码、召回、融合、重排和总耗时可对齐；meta/顶层字段统一",
       "spec_line": 291,
-      "state": "HISTORICAL_ACCEPTED_REVALIDATION_DUE",
-      "next_scope": "M3正确性 / M5效果",
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "M3",
           "status": "PASS",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_LOCAL_MODEL",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -1880,9 +1962,16 @@
       "procedure": "冻结留出集跑BM25/dense/hybrid/rerank/改写消融",
       "required_assertion": "满足第5章检索门槛；报告逐样本、未知问题、冷/热和费用",
       "spec_line": 292,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M3正确性 / M5效果",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "NOT_ACCEPTED_QUALITY_REVIEW_PENDING",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-01",
@@ -1890,9 +1979,16 @@
       "procedure": "证据已发货，候选回答还没发货",
       "required_assertion": "拒绝/修复后复核，不能以0.9事实分放行；覆盖E11",
       "spec_line": 298,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-02",
@@ -1900,9 +1996,16 @@
       "procedure": "证据299元，回答改为399元或换币种",
       "required_assertion": "阻断错误关键事实，单位/金额类型匹配",
       "spec_line": 299,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-03",
@@ -1910,9 +2013,16 @@
       "procedure": "正确订单信息后追加赔偿1000元、终身换新",
       "required_assertion": "无证据承诺被识别并移除/拒绝，不能靠字段复述通过",
       "spec_line": 300,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-04",
@@ -1920,9 +2030,16 @@
       "procedure": "无证据或所有工具失败仍声称退款成功",
       "required_assertion": "unknown/rejected，不给事实满分，不发布成功",
       "spec_line": 301,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-05",
@@ -1930,9 +2047,16 @@
       "procedure": "两工具结果互相冲突或最后一个无关成功",
       "required_assertion": "不只检查最后成功结果，按问题相关性核对全部关键事实",
       "spec_line": 302,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-06",
@@ -1940,9 +2064,16 @@
       "procedure": "生成/Judge使用含完整条件的同EvidenceBundle",
       "required_assertion": "审查引用同版本同片段，不因不同裁剪误判",
       "spec_line": 303,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-07",
@@ -1950,9 +2081,16 @@
       "procedure": "候选引用不存在ID、错误版本或不支持该论断的片段",
       "required_assertion": "校验拒绝；引用列表不能替代论断支持关系",
       "spec_line": 304,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-08",
@@ -1960,9 +2098,16 @@
       "procedure": "“警惕诈骗/不要转账”等正常防骗回答",
       "required_assertion": "不因敏感词直接拒绝，保留正常安全建议",
       "spec_line": 305,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-09",
@@ -1970,9 +2115,16 @@
       "procedure": "Judge超时/结构无效/预算耗尽",
       "required_assertion": "明确unknown；可信模板可发，未核实政策不当作通过",
       "spec_line": 306,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-10",
@@ -1980,9 +2132,16 @@
       "procedure": "首稿拒绝，修复稿正确；检查发送事件与业务计数",
       "required_assertion": "首稿零外发，修复稿完整复核，只一次业务执行",
       "spec_line": 307,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-13-11",
@@ -1991,7 +2150,7 @@
       "required_assertion": "基础事实/安全检查仍生效，workflow不能绕过",
       "spec_line": 308,
       "state": "PARTIAL_CURRENT",
-      "next_scope": "M5",
+      "next_scope": "M5及M7综合复验",
       "evidence": [
         {
           "stage": "supporting slice for M5/M6",
@@ -1999,6 +2158,12 @@
           "document": "docs/M4-EVIDENCE-v1.md",
           "report": "reports/offline/20261104-093809-934039",
           "limit": "T0人工响应兜底只按有效同scope工具回执描述状态；无请求/结果未知明确说明。全部workflow模板隐私/等待时间/基础安全检查仍未验收。"
+        },
+        {
+          "stage": "M5",
+          "status": "PARTIAL_T0",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
         }
       ]
     },
@@ -2008,9 +2173,16 @@
       "procedure": "人工标注反例与正确集运行审查",
       "required_assertion": "满足错误放行/误拒门槛，分别报告程序核验、Judge与整体",
       "spec_line": 309,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
-      "next_scope": "M5",
-      "evidence": []
+      "state": "PARTIAL_CURRENT",
+      "next_scope": "M5及M7综合复验",
+      "evidence": [
+        {
+          "stage": "M5",
+          "status": "NOT_ACCEPTED_QUALITY_REVIEW_PENDING",
+          "document": "docs/M5-GATES-v1.json",
+          "limit": "963 T0 regressions pass; selected T1 MySQL/Redis/Milvus and local model development verified. 595 draft holdout candidates pending user semantic/fact review; no current real chat/Judge quality, rewrite ablation, business5s rerank or upstreamM4 pass."
+        }
+      ]
     },
     {
       "ac": "AC-14-01",

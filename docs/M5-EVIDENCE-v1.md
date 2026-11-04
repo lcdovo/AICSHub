@@ -76,3 +76,13 @@ scripts/evaluate_m5_local.py清除宿主业务配置、工作目录临时SQLite�
 本轮第二次全量961 passed/1 failed（reports/offline/20261104-112502-003338，549.32秒），失败为原test_stream_uses_remaining_run_deadline_and_records_unknown：先把整轮剩余设置50ms，再执行实际SQLite SQL预留，负载下SQL已超过截止，生产正确not_sent，测试错误期待unknown。没有放宽生产超时/计费逻辑，也不把not_sent或unknown混为成功。
 
 测试现在真实执行SQL预留后再冻结供应商剩余500ms，替身用Event确认实际进入astream，并等待至生产截止取消，必须unknown/unknown_reserved；另加派发前过期用例，必须零供应商调用、not_sent、input/output/预算tokens和cost均0。原未知保守计量断言完整保留，新增边界分别核验。网关/迟到/恢复/Judge相关45通过（reports/offline/20261104-113522-202851），compileall/Ruff通过。最终全量后续记录，不删除两个历史全量失败。
+
+## 本轮最终证据与剩余验收
+
+最终全量python scripts/test_offline.py -q tests --tb=short，963 passed/0失败/0错误/0跳过，415.49秒（reports/offline/20261104-113638-736165）。source_tree_stable/source_snapshot_complete=true，起止指纹01bc7de693aeb14e095b13f52d4528a9efb628e780f3cd1dc2556f3fd1d28e07；网络禁止且blocked_network_operations=0，未调用付费供应商。已有依赖/datetime弃用警告9881条如实保留。compileall与切片F401/F821通过。
+
+最新真实MySQL/Redis2通过（reports/m1-closeout/real-20261104-112538）及MySQL/Milvus4通过（reports/m3-closeout/real-20261104-112538）。M3外包装保存m5-source-start/end及m5-provenance补足旧执行器来源，两报告源码指纹c2f2d6dbfbf6bfc926c10f1a1314457e4c3205452be18a6284599ffd1bd93ade，均稳定完整。此后生产未改，网关测试独立调整；局部T1不替代全部真实集成/质量验收。
+
+正式质量留出候选已新编制：595条，其中330可回答（55主题簇/每簇不同字段或行为问题）、60无答案/部分答案、100反例、105正确候选。合成语料55份，业务知识库不写入。docs/M5-HOLDOUT-DRAFT-v1.json、CORPUS/SOURCE/MANIFEST-DRAFT及12批docs/m5-review/batch-*.md已准备；标签仍assistant_draft、reviewer=None，用户只确认复核分工，没有确认标签。程序检查595schema、chunk/version存在、ID/query/cluster与开发集精确无交集、hash一致；这些不能证明语义独立，仍须用户核查近义重复、允许事实、例外、草拟反例是否真错，之后冻结数据。未调用模型对该候选评分或据其结果调参；实际输出论断支持标签尚未产生。
+
+595候选保存在docs待审，不改本次全量来源清单；后续仅更新acceptance/m5/README.md说明及dataset-manifest.json的候选资料指针，无生产/测试Python改动，元数据/候选完整性另验。M5-ACCEPTANCE-v1.md结论INCOMPLETE，26项原断言与195项总索引保留；M4实体失败、独立人工标签/真实聊天Judge质量、改写消融、业务默认5秒重排预算和综合负载仍阻止完整通过。供应商660/660、rules/灰度0保持。全部独立提交、不推送；不进入M6或部署。

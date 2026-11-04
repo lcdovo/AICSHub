@@ -1,6 +1,6 @@
 {
   "date": "2026-11-04",
-  "status": "INCOMPLETE",
+  "status": "INCOMPLETE_QUALITY_AND_PERFORMANCE_GATES",
   "scope": "OPT-12效果、OPT-13; all AC-12/13 retained",
   "upstream_m4": "FAIL entity accuracy 0.956667 < 0.97; rules/canary0 retained",
   "supplier_budget": {
@@ -31,56 +31,147 @@
       "layers": "P0/I",
       "procedure": "构造关键词独有命中和向量独有命中，真实Milvus检索",
       "assertion": "两路确实执行并贡献候选；保存schema、index、逐路命中，不以注释代替证据",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T1",
+      "evidence": [
+        {
+          "report": "reports/m3-closeout/real-20261104-105816",
+          "passed": 4,
+          "limit": "selected synthetic-embedding/MySQL/Milvus regression; historical runner has no source-start/end fingerprint; full model/quality conditions not satisfied"
+        },
+        {
+          "report": "reports/m3-closeout/real-20261104-112538",
+          "passed": 4,
+          "provenance": "m5-provenance.json",
+          "limit": "T1 actual MySQL/Milvus, synthetic embeddings, new case DB/collection; latest source start/end stable and complete"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-02",
       "layers": "P0/C+I+F",
       "procedure": "Embedding失败但BM25可用",
       "assertion": "仍有关键词结果并显式降级；覆盖E13",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-112400-567466",
+          "passed": 39,
+          "limit": "M3 route/failure/cache regressions and M5 metrics; all original I/L conditions not proven"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-03",
       "layers": "P1/I+F",
       "procedure": "Milvus超时、全文索引缺失、单路为空",
       "assertion": "实际fallback与metadata一致，不虚报hybrid/degraded=false",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-112400-567466",
+          "passed": 39,
+          "limit": "M3 route/failure/cache regressions and M5 metrics; all original I/L conditions not proven"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-04",
       "layers": "P0/U+C",
       "procedure": "同候选两路第一的RRF、纯向量和BM25分分别进入证据判定",
       "assertion": "分数类型保留；0.0328不因与0.35混比直接拒绝，未知分不冒充概率",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-112400-567466",
+          "passed": 39,
+          "limit": "M3 route/failure/cache regressions and M5 metrics; all original I/L conditions not proven"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-05",
       "layers": "P1/C+L",
       "procedure": "模型Reranker成功、超时、无配置三种情况",
       "assertion": "provider和回退准确；候选不凭空增删；单次耗时不被旧缓存值替代",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_LOCAL_MODEL",
+      "evidence": [
+        {
+          "report": "reports/m5/local-20261104-111552/report.json",
+          "rows": 96,
+          "layer": "T1 local real Embedding/Reranker",
+          "limit": "12 assistant development queries, four modes cold/hot, experiment timeout 30s; business default5s fallback and missing rewrite/full holdout not passed"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-06",
       "layers": "P1/U+I",
       "procedure": "候选正确答案排在11～20，改变recall/rerank/evidence_k",
       "assertion": "参数独立生效，可测量截断损失；关闭重排也返回规定数量",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-112400-567466",
+          "passed": 39,
+          "limit": "M3 route/failure/cache regressions and M5 metrics; all original I/L conditions not proven"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-07",
       "layers": "P0/U+I",
       "procedure": "两个chunk前100字相同、后半条件不同",
       "assertion": "去重保留不同事实；按ID/hash去重不误删例外",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-112400-567466",
+          "passed": 39,
+          "limit": "M3 route/failure/cache regressions and M5 metrics; all original I/L conditions not proven"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-08",
@@ -93,6 +184,12 @@
           "report": "reports/offline/20261104-103254-017388",
           "passed": 85,
           "limit": "shared full evidence and Judge unknown rejection; real model/quality layers not run"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -101,24 +198,75 @@
       "layers": "P0/I",
       "procedure": "检索候选包含草稿、已删除、旧版本和无权文档",
       "assertion": "进入生成前过滤，不能被高排名或缓存绕过",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T1",
+      "evidence": [
+        {
+          "report": "reports/m3-closeout/real-20261104-105816",
+          "passed": 4,
+          "limit": "selected synthetic-embedding/MySQL/Milvus regression; historical runner has no source-start/end fingerprint; full model/quality conditions not satisfied"
+        },
+        {
+          "report": "reports/m3-closeout/real-20261104-112538",
+          "passed": 4,
+          "provenance": "m5-provenance.json",
+          "limit": "T1 actual MySQL/Milvus, synthetic embeddings, new case DB/collection; latest source start/end stable and complete"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-10",
       "layers": "P1/C+L",
       "procedure": "多轮“它能退吗”、精确型号、数字、否定、两问",
       "assertion": "查询补全保留实体/否定；多问证据覆盖可单独判断",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "tests": [
+            "tests/test_query_rewrite.py",
+            "tests/test_chat_turns.py"
+          ],
+          "limit": "conservative rewrite/context regression only; no independent real model multi-question/negation quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-11",
       "layers": "P1/I+F",
       "procedure": "改知识版本、权限、Embedding或Reranker配置后重复查询",
       "assertion": "旧缓存不复用；新键含必要版本/范围，冷/热来源明确",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T1",
+      "evidence": [
+        {
+          "report": "reports/m3-closeout/real-20261104-105816",
+          "passed": 4,
+          "limit": "selected synthetic-embedding/MySQL/Milvus regression; historical runner has no source-start/end fingerprint; full model/quality conditions not satisfied"
+        },
+        {
+          "report": "reports/m3-closeout/real-20261104-112538",
+          "passed": 4,
+          "provenance": "m5-provenance.json",
+          "limit": "T1 actual MySQL/Milvus, synthetic embeddings, new case DB/collection; latest source start/end stable and complete"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-12",
@@ -131,6 +279,12 @@
           "report": "reports/offline/20261104-103254-017388",
           "passed": 85,
           "limit": "shared full evidence and Judge unknown rejection; real model/quality layers not run"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -139,20 +293,51 @@
       "layers": "P1/I+P",
       "procedure": "比较阶段metadata与实际调用计时",
       "assertion": "query编码、召回、融合、重排和总耗时可对齐；meta/顶层字段统一",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_LOCAL_MODEL",
+      "evidence": [
+        {
+          "report": "reports/m5/local-20261104-111552/report.json",
+          "rows": 96,
+          "layer": "T1 local real Embedding/Reranker",
+          "limit": "12 assistant development queries, four modes cold/hot, experiment timeout 30s; business default5s fallback and missing rewrite/full holdout not passed"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-12-14",
       "layers": "P1/L+P",
       "procedure": "冻结留出集跑BM25/dense/hybrid/rerank/改写消融",
       "assertion": "满足第5章检索门槛；报告逐样本、未知问题、冷/热和费用",
-      "status": "NOT_RUN_QUALITY_DATA_INCOMPLETE",
+      "status": "NOT_ACCEPTED_QUALITY_REVIEW_PENDING",
       "evidence": [
         {
           "report": "reports/offline/20261104-104415-379774",
           "passed": 36,
           "limit": "metric implementation T0; 37 draft development cases only, independent 560-case holdout/human labels not ready"
+        },
+        {
+          "report": "reports/m5/local-20261104-111552/report.json",
+          "rows": 96,
+          "layer": "T1 local real Embedding/Reranker",
+          "limit": "12 assistant development queries, four modes cold/hot, experiment timeout 30s; business default5s fallback and missing rewrite/full holdout not passed"
+        },
+        {
+          "document": "docs/M5-HOLDOUT-MANIFEST-DRAFT-v1.json",
+          "candidates": 595,
+          "label_source": "assistant_draft",
+          "limit": "user review pending; no generated/output-claim labels or quality score; counts/unique strings do not prove semantic independence"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -167,6 +352,12 @@
           "report": "reports/offline/20261104-103816-882970",
           "passed": 165,
           "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -181,6 +372,12 @@
           "report": "reports/offline/20261104-103816-882970",
           "passed": 165,
           "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -195,6 +392,12 @@
           "report": "reports/offline/20261104-103816-882970",
           "passed": 165,
           "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -209,6 +412,12 @@
           "report": "reports/offline/20261104-103816-882970",
           "passed": 165,
           "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -223,6 +432,12 @@
           "report": "reports/offline/20261104-103816-882970",
           "passed": 165,
           "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -237,6 +452,12 @@
           "report": "reports/offline/20261104-103254-017388",
           "passed": 85,
           "limit": "shared full evidence and Judge unknown rejection; real model/quality layers not run"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -245,8 +466,20 @@
       "layers": "P0/C+L",
       "procedure": "候选引用不存在ID、错误版本或不支持该论断的片段",
       "assertion": "校验拒绝；引用列表不能替代论断支持关系",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-105427-649307",
+          "passed": 57,
+          "limit": "citation ID/version checks; independent model claim support not validated"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        }
+      ]
     },
     {
       "ac": "AC-13-08",
@@ -259,6 +492,12 @@
           "report": "reports/offline/20261104-103816-882970",
           "passed": 165,
           "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -273,6 +512,12 @@
           "report": "reports/offline/20261104-103254-017388",
           "passed": 85,
           "limit": "shared full evidence and Judge unknown rejection; real model/quality layers not run"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -287,6 +532,12 @@
           "report": "reports/offline/20261104-103816-882970",
           "passed": 165,
           "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -301,6 +552,12 @@
           "report": "reports/offline/20261104-102919-774119",
           "passed": 98,
           "limit": "fixed output/privacy/connection/wait cases; no full adversarial or independent quality acceptance"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     },
@@ -309,12 +566,24 @@
       "layers": "P1/L+P",
       "procedure": "人工标注反例与正确集运行审查",
       "assertion": "满足错误放行/误拒门槛，分别报告程序核验、Judge与整体",
-      "status": "NOT_RUN_QUALITY_DATA_INCOMPLETE",
+      "status": "NOT_ACCEPTED_QUALITY_REVIEW_PENDING",
       "evidence": [
         {
           "report": "reports/offline/20261104-104415-379774",
           "passed": 36,
           "limit": "metric implementation T0; 37 draft development cases only, independent 560-case holdout/human labels not ready"
+        },
+        {
+          "document": "docs/M5-HOLDOUT-MANIFEST-DRAFT-v1.json",
+          "candidates": 595,
+          "label_source": "assistant_draft",
+          "limit": "user review pending; no generated/output-claim labels or quality score; counts/unique strings do not prove semantic independence"
+        },
+        {
+          "report": "reports/offline/20261104-113638-736165",
+          "layer": "T0 full regression",
+          "passed": 963,
+          "limit": "automated regression only; does not fill independent labels/model/performance layers"
         }
       ]
     }
@@ -323,5 +592,77 @@
     "Historical M3 evidence must be revalidated, not copied as current PASS",
     "Assistant-authored synthetic labels are development fixtures, not independent human adjudication",
     "No new paid supplier calls; offline/local results cannot substitute T2 chat/Judge quality evidence"
-  ]
+  ],
+  "human_review": {
+    "reviewer": "user",
+    "assignment_confirmed": true,
+    "labels_approved": false,
+    "queue": "docs/M5-REVIEW-QUEUE-v1.md",
+    "independent_holdout_reviewed_counts": {
+      "answerable": 0,
+      "unanswerable": 0,
+      "review_negative": 0,
+      "review_positive": 0
+    },
+    "candidate_package": {
+      "dataset": "docs/M5-HOLDOUT-DRAFT-v1.json",
+      "corpus": "docs/M5-HOLDOUT-CORPUS-DRAFT-v1.json",
+      "manifest": "docs/M5-HOLDOUT-MANIFEST-DRAFT-v1.json",
+      "review_batches": "docs/m5-review/batch-01.md through batch-12.md",
+      "case_counts": {
+        "answerable": 330,
+        "unanswerable": 60,
+        "review_negative": 100,
+        "review_positive": 105
+      },
+      "label_source": "assistant_draft",
+      "schema_valid": true,
+      "exact_split_checks": "PASS",
+      "semantic_independence_review": "NOT_RUN",
+      "approved": false
+    }
+  },
+  "current_blockers": [
+    "M4 upstream entity accuracy 0.956667 < 0.97",
+    "Independent human-reviewed 300/60/100/100 holdout and output claims candidates prepared, not approved; user assigned reviewer",
+    "New chat/Judge model evaluation not authorized; supplier calls used 660/660",
+    "Default 5s retrieval budget caused local Reranker fallback; experimental30s ablation is not business-default acceptance",
+    "Retrieval rewrite ablation, independent performance/concurrency/quality evaluation not run"
+  ],
+  "integrations": [
+    {
+      "report": "reports/m1-closeout/real-20261104-112538",
+      "layer": "T1 MySQL/Redis",
+      "passed": 2,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true
+    },
+    {
+      "report": "reports/m3-closeout/real-20261104-112538",
+      "layer": "T1 MySQL/Milvus",
+      "passed": 4,
+      "provenance": "m5-provenance.json",
+      "source_tree_stable": true,
+      "source_snapshot_complete": true
+    },
+    {
+      "report": "reports/m5/local-20261104-111552/report.json",
+      "layer": "real local Embedding/Reranker with temporary SQLite and new Milvus collection",
+      "observations": 96,
+      "scope": "12 assistant draft queries, four modes cold/hot, laboratory deadline30s; not independent quality acceptance"
+    }
+  ],
+  "offline_full": {
+    "report": "reports/offline/20261104-113638-736165",
+    "passed": 963,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 415.49,
+    "source_tree_stable": true,
+    "source_snapshot_complete": true,
+    "source_fingerprint": "01bc7de693aeb14e095b13f52d4528a9efb628e780f3cd1dc2556f3fd1d28e07",
+    "blocked_network_operations": 0,
+    "layer": "T0"
+  }
 }
