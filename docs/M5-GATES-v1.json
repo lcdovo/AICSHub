@@ -644,7 +644,7 @@
     "M4 upstream entity accuracy 0.956667 < 0.97",
     "Independent human-reviewed 300/60/100/100 holdout and output claims candidates prepared, not approved; user assigned reviewer",
     "New chat/Judge model evaluation not authorized; supplier calls used 660/660",
-    "Default5s local batch slice: 8/12 actual model reranks,4 timeout fallbacks; all-sample rerank P95 5005.732ms > original2000ms. Candidate20/long-duration/concurrency quality not accepted",
+    "Isolated GPU candidate 2x12 repeated development cold queries: one stageP95 2.501s, one 1.863s, end-to-end both >2s. Not200 unique samples, no 20-long-candidate/load/concurrency or business integration/rollback evidence",
     "Retrieval rewrite ablation, independent performance/concurrency/quality evaluation not run"
   ],
   "integrations": [
@@ -708,5 +708,16 @@
       "source_snapshot_complete": true,
       "limit": "12 draft development queries only; retain all failures; no holdout/cost/model quality acceptance"
     }
+  },
+  "resource_comparison": {
+    "document": "docs/M5-RERANK-BUDGET-v1.md",
+    "corrected_probe": "reports/m5/rerank-slice/repeated-threads-batch-corrected.json",
+    "cpu_gpu_probe": "reports/m5/rerank-slice/cpu-vs-gpu-12docs.json",
+    "gpu_runs": [
+      "reports/m5/local-20261104-132833/report.json",
+      "reports/m5/local-20261104-133319/report.json"
+    ],
+    "endpoint_regression": "reports/offline/20261104-133641-981756",
+    "conclusion": "GPU candidate only; mixed 2.501s/1.863s stage P95 and end-to-end P95 >2s; no business profile/config switched"
   }
 }

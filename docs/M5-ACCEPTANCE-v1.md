@@ -45,3 +45,5 @@
 最终T0：reports/offline/20261104-113638-736165，963 passed/0 failures/0 errors/0 skipped，415.49秒；源指纹01bc7de693aeb14e095b13f52d4528a9efb628e780f3cd1dc2556f3fd1d28e07，起止稳定、快照完整、网络禁止且blocked_network_operations=0。此后仅补验收文档/待审数据及acceptance/m5/README.md说明及dataset-manifest.json中的候选资料指针，生产/测试Python未改；候选数据另做schema/hash/跨集精确隔离检查，不冒称其已经纳入此全量测试或人工验收。
 
 后续完整候选/共享截止切片仅功能回归通过107项，真实性能FAIL；代码/配置/测试变化及范围见M5-RERANK-BUDGET-v1.md。原截止与质量门槛保持，595候选待人工复核，付费额度仍660/660。
+
+后续资源对照：隔离GPU两轮各12冷次均无回退，阶段P95为2501.302/1863.223ms，端到端均超过2秒。小开发重复集合不代表200独立有效运行，业务GPU未切换，质量/性能门禁不变。入口53项受影响回归通过，见M5-RERANK-BUDGET-v1.md。

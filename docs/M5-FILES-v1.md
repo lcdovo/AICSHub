@@ -19,3 +19,5 @@
 最终验收汇总：docs/M5-ACCEPTANCE-v1.md；全局195项索引同步M5局部证据，未标整体通过。595候选为助手草拟，只通过程序完整性，待用户语义/事实复核。网关截止测试调整在tests/test_m4_gateway.py，退款恢复审查在app/services/run_execution.py及tests/test_m2_runs.py；均有独立提交和保留失败证据。
 
 后续重排预算切片：修改app/services/reranker_service.py、app/services/knowledge_base/versioned_search.py、scripts/evaluate_m5_local.py、tests/test_reranker.py；新增tests/test_m5_rerank_budget.py、docs/M5-RERANK-BUDGET-v1.md，更新验收证据/门禁/本文件及全局JSON索引。功能107项通过，实际5秒性能8/12local、4超时回退，仍未验收通过。
+
+资源对照切片：scripts/evaluate_m5_local.py隔离loopback端点；tests/test_m5_local_endpoint.py九项边界测试；更新M5设备对照、证据、验收门禁和本清单。业务生产代码与部署未修改。

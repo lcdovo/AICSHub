@@ -14,6 +14,21 @@ import sys
 import tempfile
 import time
 import uuid
+from urllib.parse import urlsplit
+
+
+def local_reranker_base(value: str) -> str:
+    parsed = urlsplit(value)
+    if (parsed.scheme != 'http' or parsed.hostname != '127.0.0.1' or parsed.username
+            or parsed.password or parsed.query or parsed.fragment or parsed.path not in ('', '/')):
+        raise argparse.ArgumentTypeError('only plain HTTP loopback reranker endpoints are allowed')
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError('invalid loopback port') from exc
+    if port is None:
+        raise argparse.ArgumentTypeError('explicit loopback port required')
+    return value.rstrip('/')
 
 
 @contextmanager
@@ -48,6 +63,7 @@ def main():
     parser.add_argument('--limit',type=int,default=12,choices=range(1,13))
     parser.add_argument('--modes',nargs='+',choices=['bm25','dense','hybrid','rerank'],default=['bm25','dense','hybrid','rerank'])
     parser.add_argument('--provider-timeout',type=float,default=5.0)
+    parser.add_argument('--reranker-base',type=local_reranker_base,default='http://127.0.0.1:7997')
     args=parser.parse_args()
     if not 0 < args.provider_timeout <= 30:
         parser.error('provider-timeout must be >0 and <=30; business default is5')
@@ -75,14 +91,14 @@ def main():
                 LLM_API_KEY='',LLM_API_BASE='http://offline.invalid/v1',USER_MEMORY_ENABLED='false',
                 EMBEDDING_API_BASE='http://127.0.0.1:8012/v1',EMBEDDING_API_KEY='local-only',
                 EMBEDDING_MODEL='qwen3-embedding:0.6b',EMBEDDING_DIM='1024',EMBEDDING_REVISION='local-live-probe',
-                RERANKER_API_BASE='',RERANKER_API_KEY='',RERANKER_LOCAL_BASE='http://127.0.0.1:7997',
+                RERANKER_API_BASE='',RERANKER_API_KEY='',RERANKER_LOCAL_BASE=args.reranker_base,
                 RERANKER_LOCAL_MODEL='BAAI/bge-reranker-large',RAG_USE_RERANKER='false')
             import httpx
             with httpx.Client(timeout=5,trust_env=False) as client:
                 tags=client.get('http://127.0.0.1:8012/api/tags').raise_for_status().json()
                 model=next(m for m in tags['models'] if m['name']=='qwen3-embedding:0.6b')
                 revision=model['digest']
-                models=client.get('http://127.0.0.1:7997/models').raise_for_status().json()
+                models=client.get(args.reranker_base + '/models').raise_for_status().json()
                 if not any(m['id']=='BAAI/bge-reranker-large' for m in models['data']):
                     raise RuntimeError('local reranker model mismatch')
             from app.config.config import settings
@@ -92,10 +108,13 @@ def main():
             from app.services.embedding_service import APIEmbedding
             from app.services.knowledge_base import KnowledgeBaseService
             from app.services.knowledge_base import versioned_search
+            from app.services.knowledge_base import reset_knowledge_base
+            from app.services.reranker_service import reset_reranker
             # 默认复验业务5秒预算；较长实验必须显式传参，报告与业务结果分开。
             versioned_search.ENCODE_TIMEOUT_SECONDS=args.provider_timeout
             report['experimental_provider_timeout_seconds']=args.provider_timeout
             report['business_default_provider_timeout_seconds']=5
+            report['isolated_reranker_base']=args.reranker_base
             from app.services.knowledge_base.index_worker import index_job
             from app.services.knowledge_base.vector_index import VersionedVectorIndex
             from scripts.evaluate_m5 import Dataset,ranking_metrics,Chunk,RelevantChunk
@@ -116,6 +135,7 @@ def main():
             repo=KnowledgeRepository('sqlite:///'+(Path(temporary)/'m5.db').as_posix())
             Base.metadata.create_all(repo.engine)
             index=VersionedVectorIndex('127.0.0.1',port,prefix='m5_dev_'+uuid.uuid4().hex[:12])
+            reset_reranker()
             kb=KnowledgeBaseService(repository=repo,embedding=embedding,vector_store=index)
             kb.initialize()
             corpus=json.loads((root/'acceptance/m5/corpus.json').read_bytes())
@@ -167,7 +187,7 @@ def main():
                           embedding_method_calls=embedding.calls,
                           rewrite_status='NOT_RUN_REQUIRES_REWRITE_MODEL_OR_SEPARATELY_FROZEN_RULE_QUERIES',
                           quality_status='NOT_ACCEPTED_INDEPENDENT_HOLDOUT_AND_OUTPUT_LABELS_MISSING')
-            backend.close();backend=None;repo.engine.dispose();repo=None;index.client.close();index=None
+            reset_knowledge_base();backend.close();backend=None;repo.engine.dispose();repo=None;index.client.close();index=None
     except Exception as exc:
         report.update(status='FAIL',error_type=type(exc).__name__)
     finally:

@@ -87,6 +87,10 @@ scripts/evaluate_m5_local.py清除宿主业务配置、工作目录临时SQLite�
 
 595候选保存在docs待审，不改本次全量来源清单；后续仅更新acceptance/m5/README.md说明及dataset-manifest.json的候选资料指针，无生产/测试Python改动，元数据/候选完整性另验。M5-ACCEPTANCE-v1.md结论INCOMPLETE，26项原断言与195项总索引保留；M4实体失败、独立人工标签/真实聊天Judge质量、改写消融、业务默认5秒重排预算和综合负载仍阻止完整通过。供应商660/660、rules/灰度0保持。全部独立提交、不推送；不进入M6或部署。
 
+## M5资源对照补充
+
+CPU线程2/4及batch2/4/6/12服务级重复对照、GPU透传以及正确/作废报告的严格边界见M5-RERANK-BUDGET-v1.md。隔离GPU容器每轮只收12条合成候选；两轮应用开发消融确认新reranker-base目标、真实运行模型、固定CPU两线程并行与完整观察。评测入口拒绝非loopback地址；53项回归通过。CPU/GPU容器临时启动并stop，不移除容器/卷、不改业务服务设置。
+
 ## 后续完整候选/重排预算切片
 
 见M5-RERANK-BUDGET-v1.md。新增本地BGE4条/批、进程共享最多2批并发、完整全池评分/坏批次整体回退、父5秒绝对截止及HTTP剩余预算、过期停止后续provider、超24不静默截断；外部单次调用及其他本地模型保持原请求粒度。metadata/缓存纳入算法版本与阶段预算。本地评测器改默认5秒，显式较长预算和canonical→实际标签映射记录。
@@ -94,3 +98,5 @@ scripts/evaluate_m5_local.py清除宿主业务配置、工作目录临时SQLite�
 17项新专项及受影响回归107通过（reports/offline/20261104-120133-332724），源码起止a4fa113f5078604ebd8d78a194c1b970ec68f3d45b2a17bd0f75f95e833a93bc，稳定完整，网络禁止且blocked_network_operations=0；编译/静态检查通过。此次仅受影响范围，963全量属于此前版本，不冒称当前全量。
 
 真实默认5秒实验reports/m5/local-20261104-120224/report.json同一源码指纹、稳定完整：12冷+12热观测，冷8条local、4条超时rank_preserved，热均缓存命中；全冷重排阶段P95=5005.732ms、端到端P95=5989.6213ms，仍不满足原2秒候选目标，整体FAIL_LOCAL_RERANK_FALLBACK。语料小而Recall/nDCG=1不代表真实重排或独立质量通过；没有剔除失败、放宽截止或模型质量标准，未操作595候选调参、业务数据/配置/部署，外部/聊天调用0。M5性能和质量缺口继续保留。
+
+资源对照最终端点回归复验53 passed（reports/offline/20261104-134155-158519），compileall/Ruff/diff检查通过。只修改评测工具/测试与证据文档，未修改生产Python或部署。
