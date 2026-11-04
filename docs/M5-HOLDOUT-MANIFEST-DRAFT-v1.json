@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-04",
+  "status": "DRAFT_NOT_ACCEPTED",
+  "label_source": "assistant_draft",
+  "reviewer_assigned": "user",
+  "labels_approved": false,
+  "case_counts": {
+    "answerable": 330,
+    "unanswerable": 60,
+    "review_negative": 100,
+    "review_positive": 105
+  },
+  "total_cases": 595,
+  "corpus_documents": 55,
+  "claim_support_outputs": "NOT_RUN",
+  "semantic_independence": "330 distinct question strings in55 topic clusters; human semantic/label adjudication required, no independence pass claimed",
+  "business_data_used": false,
+  "models_called_for_labels": false,
+  "files": {
+    "M5-HOLDOUT-DRAFT-v1.json": "f9f6c93ba93844e36a96b9e64206197b3e2d2406b21cd2503f248204b890e692",
+    "M5-HOLDOUT-CORPUS-DRAFT-v1.json": "c04d21375d743c3eb1d613239dfb46eb7b301fb6de1c6ff8b1b98c779de1c362",
+    "M5-HOLDOUT-SOURCE-DRAFT-v1.json": "4571e54ebc7759f044042367e8be0e4776eea219af3ed27593e1680b988ef9a7"
+  }
+}

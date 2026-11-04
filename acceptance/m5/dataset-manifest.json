@@ -12,12 +12,13 @@
     "development.json": "2f1c7d21325aebd8e67dc50ff4d89ad29e6a8b57648e127c393591f6d5af85f8",
     "corpus.json": "1ee7582eccda8f0a5a297b281c0fdb4dc4ecbe0d64d60e79823f0bf66afa5816"
   },
-  "holdout_status": "NOT_PREPARED_REQUIRES_INDEPENDENT_CURATION_AND_HUMAN_REVIEW",
+  "holdout_status": "CANDIDATE_PREPARED_PENDING_INDEPENDENT_HUMAN_REVIEW",
   "minimum_holdout_counts": {
     "answerable": 300,
     "unanswerable": 60,
     "review_negative": 100,
     "review_positive": 100
   },
-  "no_paid_calls": true
+  "no_paid_calls": true,
+  "holdout_candidate_manifest": "docs/M5-HOLDOUT-MANIFEST-DRAFT-v1.json"
 }

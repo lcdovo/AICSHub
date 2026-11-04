@@ -2,7 +2,7 @@
 
 `development.json`包含37条助手编排的合成开发夹具：12条可回答、6条无答案/部分答案、11条审查反例、8条正确回复。12份合成知识在`corpus.json`。这些是调试/回归数据，不是300/60/100/100独立留出，不把ID替换或同一语义变体累计为独立数量。SHA256和来源见`dataset-manifest.json`。
 
-独立留出尚未准备/裁决；应由未参与调参的审阅者按原规范采样并核实chunk/version/必要条件、可允许事实、禁止论断，近义簇不能跨开发/留出。标注字段label_source=human_reviewed及reviewer只记录声明来源，不提供身份认证，不能由程序代填为“已人工”。输出关键论断还需要独立标注，不能直接采用LLM Judge自评分。
+独立留出尚未裁决/冻结（另已备595条候选，见docs/M5-HOLDOUT-MANIFEST-DRAFT-v1.json及docs/M5-REVIEW-QUEUE-v1.md）；应由未参与调参的审阅者按原规范采样并核实chunk/version/必要条件、可允许事实、禁止论断，近义簇不能跨开发/留出。标注字段label_source=human_reviewed及reviewer只记录声明来源，不提供身份认证，不能由程序代填为“已人工”。输出关键论断还需要独立标注，不能直接采用LLM Judge自评分。
 
 新报告入口（只读JSON，不执行网络/模型）：
 
