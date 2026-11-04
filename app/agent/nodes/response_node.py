@@ -139,6 +139,12 @@ async def validate_candidate(self: "ResponseContext", state: AgentState) -> bool
     )
     report = validation.to_dict()
     passed = validation.passed
+    from app.agent.citation_guard import citation_issues
+    invalid_citations = citation_issues(body, state.current_evidence())
+    if invalid_citations:
+        passed = False
+        report["issues"].extend({"type": issue, "severity": "critical"} for issue in invalid_citations)
+        state.set_flow(rag_refused=True)
     if self._rag_judge_applicable(state) and not state.flow_value(FlowFlag.CACHE_HIT):
         from app.agent.validation_llm import assess_judgement, unknown_judgement
         try:
@@ -161,6 +167,8 @@ async def validate_candidate(self: "ResponseContext", state: AgentState) -> bool
             report["overall_score"] = min(report["overall_score"], judgement["fact_score"] or 0)
             report["issues"].append({"type": "evidence_" + judgement["support"], "severity": "error"})
         state.set_flow(rag_refused=refused)
+        if invalid_citations:
+            state.set_flow(rag_refused=True)
     from app.agent.request_understanding import ReviewResult
     state.review_result=ReviewResult(passed=passed, evidence_version=(state.evidence_bundle.fingerprint() if state.evidence_bundle else None))
     report["passed"] = passed
@@ -266,6 +274,8 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
     # 失败只替换本轮文本，不能跳到人工节点引发额外写操作。
     from app.agent.publication_guard import publication_issues, SAFE_PUBLICATION_REPLY
     issues = publication_issues(state.reply)
+    from app.agent.citation_guard import citation_issues
+    issues.extend(citation_issues(state.reply, state.current_evidence()))
     from app.agent.critical_facts import critical_fact_issues
     issues.extend(item["type"] for item in critical_fact_issues(
         state.reply, [call.result for call in state.tool_calls if isinstance(call.result, dict)]

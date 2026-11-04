@@ -29,3 +29,9 @@ OPT-13，AC-13-01/02/03/04/05/08/10局部。FactValidator不再检查最后成�
 新增scripts/evaluate_m5.py，按chunk+version精确相关标签计算Recall@20、Evidence Hit@20、MRR、分级nDCG@5，必要条件覆盖要求所有必需证据/条件。缺观测/错误保留分母，失败反例不能当正确拦截；无独立人工输出标注时论断支持率null；重复ID/重复查询、NaN延迟、未知/重复结果、数据hash不符及不来自排名结果的生成证据拒绝。CLI可检查开发/留出case/query/近义cluster隔离。缺任何规模/层次/版本/人工标注均INCOMPLETE，指标失败FAIL，不以空集均值0或模型自评分冒充PASS。
 
 acceptance/m5冻结37条合成开发夹具和12份合成知识及hash，明确assistant_draft，不冒充所需560条独立质量留出。独立留出/人工输出论断标签尚未完成，是M5质量验收真实缺口。即便未来单次报告通过也仅PASS_SINGLE_RUN_ONLY，全部消融/冷热、M4前置另验。报告器16项手算/边界专项连同M3检索生命周期共36通过（reports/offline/20261104-104415-379774），compileall/Ruff通过。文件见acceptance/m5/README.md。
+
+## M5-03补充：内联引用身份
+
+OPT-13，AC-13-07局部。新增citation_guard核验[证据:chunk_id@version_id]（亦支持引用/source/evidence标签）的当前EvidenceBundle身份，缺失ID/错误版本/格式不全直接拒绝；即使独立Judge声称通过也不能放行伪引用。所有workflow最终出口同样检查。存在的引用不证明论断支持，仍需Judge核对完整条件；未声明格式的任意自然语言引用不在该身份解析保证中，完整L层仍未验。
+
+6项新身份/独立Judge反例及相关回归57通过（reports/offline/20261104-105427-649307），compileall/Ruff通过。首次新测试漏注入知识快照检查器，误连未建表的临时SQLite，52通过/5失败且临时文件句柄清理报错（105338-738454）；改为明确快照替身后重跑，未关闭真实版本检查或放宽断言。T0合成，无真实模型引用支持率证据。
