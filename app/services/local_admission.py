@@ -10,7 +10,7 @@ import uuid
 
 from app.services.local_inference import CONTEXT, LocalModelBusy, LocalModelDeadline
 
-VERSION = "whole-request-owner-lease-v1"
+VERSION = "whole-request-owner-lease-v2"
 CURRENT: ContextVar[Permit | None] = ContextVar("local_request_permit", default=None)
 
 ACQUIRE = """
@@ -49,6 +49,9 @@ class Permit:
         self._closed = False
         self._lost = False
         self._released = False
+        self._release_attempted = False
+        self.release_status = "pending"
+        self.release_attempts = 0
         self._stop = threading.Event()
         self._heartbeat = None
         if coordinator.scope == "redis":
@@ -118,14 +121,25 @@ class Permit:
                 self._maybe_release()
 
     def _maybe_release(self):
-        if self._closed and self._refs == 0 and not self._released:
-            self._released = True
+        if self._closed and self._refs == 0 and not self._release_attempted:
+            self._release_attempted = True
             self._stop.set()
-            try:
-                self.coordinator.release(self.token)
-            except Exception:
-                # Redis TTL回收，不能无条件删别人的owner。
-                self._lost = True
+            # 已无在途HTTP才释放；仅释放命令可补偿一次，不重试模型或重新准入。
+            # 两次回包均未知时停止续租，保留TTL回收，不能冒充已删除。
+            attempts = 2 if self.coordinator.scope == "redis" else 1
+            for _ in range(attempts):
+                self.release_attempts += 1
+                try:
+                    result = self.coordinator.release(self.token)
+                    if result not in (0, 1):
+                        raise ValueError("invalid_local_release_result")
+                except Exception:
+                    self._lost = True
+                    self.release_status = "unknown"
+                    continue
+                self._released = bool(result)
+                self.release_status = "released" if result else "not_owner"
+                break
 
     def close(self):
         with self._state:
@@ -175,9 +189,11 @@ class ProcessCoordinator:
 
     def release(self, token):
         with self.condition:
-            if self.owner == token:
+            released = self.owner == token
+            if released:
                 self.owner = None
             self.condition.notify_all()
+            return released
 
 
 class RedisCoordinator:
@@ -217,11 +233,11 @@ class RedisCoordinator:
             raise LocalModelBusy("local_request_wait_expired")
         finally:
             # 仅清自己的排队ticket；获得的owner交给Permit持有。
-            try:
-                self.client.zrem(self.keys[1], token)
-                self.client.zrem(self.keys[2], token)
-            except Exception:
-                pass
+            for key in self.keys[1:]:
+                try:
+                    self.client.zrem(key, token)
+                except Exception:
+                    pass
 
     def valid(self, token, renew=False):
         if renew:
@@ -287,7 +303,8 @@ def request_scope(*, purpose="retrieval"):
         if context.events is not None:
             context.events.append({"purpose":purpose,"priority":context.priority,"status":state,
                 "dispatched":False,"queue_ms":round(permit.queue_ms if permit else (time.monotonic()-began)*1000,3),
-                "inference_ms":None,"admission_scope":permit.coordinator.scope if permit else "not_acquired"})
+                "inference_ms":None,"admission_scope":permit.coordinator.scope if permit else "not_acquired",
+                "lease_release":{"status":permit.release_status,"attempts":permit.release_attempts} if permit else None})
 
 
 def run_http(call, *, purpose, deadline=None):

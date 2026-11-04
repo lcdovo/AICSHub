@@ -90,6 +90,46 @@ def main():
         else:raise AssertionError("lost reply must not dispatch")
         assert redis.get(coordinator.keys[0]) is None
         report["cases"].append({"case":"lost_reply_after_write_conditionally_cleans_own_undispatched_owner","status":"PASS"})
+        # 实际Redis键+客户端定点故障，分别核对删除、未知和继任者安全。
+        class ReleaseFault:
+            def __init__(self, mode):
+                self.mode, self.calls = mode, 0
+            def eval(self, script, *args):
+                if script == RELEASE:
+                    self.calls += 1
+                    if self.mode == "persistent" or self.calls == 1:
+                        if self.mode == "lost_reply":
+                            redis.eval(script, *args)
+                        elif self.mode == "successor":
+                            redis.eval(script, *args)
+                            assert redis.set(args[1], "synthetic-successor", nx=True, px=1500)
+                        raise TimeoutError("synthetic_release_transport_failure")
+                return redis.eval(script, *args)
+            def get(self, *args): return redis.get(*args)
+            def zrem(self, *args): return redis.zrem(*args)
+        for mode, expected in [("transient", "released"), ("lost_reply", "not_owner"),
+                               ("successor", "not_owner"), ("persistent", "unknown")]:
+            fault = ReleaseFault(mode)
+            coordinator = RedisCoordinator(fault, namespace+":release:"+mode, ttl_ms=1500)
+            permit = coordinator.acquire(priority="interactive", deadline=time.monotonic()+5)
+            permit.close()
+            permit.close()
+            assert fault.calls == permit.release_attempts == 2
+            assert permit.release_status == expected
+            assert permit._released == (expected == "released")
+            value = redis.get(coordinator.keys[0])
+            if mode == "successor":
+                assert value == "synthetic-successor"
+                redis.eval(RELEASE, 1, coordinator.keys[0], "synthetic-successor")
+            elif mode == "persistent":
+                assert value == permit.token and redis.pttl(coordinator.keys[0]) > 0
+                assert permit._stop.is_set()
+                redis.eval(RELEASE, 1, coordinator.keys[0], permit.token)
+            else:
+                assert value is None
+            report["cases"].append({"case":"release_"+mode, "status":"PASS",
+                                    "release_status":expected, "release_attempts":fault.calls,
+                                    "limit":"real Redis with client fault injection; server not stopped"})
         ready,start,events=mp.Queue(),mp.Event(),mp.Queue()
         processes=[mp.Process(target=worker,args=(port,namespace,ready,start,events)) for _ in range(2)]
         for p in processes:p.start()

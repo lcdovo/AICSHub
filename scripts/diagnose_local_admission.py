@@ -136,7 +136,8 @@ def main():
             return original_permit_close(permit)
         finally:
             recorder.add("permit.close", began, refs=permit._refs, closed=permit._closed,
-                         released=permit._released, lost=permit._lost)
+                         released=permit._released, lost=permit._lost,
+                         release_status=permit.release_status, release_attempts=permit.release_attempts)
 
     def snapshot(label):
         # Only read this freshly created test namespace and public model health/metrics.

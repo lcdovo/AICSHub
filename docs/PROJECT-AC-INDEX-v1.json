@@ -1829,6 +1829,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },
@@ -1973,6 +1980,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },
@@ -2037,6 +2051,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },
@@ -2368,6 +2389,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },
@@ -2420,6 +2448,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },
@@ -2460,6 +2495,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },
@@ -2495,6 +2537,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },
@@ -2779,6 +2828,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },
@@ -2859,6 +2915,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
           "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
+        },
+        {
+          "stage": "bounded local lease release slice",
+          "document": "docs/LOCAL-LEASE-RELEASE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
+          "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
         }
       ]
     },

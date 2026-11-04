@@ -37,17 +37,18 @@ def test_failed_release_retains_owner_until_ttl_and_diagnostic_does_not_claim_de
     """复现已核实的拒绝链；仅替身，真实Redis证据独立报告。"""
     client = Mock()
     client.zrem.return_value = 0
-    client.eval.side_effect = [1, TimeoutError("release response unknown"), 0]
+    client.eval.side_effect = [1, TimeoutError("release response unknown"), TimeoutError("still unknown"), 0]
     recorder = Recorder()
     coord = RedisCoordinator(RedisProbe(client, recorder))
     with inference_scope(events=[]):
         permit = coord.acquire(priority="interactive", deadline=time.monotonic()+5)
         permit.close()
-        assert permit._lost and permit._released  # released字段只是尝试过，不等于服务端删除成功。
+        assert permit._lost and not permit._released
+        assert permit.release_status == "unknown" and permit.release_attempts == 2
         # 仍有owner时新申请排队；不回退进程放行。
         assert coord.client.eval(ACQUIRE, 3, *coord.keys, "next", "interactive", 500, 15000, 1, 2) == 0
     failures = [r for r in recorder.rows if r["stage"] == "redis.release"]
-    assert len(failures) == 1 and failures[0]["outcome"] == "error"
+    assert len(failures) == 2 and all(row["outcome"] == "error" for row in failures)
 
 
 def test_scheduled_report_keeps_typed_busy_reason_without_dispatch(monkeypatch):

@@ -1,5 +1,7 @@
 # M5 当前文件与证据清单
 
+后续释放补偿切片：修改app/services/local_admission.py、scripts/diagnose_local_admission.py、scripts/test_local_admission_redis.py、tests/test_local_admission_diagnostics.py；新增tests/test_local_release.py和docs/LOCAL-LEASE-RELEASE-v1.md。135项相关T0与11项真实Redis通过；模型性能与质量仍按各自门禁记录，未切业务。
+
 以下为本次M5新增/修改的主题文件；整体仍未完成。
 
 | 主题 | 文件 |
