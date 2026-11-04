@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import nullcontext
+from contextlib import ExitStack, contextmanager, nullcontext
 import concurrent.futures
 from datetime import datetime
 import hashlib
@@ -151,21 +151,33 @@ def compatibility(output: Path) -> dict:
         index.client.close()
 
 
-def run_case_scheduled(case: dict, whole_request=False) -> dict:
-    """真正使用应用两个模型服务的同进程HTTP出口；繁忙不算成功。"""
-    from app.services.local_inference import inference_scope, LocalModelBusy, LocalModelDeadline
-    from app.services.local_admission import request_scope
+@contextmanager
+def scheduled_services():
+    """一个应用生命周期内复用服务；由创建者统一关闭，不由单条请求关闭。"""
     from app.services.embedding_service import APIEmbedding
     from app.services.reranker_service import RerankerService
     embedding = APIEmbedding("http://127.0.0.1:8013/v1", "local-only", "qwen3-embedding:0.6b",
                              dim=1024, max_retries=0, timeout=5, batch_size=4)
-    reranker = RerankerService(local_base="http://127.0.0.1:7999", local_model="BAAI/bge-reranker-v2-m3")
+    try:
+        reranker = RerankerService(local_base="http://127.0.0.1:7999", local_model="BAAI/bge-reranker-v2-m3")
+        try:
+            yield embedding, reranker
+        finally:
+            reranker.close()
+    finally:
+        embedding.close()
+
+
+def run_case_scheduled(case: dict, whole_request=False, services=None) -> dict:
+    """真正使用应用两个模型服务的同进程HTTP出口；繁忙不算成功。"""
+    from app.services.local_inference import inference_scope, LocalModelBusy, LocalModelDeadline
+    from app.services.local_admission import request_scope
     events = []
     began = time.perf_counter()
     row = {"case_id": case["case_id"], "cluster": case["cluster"], "candidate_count": 20,
            "candidate_lengths": [len(t) for t in case["documents"]], "local_inference": events}
     try:
-        with inference_scope(events=events):
+        with (scheduled_services() if services is None else nullcontext(services)) as (embedding, reranker), inference_scope(events=events):
             with (request_scope(purpose="retrieval") if whole_request else nullcontext()):
                 start = time.perf_counter()
                 embedding.encode_query(case["query"])
@@ -185,21 +197,18 @@ def run_case_scheduled(case: dict, whole_request=False) -> dict:
         row["error_type"] = type(exc).__name__
         if isinstance(exc, (LocalModelBusy, LocalModelDeadline)):
             row["error_code"] = str(exc)
-    finally:
-        embedding.close()
-        reranker.close()
     row["total_ms"] = (time.perf_counter() - began) * 1000
     return row
 
 
-def run_case(case: dict, scheduled=False, whole_request=False) -> dict:
+def run_case(case: dict, scheduled=False, whole_request=False, services=None, http_client=None) -> dict:
     if scheduled:
-        return run_case_scheduled(case,whole_request)
+        return run_case_scheduled(case,whole_request,services)
     import httpx
     started = time.perf_counter()
     row = {"case_id": case["case_id"], "cluster": case["cluster"], "candidate_count": 20,
            "candidate_lengths": [len(t) for t in case["documents"]]}
-    with httpx.Client(timeout=5, trust_env=False) as client:
+    with (httpx.Client(timeout=5, trust_env=False) if http_client is None else nullcontext(http_client)) as client:
         try:
             began = time.perf_counter()
             encode(client, 8013, [case["query"]])
@@ -229,11 +238,14 @@ def main():
     parser.add_argument("--count", type=int, choices=range(2, 201), default=200)
     parser.add_argument("--skip-compatibility", action="store_true")
     parser.add_argument("--scheduled", action="store_true")
+    parser.add_argument("--shared-services", action="store_true")
     parser.add_argument("--whole-request",action="store_true")
     parser.add_argument("--coordinator",choices=["process","redis"],default="process")
     args = parser.parse_args()
     if args.whole_request and not args.scheduled:
         parser.error("--whole-request requires --scheduled")
+    if args.shared_services and not args.scheduled:
+        parser.error("--shared-services requires --scheduled")
     if args.coordinator=="redis" and not args.scheduled:
         parser.error("--coordinator redis requires --scheduled")
     from scripts.test_provenance import snapshot_sources, compare_sources
@@ -247,6 +259,7 @@ def main():
     report["scheduled"] = args.scheduled
     report["whole_request"] = args.whole_request
     report["coordinator"] = args.coordinator
+    report["service_lifecycle"] = "shared" if args.shared_services else "per_case"
     if args.scheduled:
         from app.config.config import settings
         settings.LOCAL_MODEL_COORDINATOR=args.coordinator
@@ -279,6 +292,7 @@ def main():
 
     sampler = threading.Thread(target=sample, daemon=True)
     sampler.start()
+    resources = ExitStack()
     try:
         report["runtime"] = [inspect_candidate("aicshub-gpu-embedding-candidate", 8013, "11434/tcp"),
                              inspect_candidate("aicshub-gpu-v2m3-candidate", 7999, "7997/tcp")]
@@ -291,17 +305,20 @@ def main():
                 raise RuntimeError("wrong_reranker_model")
         if not args.skip_compatibility:
             report["compatibility"] = compatibility(output)
+        services = resources.enter_context(scheduled_services()) if args.shared_services else None
         cases = workload(args.count)
         serialized = json.dumps(cases, ensure_ascii=False, sort_keys=True).encode()
         report["workload_sha256"] = hashlib.sha256(serialized).hexdigest()
         (output / "synthetic-workload.json").write_bytes(serialized)
-        report["warmups"] = [run_case(cases[0], args.scheduled,args.whole_request), run_case(cases[-1], args.scheduled,args.whole_request)]
+        # 预热使用独立查询，避免共享Embedding文本缓存将正式样本变成热缓存。
+        warmups = [{**case, "query": "warmup-only:"+case["query"]} for case in (cases[0], cases[-1])]
+        report["warmups"] = [run_case(case, args.scheduled,args.whole_request,services) for case in warmups]
         report["groups"] = []
         half = args.count // 2
         for concurrency, group in [(1, cases[:half]), (10, cases[half:])]:
             rows = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
-                futures = [pool.submit(run_case, case, args.scheduled,args.whole_request) for case in group]
+                futures = [pool.submit(run_case, case, args.scheduled,args.whole_request,services) for case in group]
                 for future in concurrent.futures.as_completed(futures):
                     rows.append(future.result())
                     if len(rows) % 10 == 0:
@@ -318,6 +335,10 @@ def main():
     except Exception as exc:
         report["status"], report["error_type"] = "FAIL", type(exc).__name__
     finally:
+        try:
+            resources.close()
+        except Exception as exc:
+            report["status"], report["cleanup_error_type"] = "FAIL", type(exc).__name__
         stop.set()
         sampler.join(timeout=3)
         (output / "memory-samples.json").write_text(json.dumps(memory, indent=2), encoding="utf-8")
@@ -327,7 +348,7 @@ def main():
         if not report["source_tree_stable"] or not report["source_snapshot_complete"]:
             report["status"] = "FAIL_SOURCE_DRIFT"
         report["limitations"] = ["distinct load requests repeat12 semantic clusters, not200 independent quality examples",
-                                "direct provider HTTP, not REST/WS full app or business default integration",
+                                "model service/provider load, not REST/WS full app or business default integration",
                                 "HTTP read timeout is not a hard wall-clock cancel; all measured delays retained",
                                 "memory sampled, subsecond peaks and other GPU processes not attributable",
                                 "no production index writes/deletes or route switch"]
