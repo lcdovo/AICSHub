@@ -6,6 +6,8 @@ import asyncio
 import math
 import logging
 import time
+import threading
+from contextlib import contextmanager
 from typing import List, Optional, Dict, Any
 
 import httpx
@@ -61,6 +63,9 @@ class APIEmbedding(BaseEmbedding):
         # 文档入库侧 encode 不加，避免两侧向量空间不一致。
         self.query_instruction = query_instruction
         self._client: Optional[httpx.Client] = None
+        self._client_lock = threading.RLock()
+        self._client_users = 0
+        self._closed = False
         self._text_cache: Dict[str, List[float]] = {}
 
     def encode_query(self, text: str) -> List[float]:
@@ -79,15 +84,42 @@ class APIEmbedding(BaseEmbedding):
             return False
 
     def _get_client(self) -> httpx.Client:
-        if self._client is None or self._client.is_closed:
-            self._client = httpx.Client(
-                timeout=httpx.Timeout(self.timeout),
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-            )
-        return self._client
+        from app.services.local_inference import is_local_endpoint
+        with self._client_lock:
+            if self._closed:
+                raise RuntimeError("embedding_closed")
+            if self._client is None or self._client.is_closed:
+                self._client = httpx.Client(
+                    timeout=httpx.Timeout(self.timeout),
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    trust_env=not is_local_endpoint(self.api_base),
+                )
+            return self._client
+
+    @contextmanager
+    def _borrow_client(self, deadline: float):
+        if not self._client_lock.acquire(timeout=max(0, deadline-time.monotonic())):
+            raise TimeoutError("embedding_deadline_waiting_for_client")
+        try:
+            if time.monotonic() >= deadline:
+                raise TimeoutError("embedding_deadline_before_client")
+            client = self._get_client()
+            self._client_users += 1
+        finally:
+            self._client_lock.release()
+        try:
+            yield client
+        finally:
+            closing = None
+            with self._client_lock:
+                self._client_users -= 1
+                if self._closed and self._client_users == 0:
+                    closing, self._client = self._client, None
+            if closing is not None:
+                closing.close()
 
     def encode(self, text: str) -> List[float]:
         cache_key = f"{self.model}:{text}"
@@ -143,8 +175,6 @@ class APIEmbedding(BaseEmbedding):
 
         for attempt in range(self.max_retries + 1):
             try:
-                client = self._get_client()
-
                 payload = {
                     "model": self.model,
                     "input": texts,
@@ -154,14 +184,20 @@ class APIEmbedding(BaseEmbedding):
 
                 if local:
                     def post_local(remaining):
-                        result = client.post(f"{self.api_base}/embeddings", json=payload,
-                                             timeout=min(self.timeout, remaining))
-                        result.raise_for_status()
-                        return result
+                        expires = min(deadline, time.monotonic()+remaining)
+                        with self._borrow_client(expires) as client:
+                            remaining_http = expires-time.monotonic()
+                            if remaining_http <= 0:
+                                raise LocalModelDeadline("embedding_deadline_before_http")
+                            result = client.post(f"{self.api_base}/embeddings", json=payload,
+                                                 timeout=min(self.timeout, remaining_http))
+                            result.raise_for_status()
+                            return result
                     response = run_http(
                         post_local, purpose="embedding", deadline=deadline)
                 else:
-                    response = client.post(f"{self.api_base}/embeddings", json=payload)
+                    with self._borrow_client(time.monotonic()+self.timeout) as client:
+                        response = client.post(f"{self.api_base}/embeddings", json=payload)
                 response.raise_for_status()
                 data = response.json()
 
@@ -178,6 +214,8 @@ class APIEmbedding(BaseEmbedding):
                         raise ValueError("embedding_index_invalid")
                     vectors[index]=validate_vector(item.get("embedding"),self.dim)
 
+                if local and time.monotonic() >= deadline:
+                    raise LocalModelDeadline("embedding_deadline_after_decode")
                 return vectors
 
             except (LocalModelBusy, LocalModelDeadline):
@@ -203,9 +241,13 @@ class APIEmbedding(BaseEmbedding):
 
 
     def close(self):
-        if self._client and not self._client.is_closed:
-            self._client.close()
-            self._client = None
+        closing = None
+        with self._client_lock:
+            self._closed = True
+            if self._client_users == 0:
+                closing, self._client = self._client, None
+        if closing is not None and not closing.is_closed:
+            closing.close()
 
 
 class EmbeddingService:

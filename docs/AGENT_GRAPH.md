@@ -179,3 +179,5 @@ M5检索服务search可显式选择retrieval_mode=hybrid/bm25/dense作消融，�
 后续冷检索/后台本地Embedding批次改为整轮Permit，已获资格的模型HTTP不再各自排队。可选Redis原子owner/等待ticket/TTL/续租与条件释放，使同Redis/namespace的已升级API/Job worker协作；默认process未切换。外层结束后未完HTTP仍持有资格到返回，晚到结果拒绝；失租不发后续请求，同token重放幂等、未知申请回包只条件清理自己的占位。1038项T0和7项真实Redis场景通过，但真实GPU压力FAIL，不能启用业务或宣称完整跨系统GPU互斥，见WHOLE-REQUEST-ADMISSION-v1.md。
 
 后续v2在HTTP引用归零后对异常释放最多补偿一次，每次仍比较同owner；`released`/`not_owner`/`unknown`与尝试次数显式进入scope观测，连续失败依TTL回收，不能将尝试过视为删除成功。前/后台ticket分别条件清理。135项受影响回归与11项真实Redis场景通过，非全量/容量验收；详见LOCAL-LEASE-RELEASE-v1.md。
+
+APIEmbedding首次HTTP池创建与关闭由实例锁/引用管理，本地端点不继承环境代理；创建、HTTP及解码计入原截止，迟到不缓存。评测新增常驻服务路径以区分每次初始化开销，原200常驻串行100/100、并发10仅2/100，功能与容量分别记录；详见EMBEDDING-HTTP-LIFECYCLE-v1.md。

@@ -74,6 +74,13 @@
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
+        },
+        {
+          "stage": "shared model clients and Embedding lifecycle",
+          "document": "docs/EMBEDDING-HTTP-LIFECYCLE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "report": "reports/gpu-pair/acceptance-20261104-191002/report.json",
+          "limit": "157 affected T0 pass; same200 workload shared services serial100/100, end-to-endP95=425.817ms and rerank381.458ms; concurrency10 only2/100 complete,98BUSY; all admitted queries dispatch Embedding; provider2 is only finite12-case diagnostic, not app capacity; no business switch or full quality acceptance"
         }
       ]
     },
@@ -169,6 +176,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
           "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
+        },
+        {
+          "stage": "shared model clients and Embedding lifecycle",
+          "document": "docs/EMBEDDING-HTTP-LIFECYCLE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "report": "reports/gpu-pair/acceptance-20261104-191002/report.json",
+          "limit": "157 affected T0 pass; same200 workload shared services serial100/100, end-to-endP95=425.817ms and rerank381.458ms; concurrency10 only2/100 complete,98BUSY; all admitted queries dispatch Embedding; provider2 is only finite12-case diagnostic, not app capacity; no business switch or full quality acceptance"
         }
       ]
     },
@@ -327,6 +341,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
           "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
+        },
+        {
+          "stage": "shared model clients and Embedding lifecycle",
+          "document": "docs/EMBEDDING-HTTP-LIFECYCLE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "report": "reports/gpu-pair/acceptance-20261104-191002/report.json",
+          "limit": "157 affected T0 pass; same200 workload shared services serial100/100, end-to-endP95=425.817ms and rerank381.458ms; concurrency10 only2/100 complete,98BUSY; all admitted queries dispatch Embedding; provider2 is only finite12-case diagnostic, not app capacity; no business switch or full quality acceptance"
         }
       ]
     },
@@ -397,6 +418,13 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "limit": "135 affected T0 and 11 real Redis cases pass; original200 load serial100/100, rerankP95=1118.007ms, concurrency10 only1/100 complete and99BUSY; source stable/complete; same-owner bounded release; process remains default; no full M4/M5 or business switch acceptance",
           "report": "reports/gpu-pair/acceptance-20261104-185603/report.json"
+        },
+        {
+          "stage": "shared model clients and Embedding lifecycle",
+          "document": "docs/EMBEDDING-HTTP-LIFECYCLE-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "report": "reports/gpu-pair/acceptance-20261104-191002/report.json",
+          "limit": "157 affected T0 pass; same200 workload shared services serial100/100, end-to-endP95=425.817ms and rerank381.458ms; concurrency10 only2/100 complete,98BUSY; all admitted queries dispatch Embedding; provider2 is only finite12-case diagnostic, not app capacity; no business switch or full quality acceptance"
         }
       ]
     },

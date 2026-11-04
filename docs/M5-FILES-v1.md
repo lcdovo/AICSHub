@@ -1,5 +1,7 @@
 # M5 当前文件与证据清单
 
+常驻容量/Embedding生命周期切片：scripts/verify_gpu_pair.py新增--shared-services，新增scripts/diagnose_gpu_capacity.py、tests/test_gpu_capacity_diagnostics.py、docs/GPU-CAPACITY-DIAGNOSIS-v1.md；后续app/services/embedding_service.py补池生命周期/本地代理/截止，新增tests/test_embedding_http_lifecycle.py、docs/EMBEDDING-HTTP-LIFECYCLE-v1.md。157相关回归通过，真实常驻200串行通过、并发容量FAIL，未切业务。
+
 后续释放补偿切片：修改app/services/local_admission.py、scripts/diagnose_local_admission.py、scripts/test_local_admission_redis.py、tests/test_local_admission_diagnostics.py；新增tests/test_local_release.py和docs/LOCAL-LEASE-RELEASE-v1.md。135项相关T0与11项真实Redis通过；模型性能与质量仍按各自门禁记录，未切业务。
 
 以下为本次M5新增/修改的主题文件；整体仍未完成。
