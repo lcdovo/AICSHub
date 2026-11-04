@@ -47,7 +47,10 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--limit',type=int,default=12,choices=range(1,13))
     parser.add_argument('--modes',nargs='+',choices=['bm25','dense','hybrid','rerank'],default=['bm25','dense','hybrid','rerank'])
+    parser.add_argument('--provider-timeout',type=float,default=5.0)
     args=parser.parse_args()
+    if not 0 < args.provider_timeout <= 30:
+        parser.error('provider-timeout must be >0 and <=30; business default is5')
     output=root/'reports/m5'/datetime.now().strftime('local-%Y%m%d-%H%M%S')
     output.mkdir(parents=True)
     from scripts.test_provenance import snapshot_sources,compare_sources
@@ -89,9 +92,9 @@ def main():
             from app.services.embedding_service import APIEmbedding
             from app.services.knowledge_base import KnowledgeBaseService
             from app.services.knowledge_base import versioned_search
-            # 实验进程有界30秒，业务默认5秒保持；原5秒回退失败证据另存。
-            versioned_search.ENCODE_TIMEOUT_SECONDS=30
-            report['experimental_provider_timeout_seconds']=30
+            # 默认复验业务5秒预算；较长实验必须显式传参，报告与业务结果分开。
+            versioned_search.ENCODE_TIMEOUT_SECONDS=args.provider_timeout
+            report['experimental_provider_timeout_seconds']=args.provider_timeout
             report['business_default_provider_timeout_seconds']=5
             from app.services.knowledge_base.index_worker import index_job
             from app.services.knowledge_base.vector_index import VersionedVectorIndex
@@ -134,6 +137,8 @@ def main():
             report.update(embedding_model=backend.model,embedding_revision=settings.EMBEDDING_REVISION,
                 reranker_model='BAAI/bge-reranker-large',dataset_sha256=hashlib.sha256(raw).hexdigest(),
                 chunks=len(corpus),corpus_sha256=hashlib.sha256((root/'acceptance/m5/corpus.json').read_bytes()).hexdigest())
+            report['canonical_to_runtime_labels']=[{'canonical_chunk_id':key[0],'canonical_version_id':key[1],
+                'runtime_chunk_id':value[0],'runtime_version_id':value[1]} for key,value in mapping.items()]
             rows=[]
             for mode in args.modes:
                 settings.RAG_USE_RERANKER=mode=='rerank'

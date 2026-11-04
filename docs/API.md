@@ -216,6 +216,8 @@ MCP派发前无法连接可回退进程内同一工具；写调用派发后失�
 
 POST /search支持独立recall_k/rerank_k/top_k，结果含逐路ID、score_type、knowledge_epoch、冷/热来源和本次耗时；RRF不是概率。当前所有已认证用户共享已发布知识，未新增文档级ACL业务规则。草稿/删除/旧发布版不能经缓存或高排名绕过SQL过滤。批量上传逐文件报告排队/失败；单文件64KiB分段读取并限总大小，解析10秒超时。
 
+重排metadata新增rerank_candidate_count、rerank_budget_ms与rerank_algorithm_version，记录本轮选择候选数、阶段预算和算法版本；缓存命中仍由cache/timings_ms明确表示。预算内全部评分有效才标模型provider；超时/部分回包/超支持容量保留原融合排名并标rank_preserved/degraded，不能按模型成功解释。当前本地BGE分批共享5秒截止，性能仍未通过2秒P95目标，见M5-RERANK-BUDGET-v1.md；未新增HTTP端可修改的模型调用权限或费用配置。
+
 完整契约及验证边界见M3-IMPLEMENTATION-v1.md与M3-EVIDENCE-v1.md。
 
 ## M4候选模型账本（2026-11-04）

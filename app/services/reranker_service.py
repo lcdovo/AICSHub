@@ -15,6 +15,11 @@ Reranker 服务 - RAG 检索结果重排（模型 reranker）
   不会阻塞事件循环）；超时严格，无重试。
 """
 import logging
+import math
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+from contextvars import ContextVar
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -28,6 +33,13 @@ PROVIDER_LOCAL = "local"
 MAX_CANDIDATES = 24
 # 单个候选输入重排器的内容长度上限，防止超长片段撑爆输入。
 MAX_DOC_CHARS = 2000
+# 仅对已验证逐query/document独立打分的本地BGE模型分批，不改变外部供应商请求数。
+LOCAL_BATCH_SIZE = 4
+LOCAL_BATCH_WORKERS = 2
+RERANK_ALGORITHM_VERSION = "local-bge-batch4-parallel2-v1"
+_LOCAL_BATCH_POOL = ThreadPoolExecutor(max_workers=LOCAL_BATCH_WORKERS, thread_name_prefix="rag-rerank")
+_LOCAL_BATCH_SLOTS = threading.BoundedSemaphore(LOCAL_BATCH_WORKERS)
+_RERANK_DEADLINE: ContextVar[float | None] = ContextVar("rerank_deadline", default=None)
 
 
 class _RerankProvider:
@@ -84,7 +96,8 @@ class _RerankProvider:
                 continue
             index = item.get("index")
             score = item.get("relevance_score", item.get("score"))
-            if isinstance(index, int) and isinstance(score, (int, float)):
+            if (type(index) is int and 0 <= index < len(documents)
+                    and type(score) in (int, float) and math.isfinite(score)):
                 scored.append((index, float(score)))
         if not scored:
             return None
@@ -95,8 +108,12 @@ class _RerankProvider:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+        deadline = _RERANK_DEADLINE.get()
+        timeout = min(self.timeout, deadline - time.monotonic()) if deadline is not None else self.timeout
+        if timeout <= 0:
+            raise TimeoutError("rerank_deadline_before_http")
         client = httpx.Client(
-            timeout=httpx.Timeout(self.timeout, connect=min(self.timeout, 3.0)),
+            timeout=httpx.Timeout(timeout, connect=min(timeout, 3.0)),
             headers=headers,
         )
         try:
@@ -151,12 +168,16 @@ class RerankerService:
         return bool(self._providers)
 
     def rerank_sync(
-        self, query: str, candidates: List[Dict[str, Any]], top_k: int
+        self, query: str, candidates: List[Dict[str, Any]], top_k: int, *, deadline: float | None = None
     ) -> Optional[List[Dict[str, Any]]]:
         """按 provider 链重排候选。返回重排后的 top_k（写 rerank_score/final_score）；
         全部失败返回 None，由调用方回退启发式。"""
         if not self.is_available() or not candidates:
             return None
+        # 原实现[:24]会默默遗漏尾部相关候选；超支持范围必须整次回退，不能声称完整重排。
+        if len(candidates) > MAX_CANDIDATES:
+            return None
+        deadline = deadline if deadline is not None else time.monotonic() + sum(p.timeout for p in self._providers)
 
         docs = [
             str(c.get("content") or "")[:MAX_DOC_CHARS]
@@ -166,13 +187,21 @@ class RerankerService:
             return None
 
         for provider in self._providers:
+            if time.monotonic() >= deadline:
+                return None
+            token = _RERANK_DEADLINE.set(deadline)
             try:
-                scored = provider.rerank(query, docs, top_n=len(docs))
+                if provider.name == PROVIDER_LOCAL and provider.model == "BAAI/bge-reranker-large" and len(docs) > LOCAL_BATCH_SIZE:
+                    scored = self._local_batches(provider, query, docs, deadline)
+                else:
+                    scored = provider.rerank(query, docs, top_n=len(docs))
             except Exception as exc:
-                logger.warning("Reranker provider %s 调用失败，尝试下一级: %s", provider.name, exc)
+                logger.warning("Reranker provider %s 调用失败: %s", provider.name, type(exc).__name__)
                 continue
-            if not scored:
-                logger.warning("Reranker provider %s 返回空结果，尝试下一级", provider.name)
+            finally:
+                _RERANK_DEADLINE.reset(token)
+            if not self._complete_scores(scored, len(docs)) or time.monotonic() >= deadline:
+                logger.warning("Reranker provider %s 回执不完整或已超过截止时间", provider.name)
                 continue
 
             pool = candidates[:MAX_CANDIDATES]
@@ -190,6 +219,68 @@ class RerankerService:
                 self.last_used_provider = provider.name
                 return reranked
         return None
+
+    @staticmethod
+    def _complete_scores(scored, count: int) -> bool:
+        return (isinstance(scored, list) and len(scored) == count
+                and all(isinstance(item, tuple) and len(item) == 2 and type(item[0]) is int
+                        and 0 <= item[0] < count and type(item[1]) in (int, float)
+                        and math.isfinite(item[1]) for item in scored)
+                and len({item[0] for item in scored}) == count)
+
+    @staticmethod
+    def _local_batches(provider, query: str, docs: list[str], deadline: float):
+        """全池最多2个推理任务，无无界等待队列；超时后不再派发后续批次。"""
+        pending = {}
+        scored = []
+        offset = 0
+
+        def infer(start, texts):
+            if time.monotonic() >= deadline:
+                raise TimeoutError("rerank_deadline_before_dispatch")
+            token = _RERANK_DEADLINE.set(deadline)
+            try:
+                result = provider.rerank(query, texts, top_n=len(texts))
+            finally:
+                _RERANK_DEADLINE.reset(token)
+            if time.monotonic() >= deadline or not RerankerService._complete_scores(result, len(texts)):
+                raise ValueError("late_or_invalid_rerank_batch")
+            return [(index + start, value) for index, value in result]
+
+        try:
+            while offset < len(docs) or pending:
+                while offset < len(docs) and len(pending) < LOCAL_BATCH_WORKERS:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("rerank_deadline")
+                    slots = _LOCAL_BATCH_SLOTS
+                    if not slots.acquire(blocking=False):
+                        # 本轮已有任务先收割；没有任务则只在本轮剩余截止时间内等槽。
+                        if pending:
+                            break
+                        if not slots.acquire(timeout=max(0, deadline - time.monotonic())):
+                            raise RuntimeError("rerank_batch_pool_busy")
+                    texts = docs[offset:offset + LOCAL_BATCH_SIZE]
+                    try:
+                        future = _LOCAL_BATCH_POOL.submit(infer, offset, texts)
+                    except BaseException:
+                        slots.release()
+                        raise
+                    future.add_done_callback(lambda _, reserved=slots: reserved.release())
+                    pending[future] = offset
+                    offset += len(texts)
+                finished, _ = wait(pending, timeout=max(0, deadline - time.monotonic()), return_when=FIRST_COMPLETED)
+                if not finished:
+                    raise TimeoutError("rerank_deadline")
+                for future in finished:
+                    pending.pop(future)
+                    scored.extend(future.result())
+            return sorted(scored, key=lambda item: (-item[1], item[0]))
+        finally:
+            for future in pending:
+                future.cancel()
+
+    def rerank_with_deadline(self, query, candidates, top_k, *, deadline):
+        return self.rerank_sync(query, candidates, top_k, deadline=deadline)
 
 
 _reranker: Optional[RerankerService] = None

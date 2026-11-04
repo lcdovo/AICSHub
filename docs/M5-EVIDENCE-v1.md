@@ -86,3 +86,11 @@ scripts/evaluate_m5_local.py清除宿主业务配置、工作目录临时SQLite�
 正式质量留出候选已新编制：595条，其中330可回答（55主题簇/每簇不同字段或行为问题）、60无答案/部分答案、100反例、105正确候选。合成语料55份，业务知识库不写入。docs/M5-HOLDOUT-DRAFT-v1.json、CORPUS/SOURCE/MANIFEST-DRAFT及12批docs/m5-review/batch-*.md已准备；标签仍assistant_draft、reviewer=None，用户只确认复核分工，没有确认标签。程序检查595schema、chunk/version存在、ID/query/cluster与开发集精确无交集、hash一致；这些不能证明语义独立，仍须用户核查近义重复、允许事实、例外、草拟反例是否真错，之后冻结数据。未调用模型对该候选评分或据其结果调参；实际输出论断支持标签尚未产生。
 
 595候选保存在docs待审，不改本次全量来源清单；后续仅更新acceptance/m5/README.md说明及dataset-manifest.json的候选资料指针，无生产/测试Python改动，元数据/候选完整性另验。M5-ACCEPTANCE-v1.md结论INCOMPLETE，26项原断言与195项总索引保留；M4实体失败、独立人工标签/真实聊天Judge质量、改写消融、业务默认5秒重排预算和综合负载仍阻止完整通过。供应商660/660、rules/灰度0保持。全部独立提交、不推送；不进入M6或部署。
+
+## 后续完整候选/重排预算切片
+
+见M5-RERANK-BUDGET-v1.md。新增本地BGE4条/批、进程共享最多2批并发、完整全池评分/坏批次整体回退、父5秒绝对截止及HTTP剩余预算、过期停止后续provider、超24不静默截断；外部单次调用及其他本地模型保持原请求粒度。metadata/缓存纳入算法版本与阶段预算。本地评测器改默认5秒，显式较长预算和canonical→实际标签映射记录。
+
+17项新专项及受影响回归107通过（reports/offline/20261104-120133-332724），源码起止a4fa113f5078604ebd8d78a194c1b970ec68f3d45b2a17bd0f75f95e833a93bc，稳定完整，网络禁止且blocked_network_operations=0；编译/静态检查通过。此次仅受影响范围，963全量属于此前版本，不冒称当前全量。
+
+真实默认5秒实验reports/m5/local-20261104-120224/report.json同一源码指纹、稳定完整：12冷+12热观测，冷8条local、4条超时rank_preserved，热均缓存命中；全冷重排阶段P95=5005.732ms、端到端P95=5989.6213ms，仍不满足原2秒候选目标，整体FAIL_LOCAL_RERANK_FALLBACK。语料小而Recall/nDCG=1不代表真实重排或独立质量通过；没有剔除失败、放宽截止或模型质量标准，未操作595候选调参、业务数据/配置/部署，外部/聊天调用0。M5性能和质量缺口继续保留。

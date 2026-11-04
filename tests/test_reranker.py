@@ -105,7 +105,8 @@ def test_external_fails_local_succeeds(monkeypatch):
     svc = _svc_with(
         monkeypatch,
         external_raise=TimeoutError("timeout"),
-        local_raw={"results": [{"index": 1, "relevance_score": 0.9}]},
+        local_raw={"results": [{"index": 1, "relevance_score": 0.9},
+                               {"index": 0, "relevance_score": 0.2}]},
     )
     candidates = [{"id": "a", "content": "x"}, {"id": "b", "content": "y"}]
     out = svc.rerank_sync("q", candidates, top_k=2)

@@ -130,6 +130,12 @@
           "layer": "T0 full regression",
           "passed": 963,
           "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        },
+        {
+          "document": "docs/M5-RERANK-BUDGET-v1.md",
+          "report": "reports/offline/20261104-120133-332724",
+          "passed": 107,
+          "limit": "T0 full20 candidate coverage/shared deadline/malformed batch/cache; real local8/12 success4/12 timeout; P95>2s, no overall performance PASS"
         }
       ]
     },
@@ -150,6 +156,12 @@
           "layer": "T0 full regression",
           "passed": 963,
           "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        },
+        {
+          "document": "docs/M5-RERANK-BUDGET-v1.md",
+          "report": "reports/offline/20261104-120133-332724",
+          "passed": 107,
+          "limit": "T0 full20 candidate coverage/shared deadline/malformed batch/cache; real local8/12 success4/12 timeout; P95>2s, no overall performance PASS"
         }
       ]
     },
@@ -306,6 +318,12 @@
           "layer": "T0 full regression",
           "passed": 963,
           "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        },
+        {
+          "document": "docs/M5-RERANK-BUDGET-v1.md",
+          "report": "reports/offline/20261104-120133-332724",
+          "passed": 107,
+          "limit": "T0 full20 candidate coverage/shared deadline/malformed batch/cache; real local8/12 success4/12 timeout; P95>2s, no overall performance PASS"
         }
       ]
     },
@@ -626,7 +644,7 @@
     "M4 upstream entity accuracy 0.956667 < 0.97",
     "Independent human-reviewed 300/60/100/100 holdout and output claims candidates prepared, not approved; user assigned reviewer",
     "New chat/Judge model evaluation not authorized; supplier calls used 660/660",
-    "Default 5s retrieval budget caused local Reranker fallback; experimental30s ablation is not business-default acceptance",
+    "Default5s local batch slice: 8/12 actual model reranks,4 timeout fallbacks; all-sample rerank P95 5005.732ms > original2000ms. Candidate20/long-duration/concurrency quality not accepted",
     "Retrieval rewrite ablation, independent performance/concurrency/quality evaluation not run"
   ],
   "integrations": [
@@ -663,6 +681,32 @@
     "source_snapshot_complete": true,
     "source_fingerprint": "01bc7de693aeb14e095b13f52d4528a9efb628e780f3cd1dc2556f3fd1d28e07",
     "blocked_network_operations": 0,
-    "layer": "T0"
+    "layer": "T0",
+    "scope_note": "historical full963 before local batching/deadline slice; current affected107 only, not a new full run"
+  },
+  "rerank_budget_slice": {
+    "document": "docs/M5-RERANK-BUDGET-v1.md",
+    "functional_regression": "PASS_AFFECTED_T0",
+    "performance": "FAIL",
+    "offline_report": "reports/offline/20261104-120133-332724",
+    "passed": 107,
+    "new_tests": 17,
+    "whole_m5_pass": false,
+    "real_model_evidence": {
+      "report": "reports/m5/local-20261104-120224/report.json",
+      "document": "docs/M5-RERANK-BUDGET-v1.md",
+      "layer": "real local Embedding/Reranker with temporary SQLite and new Milvus collection",
+      "status": "FAIL_PERFORMANCE",
+      "phase_budget_seconds": 5,
+      "cold_queries": 12,
+      "model_reranked": 8,
+      "rank_preserved_after_timeout": 4,
+      "rerank_phase_p95_ms_all_queries": 5005.732,
+      "required_candidate_p95_ms": 2000,
+      "source_fingerprint": "a4fa113f5078604ebd8d78a194c1b970ec68f3d45b2a17bd0f75f95e833a93bc",
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "limit": "12 draft development queries only; retain all failures; no holdout/cost/model quality acceptance"
+    }
   }
 }

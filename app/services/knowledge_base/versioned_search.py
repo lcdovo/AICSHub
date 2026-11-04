@@ -60,6 +60,9 @@ def search(
             "RAG_USE_RERANKER",
         )
     }
+    from app.services.reranker_service import RERANK_ALGORITHM_VERSION
+    rerank_identity["algorithm_version"] = RERANK_ALGORITHM_VERSION
+    rerank_identity["phase_timeout_seconds"] = ENCODE_TIMEOUT_SECONDS
     cache_key = hashlib.sha256(
         json.dumps(
             [
@@ -190,18 +193,24 @@ def search(
     timings["fusion"] = round((time.perf_counter() - begin) * 1000, 3)
     begin = time.perf_counter()
     reranker = "none"
+    rerank_candidate_count = 0
     if (
         settings.RAG_USE_RERANKER
         and service._reranker is not None
         and service._reranker.is_available()
     ):
         selected = candidates[:rerank_k]
+        rerank_candidate_count = len(selected)
+        rerank_deadline = time.monotonic() + ENCODE_TIMEOUT_SECONDS
+
+        def rerank_current():
+            bounded = getattr(service._reranker, "rerank_with_deadline", None)
+            if callable(bounded):
+                return bounded(query, copy.deepcopy(selected), top_k, deadline=rerank_deadline)
+            return service._reranker.rerank_sync(query, copy.deepcopy(selected), top_k)
+
         try:
-            reranked = bounded_provider(
-                lambda: service._reranker.rerank_sync(
-                    query, copy.deepcopy(selected), top_k
-                )
-            )
+            reranked = bounded_provider(rerank_current)
         except Exception:
             reranked = None
         if (
@@ -255,6 +264,9 @@ def search(
         "embedding_fingerprint": fingerprint,
         "score_type": "rrf",
         "reranker": reranker,
+        "rerank_candidate_count": rerank_candidate_count,
+        "rerank_budget_ms": ENCODE_TIMEOUT_SECONDS * 1000,
+        "rerank_algorithm_version": RERANK_ALGORITHM_VERSION,
         "cache": "miss",
         "timings_ms": timings,
         "latency_ms": total,
