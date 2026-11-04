@@ -187,6 +187,7 @@ def run_case_scheduled(case: dict, whole_request=False) -> dict:
             row["error_code"] = str(exc)
     finally:
         embedding.close()
+        reranker.close()
     row["total_ms"] = (time.perf_counter() - began) * 1000
     return row
 

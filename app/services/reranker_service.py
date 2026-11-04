@@ -18,6 +18,7 @@ import logging
 import math
 import threading
 import time
+from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from contextvars import ContextVar
 from contextvars import copy_context
@@ -61,6 +62,54 @@ class _RerankProvider:
         self.model = model
         self.style = style
         self.timeout = timeout
+        self._client: Optional[httpx.Client] = None
+        self._client_lock = threading.Lock()
+        self._client_users = 0
+        self._closed = False
+
+    @contextmanager
+    def _borrow_client(self, deadline: float):
+        """共享线程安全HTTP池；构建/等锁耗时计入同一截止时间。"""
+        if not self._client_lock.acquire(timeout=max(0, deadline-time.monotonic())):
+            raise TimeoutError("rerank_deadline_waiting_for_client")
+        try:
+            if self._closed:
+                raise RuntimeError("reranker_closed")
+            if time.monotonic() >= deadline:
+                raise TimeoutError("rerank_deadline_before_client")
+            if self._client is None:
+                from app.services.local_inference import is_local_endpoint
+                headers = {"Content-Type": "application/json"}
+                if self.api_key:
+                    headers["Authorization"] = f"Bearer {self.api_key}"
+                self._client = httpx.Client(
+                    timeout=httpx.Timeout(self.timeout), headers=headers,
+                    trust_env=not (self.name == PROVIDER_LOCAL and is_local_endpoint(self.base)),
+                )
+            self._client_users += 1
+            client = self._client
+        finally:
+            self._client_lock.release()
+        try:
+            yield client
+        finally:
+            closing = None
+            with self._client_lock:
+                self._client_users -= 1
+                if self._closed and self._client_users == 0:
+                    closing, self._client = self._client, None
+            if closing is not None:
+                closing.close()
+
+    def close(self):
+        """拒绝新调用；已发HTTP归还后再释放连接池，不中断在途请求。"""
+        closing = None
+        with self._client_lock:
+            self._closed = True
+            if self._client_users == 0:
+                closing, self._client = self._client, None
+        if closing is not None:
+            closing.close()
 
     def rerank(
         self, query: str, documents: List[str], top_n: int
@@ -114,25 +163,20 @@ class _RerankProvider:
         return self._post_uncoordinated(url, payload)
 
     def _post_uncoordinated(self, url: str, payload: Dict[str, Any], remaining=None) -> Any:
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-        deadline = _RERANK_DEADLINE.get()
-        timeout = min(self.timeout, deadline - time.monotonic()) if deadline is not None else self.timeout
-        if remaining is not None:
-            timeout = min(timeout, remaining)
-        if timeout <= 0:
-            raise TimeoutError("rerank_deadline_before_http")
-        client = httpx.Client(
-            timeout=httpx.Timeout(timeout, connect=min(timeout, 3.0)),
-            headers=headers,
-        )
-        try:
-            response = client.post(url, json=payload)
+        began = time.monotonic()
+        deadline = min(d for d in (began+self.timeout, _RERANK_DEADLINE.get(),
+                                  began+remaining if remaining is not None else None) if d is not None)
+        with self._borrow_client(deadline) as client:
+            timeout = deadline-time.monotonic()
+            if timeout <= 0:
+                raise TimeoutError("rerank_deadline_before_http")
+            response = client.post(url, json=payload,
+                                   timeout=httpx.Timeout(timeout, connect=min(timeout, 3.0)))
             response.raise_for_status()
-            return response.json()
-        finally:
-            client.close()
+            result = response.json()
+            if time.monotonic() >= deadline:
+                raise TimeoutError("rerank_deadline_after_http")
+            return result
 
 
 class RerankerService:
@@ -177,6 +221,17 @@ class RerankerService:
 
     def is_available(self) -> bool:
         return bool(self._providers)
+
+    def close(self):
+        first_error = None
+        for provider in self._providers:
+            try:
+                provider.close()
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+        if first_error is not None:
+            raise first_error
 
     def rerank_sync(
         self, query: str, candidates: List[Dict[str, Any]], top_k: int, *, deadline: float | None = None
@@ -298,26 +353,31 @@ class RerankerService:
 
 
 _reranker: Optional[RerankerService] = None
+_reranker_lock = threading.Lock()
 
 
 def get_reranker() -> Optional[RerankerService]:
     """模块级单例。未配置任何 reranker 配置时返回无 provider 的空服务。"""
     global _reranker
-    if _reranker is None:
-        from app.config.config import settings
+    with _reranker_lock:
+        if _reranker is None:
+            from app.config.config import settings
 
-        _reranker = RerankerService(
-            api_base=settings.RERANKER_API_BASE,
-            api_key=settings.RERANKER_API_KEY,
-            model=settings.RERANKER_MODEL,
-            style=settings.RERANKER_API_STYLE,
-            timeout=settings.RERANKER_TIMEOUT_SECONDS,
-            local_base=settings.RERANKER_LOCAL_BASE,
-            local_model=settings.RERANKER_LOCAL_MODEL,
-        )
-    return _reranker
+            _reranker = RerankerService(
+                api_base=settings.RERANKER_API_BASE,
+                api_key=settings.RERANKER_API_KEY,
+                model=settings.RERANKER_MODEL,
+                style=settings.RERANKER_API_STYLE,
+                timeout=settings.RERANKER_TIMEOUT_SECONDS,
+                local_base=settings.RERANKER_LOCAL_BASE,
+                local_model=settings.RERANKER_LOCAL_MODEL,
+            )
+        return _reranker
 
 
 def reset_reranker() -> None:
     global _reranker
-    _reranker = None
+    with _reranker_lock:
+        previous, _reranker = _reranker, None
+    if previous is not None:
+        previous.close()

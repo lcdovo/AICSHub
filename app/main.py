@@ -92,8 +92,12 @@ async def shutdown_resources():
         logger.error("Shutdown langfuse failed: %s", type(exc).__name__)
     from app.agent.mcp_client import shutdown_mcp_client
     from app.services.chat_service import chat_service
+    from app.services.reranker_service import reset_reranker
 
-    closers = [("mcp", shutdown_mcp_client), ("redis", close_redis)]
+    async def close_reranker():
+        await asyncio.to_thread(reset_reranker)
+
+    closers = [("mcp", shutdown_mcp_client), ("reranker", close_reranker), ("redis", close_redis)]
     services = [llm_service, getattr(chat_service.agent_graph, "llm_service", None)]
     seen = set()
     for service in services:

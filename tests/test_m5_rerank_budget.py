@@ -100,15 +100,19 @@ def test_http_read_timeout_is_capped_by_remaining_shared_deadline(monkeypatch):
     captured={}
     class Client:
         def __init__(self,**kw):captured.update(kw)
-        def post(self,*a,**kw):raise TimeoutError("synthetic")
+        def post(self,*a,**kw):
+            captured["request_timeout"]=kw["timeout"]
+            raise TimeoutError("synthetic")
         def close(self):captured["closed"]=True
     monkeypatch.setattr("app.services.reranker_service.httpx.Client",Client)
     provider=_RerankProvider("local","http://local.test","","BAAI/bge-reranker-large","openai",12)
     token=_RERANK_DEADLINE.set(time.monotonic()+.4)
     try:
         with pytest.raises(TimeoutError):provider._post("http://local.test/rerank",{})
-    finally:_RERANK_DEADLINE.reset(token)
-    assert 0<captured["timeout"].read<=.4 and captured["closed"]
+    finally:
+        _RERANK_DEADLINE.reset(token)
+        provider.close()
+    assert 0<captured["request_timeout"].read<=.4 and captured["closed"]
 
 
 def test_external_provider_is_not_split_into_extra_paid_calls(monkeypatch):

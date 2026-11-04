@@ -15,12 +15,14 @@ async def test_lifespan_closes_actual_chat_graph_and_other_resources_despite_fai
     chat = SimpleNamespace(close=AsyncMock(side_effect=RuntimeError("synthetic-private-error") if failed else None))
     redis = AsyncMock()
     mcp = AsyncMock()
+    reranker = Mock()
     monkeypatch.setattr(main, "llm_service", health)
     monkeypatch.setattr(chat_service, "agent_graph", SimpleNamespace(llm_service=chat))
     monkeypatch.setattr(main, "init_database", AsyncMock())
     monkeypatch.setattr(main, "close_redis", redis)
     monkeypatch.setattr(main, "shutdown_langfuse", Mock())
     monkeypatch.setattr("app.agent.mcp_client.shutdown_mcp_client", mcp)
+    monkeypatch.setattr("app.services.reranker_service.reset_reranker", reranker)
     monkeypatch.setattr("app.utils.otel.enable_otlp_export", lambda: None)
 
     async def lifecycle():
@@ -37,4 +39,5 @@ async def test_lifespan_closes_actual_chat_graph_and_other_resources_despite_fai
     chat.close.assert_awaited_once()
     mcp.assert_awaited_once()
     redis.assert_awaited_once()
+    reranker.assert_called_once()
     assert "synthetic-private-error" not in caplog.text
