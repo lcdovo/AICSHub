@@ -223,8 +223,14 @@
       "layers": "P0/C+I",
       "procedure": "转人工/澄清模板含虚假已接通、时间、隐私信息",
       "assertion": "基础事实/安全检查仍生效，workflow不能绕过",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-102919-774119",
+          "passed": 98,
+          "limit": "fixed output/privacy/connection/wait cases; no full adversarial or independent quality acceptance"
+        }
+      ]
     },
     {
       "ac": "AC-13-12",

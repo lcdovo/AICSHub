@@ -261,6 +261,16 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
 
     if grounded and state.flow_value(FlowFlag.GROUNDED) and not state.flow_value(FlowFlag.REFUSED) and not handoff_done:
         state.reply = self._add_rag_citations(state.reply, state.current_evidence())
+    # 所有公开文本共用此底线，包括工作流、可信模板、缓存和最终引用。
+    # 失败只替换本轮文本，不能跳到人工节点引发额外写操作。
+    from app.agent.publication_guard import publication_issues, SAFE_PUBLICATION_REPLY
+    issues = publication_issues(state.reply)
+    state.collected_info["publication_guard"] = {"passed": not issues, "issues": issues}
+    if issues:
+        from app.agent.request_understanding import ReviewResult
+        state.reply = SAFE_PUBLICATION_REPLY
+        state.set_flow(answer_validated=False)
+        state.review_result = ReviewResult(passed=False, evidence_version=(state.evidence_bundle.fingerprint() if state.evidence_bundle else None))
     if (generated_by_llm and answer_cache_key and state.flow_value(FlowFlag.VALIDATED)
             and state.flow_value(FlowFlag.GROUNDED) and state.current_evidence()
             and not state.need_human and not state.flow_value(FlowFlag.REFUSED)
