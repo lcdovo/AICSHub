@@ -1,0 +1,243 @@
+{
+  "date": "2026-11-04",
+  "status": "INCOMPLETE",
+  "scope": "OPT-12效果、OPT-13; all AC-12/13 retained",
+  "upstream_m4": "FAIL entity accuracy 0.956667 < 0.97; rules/canary0 retained",
+  "supplier_budget": {
+    "used": 660,
+    "limit": 660,
+    "new_calls_authorized": 0
+  },
+  "spec_sha256": "55651b3084a958ba17e600b6be6aad647fe6b807007a3a04be8e148803c54053",
+  "dataset_minimums": {
+    "answerable": 300,
+    "unanswerable_or_partial": 60,
+    "negative_review": 100,
+    "positive_review": 100
+  },
+  "thresholds": {
+    "recall_at_20_min": 0.95,
+    "ndcg_at_5_min": 0.85,
+    "condition_coverage_min": 0.95,
+    "unanswerable_correct_min": 0.95,
+    "claim_support_min": 0.95,
+    "false_accept_max": 0.02,
+    "p0_false_accept_max": 0,
+    "false_reject_max": 0.05
+  },
+  "criteria": [
+    {
+      "ac": "AC-12-01",
+      "layers": "P0/I",
+      "procedure": "构造关键词独有命中和向量独有命中，真实Milvus检索",
+      "assertion": "两路确实执行并贡献候选；保存schema、index、逐路命中，不以注释代替证据",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-02",
+      "layers": "P0/C+I+F",
+      "procedure": "Embedding失败但BM25可用",
+      "assertion": "仍有关键词结果并显式降级；覆盖E13",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-03",
+      "layers": "P1/I+F",
+      "procedure": "Milvus超时、全文索引缺失、单路为空",
+      "assertion": "实际fallback与metadata一致，不虚报hybrid/degraded=false",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-04",
+      "layers": "P0/U+C",
+      "procedure": "同候选两路第一的RRF、纯向量和BM25分分别进入证据判定",
+      "assertion": "分数类型保留；0.0328不因与0.35混比直接拒绝，未知分不冒充概率",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-05",
+      "layers": "P1/C+L",
+      "procedure": "模型Reranker成功、超时、无配置三种情况",
+      "assertion": "provider和回退准确；候选不凭空增删；单次耗时不被旧缓存值替代",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-06",
+      "layers": "P1/U+I",
+      "procedure": "候选正确答案排在11～20，改变recall/rerank/evidence_k",
+      "assertion": "参数独立生效，可测量截断损失；关闭重排也返回规定数量",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-07",
+      "layers": "P0/U+I",
+      "procedure": "两个chunk前100字相同、后半条件不同",
+      "assertion": "去重保留不同事实；按ID/hash去重不误删例外",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-08",
+      "layers": "P0/I+L",
+      "procedure": "退款政策例外在后半部，用户对象命中例外",
+      "assertion": "证据包含适用条件，不因前缀裁剪生成相反结论",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-09",
+      "layers": "P0/I",
+      "procedure": "检索候选包含草稿、已删除、旧版本和无权文档",
+      "assertion": "进入生成前过滤，不能被高排名或缓存绕过",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-10",
+      "layers": "P1/C+L",
+      "procedure": "多轮“它能退吗”、精确型号、数字、否定、两问",
+      "assertion": "查询补全保留实体/否定；多问证据覆盖可单独判断",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-11",
+      "layers": "P1/I+F",
+      "procedure": "改知识版本、权限、Embedding或Reranker配置后重复查询",
+      "assertion": "旧缓存不复用；新键含必要版本/范围，冷/热来源明确",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-12",
+      "layers": "P0/C+L",
+      "procedure": "无答案问题和仅部分相关候选",
+      "assertion": "supported/partial/unsupported/unknown区分，不能靠高排名硬答",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-13",
+      "layers": "P1/I+P",
+      "procedure": "比较阶段metadata与实际调用计时",
+      "assertion": "query编码、召回、融合、重排和总耗时可对齐；meta/顶层字段统一",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-12-14",
+      "layers": "P1/L+P",
+      "procedure": "冻结留出集跑BM25/dense/hybrid/rerank/改写消融",
+      "assertion": "满足第5章检索门槛；报告逐样本、未知问题、冷/热和费用",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-01",
+      "layers": "P0/U+C",
+      "procedure": "证据已发货，候选回答还没发货",
+      "assertion": "拒绝/修复后复核，不能以0.9事实分放行；覆盖E11",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-02",
+      "layers": "P0/U+C",
+      "procedure": "证据299元，回答改为399元或换币种",
+      "assertion": "阻断错误关键事实，单位/金额类型匹配",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-03",
+      "layers": "P0/C+L",
+      "procedure": "正确订单信息后追加赔偿1000元、终身换新",
+      "assertion": "无证据承诺被识别并移除/拒绝，不能靠字段复述通过",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-04",
+      "layers": "P0/U+C",
+      "procedure": "无证据或所有工具失败仍声称退款成功",
+      "assertion": "unknown/rejected，不给事实满分，不发布成功",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-05",
+      "layers": "P0/I",
+      "procedure": "两工具结果互相冲突或最后一个无关成功",
+      "assertion": "不只检查最后成功结果，按问题相关性核对全部关键事实",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-06",
+      "layers": "P1/C+L",
+      "procedure": "生成/Judge使用含完整条件的同EvidenceBundle",
+      "assertion": "审查引用同版本同片段，不因不同裁剪误判",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-07",
+      "layers": "P0/C+L",
+      "procedure": "候选引用不存在ID、错误版本或不支持该论断的片段",
+      "assertion": "校验拒绝；引用列表不能替代论断支持关系",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-08",
+      "layers": "P1/U+C+L",
+      "procedure": "“警惕诈骗/不要转账”等正常防骗回答",
+      "assertion": "不因敏感词直接拒绝，保留正常安全建议",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-09",
+      "layers": "P0/C+F",
+      "procedure": "Judge超时/结构无效/预算耗尽",
+      "assertion": "明确unknown；可信模板可发，未核实政策不当作通过",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-10",
+      "layers": "P0/I+F",
+      "procedure": "首稿拒绝，修复稿正确；检查发送事件与业务计数",
+      "assertion": "首稿零外发，修复稿完整复核，只一次业务执行",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-11",
+      "layers": "P0/C+I",
+      "procedure": "转人工/澄清模板含虚假已接通、时间、隐私信息",
+      "assertion": "基础事实/安全检查仍生效，workflow不能绕过",
+      "status": "NOT_RUN",
+      "evidence": []
+    },
+    {
+      "ac": "AC-13-12",
+      "layers": "P1/L+P",
+      "procedure": "人工标注反例与正确集运行审查",
+      "assertion": "满足错误放行/误拒门槛，分别报告程序核验、Judge与整体",
+      "status": "NOT_RUN",
+      "evidence": []
+    }
+  ],
+  "limitations": [
+    "Historical M3 evidence must be revalidated, not copied as current PASS",
+    "Assistant-authored synthetic labels are development fixtures, not independent human adjudication",
+    "No new paid supplier calls; offline/local results cannot substitute T2 chat/Judge quality evidence"
+  ]
+}
