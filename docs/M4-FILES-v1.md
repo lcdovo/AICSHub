@@ -107,3 +107,5 @@ SQL轮次恢复切片新增：`tests/test_m4_sql_turn_reset.py`；修改AgentSta
 真实测试资源复用切片新增：`tests/test_m1_runtime_guard.py`；修改M1执行器的显式--reuse-m3归属/端口校验、源码指纹与测试证据说明。
 
 动作回执展示切片新增：`app/agent/refund_action_contracts.py`、`tests/test_m4_refund_action_view.py`；修改AgentState、意图/工具确认节点、SQL恢复和正向准备回执夹具；异常部分回执另有负向测试保留。
+
+人工事实切片新增：`app/agent/handoff_evidence.py`、`tests/test_m4_handoff_truth.py`；修改人工节点、响应节点和ChatService，统一回执归属/状态检查，建议不伪装已登记，Trace人工计数核验SQL事实。

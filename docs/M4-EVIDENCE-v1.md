@@ -348,3 +348,15 @@ OPT-07/09/04，AC-07-01局部迁移、关联AC-09-04/05/06/12。原confirmation�
 compileall及本切片F401/F821通过，无供应商调用/部署/迁移/业务数据删除。M4状态中仍有改写/其他观察与兼容键全面声明待完成，AC-07-01保持PARTIAL。原实体质量失败、模型调用660/660不变。
 
 补录此前abc1f40预览版全量819 passed、0失败/0错误（reports/offline/20261104-041809-138632，258.78秒），源码起止稳定且快照完整；尚不含本动作展示及测试执行器复用改动，最新全量后续单列。
+
+## 后续切片：人工建议、回执与指标事实分离（2026-11-04）
+
+OPT-10/13/17，关联AC-10-08、AC-13-11、AC-17-04的局部边界。原响应兜底将need_human直接写为“正在为您转接”，会覆盖尚无转接请求的投诉工单回执；persist_result也仅凭need_human增加人工计数。现在统一matching_handoff_receipt检查用户/会话/请求ID/状态，回复使用已登记请求的实际pending/assigned/resolved/cancelled状态；没有请求时说明尚未创建，失败或无效回执说明结果无法确认。投诉工单回执继续按实际工单展示。
+
+人工Trace计数必须同时有成功工具回执及同用户同会话SQL请求，推荐标记不作事实来源；不存在请求、伪造当前scope但引用其他用户/其他会话的真实请求均不计入。只修人工计数，不宣称所有业务成功/未知/失败指标或跨worker持久统计已收口；SQL查询也不证明真人已接通。完整workflow模板隐私/等待时间/基础安全及浏览器验收仍需另验。
+
+T0专项及相关回归86 passed（reports/offline/20261104-093809-934039），source_tree_stable/source_snapshot_complete均true，源码指纹9f901389856b152b10b9cce65cd5d82a2bfa0e38343c24af0c21e978c6f4fed8。新增人工事实专项18项：四种有效状态、错用户/布尔用户/错会话/空ID/未知状态/工具失败、不创建时的明确提示、保留投诉工单回执、推荐与实际SQL的交叉验证。所有数据为临时SQLite合成数据，模型为替身，网络禁止且blocked_network_operations=0。首次命令误写不存在的tests/test_handoff_lifecycle.py（reports/offline/20261104-093755-571789）导致无测试执行/非0退出，保留为执行错误，不计PASS；已修正后运行上述86项。另直接pytest的55项初检通过，仅作辅助，不代替隔离入口证据。
+
+compileall app scripts、本切片Ruff F401/F821、git diff --check通过。本切片未进行真实MySQL/Redis、浏览器、真实供应商或部署验收；660/660调用额度保持，M4实体95.67%未达97%的质量失败及rules/灰度0不变。原未跟踪方案/验收文档与开发脚本保留且不入提交。
+
+本切片最终全量T0：python scripts/test_offline.py -q tests，863 passed、0失败/0错误/0跳过（reports/offline/20261104-093844-105880，382.13秒）。开始/结束源码指纹同为9f901389856b152b10b9cce65cd5d82a2bfa0e38343c24af0c21e978c6f4fed8，源码稳定且快照完整，禁止网络且blocked_network_operations=0。9838项警告主要为既有datetime.utcnow弃用及依赖弃用提示，保留日志。该结果含当前人工事实改动与已提交退款展示/确认/参数代码；启动HEAD=dd0c212且存在dirty输入，按清单/指纹解释，不能伪称已提交版本的真实部署验收。全部原195项仍保留；三项相关AC仅增加局部证据，不提升为整项PASS。

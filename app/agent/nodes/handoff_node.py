@@ -9,6 +9,7 @@ from app.agent.tools import ToolExecutionResult
 from app.agent.handoff_authorization import authorize_handoff
 from app.services.ticket_creation import handoff_message
 from app.agent.nodes.tool_node import ToolInvoker
+from app.agent.handoff_evidence import matching_handoff_receipt
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,7 @@ async def request_handoff(dependencies: HandoffDependencies, state: AgentState) 
         logger.warning("Handoff execution context or service unavailable")
         handoff = ToolExecutionResult(success=False, error="人工请求执行上下文无效或服务不可用", error_type="execution")
     data = handoff.data if isinstance(handoff.data, dict) else {}
-    if handoff.success and (not isinstance(data.get("request_id"), str) or not data["request_id"].strip()
-                            or not isinstance(data.get("status"), str)
-                            or data.get("status") not in {"pending", "assigned", "resolved", "cancelled"}
-                            or type(data.get("user_id")) is not int or data["user_id"] != state.user_id
-                            or data.get("session_id") != state.session_id):
+    if handoff.success and not matching_handoff_receipt(data, state.user_id, state.session_id):
         handoff = ToolExecutionResult(success=False, error="人工请求缺少可信回执", error_type="unknown")
     state.record_tool_observation("escalate_to_human", handoff.model_dump())
     state.add_tool_call(tool_name="escalate_to_human", arguments=arguments, result=handoff.model_dump(),

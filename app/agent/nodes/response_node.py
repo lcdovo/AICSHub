@@ -18,6 +18,7 @@ from datetime import datetime
 from app.agent.state import AgentState, AgentNode, IntentType
 from app.config.config import settings
 from app.services.user_memory import get_user_memory_service
+from app.agent.handoff_evidence import matching_handoff_receipt
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +177,18 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
         state.need_human = False
         state.collected_info["reply_source"] = "shadow_notice"
     if state.need_human and not state.reply:
-        state.reply = f"非常抱歉，正在为您转接人工客服。{state.human_reason or ''}"
+        # need_human是诉求/建议，不是接通事实。只按回执描述已登记状态。
+        from app.services.ticket_creation import handoff_message
+        receipt = next((call.result["data"] for call in reversed(state.tool_calls)
+                        if call.tool_name == "escalate_to_human" and call.success
+                        and isinstance(call.result, dict)
+                        and matching_handoff_receipt(call.result.get("data"), state.user_id, state.session_id)), None)
+        if receipt is not None:
+            state.reply = handoff_message(receipt)
+        elif state.flow_value(FlowFlag.HANDOFF_ATTEMPTED) or any(call.tool_name == "escalate_to_human" for call in state.tool_calls):
+            state.reply = "暂时无法确认转人工请求结果，请查看请求记录或联系支持。"
+        else:
+            state.reply = self._try_templated_tool_reply(state) or "建议由人工进一步协助；当前尚未创建转人工请求，请回复“转人工”发起。"
     if state.flow_value(FlowFlag.SMALLTALK) and not state.reply:
         state.reply = self._get_default_reply(IntentType.GENERAL, state.user_message)
 

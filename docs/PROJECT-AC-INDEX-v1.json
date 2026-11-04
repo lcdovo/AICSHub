@@ -21,9 +21,9 @@
     "P1": 90
   },
   "states": {
-    "NO_GATE_MAPPING_REQUIRES_AUDIT": 78,
+    "NO_GATE_MAPPING_REQUIRES_AUDIT": 75,
     "HISTORICAL_ACCEPTED_REVALIDATION_DUE": 87,
-    "PARTIAL_CURRENT": 29,
+    "PARTIAL_CURRENT": 32,
     "FAIL": 1
   },
   "rules": [
@@ -1445,9 +1445,17 @@
       "procedure": "请求尚未受理、没有实时聊天",
       "required_assertion": "文案不声称真人已接通、不编排队人数与等待时间",
       "spec_line": 254,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "state": "PARTIAL_CURRENT",
       "next_scope": "M6（保留M1已验P0）",
-      "evidence": []
+      "evidence": [
+        {
+          "stage": "supporting slice for M5/M6",
+          "status": "PASS_T0_PARTIAL",
+          "document": "docs/M4-EVIDENCE-v1.md",
+          "report": "reports/offline/20261104-093809-934039",
+          "limit": "T0同scope回执四状态/失败/无请求/工单回执验证；推荐不声称已接通。未执行浏览器文案与完整用户管理员闭环验收。"
+        }
+      ]
     },
     {
       "ac": "AC-10-09",
@@ -1982,9 +1990,17 @@
       "procedure": "转人工/澄清模板含虚假已接通、时间、隐私信息",
       "required_assertion": "基础事实/安全检查仍生效，workflow不能绕过",
       "spec_line": 308,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "state": "PARTIAL_CURRENT",
       "next_scope": "M5",
-      "evidence": []
+      "evidence": [
+        {
+          "stage": "supporting slice for M5/M6",
+          "status": "PASS_T0_PARTIAL",
+          "document": "docs/M4-EVIDENCE-v1.md",
+          "report": "reports/offline/20261104-093809-934039",
+          "limit": "T0人工响应兜底只按有效同scope工具回执描述状态；无请求/结果未知明确说明。全部workflow模板隐私/等待时间/基础安全检查仍未验收。"
+        }
+      ]
     },
     {
       "ac": "AC-13-12",
@@ -2559,9 +2575,17 @@
       "procedure": "工具声称成功但业务回执未提交的故障fixture",
       "required_assertion": "业务成功率不增加，未知/失败计数增加",
       "spec_line": 364,
-      "state": "NO_GATE_MAPPING_REQUIRES_AUDIT",
+      "state": "PARTIAL_CURRENT",
       "next_scope": "M6（保留M1已验P0）",
-      "evidence": []
+      "evidence": [
+        {
+          "stage": "supporting slice for M5/M6",
+          "status": "PASS_T0_PARTIAL",
+          "document": "docs/M4-EVIDENCE-v1.md",
+          "report": "reports/offline/20261104-093809-934039",
+          "limit": "T0人工Trace计数需成功工具回执与同scope真实临时SQLite记录；缺记录/错用户/错会话均不增加。所有业务指标、未知/失败计数、真实MySQL与跨worker统计仍未验收。"
+        }
+      ]
     },
     {
       "ac": "AC-17-05",

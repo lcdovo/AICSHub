@@ -188,8 +188,21 @@ class ChatService:
         tracer = get_tracer()
         tracer.record_intent(state.detected_intent, state.intent_confidence)
         tracer.record_evaluation(evaluation.overall_score, evaluation.is_low_score)
-        if state.need_human:
-            tracer.record_handoff()
+        from app.agent.handoff_evidence import matching_handoff_receipt
+        handoff_ids = {
+            call.result["data"]["request_id"] for call in state.tool_calls
+            if call.tool_name == "escalate_to_human" and call.success and isinstance(call.result, dict)
+            and matching_handoff_receipt(call.result.get("data"), state.user_id, state.session_id)
+        }
+        if handoff_ids:
+            from sqlalchemy import select
+            from app.models.models import HandoffRequestRecord
+            persisted_handoff = await db.scalar(select(HandoffRequestRecord.id).where(
+                HandoffRequestRecord.id.in_(handoff_ids), HandoffRequestRecord.user_id == state.user_id,
+                HandoffRequestRecord.session_id == state.session_id,
+            ).limit(1))
+            if persisted_handoff is not None:
+                tracer.record_handoff()
         if evaluation.is_low_score:
             get_low_score_pool().add_sample(
                 sample_id=str(assistant_message.id),
