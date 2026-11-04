@@ -35,3 +35,21 @@ acceptance/m5冻结37条合成开发夹具和12份合成知识及hash，明确as
 OPT-13，AC-13-07局部。新增citation_guard核验[证据:chunk_id@version_id]（亦支持引用/source/evidence标签）的当前EvidenceBundle身份，缺失ID/错误版本/格式不全直接拒绝；即使独立Judge声称通过也不能放行伪引用。所有workflow最终出口同样检查。存在的引用不证明论断支持，仍需Judge核对完整条件；未声明格式的任意自然语言引用不在该身份解析保证中，完整L层仍未验。
 
 6项新身份/独立Judge反例及相关回归57通过（reports/offline/20261104-105427-649307），compileall/Ruff通过。首次新测试漏注入知识快照检查器，误连未建表的临时SQLite，52通过/5失败且临时文件句柄清理报错（105338-738454）；改为明确快照替身后重跑，未关闭真实版本检查或放宽断言。T0合成，无真实模型引用支持率证据。
+
+## M5真实依赖及本地开发实验（进行中）
+
+用户显式允许启动Docker Desktop。本机安装位置D:/develop/docker/program，经安装登记核实后启动；只显式启动test.owner=m3-closeout的原隔离栈。未执行业务Compose up、数据删除或部署。两个历史测试Milvus共享etcd root协调键，均因indexcoord CompareAndSwap冲突以134退出；首次4个T1用例setup连接失败（reports/m3-closeout/real-20261104-104606），不能当业务断言通过。保留原容器/数据，停额外本地模型测试Milvus，仅启单个隔离Milvus后，4项检索/发布用例通过（reports/m3-closeout/real-20261104-105816），包括真实dense/关键词独有命中、同名更新删除重启与索引失败、双读者缓存排除删除、发布快照一致。该旧执行器尚无开始/结束来源清单，本次按当时源码和报告解释，不冒充有完整指纹的T1版本验收。
+
+真实MySQL/Redis REST/WS退款与注入证据不能改变身份/确认2项通过（reports/m1-closeout/real-20261104-104606）；显式reuse-m3，owner/运行端口核验，source_tree_stable/source_snapshot_complete=true。所有SQL为新建合成case库，未用业务库。已有服务随Docker自身重启策略恢复，不调整其他项目配置。
+
+本地Ollama/Infinity模型清单实际可读。首次开发消融仅2/12样本（reports/m5/local-20261104-110128/report.json），12合成知识、新Milvus collection及临时SQLite；Embedding方法18次，无外部/聊天调用。BM25/dense/hybrid两样本Recall/nDCG=1仅作诊断；实际Reranker两次5秒截止后保序回退，不能称真实重排通过；执行器Windows临时目录退出时PermissionError，整轮FAIL，所有结果保留。单独本地服务12文档调用成功/12结果/4219.736ms（reports/m5/reranker-12-provider-probe.json），仅证明服务能力。后续实验以单进程30秒有界超时运行，业务默认5秒保持，不把实验超时调整当业务配置完成。
+
+完整T0初验959 passed/2 failed（reports/offline/20261104-110236-427000）：正常/损坏预览两种已提交退款恢复失败。根因恢复文案用完整audit.result_payload，但给审查器仅refund_id，M5新回执检查拒绝缺状态的“已登记”。不表示重复退款或SQL提交丢失；当前修复将同一完整审计回执供审查，回执要求不降低，后续复验单列。探索中临时缩窄require_receipt的路径已放弃，相关失败报告111147/111240（106通过/3失败）保留，不计成功；最终不提供恢复绕过开关。
+
+用户已确认独立人工复核由其负责，仅确认分工，没有确认任何标签。M5-REVIEW-QUEUE-v1.md已整理12份合成原文和37条开发候选，全部待审。独立560条留出及其输出论断尚未完成，M4质量前置和新增真实聊天/Judge额度也未解决，M5完整验收保持INCOMPLETE。
+
+## M5恢复回执复验
+
+最终修复仅将refund恢复审查证据从ID投影改为audit.result_payload完整回执，与生成模板来源一致。没有require_receipt豁免开关、未缩小回执检查范围。原M2正常/损坏预览恢复测试保留一次申请、两条消息、0.10精度、模拟说明与清理待确认断言，仅追加失败诊断error_code。新增部分成功回执workflow流式拒绝反例；非workflow路径本会在validate_candidate拒绝后返回人工节点，新增测试明确workflow=true检验最终发布底线，未改变生产路由来迎合测试。
+
+最新受影响110 passed（reports/offline/20261104-112252-390635），含M2全部Run、M5事实/工作流、聊天轮次。临时探索两次3失败和一次新增用例误判返回节点1失败保留；最终原3项ResponseValidator缺/部分回执断言恢复不变、原回执要求完整保留。compileall/Ruff通过，后续重跑全量；本次属于恢复数据一致性修复，不新增退款执行或支付能力。

@@ -348,7 +348,8 @@ async def recover(factory: async_sessionmaker[AsyncSession], rid: str) -> None:
                 and action.user_id == run.user_id and action.session_id == run.session_id and action.status == "submitted"):
             audit = await db.scalar(select(OperationAudit).where(OperationAudit.operation == "apply_refund", OperationAudit.resource_id == action.application_id))
             if audit and audit.user_id == run.user_id and audit.status == "succeeded":
-                receipt_evidence.append({"success": True, "data": {"refund_id": action.application_id}})
+                # 审查与恢复文案使用同一已持久审计回执，不能仅投影ID丢失状态/金额。
+                receipt_evidence.append({"success": True, "data": audit.result_payload})
                 from app.agent.nodes.response_node import build_refund_reply_template
                 receipt_parts.append(build_refund_reply_template(audit.result_payload))
         if receipt_parts:

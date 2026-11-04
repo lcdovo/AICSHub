@@ -84,3 +84,22 @@ async def test_workflow_flag_cannot_bypass_fixed_business_facts_or_publish_strea
     assert "退款成功" not in state.reply
     assert all("退款成功" not in queue.get_nowait()[1] for _ in range(queue.qsize()))
     assert not state.tool_calls and not state.review_result.passed
+
+
+async def test_business_action_with_partial_application_receipt_is_blocked_before_publication():
+    import asyncio
+    from app.agent.state import AgentState, AgentNode
+    from app.agent.nodes.response_node import ResponseNode, ResponseServices
+    from app.agent.stream_context import stream_event_queue
+    from tests.test_chat_turns import Cache
+    state = AgentState(session_id="s", user_id=101, user_message="申请退款", reply="退款申请已提交。", needs_clarification=True)
+    state.add_tool_call("apply_refund", {}, {"success": True, "data": {"refund_id": "partial"}}, True)
+    node = ResponseNode(ResponseServices(lambda: None, ResponseValidator, lambda: None,
+                                         Cache, lambda: None, lambda: None))
+    queue = asyncio.Queue(); token = stream_event_queue.set(queue)
+    try:
+        assert await node(state) == AgentNode.END
+    finally:
+        stream_event_queue.reset(token)
+    assert "退款申请已提交" not in state.reply and not state.review_result.passed
+    assert all("退款申请已提交" not in queue.get_nowait()[1] for _ in range(queue.qsize()))

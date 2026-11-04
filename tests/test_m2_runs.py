@@ -253,7 +253,7 @@ async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,
         for _ in range(3): await runs.recover(factory,run.id)
         async with factory() as db:
             current=await db.get(ChatRun,run.id)
-            assert current.status=="succeeded" and result["refund_id"] in current.result["reply"]
+            assert current.status=="succeeded" and result["refund_id"] in current.result["reply"], current.error_code
             assert "0.10" in current.result["reply"] and "模拟" in current.result["reply"]
             projection=(await db.get(Session,run.session_id)).context_data
             assert projection["pending_confirmations"]==[] and "refund_preview" not in projection["collected_info"]
