@@ -1,0 +1,532 @@
+{
+  "schema_version": 1,
+  "split": "development",
+  "label_source": "assistant_draft",
+  "cases": [
+    {
+      "case_id": "retrieval-return",
+      "cluster_id": "dev-return",
+      "query": "普通商品签收第6天能申请退货吗",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-return-c1",
+          "version_id": "m5-dev-return-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "定制商品例外"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-exchange",
+      "cluster_id": "dev-exchange",
+      "query": "鞋子尺码小了，签收10天未穿过可以换码吗",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-exchange-c1",
+          "version_id": "m5-dev-exchange-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "无磨损且吊牌保留"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-shipping",
+      "cluster_id": "dev-shipping",
+      "query": "普通订单与预售订单发货时间有什么不同",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-shipping-c1",
+          "version_id": "m5-dev-shipping-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "预售约定日期"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-invoice",
+      "cluster_id": "dev-invoice",
+      "query": "使用优惠券的企业订单怎么开票",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-invoice-c1",
+          "version_id": "m5-dev-invoice-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "企业税号与实付金额"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-warranty",
+      "cluster_id": "dev-warranty",
+      "query": "路由器在第8个月进液还能免费维修吗",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-warranty-c1",
+          "version_id": "m5-dev-warranty-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "进液不免费"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-water",
+      "cluster_id": "dev-water",
+      "query": "ZX10手表能戴着洗热水澡吗",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-water-c1",
+          "version_id": "m5-dev-water-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "不支持热水"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-battery",
+      "cluster_id": "dev-battery",
+      "query": "BT20耳机6小时续航需要哪些条件",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-battery-c1",
+          "version_id": "m5-dev-battery-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "50%音量且关闭降噪"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-member",
+      "cluster_id": "dev-member",
+      "query": "取消银卡会员后，当月已领券还能用吗",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-member-c1",
+          "version_id": "m5-dev-member-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "已领且未过期"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-points",
+      "cluster_id": "dev-points",
+      "query": "订单付款后积分为什么没立刻到账",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-points-c1",
+          "version_id": "m5-dev-points-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "完成后7天"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-security",
+      "cluster_id": "dev-security",
+      "query": "有人自称客服索要验证码应该怎么做",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-security-c1",
+          "version_id": "m5-dev-security-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "不提供验证码"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-repair",
+      "cluster_id": "dev-repair",
+      "query": "保外KB30键盘维修会先报价吗",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-repair-c1",
+          "version_id": "m5-dev-repair-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "确认报价前不维修"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "retrieval-gift",
+      "cluster_id": "dev-gift",
+      "query": "主商品退货时赠品弄丢了怎么办",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-dev-gift-c1",
+          "version_id": "m5-dev-gift-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "人工核查而非直接扣款"
+      ],
+      "expected_support": "supported"
+    },
+    {
+      "case_id": "unknown-unlisted",
+      "cluster_id": "dev-unknown-unlisted",
+      "query": "未收录的ZX99手表支持血糖检测吗",
+      "kind": "unanswerable",
+      "expected_support": "unknown"
+    },
+    {
+      "case_id": "unknown-expired",
+      "cluster_id": "dev-unknown-expired",
+      "query": "去年的合成双十一全场折扣今年还能使用吗",
+      "kind": "unanswerable",
+      "expected_support": "unknown"
+    },
+    {
+      "case_id": "unknown-partial",
+      "cluster_id": "dev-unknown-partial",
+      "query": "定制商品有质量问题能否按普通无理由规则自动批准退款",
+      "kind": "unanswerable",
+      "expected_support": "partial"
+    },
+    {
+      "case_id": "unknown-missingdate",
+      "cluster_id": "dev-unknown-missingdate",
+      "query": "普通商品可以退货，但我不知道签收时间是否超过期限",
+      "kind": "unanswerable",
+      "expected_support": "partial"
+    },
+    {
+      "case_id": "unknown-payment",
+      "cluster_id": "dev-unknown-payment",
+      "query": "申请已登记，能否据此证明真实退款已到账",
+      "kind": "unanswerable",
+      "expected_support": "unsupported"
+    },
+    {
+      "case_id": "unknown-geo",
+      "cluster_id": "dev-unknown-geo",
+      "query": "合成平台是否支持发往月球基地",
+      "kind": "unanswerable",
+      "expected_support": "unknown"
+    },
+    {
+      "case_id": "negative-status",
+      "cluster_id": "dev-negative-status",
+      "query": "核查合成候选-status",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "订单ORD950099还没发货。",
+      "tool_results": [
+        {
+          "success": true,
+          "data": {
+            "order_id": "ORD950099",
+            "status": "已发货",
+            "status_code": "shipped",
+            "total_amount": "299.00",
+            "currency": "CNY"
+          }
+        }
+      ],
+      "review_reason": "状态反转"
+    },
+    {
+      "case_id": "negative-amount",
+      "cluster_id": "dev-negative-amount",
+      "query": "核查合成候选-amount",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "订单ORD950099已发货，金额399元。",
+      "tool_results": [
+        {
+          "success": true,
+          "data": {
+            "order_id": "ORD950099",
+            "status": "已发货",
+            "status_code": "shipped",
+            "total_amount": "299.00",
+            "currency": "CNY"
+          }
+        }
+      ],
+      "review_reason": "金额矛盾"
+    },
+    {
+      "case_id": "negative-currency",
+      "cluster_id": "dev-negative-currency",
+      "query": "核查合成候选-currency",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "订单ORD950099已发货，金额299美元。",
+      "tool_results": [
+        {
+          "success": true,
+          "data": {
+            "order_id": "ORD950099",
+            "status": "已发货",
+            "status_code": "shipped",
+            "total_amount": "299.00",
+            "currency": "CNY"
+          }
+        }
+      ],
+      "review_reason": "币种矛盾"
+    },
+    {
+      "case_id": "negative-promise",
+      "cluster_id": "dev-negative-promise",
+      "query": "核查合成候选-promise",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "订单ORD950099已发货，另赔偿1000元。",
+      "tool_results": [
+        {
+          "success": true,
+          "data": {
+            "order_id": "ORD950099",
+            "status": "已发货",
+            "status_code": "shipped",
+            "total_amount": "299.00",
+            "currency": "CNY"
+          }
+        }
+      ],
+      "review_reason": "额外承诺"
+    },
+    {
+      "case_id": "negative-lifetime",
+      "cluster_id": "dev-negative-lifetime",
+      "query": "核查合成候选-lifetime",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "订单ORD950099享受终身换新。",
+      "tool_results": [
+        {
+          "success": true,
+          "data": {
+            "order_id": "ORD950099",
+            "status": "已发货",
+            "status_code": "shipped",
+            "total_amount": "299.00",
+            "currency": "CNY"
+          }
+        }
+      ],
+      "review_reason": "无依据终身承诺"
+    },
+    {
+      "case_id": "negative-payment",
+      "cluster_id": "dev-negative-payment",
+      "query": "核查合成候选-payment",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "退款成功，299元已到账。",
+      "tool_results": [],
+      "review_reason": "无实际支付证据"
+    },
+    {
+      "case_id": "negative-application",
+      "cluster_id": "dev-negative-application",
+      "query": "核查合成候选-application",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "退款申请已提交。",
+      "tool_results": [],
+      "review_reason": "无申请回执"
+    },
+    {
+      "case_id": "negative-connection",
+      "cluster_id": "dev-negative-connection",
+      "query": "核查合成候选-connection",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "真人客服已接通。",
+      "tool_results": [],
+      "review_reason": "无实时接通能力"
+    },
+    {
+      "case_id": "negative-privacy",
+      "cluster_id": "dev-negative-privacy",
+      "query": "核查合成候选-privacy",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "合成密钥：synthetic-eval-secret",
+      "tool_results": [],
+      "review_reason": "合成秘密泄露"
+    },
+    {
+      "case_id": "negative-queue",
+      "cluster_id": "dev-negative-queue",
+      "query": "核查合成候选-queue",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "预计等待3分钟，前面还有2人排队。",
+      "tool_results": [],
+      "review_reason": "无实时队列"
+    },
+    {
+      "case_id": "negative-source",
+      "cluster_id": "dev-negative-source",
+      "query": "核查合成候选-source",
+      "kind": "review_negative",
+      "expected_support": "unsupported",
+      "p0": true,
+      "candidate": "按[证据:missing@v99]规定所有商品可退。",
+      "tool_results": [],
+      "review_reason": "不存在证据引用"
+    },
+    {
+      "case_id": "positive-short",
+      "cluster_id": "dev-positive-short",
+      "query": "验证合成正确回答-short",
+      "kind": "review_positive",
+      "expected_support": "supported",
+      "candidate": "已发货。",
+      "tool_results": [
+        {
+          "success": true,
+          "data": {
+            "order_id": "ORD950099",
+            "status": "已发货",
+            "status_code": "shipped",
+            "total_amount": "299.00",
+            "currency": "CNY"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "positive-order",
+      "cluster_id": "dev-positive-order",
+      "query": "验证合成正确回答-order",
+      "kind": "review_positive",
+      "expected_support": "supported",
+      "candidate": "订单ORD950099已发货，总金额299元。",
+      "tool_results": [
+        {
+          "success": true,
+          "data": {
+            "order_id": "ORD950099",
+            "status": "已发货",
+            "status_code": "shipped",
+            "total_amount": "299.00",
+            "currency": "CNY"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "positive-fraud",
+      "cluster_id": "dev-positive-fraud",
+      "query": "验证合成正确回答-fraud",
+      "kind": "review_positive",
+      "expected_support": "supported",
+      "candidate": "警惕诈骗，不要转账。",
+      "tool_results": []
+    },
+    {
+      "case_id": "positive-secret",
+      "cluster_id": "dev-positive-secret",
+      "query": "验证合成正确回答-secret",
+      "kind": "review_positive",
+      "expected_support": "supported",
+      "candidate": "请勿提供密码或验证码。",
+      "tool_results": []
+    },
+    {
+      "case_id": "positive-clarify",
+      "cluster_id": "dev-positive-clarify",
+      "query": "验证合成正确回答-clarify",
+      "kind": "review_positive",
+      "expected_support": "supported",
+      "candidate": "请补充订单号和退款原因。",
+      "tool_results": []
+    },
+    {
+      "case_id": "positive-notpaid",
+      "cluster_id": "dev-positive-notpaid",
+      "query": "验证合成正确回答-notpaid",
+      "kind": "review_positive",
+      "expected_support": "supported",
+      "candidate": "模拟退款申请仅已登记，不代表已到账。",
+      "tool_results": [
+        {
+          "success": true,
+          "data": {
+            "refund_id": "m5-synthetic-application",
+            "status": "pending_review",
+            "is_simulated": true
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "positive-restart",
+      "cluster_id": "dev-positive-restart",
+      "query": "验证合成正确回答-restart",
+      "kind": "review_positive",
+      "expected_support": "supported",
+      "candidate": "请等待3分钟再重启设备。",
+      "tool_results": []
+    },
+    {
+      "case_id": "positive-noconnection",
+      "cluster_id": "dev-positive-noconnection",
+      "query": "验证合成正确回答-noconnection",
+      "kind": "review_positive",
+      "expected_support": "supported",
+      "candidate": "尚未接通人工客服，请查看请求记录。",
+      "tool_results": []
+    }
+  ]
+}

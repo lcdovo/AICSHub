@@ -147,8 +147,14 @@
       "layers": "P1/L+P",
       "procedure": "冻结留出集跑BM25/dense/hybrid/rerank/改写消融",
       "assertion": "满足第5章检索门槛；报告逐样本、未知问题、冷/热和费用",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "NOT_RUN_QUALITY_DATA_INCOMPLETE",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-104415-379774",
+          "passed": 36,
+          "limit": "metric implementation T0; 37 draft development cases only, independent 560-case holdout/human labels not ready"
+        }
+      ]
     },
     {
       "ac": "AC-13-01",
@@ -303,8 +309,14 @@
       "layers": "P1/L+P",
       "procedure": "人工标注反例与正确集运行审查",
       "assertion": "满足错误放行/误拒门槛，分别报告程序核验、Judge与整体",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "NOT_RUN_QUALITY_DATA_INCOMPLETE",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-104415-379774",
+          "passed": 36,
+          "limit": "metric implementation T0; 37 draft development cases only, independent 560-case holdout/human labels not ready"
+        }
+      ]
     }
   ],
   "limitations": [

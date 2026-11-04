@@ -1,0 +1,86 @@
+[
+  {
+    "document_id": "m5-dev-return",
+    "chunk_id": "m5-dev-return-c1",
+    "version_id": "m5-dev-return-v1",
+    "title": "合成退货规则",
+    "content": "合成普通商品签收后7天内可申请无理由退货；定制商品不适用。商品需完好且保留配件。质量问题退货运费由平台承担；非质量问题由买家承担。"
+  },
+  {
+    "document_id": "m5-dev-exchange",
+    "chunk_id": "m5-dev-exchange-c1",
+    "version_id": "m5-dev-exchange-v1",
+    "title": "合成换货规则",
+    "content": "合成鞋类尺码不合可在签收后15天内申请一次换码，鞋底无磨损且吊牌保留。缺货时只能咨询其他处理方案，不保证补货日期。"
+  },
+  {
+    "document_id": "m5-dev-shipping",
+    "chunk_id": "m5-dev-shipping-c1",
+    "version_id": "m5-dev-shipping-v1",
+    "title": "合成物流规则",
+    "content": "合成普通订单付款后48小时内发出；预售商品按商品页约定日期发出。快递轨迹停滞超过72小时可登记物流核查，不承诺立即补发。"
+  },
+  {
+    "document_id": "m5-dev-invoice",
+    "chunk_id": "m5-dev-invoice-c1",
+    "version_id": "m5-dev-invoice-v1",
+    "title": "合成发票规则",
+    "content": "合成订单仅对实际支付金额开具电子普通发票，不含优惠券抵扣额。抬头为个人姓名或企业名称；企业发票须提供税号。退款后需冲红原发票。"
+  },
+  {
+    "document_id": "m5-dev-warranty",
+    "chunk_id": "m5-dev-warranty-c1",
+    "version_id": "m5-dev-warranty-v1",
+    "title": "合成保修规则",
+    "content": "合成路由器自签收起保修12个月；主机质量故障可送修，进液和自行拆机造成的损坏不属于免费保修。送修前应备份设置。"
+  },
+  {
+    "document_id": "m5-dev-water",
+    "chunk_id": "m5-dev-water-c1",
+    "version_id": "m5-dev-water-v1",
+    "title": "合成手表防水规则",
+    "content": "合成手表ZX10支持IP68日常防泼溅，但不支持热水淋浴、桑拿或潜水。表带不是防水等级证明。进水后请停止充电并联系售后。"
+  },
+  {
+    "document_id": "m5-dev-battery",
+    "chunk_id": "m5-dev-battery-c1",
+    "version_id": "m5-dev-battery-v1",
+    "title": "合成耳机充电规则",
+    "content": "合成耳机BT20单次播放续航约6小时，连充电盒合计约24小时；数值基于50%音量且关闭降噪。使用5V充电器，充电口潮湿时不得充电。"
+  },
+  {
+    "document_id": "m5-dev-member",
+    "chunk_id": "m5-dev-member-c1",
+    "version_id": "m5-dev-member-v1",
+    "title": "合成会员权益",
+    "content": "合成银卡会员每月可领1张10元优惠券，限满100元订单使用。当月有效，不与店铺满减叠加；取消会员后已领取且未过期券仍可用。"
+  },
+  {
+    "document_id": "m5-dev-points",
+    "chunk_id": "m5-dev-points-c1",
+    "version_id": "m5-dev-points-v1",
+    "title": "合成积分规则",
+    "content": "合成积分按实付金额每1元积1分，不足1元部分不计。订单完成后7天到账；退款按退回实付金额扣回积分。积分不兑换现金。"
+  },
+  {
+    "document_id": "m5-dev-security",
+    "chunk_id": "m5-dev-security-c1",
+    "version_id": "m5-dev-security-v1",
+    "title": "合成账户安全",
+    "content": "合成平台客服不会要求用户提供密码、短信验证码或向个人账户转账。遇到疑似诈骗请停止操作，通过订单页官方入口核实。账号注销不等于取消退款申请。"
+  },
+  {
+    "document_id": "m5-dev-repair",
+    "chunk_id": "m5-dev-repair-c1",
+    "version_id": "m5-dev-repair-v1",
+    "title": "合成维修规则",
+    "content": "合成键盘KB30单键故障可先断电并检查可拆键帽，禁止带电清洗。保外维修需检测后出具报价，用户确认前不维修；往返运费另行确认。"
+  },
+  {
+    "document_id": "m5-dev-gift",
+    "chunk_id": "m5-dev-gift-c1",
+    "version_id": "m5-dev-gift-v1",
+    "title": "合成赠品规则",
+    "content": "合成活动赠品以订单确认页为准，数量有限。主商品无理由退货时赠品应一同退回；赠品缺失需人工核查，不可直接扣除未经确认的金额。"
+  }
+]
