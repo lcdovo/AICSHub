@@ -155,40 +155,70 @@
       "layers": "P0/U+C",
       "procedure": "证据已发货，候选回答还没发货",
       "assertion": "拒绝/修复后复核，不能以0.9事实分放行；覆盖E11",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103816-882970",
+          "passed": 165,
+          "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        }
+      ]
     },
     {
       "ac": "AC-13-02",
       "layers": "P0/U+C",
       "procedure": "证据299元，回答改为399元或换币种",
       "assertion": "阻断错误关键事实，单位/金额类型匹配",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103816-882970",
+          "passed": 165,
+          "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        }
+      ]
     },
     {
       "ac": "AC-13-03",
       "layers": "P0/C+L",
       "procedure": "正确订单信息后追加赔偿1000元、终身换新",
       "assertion": "无证据承诺被识别并移除/拒绝，不能靠字段复述通过",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103816-882970",
+          "passed": 165,
+          "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        }
+      ]
     },
     {
       "ac": "AC-13-04",
       "layers": "P0/U+C",
       "procedure": "无证据或所有工具失败仍声称退款成功",
       "assertion": "unknown/rejected，不给事实满分，不发布成功",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103816-882970",
+          "passed": 165,
+          "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        }
+      ]
     },
     {
       "ac": "AC-13-05",
       "layers": "P0/I",
       "procedure": "两工具结果互相冲突或最后一个无关成功",
       "assertion": "不只检查最后成功结果，按问题相关性核对全部关键事实",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103816-882970",
+          "passed": 165,
+          "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        }
+      ]
     },
     {
       "ac": "AC-13-06",
@@ -217,8 +247,14 @@
       "layers": "P1/U+C+L",
       "procedure": "“警惕诈骗/不要转账”等正常防骗回答",
       "assertion": "不因敏感词直接拒绝，保留正常安全建议",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103816-882970",
+          "passed": 165,
+          "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        }
+      ]
     },
     {
       "ac": "AC-13-09",
@@ -239,8 +275,14 @@
       "layers": "P0/I+F",
       "procedure": "首稿拒绝，修复稿正确；检查发送事件与业务计数",
       "assertion": "首稿零外发，修复稿完整复核，只一次业务执行",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103816-882970",
+          "passed": 165,
+          "limit": "fixed deterministic business assertions; no independent annotated/model quality acceptance"
+        }
+      ]
     },
     {
       "ac": "AC-13-11",

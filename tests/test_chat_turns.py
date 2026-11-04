@@ -362,7 +362,8 @@ async def test_actual_graph_refund_preview_then_clean_confirmation(streaming, mo
     calls = []
     async def invoke(name, **args):
         calls.append((name, args))
-        return ToolExecutionResult(success=True, data={"refund_id": "R1", "amount": 99})
+        return ToolExecutionResult(success=True, data={"refund_id": "R1", "amount": "99.00",
+            "status": "pending_review", "currency": "CNY", "is_simulated": True})
     monkeypatch.setattr("app.agent.nodes.tool_node.invoke_tool", invoke)
     service = ChatService(graph)
     state = await service.hydrate_state("refund-test", 1, "ORD123456 我要退款，商品包装严重破损")
@@ -442,7 +443,8 @@ def test_rest_and_websocket_share_clean_refund_turns_and_persistence(chat_api, m
     calls = []
     async def invoke(name, **args):
         calls.append((name, args))
-        return ToolExecutionResult(success=True, data={"refund_id": "R1", "amount": 99})
+        return ToolExecutionResult(success=True, data={"refund_id": "R1", "amount": "99.00",
+            "status": "pending_review", "currency": "CNY", "is_simulated": True})
     monkeypatch.setattr("app.agent.nodes.tool_node.invoke_tool", invoke)
     assert client.get("/docs").status_code == 200
     result = client.post("/api/v1/chat/send", json={

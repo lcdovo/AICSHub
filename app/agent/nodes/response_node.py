@@ -266,6 +266,10 @@ async def response_generation_node(self: "ResponseContext", state: AgentState) -
     # 失败只替换本轮文本，不能跳到人工节点引发额外写操作。
     from app.agent.publication_guard import publication_issues, SAFE_PUBLICATION_REPLY
     issues = publication_issues(state.reply)
+    from app.agent.critical_facts import critical_fact_issues
+    issues.extend(item["type"] for item in critical_fact_issues(
+        state.reply, [call.result for call in state.tool_calls if isinstance(call.result, dict)]
+    ))
     state.collected_info["publication_guard"] = {"passed": not issues, "issues": issues}
     if issues:
         from app.agent.request_understanding import ReviewResult

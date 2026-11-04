@@ -9,7 +9,6 @@
 两者职责不同，刻意保持独立（避免把实时闸门与监控指标耦合）。
 """
 import re
-import time
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -57,80 +56,9 @@ class FactValidator:
         tool_results: List[Dict[str, Any]],
         user_query: str,
     ) -> Tuple[float, List[Dict[str, Any]]]:
-        issues = []
-        score = 1.0
-
-        if not tool_results:
-            return 1.0, []
-
-        successful_results = [r for r in tool_results if r.get("success", False)]
-        if not successful_results:
-            return 1.0, []
-
-        last_result = successful_results[-1]
-        data = last_result.get("data", {})
-
-        if not data:
-            return 1.0, []
-
-        response_lower = response.lower()
-
-        def check_field(field_name: str, field_value: Any, min_score: float = 0.8):
-            nonlocal score
-            if field_value is None:
-                return
-
-            if isinstance(field_value, str):
-                value_lower = field_value.lower()
-                if value_lower and value_lower in response_lower:
-                    score = min(score + 0.1, 1.0)
-                elif value_lower and value_lower not in response_lower:
-                    score -= 0.1
-                    issues.append({
-                        "type": "fact_missing",
-                        "field": field_name,
-                        "message": f"字段 '{field_name}' 的值 '{str(field_value)[:30]}' 在回答中缺失",
-                        "severity": "warning",
-                    })
-
-            elif isinstance(field_value, (int, float)):
-                value_str = str(field_value)
-                if value_str in response:
-                    score = min(score + 0.1, 1.0)
-                else:
-                    score -= 0.05
-                    issues.append({
-                        "type": "fact_missing",
-                        "field": field_name,
-                        "message": f"数值字段 '{field_name}' 的值 {field_value} 在回答中缺失",
-                        "severity": "info",
-                    })
-
-        if isinstance(data, dict):
-            for key, value in data.items():
-                if key not in ["status_code", "created_at", "updated_at", "cancel_reason"]:
-                    check_field(key, value)
-
-            if "order_id" in data and data["order_id"] not in response:
-                score -= 0.2
-                issues.append({
-                    "type": "fact_critical",
-                    "message": "订单号未在回答中明确提及",
-                    "severity": "error",
-                })
-
-            if "total_amount" in data:
-                amount_str = str(data["total_amount"])
-                if amount_str not in response:
-                    score -= 0.1
-                    issues.append({
-                        "type": "fact_missing",
-                        "message": "订单金额未在回答中体现",
-                        "severity": "warning",
-                    })
-
-        score = max(0.0, min(1.0, score))
-        return score, issues
+        from app.agent.critical_facts import critical_fact_issues
+        issues = critical_fact_issues(response, tool_results)
+        return (0.0 if issues else 1.0), issues
 
 
 class SafetyValidator:
@@ -164,16 +92,11 @@ class SafetyValidator:
         response_lower = response.lower()
         query_lower = user_query.lower()
 
-        for word, category in self.SENSITIVE_WORDS:
-            if word.lower() in response_lower:
-                score -= 0.3
-                issues.append({
-                    "type": "sensitive_content",
-                    "category": category,
-                    "word": word,
-                    "message": f"回答中包含敏感内容: {word} ({category})",
-                    "severity": "error",
-                })
+        # 单独出现“诈骗/赌博/注入”等词不能证明回答有害，正常防骗必须保留。
+        from app.agent.publication_guard import publication_issues
+        for code in publication_issues(response):
+            score = 0.0
+            issues.append({"type": code, "severity": "critical"})
 
         for pattern in self.INJECTION_PATTERNS:
             if re.search(pattern, response_lower, re.IGNORECASE):
@@ -268,11 +191,10 @@ class CompletenessValidator:
             check = intent_checks[intent]
 
             if len(response) < check["min_length"]:
-                score -= 0.2
                 issues.append({
                     "type": "insufficient_detail",
-                    "message": f"回答内容过于简短 ({len(response)} 字符)，建议提供更多详情",
-                    "severity": "warning",
+                    "message": "简短回答的完整性需按问题判断，长度不作为事实拒绝依据",
+                    "severity": "info",
                 })
 
             missing_keywords = [kw for kw in check["keywords"] if kw not in response]
@@ -346,6 +268,8 @@ class ResponseValidator:
         return result
 
     def _check_pass(self, result: ValidationResult) -> bool:
+        if any(i.get("severity") == "critical" for i in result.issues):
+            return False
         if result.safety_score < self.SAFETY_THRESHOLD:
             return False
 
