@@ -1,5 +1,7 @@
 # Embedding HTTP生命周期与常驻200请求复验 v1
 
+后续[固定到达率与batch4/8对照](GPU-ARRIVALS-BATCH-v1.md)已完成有限A/B/A诊断；1～3请求/秒短时全完成，4/6请求/秒仍BUSY，batch8不采用。下方200门禁FAIL保留。
+
 2026-11-04。承接GPU-CAPACITY-DIAGNOSIS-v1.md对照，仅修复APIEmbedding连接池资源/预算边界；生产模型、维度、指令、索引空间和调度配置不变。
 
 ## 实现

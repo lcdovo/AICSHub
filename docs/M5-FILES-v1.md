@@ -1,5 +1,7 @@
 # M5 当前文件与证据清单
 
+固定到达率/batch候选切片：新增scripts/evaluate_gpu_arrivals.py、scripts/compare_gpu_batch.py、tests/test_gpu_arrivals.py、docs/GPU-ARRIVALS-BATCH-v1.md。包含生成器有界在途/迟到/失败计数、只读离线候选batch8及finally恢复batch4。61相关T0通过，真实A/B/A仍有过载拒绝，业务/生产Python未改。
+
 常驻容量/Embedding生命周期切片：scripts/verify_gpu_pair.py新增--shared-services，新增scripts/diagnose_gpu_capacity.py、tests/test_gpu_capacity_diagnostics.py、docs/GPU-CAPACITY-DIAGNOSIS-v1.md；后续app/services/embedding_service.py补池生命周期/本地代理/截止，新增tests/test_embedding_http_lifecycle.py、docs/EMBEDDING-HTTP-LIFECYCLE-v1.md。157相关回归通过，真实常驻200串行通过、并发容量FAIL，未切业务。
 
 后续释放补偿切片：修改app/services/local_admission.py、scripts/diagnose_local_admission.py、scripts/test_local_admission_redis.py、tests/test_local_admission_diagnostics.py；新增tests/test_local_release.py和docs/LOCAL-LEASE-RELEASE-v1.md。135项相关T0与11项真实Redis通过；模型性能与质量仍按各自门禁记录，未切业务。

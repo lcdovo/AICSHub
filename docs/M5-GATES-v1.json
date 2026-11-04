@@ -183,6 +183,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "report": "reports/gpu-pair/acceptance-20261104-191002/report.json",
           "limit": "157 affected T0 pass; same200 workload shared services serial100/100, end-to-endP95=425.817ms and rerank381.458ms; concurrency10 only2/100 complete,98BUSY; all admitted queries dispatch Embedding; provider2 is only finite12-case diagnostic, not app capacity; no business switch or full quality acceptance"
+        },
+        {
+          "stage": "fixed arrivals and reversible batch4/8/4 diagnosis",
+          "status": "PARTIAL_DIAGNOSTIC_CAPACITY_FAIL",
+          "document": "docs/GPU-ARRIVALS-BATCH-v1.md",
+          "limit": "61 affected T0 pass;100same synthetic loads per config,1/2/3rps20/20each;4rps17/19/18complete,6rps13/14/12;BUSY retained;generatorlag valid;originalbatch4 restored,no production change;not sustainedQPS,background or app concurrency10 acceptance"
         }
       ]
     },
@@ -348,6 +354,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "report": "reports/gpu-pair/acceptance-20261104-191002/report.json",
           "limit": "157 affected T0 pass; same200 workload shared services serial100/100, end-to-endP95=425.817ms and rerank381.458ms; concurrency10 only2/100 complete,98BUSY; all admitted queries dispatch Embedding; provider2 is only finite12-case diagnostic, not app capacity; no business switch or full quality acceptance"
+        },
+        {
+          "stage": "fixed arrivals and reversible batch4/8/4 diagnosis",
+          "status": "PARTIAL_DIAGNOSTIC_CAPACITY_FAIL",
+          "document": "docs/GPU-ARRIVALS-BATCH-v1.md",
+          "limit": "61 affected T0 pass;100same synthetic loads per config,1/2/3rps20/20each;4rps17/19/18complete,6rps13/14/12;BUSY retained;generatorlag valid;originalbatch4 restored,no production change;not sustainedQPS,background or app concurrency10 acceptance"
         }
       ]
     },
@@ -425,6 +437,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "report": "reports/gpu-pair/acceptance-20261104-191002/report.json",
           "limit": "157 affected T0 pass; same200 workload shared services serial100/100, end-to-endP95=425.817ms and rerank381.458ms; concurrency10 only2/100 complete,98BUSY; all admitted queries dispatch Embedding; provider2 is only finite12-case diagnostic, not app capacity; no business switch or full quality acceptance"
+        },
+        {
+          "stage": "fixed arrivals and reversible batch4/8/4 diagnosis",
+          "status": "PARTIAL_DIAGNOSTIC_CAPACITY_FAIL",
+          "document": "docs/GPU-ARRIVALS-BATCH-v1.md",
+          "limit": "61 affected T0 pass;100same synthetic loads per config,1/2/3rps20/20each;4rps17/19/18complete,6rps13/14/12;BUSY retained;generatorlag valid;originalbatch4 restored,no production change;not sustainedQPS,background or app concurrency10 acceptance"
         }
       ]
     },
