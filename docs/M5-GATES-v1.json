@@ -87,8 +87,14 @@
       "layers": "P0/I+L",
       "procedure": "退款政策例外在后半部，用户对象命中例外",
       "assertion": "证据包含适用条件，不因前缀裁剪生成相反结论",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103254-017388",
+          "passed": 85,
+          "limit": "shared full evidence and Judge unknown rejection; real model/quality layers not run"
+        }
+      ]
     },
     {
       "ac": "AC-12-09",
@@ -119,8 +125,14 @@
       "layers": "P0/C+L",
       "procedure": "无答案问题和仅部分相关候选",
       "assertion": "supported/partial/unsupported/unknown区分，不能靠高排名硬答",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103254-017388",
+          "passed": 85,
+          "limit": "shared full evidence and Judge unknown rejection; real model/quality layers not run"
+        }
+      ]
     },
     {
       "ac": "AC-12-13",
@@ -183,8 +195,14 @@
       "layers": "P1/C+L",
       "procedure": "生成/Judge使用含完整条件的同EvidenceBundle",
       "assertion": "审查引用同版本同片段，不因不同裁剪误判",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103254-017388",
+          "passed": 85,
+          "limit": "shared full evidence and Judge unknown rejection; real model/quality layers not run"
+        }
+      ]
     },
     {
       "ac": "AC-13-07",
@@ -207,8 +225,14 @@
       "layers": "P0/C+F",
       "procedure": "Judge超时/结构无效/预算耗尽",
       "assertion": "明确unknown；可信模板可发，未核实政策不当作通过",
-      "status": "NOT_RUN",
-      "evidence": []
+      "status": "PARTIAL_T0",
+      "evidence": [
+        {
+          "report": "reports/offline/20261104-103254-017388",
+          "passed": 85,
+          "limit": "shared full evidence and Judge unknown rejection; real model/quality layers not run"
+        }
+      ]
     },
     {
       "ac": "AC-13-10",

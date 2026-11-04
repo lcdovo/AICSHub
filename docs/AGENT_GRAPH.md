@@ -165,3 +165,5 @@ RefundPreview提供预览统一类型入口：归属/形状验证，镜像或当
 人工转接建议与请求事实分开：need_human只表示建议/诉求。响应无现成回复时优先使用同用户、同会话且状态有效的成功工具回执；仅建议时明确尚未创建，尝试失败时明确结果无法确认，投诉工单真实回执不被转接话术覆盖。人工计数还需查询SQL中同scope的HandoffRequestRecord，不能仅凭need_human或工具声称成功计数。此处是进程内Trace指标，不等于跨worker持久统计或全部workflow安全审查已完成。
 
 M5新增所有文本共用的publication_guard：workflow、模板、缓存、生成与服务端引用均在token/回答缓存发布前检查已识别敏感值和未支持的接通/排队承诺。失败发布固定安全说明且不创建新动作。此确定性底线不替代政策Judge、全部事实审查或人工质量验收；范围见M5-EVIDENCE-v1.md。
+
+M5政策Judge关闭/不可用/非法/异常/超时均unknown、不得作为放行，未grounded不因高分通过。生成与Judge共用完整format_review_evidence视口，保留每片段ID/版本与后部条件及成功工具完整回执。缓存使用validated-v3隔离旧宽松审查结果；实际模型新schema兼容/质量仍待验。

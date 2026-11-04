@@ -73,7 +73,8 @@ async def test_malformed_generation_metadata_does_not_cache_answer_even_when_rev
     model = SimpleNamespace(chat=AsyncMock(return_value=("合成证据回答", "technical", 3)),
                             get_last_call_metadata=lambda: {"degraded": False, "cost_usd": "bad"})
     knowledge = SimpleNamespace(evidence_is_current=lambda _: True)
-    judge = SimpleNamespace(DEFAULT_THRESHOLD=.45, judge=AsyncMock(return_value=None))
+    judge = SimpleNamespace(DEFAULT_THRESHOLD=.45, judge=AsyncMock(return_value={
+        "grounded": True, "fact_score": 1.0, "has_unsupported_claim": False, "refuse_recommended": False}))
     node = ResponseNode(ResponseServices(lambda: model, lambda: Validator(), lambda: judge,
                                          lambda: cache, lambda: knowledge, lambda: None))
     state = AgentState(session_id="s", user_id=101, user_message="合成问题", detected_intent="technical")

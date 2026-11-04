@@ -140,26 +140,27 @@ async def validate_candidate(self: "ResponseContext", state: AgentState) -> bool
     report = validation.to_dict()
     passed = validation.passed
     if self._rag_judge_applicable(state) and not state.flow_value(FlowFlag.CACHE_HIT):
-        judgement = await self.llm_judge.judge(
-            response=body, user_query=state.user_message,
-            kb_context=state.current_evidence(),
-            tool_evidence=self._tool_evidence_text(state),
-        )
-        if judgement is not None:
-            state.collected_info["llm_judge"] = judgement
-            refused = bool(
-                judgement.get("refuse_recommended")
-                or judgement.get("has_unsupported_claim")
-                or (not judgement.get("grounded") and
-                    judgement.get("fact_score", 0) < self.llm_judge.DEFAULT_THRESHOLD)
+        from app.agent.validation_llm import assess_judgement, unknown_judgement
+        try:
+            judgement = await self.llm_judge.judge(
+                response=body, user_query=state.user_message,
+                kb_context=state.current_evidence(), tool_evidence=self._tool_evidence_text(state),
             )
-            passed = passed and not refused
-            report["judge_passed"] = not refused
-            report["evidence_score"] = judgement.get("fact_score", 0)
-            if refused:
-                report["overall_score"] = min(report["overall_score"], judgement.get("fact_score", 0))
-                report["issues"].append({"type": "evidence_rejected", "severity": "error"})
-            state.set_flow(rag_refused=refused)
+        except Exception:
+            judgement = unknown_judgement("judge_dependency_failed")
+        judgement = assess_judgement(judgement)
+        state.collected_info["llm_judge"] = judgement
+        refused = judgement["support"] != "supported"
+        passed = passed and not refused
+        report["judge_passed"] = not refused
+        report["evidence_score"] = judgement["fact_score"]
+        report["evidence_support"] = judgement["support"]
+        if state.evidence_bundle is not None:
+            state.evidence_bundle.support = judgement["support"]
+        if refused:
+            report["overall_score"] = min(report["overall_score"], judgement["fact_score"] or 0)
+            report["issues"].append({"type": "evidence_" + judgement["support"], "severity": "error"})
+        state.set_flow(rag_refused=refused)
     from app.agent.request_understanding import ReviewResult
     state.review_result=ReviewResult(passed=passed, evidence_version=(state.evidence_bundle.fingerprint() if state.evidence_bundle else None))
     report["passed"] = passed
@@ -346,7 +347,8 @@ def build_answer_cache_key(self: "ResponseContext", state: AgentState) -> str:
         "judge": settings.LLM_JUDGE_ENABLED,
     }
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
-    return f"validated-v2:{digest}"
+    # M5收紧审查后不能复用旧版本曾在Judge未知时放行的缓存。
+    return f"validated-v3:{digest}"
 
 
 async def answer_cache_get(self: "ResponseContext", key: str) -> Optional[str]:
@@ -506,7 +508,7 @@ def tool_evidence_text(state: AgentState) -> str:
     parts = []
     for tc in state.tool_calls:
         if tc.success and isinstance(tc.result, dict) and tc.result.get("data"):
-            parts.append(json.dumps(tc.result["data"], ensure_ascii=False)[:300])
+            parts.append(json.dumps(tc.result["data"], ensure_ascii=False))
     return "\n".join(parts)
 
 
@@ -621,32 +623,6 @@ def build_llm_prompt(self: "ResponseContext", state: AgentState) -> str:
     if slot_parts:
         parts.append("【已收集信息】" + "；".join(slot_parts))
 
-    successful_tools = [tc for tc in state.tool_calls if tc.success]
-    if successful_tools:
-        parts.append("【工具执行结果】")
-        for tc in successful_tools:
-            result = tc.result
-            if isinstance(result, dict) and result.get("data"):
-                data = result["data"]
-                if isinstance(data, dict):
-                    parts.append(f"  - {tc.tool_name}: {json.dumps(data, ensure_ascii=False, indent=2)}")
-                elif isinstance(data, list) and data:
-                    if isinstance(data[0], dict):
-                        parts.append(f"  - {tc.tool_name}: 找到 {len(data)} 条结果")
-                        for item in data[:3]:
-                            title = item.get("title", "")
-                            content = item.get("content", "")[:200]
-                            if title:
-                                parts.append(f"    【{title}】{content}")
-                    else:
-                        parts.append(f"  - {tc.tool_name}: {json.dumps(data, ensure_ascii=False)[:500]}")
-                else:
-                    parts.append(f"  - {tc.tool_name}: {str(data)[:500]}")
-            elif isinstance(result, dict) and result.get("success"):
-                parts.append(f"  - {tc.tool_name}: 操作成功")
-            else:
-                parts.append(f"  - {tc.tool_name}: 执行成功")
-
     failed_tools = [tc for tc in state.tool_calls if not tc.success]
     if failed_tools:
         parts.append("【工具执行失败】")
@@ -654,20 +630,9 @@ def build_llm_prompt(self: "ResponseContext", state: AgentState) -> str:
             parts.append(f"  - {tc.tool_name}: {tc.error_message or '未知错误'}")
 
     kb_results = state.current_evidence()
-    if kb_results:
-        parts.append("【知识库检索结果】")
-        for i, result in enumerate(kb_results[:3], 1):
-            title = result.get("title", "")
-            content = result.get("evidence_text", result.get("content", ""))
-            category = result.get("category", "")
-            score = result.get("final_score", result.get("hybrid_score", 0))
-            parts.append(f"  {i}. 【{title}】({category}, 相关度:{score:.0%})")
-            if content:
-                clean_title, chapter, body = self._clean_chunk(str(content), title)
-                if chapter:
-                    parts.append(f"     章节：{chapter}")
-                if body:
-                    parts.append(f"     {body}")
+    from app.agent.validation_llm import format_review_evidence
+    parts.append("【知识库检索结果与工具执行结果】")
+    parts.append(format_review_evidence(kb_results, self._tool_evidence_text(state)))
 
     parts.append("")
     parts.append("请根据以上信息，用自然、专业、简洁的中文回复用户。回复要点：")
