@@ -1730,6 +1730,12 @@
           "status": "PARTIAL_T0",
           "document": "docs/M5-GATES-v1.json",
           "limit": "Historical full963 before rerank slice; current affected107 pass. Selected historical T1 and local development evidence only; new5s local rerank8/12,4fallback,P95>2s.595 draft candidates await user review; real chat/Judge/rewrite/upstreamM4 not passed."
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -1753,6 +1759,12 @@
           "status": "PARTIAL_T0",
           "document": "docs/M5-GATES-v1.json",
           "limit": "Historical full963 before rerank slice; current affected107 pass. Selected historical T1 and local development evidence only; new5s local rerank8/12,4fallback,P95>2s.595 draft candidates await user review; real chat/Judge/rewrite/upstreamM4 not passed."
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -1805,6 +1817,12 @@
           "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
           "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
           "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -1937,6 +1955,12 @@
           "status": "PARTIAL_T1",
           "document": "docs/M5-GATES-v1.json",
           "limit": "Historical full963 before rerank slice; current affected107 pass. Selected historical T1 and local development evidence only; new5s local rerank8/12,4fallback,P95>2s.595 draft candidates await user review; real chat/Judge/rewrite/upstreamM4 not passed."
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -1989,6 +2013,12 @@
           "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
           "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
           "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -2308,6 +2338,12 @@
           "status": "PASS_F_P_SYNTHETIC",
           "document": "docs/M4-GATES-v1.json",
           "limit": "真实SDK+MockTransport 429/500/超时，多层回退与修复共享6尝试；Run费用并行锁、普通/流式发出前deadline及not_sent退款；40项T0与2项真实SQL通过，无真实供应商故障请求"
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -2348,6 +2384,12 @@
           "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
           "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
           "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -2405,6 +2447,12 @@
           "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
           "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
           "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -2677,6 +2725,12 @@
           "status": "PASS",
           "document": "docs/M2-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },
@@ -2745,6 +2799,12 @@
           "status": "PASS",
           "document": "docs/M2-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "process-local inference backpressure slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
         }
       ]
     },

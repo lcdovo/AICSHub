@@ -150,7 +150,45 @@ def compatibility(output: Path) -> dict:
         index.client.close()
 
 
-def run_case(case: dict) -> dict:
+def run_case_scheduled(case: dict) -> dict:
+    """真正使用应用两个模型服务的同进程HTTP出口；繁忙不算成功。"""
+    from app.services.local_inference import inference_scope, LocalModelBusy
+    from app.services.embedding_service import APIEmbedding
+    from app.services.reranker_service import RerankerService
+    embedding = APIEmbedding("http://127.0.0.1:8013/v1", "local-only", "qwen3-embedding:0.6b",
+                             dim=1024, max_retries=0, timeout=5, batch_size=4)
+    reranker = RerankerService(local_base="http://127.0.0.1:7999", local_model="BAAI/bge-reranker-v2-m3")
+    events = []
+    began = time.perf_counter()
+    row = {"case_id": case["case_id"], "cluster": case["cluster"], "candidate_count": 20,
+           "candidate_lengths": [len(t) for t in case["documents"]], "local_inference": events}
+    try:
+        with inference_scope(events=events):
+            start = time.perf_counter()
+            embedding.encode_query(case["query"])
+            row["embedding_ms"] = (time.perf_counter() - start) * 1000
+            start = time.perf_counter()
+            try:
+                result = reranker.rerank_with_deadline(
+                    case["query"], [{"id": str(i), "content": text} for i, text in enumerate(case["documents"])],
+                    20, deadline=time.monotonic() + 5)
+                if not result or len(result) != 20 or len({r["id"] for r in result}) != 20:
+                    raise RuntimeError("rerank_failed_or_incomplete")
+                row["status"], row["rank"] = "PASS", [r["id"] for r in result]
+            finally:
+                row["rerank_ms"] = (time.perf_counter() - start) * 1000
+    except Exception as exc:
+        row["status"] = "BUSY" if isinstance(exc, LocalModelBusy) else "FAIL"
+        row["error_type"] = type(exc).__name__
+    finally:
+        embedding.close()
+    row["total_ms"] = (time.perf_counter() - began) * 1000
+    return row
+
+
+def run_case(case: dict, scheduled=False) -> dict:
+    if scheduled:
+        return run_case_scheduled(case)
     import httpx
     started = time.perf_counter()
     row = {"case_id": case["case_id"], "cluster": case["cluster"], "candidate_count": 20,
@@ -184,6 +222,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--count", type=int, choices=range(2, 201), default=200)
     parser.add_argument("--skip-compatibility", action="store_true")
+    parser.add_argument("--scheduled", action="store_true")
     args = parser.parse_args()
     from scripts.test_provenance import snapshot_sources, compare_sources
     output = ROOT / "reports/gpu-pair" / datetime.now().strftime("acceptance-%Y%m%d-%H%M%S")
@@ -193,6 +232,11 @@ def main():
     report = {"status": "INCOMPLETE", "whole_m5_pass": False, "business_changed": False,
               "external_calls": 0, "chat_calls": 0, "output": str(output),
               "layer": "real local provider load + isolated Milvus compatibility; not full app acceptance"}
+    report["scheduled"] = args.scheduled
+    if args.scheduled:
+        from app.services.local_inference import SCHEDULER_VERSION
+        report["scheduler"] = {"version": SCHEDULER_VERSION, "scope": "one process",
+                               "active": 1, "waiters": 2, "queue_ms": 500, "background_wait_ms": 50}
     stop = threading.Event()
     memory = []
 
@@ -222,18 +266,22 @@ def main():
         serialized = json.dumps(cases, ensure_ascii=False, sort_keys=True).encode()
         report["workload_sha256"] = hashlib.sha256(serialized).hexdigest()
         (output / "synthetic-workload.json").write_bytes(serialized)
-        report["warmups"] = [run_case(cases[0]), run_case(cases[-1])]
+        report["warmups"] = [run_case(cases[0], args.scheduled), run_case(cases[-1], args.scheduled)]
         report["groups"] = []
         half = args.count // 2
         for concurrency, group in [(1, cases[:half]), (10, cases[half:])]:
             rows = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
-                futures = [pool.submit(run_case, case) for case in group]
+                futures = [pool.submit(run_case, case, args.scheduled) for case in group]
                 for future in concurrent.futures.as_completed(futures):
                     rows.append(future.result())
                     if len(rows) % 10 == 0:
                         print(f"concurrency={concurrency} finished={len(rows)}/{len(group)} failed={sum(r['status']!='PASS' for r in rows)}", flush=True)
             summary = summarize(rows, len(group))
+            summary["busy_rejections"] = sum(r["status"] == "BUSY" for r in rows)
+            summary["provider_dispatches"] = sum(e["dispatched"] for r in rows for e in r.get("local_inference", []))
+            summary["queue_p95_ms"] = percentile([e["queue_ms"] for r in rows for e in r.get("local_inference", [])])
+            summary["inference_p95_ms"] = percentile([e["inference_ms"] for r in rows for e in r.get("local_inference", []) if e["inference_ms"] is not None])
             report["groups"].append({"concurrency": concurrency, "summary": summary, "rows": rows})
             (output / f"concurrency-{concurrency}.json").write_text(json.dumps(report["groups"][-1], indent=2) + "\n", encoding="utf-8")
         report["status"] = "PASS_FINITE_PROVIDER_LOAD_ONLY" if all(g["summary"]["status"] == "PASS_FINITE_LOAD_ONLY" for g in report["groups"]) else "FAIL"

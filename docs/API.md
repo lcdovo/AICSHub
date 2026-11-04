@@ -218,6 +218,8 @@ POST /search支持独立recall_k/rerank_k/top_k，结果含逐路ID、score_type
 
 重排metadata新增rerank_candidate_count、rerank_budget_ms与rerank_algorithm_version，记录本轮选择候选数、阶段预算和算法版本；缓存命中仍由cache/timings_ms明确表示。预算内全部评分有效才标模型provider；超时/部分回包/超支持容量保留原融合排名并标rank_preserved/degraded，不能按模型成功解释。当前本地BGE分批共享5秒截止，性能仍未通过2秒P95目标，见M5-RERANK-BUDGET-v1.md；未新增HTTP端可修改的模型调用权限或费用配置。
 
+本地模型出口引入同进程共享预算后，检索metadata增加local_inference（固定purpose/priority/status/dispatched/queue_ms/inference_ms）、local_model_admission（busy/deadline/cache/completed_or_not_local）及local_model_scheduler_scope=process。busy/deadline可伴随BM25/融合排名降级，不等于业务已完成；瞬时准入失败结果不入检索缓存。无足够证据时聊天明确提示繁忙或超时、稍后重试，不自动创建人工请求。没有新增承诺跨worker限流的HTTP接口或运行时调参入口，详情见LOCAL-INFERENCE-BUDGET-v1.md。
+
 完整契约及验证边界见M3-IMPLEMENTATION-v1.md与M3-EVIDENCE-v1.md。
 
 ## M4候选模型账本（2026-11-04）

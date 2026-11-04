@@ -125,6 +125,11 @@ async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentSta
             "我暂时没有在知识库中找到足够可靠的答案。"
             "请补充更多细节，或回复“转人工”获取客服协助。"
         )
+        admission = search_result.get("meta", {}).get("local_model_admission")
+        if admission == "busy":
+            state.reply = "本地检索模型繁忙，本轮未取得足够可靠的依据。请稍后重试；尚未创建人工或其他业务请求。"
+        elif admission == "deadline":
+            state.reply = "本地检索模型等待或推理超时，本轮未核实答案。请稍后重试；尚未创建人工或其他业务请求。"
     else:
         state.set_flow(rag_grounded=True)
 

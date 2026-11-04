@@ -25,3 +25,5 @@
 双GPU候选切片：新增compose.gpu-candidates.yaml与docs/GPU-PAIR-DEPLOYMENT-v1.md；修改scripts/evaluate_m5_local.py、tests/test_m5_local_endpoint.py、M5证据/门禁/清单。候选已运行，业务路由未切换；原文件和数据保留。
 
 双GPU压力与兼容切片：新增scripts/verify_gpu_pair.py、tests/test_gpu_pair_acceptance.py、docs/GPU-PAIR-ACCEPTANCE-v1.md；更新候选部署记录、M5验收/门禁/证据及清单、全项目JSON索引。压力结果FAIL、业务保持，75项受影响T0通过。
+
+共享预算/背压切片：新增app/services/local_inference.py、tests/test_local_inference.py、docs/LOCAL-INFERENCE-BUDGET-v1.md；修改Embedding/Reranker出口、knowledge_base/versioned_search.py及index_worker.py、agent/nodes/rag_node.py、scripts/verify_gpu_pair.py和相关架构/API/部署验收记录。单进程功能验证通过，高并发完成率仍失败，未切GPU业务路由。

@@ -1,6 +1,7 @@
 """每次检索取SQL发布快照；双路独立，版本/指纹过滤先于排名与缓存。"""
 
 import asyncio
+from contextvars import copy_context
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import copy
@@ -21,7 +22,13 @@ def bounded_provider(call):
     if not _PROVIDER_SLOTS.acquire(blocking=False):
         raise RuntimeError("provider_budget_exhausted")
     try:
-        future = _PROVIDER_POOL.submit(call)
+        from app.services.local_inference import inference_scope
+        context = copy_context()
+        deadline = time.monotonic() + ENCODE_TIMEOUT_SECONDS
+        def scoped_call():
+            with inference_scope(deadline=deadline):
+                return call()
+        future = _PROVIDER_POOL.submit(context.run, scoped_call)
     except BaseException:
         _PROVIDER_SLOTS.release()
         raise
@@ -30,6 +37,23 @@ def bounded_provider(call):
 
 
 def search(
+    service, query, top_k=None, similarity_threshold=None, recall_k=None, rerank_k=None, retrieval_mode="hybrid"
+):
+    from app.services.local_inference import inference_scope
+    observations = []
+    with inference_scope(priority="interactive", events=observations):
+        result = _search(service, query, top_k, similarity_threshold, recall_k, rerank_k, retrieval_mode)
+    result["meta"]["local_inference"] = list(observations)
+    reason = result.get("degraded_reason") or ""
+    result["meta"]["local_model_admission"] = (
+        "busy" if any(e["status"] == "busy" for e in observations) or "local_model_busy" in reason else
+        "deadline" if any(e["status"] == "deadline" for e in observations) or "local_model_deadline" in reason else
+        "cache" if result.get("from_cache") else "completed_or_not_local")
+    result["meta"]["local_model_scheduler_scope"] = "process"
+    return result
+
+
+def _search(
     service, query, top_k=None, similarity_threshold=None, recall_k=None, rerank_k=None, retrieval_mode="hybrid"
 ):
     if retrieval_mode not in {"hybrid", "bm25", "dense"}:
@@ -63,6 +87,8 @@ def search(
     from app.services.reranker_service import RERANK_ALGORITHM_VERSION
     rerank_identity["algorithm_version"] = RERANK_ALGORITHM_VERSION
     rerank_identity["phase_timeout_seconds"] = ENCODE_TIMEOUT_SECONDS
+    from app.services.local_inference import SCHEDULER_VERSION
+    rerank_identity["local_model_scheduler"] = SCHEDULER_VERSION
     cache_key = hashlib.sha256(
         json.dumps(
             [
@@ -124,9 +150,11 @@ def search(
             from app.services.embedding_service import validate_vector
 
             vector = validate_vector(vector, identity["dim"])
-        except Exception:
+        except Exception as exc:
+            from app.services.local_inference import LocalModelBusy, LocalModelDeadline
             vector = None
-            errors.append("embedding_unavailable_or_invalid")
+            errors.append("local_model_busy" if isinstance(exc, LocalModelBusy) else
+                          "local_model_deadline" if isinstance(exc, (LocalModelDeadline, TimeoutError)) else "embedding_unavailable_or_invalid")
     timings["encode"] = round((time.perf_counter() - begin) * 1000, 3)
     begin = time.perf_counter()
     dense_backend = "none"
@@ -211,8 +239,11 @@ def search(
 
         try:
             reranked = bounded_provider(rerank_current)
-        except Exception:
+        except Exception as exc:
+            from app.services.local_inference import LocalModelBusy, LocalModelDeadline
             reranked = None
+            if isinstance(exc, (LocalModelBusy, LocalModelDeadline, TimeoutError)):
+                errors.append("local_model_busy" if isinstance(exc, LocalModelBusy) else "local_model_deadline")
         if (
             reranked is not None
             and len(reranked) == min(top_k, len(selected))
@@ -305,7 +336,8 @@ def search(
             "support": "unknown",
         },
     }
-    service._query_cache.set(cache_key, copy.deepcopy(result))
+    if not any(code in errors for code in ("local_model_busy", "local_model_deadline")):
+        service._query_cache.set(cache_key, copy.deepcopy(result))
     return result
 
 

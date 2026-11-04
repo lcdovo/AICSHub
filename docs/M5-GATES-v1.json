@@ -69,6 +69,11 @@
           "layer": "T0 full regression",
           "passed": 963,
           "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        },
+        {
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
         }
       ]
     },
@@ -89,6 +94,11 @@
           "layer": "T0 full regression",
           "passed": 963,
           "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        },
+        {
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
         }
       ]
     },
@@ -142,6 +152,11 @@
           "report": "reports/gpu-pair/acceptance-20261104-153203/report.json",
           "status": "FAIL_PERFORMANCE",
           "limit": "direct provider load, not full app;200distinct strings/12clusters,47timeouts retained;no quality/production switching pass"
+        },
+        {
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
         }
       ]
     },
@@ -283,6 +298,11 @@
           "layer": "T0 full regression",
           "passed": 963,
           "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        },
+        {
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
         }
       ]
     },
@@ -336,6 +356,11 @@
           "report": "reports/gpu-pair/acceptance-20261104-153203/report.json",
           "status": "FAIL_PERFORMANCE",
           "limit": "direct provider load, not full app;200distinct strings/12clusters,47timeouts retained;no quality/production switching pass"
+        },
+        {
+          "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
         }
       ]
     },
@@ -664,7 +689,8 @@
     "New chat/Judge model evaluation not authorized; supplier calls used 660/660",
     "Isolated GPU candidate 2x12 repeated development cold queries: one stageP95 2.501s, one 1.863s, end-to-end both >2s. Not200 unique samples, no 20-long-candidate/load/concurrency or business integration/rollback evidence",
     "Retrieval rewrite ablation, independent performance/concurrency/quality evaluation not run",
-    "Finite200-request provider pressure FAIL: serial96/100 and concurrency10 57/100;47ReadTimeout retained; rerankP95 3.377/5.015s exceeds2s. Not independent semantic holdout. Mixed index only12-query observation, no approval; business unchanged."
+    "Finite200-request provider pressure FAIL: serial96/100 and concurrency10 57/100;47ReadTimeout retained; rerankP95 3.377/5.015s exceeds2s. Not independent semantic holdout. Mixed index only12-query observation, no approval; business unchanged.",
+    "Process-local bounded admission verified but concurrency10 is5% completed/94%busy/1%deadline; busy is not success. Multiworker/model-server admission and overallM5 quality still not accepted."
   ],
   "integrations": [
     {
@@ -790,5 +816,49 @@
     "mixed_index_approved": false,
     "affected_offline_tests": 75,
     "offline_report": "reports/offline/20261104-154007-035105"
+  },
+  "local_inference_backpressure": {
+    "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
+    "scope": "process-local HTTP calls only; not distributed/GPU-driver mutual exclusion",
+    "limits": {
+      "active": 1,
+      "waiters": 2,
+      "foreground_queue_ms": 500,
+      "background_queue_ms": 50,
+      "phase_budget_seconds": 5
+    },
+    "full_regression_before_final_cache_fix": {
+      "report": "reports/offline/20261104-155454-041883",
+      "passed": 1024,
+      "source_fingerprint": "fd56ba046f5bb821d107482b8b947f26d322b9eea3acd2ba992957d39f54d5f5"
+    },
+    "final_affected_regression": {
+      "report": "reports/offline/20261104-160723-420202",
+      "passed": 161,
+      "source_fingerprint": "8b0bca0d9d1e0298d70d9ecde83315b72818699ff2e6d6ab38d66f1c444d324b"
+    },
+    "real_pressure": {
+      "report": "reports/gpu-pair/acceptance-20261104-155454/report.json",
+      "requests": 200,
+      "semantic_clusters": 12,
+      "concurrency1": {
+        "passed": 100,
+        "busy": 0,
+        "failed": 0,
+        "rerank_p95_ms": 1426.0967,
+        "total_p95_ms": 2119.7317
+      },
+      "concurrency10": {
+        "passed": 5,
+        "busy": 94,
+        "failed": 1,
+        "rerank_p95_including_rejections_ms": 6028.0282,
+        "total_p95_all_requests_ms": 3184.9711
+      },
+      "status": "FAIL_BUSY_IS_NOT_SUCCESS"
+    },
+    "real_background_smoke": "reports/gpu-pair/background-budget-20261104.json",
+    "business_gpu_route_changed": false,
+    "whole_m5_pass": false
   }
 }

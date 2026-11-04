@@ -135,6 +135,10 @@ class APIEmbedding(BaseEmbedding):
 
     def _call_api_once(self, texts: List[str]) -> List[List[float]]:
         last_error = None
+        from app.services.local_inference import SCHEDULER, CONTEXT, is_local_endpoint, LocalModelBusy, LocalModelDeadline
+        local = is_local_endpoint(self.api_base)
+        deadline = min(time.monotonic() + min(self.timeout, 5.0),
+                       CONTEXT.get().deadline or float("inf")) if local else None
 
         for attempt in range(self.max_retries + 1):
             try:
@@ -147,10 +151,16 @@ class APIEmbedding(BaseEmbedding):
                     "dimensions": self.dim,
                 }
 
-                response = client.post(
-                    f"{self.api_base}/embeddings",
-                    json=payload,
-                )
+                if local:
+                    def post_local(remaining):
+                        result = client.post(f"{self.api_base}/embeddings", json=payload,
+                                             timeout=min(self.timeout, remaining))
+                        result.raise_for_status()
+                        return result
+                    response = SCHEDULER.run(
+                        post_local, purpose="embedding", deadline=deadline)
+                else:
+                    response = client.post(f"{self.api_base}/embeddings", json=payload)
                 response.raise_for_status()
                 data = response.json()
 
@@ -169,6 +179,13 @@ class APIEmbedding(BaseEmbedding):
 
                 return vectors
 
+            except (LocalModelBusy, LocalModelDeadline):
+                raise
+            except httpx.TimeoutException as exc:
+                if local:
+                    raise LocalModelDeadline("local_embedding_http_timeout") from None
+                last_error = exc
+                time.sleep(1 * (attempt + 1))
             except httpx.HTTPStatusError as e:
                 last_error = e
                 logger.warning(f"Embedding API error (attempt {attempt + 1}): HTTP {e.response.status_code}")

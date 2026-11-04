@@ -105,11 +105,20 @@ class _RerankProvider:
         return scored
 
     def _post(self, url: str, payload: Dict[str, Any]) -> Any:
+        from app.services.local_inference import SCHEDULER, is_local_endpoint
+        if self.name == PROVIDER_LOCAL and is_local_endpoint(self.base):
+            return SCHEDULER.run(lambda remaining: self._post_uncoordinated(url, payload, remaining),
+                                 purpose="rerank", deadline=_RERANK_DEADLINE.get())
+        return self._post_uncoordinated(url, payload)
+
+    def _post_uncoordinated(self, url: str, payload: Dict[str, Any], remaining=None) -> Any:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         deadline = _RERANK_DEADLINE.get()
         timeout = min(self.timeout, deadline - time.monotonic()) if deadline is not None else self.timeout
+        if remaining is not None:
+            timeout = min(timeout, remaining)
         if timeout <= 0:
             raise TimeoutError("rerank_deadline_before_http")
         client = httpx.Client(
@@ -196,6 +205,9 @@ class RerankerService:
                 else:
                     scored = provider.rerank(query, docs, top_n=len(docs))
             except Exception as exc:
+                from app.services.local_inference import LocalModelBusy, LocalModelDeadline
+                if isinstance(exc, (LocalModelBusy, LocalModelDeadline)):
+                    raise
                 logger.warning("Reranker provider %s 调用失败: %s", provider.name, type(exc).__name__)
                 continue
             finally:

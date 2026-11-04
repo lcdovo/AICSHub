@@ -66,14 +66,16 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
             with repository.transaction() as db:
                 current = owned(db, jid, token)
                 current.lease_expires_at = datetime.utcnow() + timedelta(seconds=120)
-            vectors.extend(
-                embedding.encode_batch(
-                    [
-                        c["content"]
-                        for c in chunks[offset : offset + settings.EMBEDDING_BATCH_SIZE]
-                    ]
+            from app.services.local_inference import inference_scope
+            with inference_scope(priority="background"):
+                vectors.extend(
+                    embedding.encode_batch(
+                        [
+                            c["content"]
+                            for c in chunks[offset : offset + settings.EMBEDDING_BATCH_SIZE]
+                        ]
+                    )
                 )
-            )
         if len(vectors) != len(chunks):
             raise ValueError("embedding_count_mismatch")
         vectors = [validate_vector(v, metadata["dim"]) for v in vectors]
@@ -146,13 +148,23 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
                 version.status = "published"
                 repository.bump(db)
             job.status, job.lease_token, job.lease_expires_at = "succeeded", None, None
-    except Exception:
+    except Exception as exc:
         with repository.transaction() as db:
             try:
                 job = owned(db, jid, token)
             except RuntimeError:
                 return
             version = db.get(KnowledgeVersion, job.resource_id)
+            from app.services.local_inference import LocalModelBusy, LocalModelDeadline
+            if isinstance(exc, (LocalModelBusy, LocalModelDeadline)):
+                exhausted = job.attempts >= job.max_attempts
+                version.status, version.error_code = (
+                    "failed" if exhausted else "draft", "local_model_busy" if not exhausted else "attempts_exhausted")
+                job.status = "failed" if exhausted else "retrying"
+                job.last_error = version.error_code
+                job.next_run = datetime.utcnow() + timedelta(seconds=min(60, 2 ** job.attempts))
+                job.lease_token, job.lease_expires_at = None, None
+                return
             version.status, version.error_code = (
                 "failed",
                 "index_dependency_or_contract_error",
