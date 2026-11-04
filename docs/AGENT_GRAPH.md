@@ -169,3 +169,5 @@ M5新增所有文本共用的publication_guard：workflow、模板、缓存、�
 M5政策Judge关闭/不可用/非法/异常/超时均unknown、不得作为放行，未grounded不因高分通过。生成与Judge共用完整format_review_evidence视口，保留每片段ID/版本与后部条件及成功工具完整回执。缓存使用validated-v3隔离旧宽松审查结果；实际模型新schema兼容/质量仍待验。
 
 M5固定业务核验读取全部相关成功回执，状态反转、订单金额/币种矛盾、同订单冲突、无申请回执登记及真实支付承诺critical阻断。最终workflow出口同样检查；长度/敏感名词不等于事实错误。固定规则覆盖及语义限制见M5-EVIDENCE-v1.md，不能据此宣称任意承诺/多对象自然语言已完全可靠。
+
+M5检索服务search可显式选择retrieval_mode=hybrid/bm25/dense作消融，缓存隔离选择，默认聊天/API仍hybrid；单路不执行另一召回器。真实本地开发消融采用实验进程30秒预算，不等同业务默认5秒重排或独立留出验收。

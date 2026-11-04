@@ -30,8 +30,10 @@ def bounded_provider(call):
 
 
 def search(
-    service, query, top_k=None, similarity_threshold=None, recall_k=None, rerank_k=None
+    service, query, top_k=None, similarity_threshold=None, recall_k=None, rerank_k=None, retrieval_mode="hybrid"
 ):
+    if retrieval_mode not in {"hybrid", "bm25", "dense"}:
+        raise ValueError("invalid_retrieval_mode")
     started = time.perf_counter()
     service.initialize()
     top_k = max(1, min(int(top_k or settings.RAG_TOP_K), 50))
@@ -61,7 +63,8 @@ def search(
     cache_key = hashlib.sha256(
         json.dumps(
             [
-                "m3-search-v1",
+                "m5-search-v2",
+                retrieval_mode,
                 query,
                 epoch,
                 fingerprint,
@@ -97,32 +100,35 @@ def search(
     errors = []
     by_id = {c["id"]: c for c in chunks}
     begin = time.perf_counter()
-    bm25 = BM25Scorer()
-    bm25.build_index([c["content"] for c in chunks]) if chunks else None
     lexical = []
-    for i, c in enumerate(chunks):
-        score = bm25.score(query, i)
-        if score > 0:
-            lexical.append({**c, "bm25_score": score, "score_type": "bm25"})
-    lexical = sorted(lexical, key=lambda c: c["bm25_score"], reverse=True)[:recall_k]
+    if retrieval_mode != "dense":
+        bm25 = BM25Scorer()
+        bm25.build_index([c["content"] for c in chunks]) if chunks else None
+        for i, c in enumerate(chunks):
+            score = bm25.score(query, i)
+            if score > 0:
+                lexical.append({**c, "bm25_score": score, "score_type": "bm25"})
+        lexical = sorted(lexical, key=lambda c: c["bm25_score"], reverse=True)[:recall_k]
     timings["bm25"] = round((time.perf_counter() - begin) * 1000, 3)
     dense = []
     begin = time.perf_counter()
-    try:
-        vector = bounded_provider(
-            lambda: service._embedding_service.encode_query(query)
-        )
-        from app.services.embedding_service import validate_vector
+    vector = None
+    if retrieval_mode != "bm25":
+        try:
+            vector = bounded_provider(
+                lambda: service._embedding_service.encode_query(query)
+            )
+            from app.services.embedding_service import validate_vector
 
-        vector = validate_vector(vector, identity["dim"])
-    except Exception:
-        vector = None
-        errors.append("embedding_unavailable_or_invalid")
+            vector = validate_vector(vector, identity["dim"])
+        except Exception:
+            vector = None
+            errors.append("embedding_unavailable_or_invalid")
     timings["encode"] = round((time.perf_counter() - begin) * 1000, 3)
     begin = time.perf_counter()
     dense_backend = "none"
     matching = [c for c in chunks if c["embedding_fingerprint"] == fingerprint]
-    if len(matching) != len(chunks):
+    if retrieval_mode != "bm25" and len(matching) != len(chunks):
         errors.append("embedding_fingerprint_mismatch")
     if vector is not None:
         if service._vector_store:
@@ -241,10 +247,11 @@ def search(
     total = round((time.perf_counter() - started) * 1000, 3)
     meta = {
         "backend": dense_backend,
-        "degraded": bool(errors) or dense_backend != "milvus",
+        "degraded": bool(errors) or (retrieval_mode != "bm25" and dense_backend != "milvus"),
         "degraded_reason": ";".join(sorted(set(errors)))
-        or ("milvus_disabled" if dense_backend != "milvus" else None),
+        or ("milvus_disabled" if retrieval_mode != "bm25" and dense_backend != "milvus" else None),
         "knowledge_epoch": epoch,
+        "retrieval_mode": retrieval_mode,
         "embedding_fingerprint": fingerprint,
         "score_type": "rrf",
         "reranker": reranker,

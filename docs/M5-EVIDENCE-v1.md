@@ -53,3 +53,20 @@ OPT-13，AC-13-07局部。新增citation_guard核验[证据:chunk_id@version_id]
 最终修复仅将refund恢复审查证据从ID投影改为audit.result_payload完整回执，与生成模板来源一致。没有require_receipt豁免开关、未缩小回执检查范围。原M2正常/损坏预览恢复测试保留一次申请、两条消息、0.10精度、模拟说明与清理待确认断言，仅追加失败诊断error_code。新增部分成功回执workflow流式拒绝反例；非workflow路径本会在validate_candidate拒绝后返回人工节点，新增测试明确workflow=true检验最终发布底线，未改变生产路由来迎合测试。
 
 最新受影响110 passed（reports/offline/20261104-112252-390635），含M2全部Run、M5事实/工作流、聊天轮次。临时探索两次3失败和一次新增用例误判返回节点1失败保留；最终原3项ResponseValidator缺/部分回执断言恢复不变、原回执要求完整保留。compileall/Ruff通过，后续重跑全量；本次属于恢复数据一致性修复，不新增退款执行或支付能力。
+
+## M5-05 本地开发消融
+
+OPT-12，AC-12-05/13/14局部。KnowledgeBaseService.search显式retrieval_mode=hybrid/bm25/dense，仅进程内评测接口，HTTP和聊天默认hybrid不变；关闭路线不执行模型或BM25评分，缓存键含mode防止混用，未知mode先拒绝。显式BM25不把按要求关闭dense虚报为依赖故障；其他真实故障/默认路径降级保持。rerank实验通过RAG_USE_RERANKER仅改实验子进程设置，源码业务默认预算未改变。3项路线/缓存专项与M3/指标共39通过（reports/offline/20261104-112400-567466），compileall/Ruff通过。
+
+scripts/evaluate_m5_local.py清除宿主业务配置、工作目录临时SQLite、核验m3-closeout实际运行端口、新m5_dev随机collection，loopback模型固定，无聊天/Judge/付费调用。真实模型qwen3-embedding:0.6b/1024维/revision ollama-ac6da0dfba84和BAAI/bge-reranker-large，12份合成知识索引、12条开发查询、4种路线各cold/hot共96观测。新报告reports/m5/local-20261104-111552/report.json为PASS_LOCAL_DEVELOPMENT_ONLY，真实local重排均成功，Embedding方法48次，source_tree_stable/source_snapshot_complete=true，源码指纹bd31d9557bd367edd6bf270c13a1f24542478327ce356138f186aa1be9f5c731。方法计数不是provider精确请求账单，批次/缓存及重排请求另据实际metadata解释；外部与聊天调用0。
+
+| 路线 | 开发Recall@20/nDCG@5 | 冷P95毫秒 | 热P95毫秒 |
+| --- | --- | ---: | ---: |
+| BM25 | 1.0 / 1.0 | 12.3 | 12.3 |
+| dense | 1.0 / 1.0 | 991.5 | 10.7 |
+| hybrid | 1.0 / 1.0 | 789.1 | 12.8 |
+| rerank | 1.0 / 1.0 | 12929.4 | 21.1 |
+
+全部热次命中本测试实例缓存；冷次清本实例检索与文本缓存，不清业务Redis。语料仅12chunk，Recall@20可包含全部语料，1.0不证明大库召回质量；必要条件覆盖/无答案/真实回答支持没有用子串猜测填分。实验进程供应商上限30秒，业务默认5秒确已在前次真实链路回退，故不能标AC-12-05/14完整通过；改写消融、200独立运行/并发负载、真实聊天/Judge以及独立留出标注都未完成。Windows cleanup错误修复为先退出临时工作目录再销毁；未删除业务数据，新增测试collection保留不清理。
+
+本报告之后的显式BM25降级metadata修正仅39项T0复验，未声称其改变前一份真实来源指纹；实际本地推理结果按上述原指纹解释。
