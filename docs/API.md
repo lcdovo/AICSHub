@@ -220,6 +220,8 @@ POST /search支持独立recall_k/rerank_k/top_k，结果含逐路ID、score_type
 
 本地模型出口引入同进程共享预算后，检索metadata增加local_inference（固定purpose/priority/status/dispatched/queue_ms/inference_ms）、local_model_admission（busy/deadline/cache/completed_or_not_local）及local_model_scheduler_scope=process。busy/deadline可伴随BM25/融合排名降级，不等于业务已完成；瞬时准入失败结果不入检索缓存。无足够证据时聊天明确提示繁忙或超时、稍后重试，不自动创建人工请求。没有新增承诺跨worker限流的HTTP接口或运行时调参入口，详情见LOCAL-INFERENCE-BUDGET-v1.md。
 
+后续整轮准入在健康检索缓存之后、模型调用前执行；被拒绝时返回空证据和明确busy/deadline，不先执行Embedding。metadata新增local_request_admission，包含本轮retrieval资格状态和admission_scope；local_model_scheduler_scope记录配置模式process/redis，不能仅凭该字段证明已获Redis资格。local_inference的admitted表示取得资格，不代表模型/业务成功。Redis模式须协作worker连接同Redis/namespace，失联拒绝；不承诺GPU服务端任务取消。详情见WHOLE-REQUEST-ADMISSION-v1.md。
+
 完整契约及验证边界见M3-IMPLEMENTATION-v1.md与M3-EVIDENCE-v1.md。
 
 ## M4候选模型账本（2026-11-04）

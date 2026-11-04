@@ -29,3 +29,5 @@ compose.gpu-candidates.yaml记录固定镜像摘要、GPU请求、loopback端口
 详见GPU-PAIR-ACCEPTANCE-v1.md。本轮200不同合成请求（12重复语义簇，每次20条369～425字候选）：串行96/100成功、并发10为57/100，全部47超时保留；重排P95约3.38/5.02秒，暂不切业务。12文档/12查询隔离索引的混合top1/top3未变，但完整排序2/12变化，不批准混用旧空间。候选/业务容器、数据卷及旧索引均未改。
 
 共享预算代码已补（见LOCAL-INFERENCE-BUDGET-v1.md），限同一应用进程的本地HTTP出口；不同API/Job worker不共享预算，不能把它当GPU全局限流。200次真实同负载串行100成功，并发10仅5成功/94明确繁忙/1超时，依旧不切业务；后台一次真实同进程竞争仅证明有限延后行为。
+
+整轮准入与Redis协调功能为候选（WHOLE-REQUEST-ADMISSION-v1.md），默认process，配置模板透传但未对业务执行部署。T0/Redis有限场景通过，真实200压力依然FAIL；启用Redis后也必须所有API/Job worker共享同Redis DB/namespace和新版入口，其他模型客户端不受此代码约束，GPU已发任务无法靠租约强制停止。当前不切业务GPU。

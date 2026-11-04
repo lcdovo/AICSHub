@@ -175,3 +175,5 @@ M5检索服务search可显式选择retrieval_mode=hybrid/bm25/dense作消融，�
 后续本地BGE重排按4条/批、每进程共享最多2批执行，完整评分全池后才取top_k；父检索绝对截止和HTTP剩余预算贯穿各批/后备provider，晚到结果拒绝，失败保留融合排名。候选超过支持24条整次回退，不静默丢尾部。外部及其他本地模型不拆请求，缓存/meta含算法与预算。执行器现在默认复验5秒，30秒实验需显式指定；真实默认实验8/12local、4超时，P95未达2秒，见M5-RERANK-BUDGET-v1.md。
 
 本地Embedding和重排HTTP出口现共用单进程active1/waiters2预算，前台等待500ms、后台50ms，父阶段deadline通过线程context传播；排队时间不重置阶段截止。后台索引遇忙/截止进入有界Job退避并保留旧发布指针。瞬时busy/deadline检索不缓存，证据不足时返回真实繁忙/超时提示，不创建写入型人工请求。此预算不覆盖独立worker进程/其他模型客户端，也不能强杀服务端已发推理；完整作用域、真实拒绝率及未通过门槛见LOCAL-INFERENCE-BUDGET-v1.md。
+
+后续冷检索/后台本地Embedding批次改为整轮Permit，已获资格的模型HTTP不再各自排队。可选Redis原子owner/等待ticket/TTL/续租与条件释放，使同Redis/namespace的已升级API/Job worker协作；默认process未切换。外层结束后未完HTTP仍持有资格到返回，晚到结果拒绝；失租不发后续请求，同token重放幂等、未知申请回包只条件清理自己的占位。1038项T0和7项真实Redis场景通过，但真实GPU压力FAIL，不能启用业务或宣称完整跨系统GPU互斥，见WHOLE-REQUEST-ADMISSION-v1.md。

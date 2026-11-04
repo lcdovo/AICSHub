@@ -27,3 +27,5 @@
 双GPU压力与兼容切片：新增scripts/verify_gpu_pair.py、tests/test_gpu_pair_acceptance.py、docs/GPU-PAIR-ACCEPTANCE-v1.md；更新候选部署记录、M5验收/门禁/证据及清单、全项目JSON索引。压力结果FAIL、业务保持，75项受影响T0通过。
 
 共享预算/背压切片：新增app/services/local_inference.py、tests/test_local_inference.py、docs/LOCAL-INFERENCE-BUDGET-v1.md；修改Embedding/Reranker出口、knowledge_base/versioned_search.py及index_worker.py、agent/nodes/rag_node.py、scripts/verify_gpu_pair.py和相关架构/API/部署验收记录。单进程功能验证通过，高并发完成率仍失败，未切GPU业务路由。
+
+整轮/跨worker候选切片：新增app/services/local_admission.py、scripts/test_local_admission_redis.py、tests/test_local_admission.py、docs/WHOLE-REQUEST-ADMISSION-v1.md；修改app/config/config.py、.env.example、docker-compose.yml透传可选process/redis模式及namespace；Embedding/Reranker/知识检索和索引Job接入整轮资格，旧BGE线程继承context；scripts/verify_gpu_pair.py增加whole-request/redis隔离压力，tests/test_local_inference.py保留阻断断言并替换新入口；更新架构/API/M5门禁/全局JSON索引。配置未应用业务，1038全量/7真实Redis通过，实际模型压力FAIL。

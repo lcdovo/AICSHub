@@ -117,9 +117,10 @@ def test_observation_separates_queue_inference_rejection_and_contains_no_payload
 def test_embedding_and_reranker_http_share_same_scheduler_and_busy_embedding_does_not_retry(monkeypatch):
     from app.services.embedding_service import APIEmbedding
     from app.services.reranker_service import _RerankProvider
-    scheduler = LocalInferenceScheduler(max_waiters=0)
-    monkeypatch.setattr("app.services.local_inference.SCHEDULER", scheduler)
-    scheduler._active = True
+    from app.services.local_admission import ProcessCoordinator
+    scheduler = ProcessCoordinator(max_waiters=0)
+    monkeypatch.setattr("app.services.local_admission.get_coordinator", lambda: scheduler)
+    owner = scheduler.acquire(priority="interactive", deadline=time.monotonic()+5)
     embedding = APIEmbedding("http://127.0.0.1:8013/v1", "synthetic", "synthetic", dim=3)
     provider = _RerankProvider("local", "http://127.0.0.1:7999", "", "synthetic", "openai", 3)
     call = Mock(side_effect=AssertionError("busy request dispatched"))
@@ -132,21 +133,23 @@ def test_embedding_and_reranker_http_share_same_scheduler_and_busy_embedding_doe
             provider._post("http://127.0.0.1:7999/rerank", {})
         call.assert_not_called()
     finally:
-        scheduler._active = False
+        owner.close()
         embedding.close()
 
 
 def test_external_embedding_is_not_part_of_local_gpu_budget(monkeypatch):
     from app.services.embedding_service import APIEmbedding
-    scheduler = LocalInferenceScheduler(max_waiters=0)
-    scheduler._active = True
-    monkeypatch.setattr("app.services.local_inference.SCHEDULER", scheduler)
+    from app.services.local_admission import ProcessCoordinator
+    scheduler = ProcessCoordinator(max_waiters=0)
+    monkeypatch.setattr("app.services.local_admission.get_coordinator", lambda: scheduler)
+    owner = scheduler.acquire(priority="interactive",deadline=time.monotonic()+5)
     embedding = APIEmbedding("https://synthetic.invalid/v1", "synthetic", "synthetic", dim=3)
     embedding._client = httpx.Client(transport=httpx.MockTransport(
         lambda _: httpx.Response(200, json={"data": [{"index": 0, "embedding": [1., 0., 0.]}]})))
     try:
         assert embedding.encode_query("synthetic") == [1., 0., 0.]
     finally:
+        owner.close()
         embedding.close()
 
 

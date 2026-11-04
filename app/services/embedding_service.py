@@ -135,7 +135,8 @@ class APIEmbedding(BaseEmbedding):
 
     def _call_api_once(self, texts: List[str]) -> List[List[float]]:
         last_error = None
-        from app.services.local_inference import SCHEDULER, CONTEXT, is_local_endpoint, LocalModelBusy, LocalModelDeadline
+        from app.services.local_inference import CONTEXT, is_local_endpoint, LocalModelBusy, LocalModelDeadline
+        from app.services.local_admission import run_http
         local = is_local_endpoint(self.api_base)
         deadline = min(time.monotonic() + min(self.timeout, 5.0),
                        CONTEXT.get().deadline or float("inf")) if local else None
@@ -157,7 +158,7 @@ class APIEmbedding(BaseEmbedding):
                                              timeout=min(self.timeout, remaining))
                         result.raise_for_status()
                         return result
-                    response = SCHEDULER.run(
+                    response = run_http(
                         post_local, purpose="embedding", deadline=deadline)
                 else:
                     response = client.post(f"{self.api_base}/embeddings", json=payload)

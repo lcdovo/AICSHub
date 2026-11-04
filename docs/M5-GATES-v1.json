@@ -157,6 +157,11 @@
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
+        },
+        {
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "1038T0+7realRedis scenarios, replay/lost-reply boundary fixed;finite200GPU pressure serial24%/concurrency10 1%completed;not wholeM5 or business switch"
         }
       ]
     },
@@ -303,6 +308,11 @@
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
+        },
+        {
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "1038T0+7realRedis scenarios, replay/lost-reply boundary fixed;finite200GPU pressure serial24%/concurrency10 1%completed;not wholeM5 or business switch"
         }
       ]
     },
@@ -361,6 +371,11 @@
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "limit": "single-process model admission;161 final affected tests after1024 earlier full;real concurrent10 completion5/100,94busy1deadline;no crossworker/production switching acceptance"
+        },
+        {
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "limit": "1038T0+7realRedis scenarios, replay/lost-reply boundary fixed;finite200GPU pressure serial24%/concurrency10 1%completed;not wholeM5 or business switch"
         }
       ]
     },
@@ -687,10 +702,11 @@
     "M4 upstream entity accuracy 0.956667 < 0.97",
     "Independent human-reviewed 300/60/100/100 holdout and output claims candidates prepared, not approved; user assigned reviewer",
     "New chat/Judge model evaluation not authorized; supplier calls used 660/660",
-    "Isolated GPU candidate 2x12 repeated development cold queries: one stageP95 2.501s, one 1.863s, end-to-end both >2s. Not200 unique samples, no 20-long-candidate/load/concurrency or business integration/rollback evidence",
-    "Retrieval rewrite ablation, independent performance/concurrency/quality evaluation not run",
+    "Historical GPU small-development tests are supporting only; subsequent20-long-candidate200 finite loads ran and failed, not independent quality or business rollback acceptance",
+    "Frozen retrieval rewrite ablation and independent quality/concurrency acceptance remain incomplete; finite pressure reports are not omitted",
     "Finite200-request provider pressure FAIL: serial96/100 and concurrency10 57/100;47ReadTimeout retained; rerankP95 3.377/5.015s exceeds2s. Not independent semantic holdout. Mixed index only12-query observation, no approval; business unchanged.",
-    "Process-local bounded admission verified but concurrency10 is5% completed/94%busy/1%deadline; busy is not success. Multiworker/model-server admission and overallM5 quality still not accepted."
+    "Process-mode bounded admission historical results remain; Redis crossworker coordination has7 finite tests passed but is not enabled in business; latest GPU capacity remains FAIL",
+    "Latest whole-request Redis candidate GPU pressure FAIL: serial24/100, concurrency10 1/100; all BUSY pre-dispatch but poor availability. Preserve both failures and replay bug fix evidence; no business enablement."
   ],
   "integrations": [
     {
@@ -716,18 +732,17 @@
     }
   ],
   "offline_full": {
-    "report": "reports/offline/20261104-113638-736165",
-    "passed": 963,
+    "report": "reports/offline/20261104-164455-476590",
+    "passed": 1038,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
-    "seconds": 415.49,
+    "seconds": 577.37,
+    "source_fingerprint": "9b410f32a2a597879b40aeb7e90920c9d1bb1eb2c99f5943469b35a9728da902",
     "source_tree_stable": true,
     "source_snapshot_complete": true,
-    "source_fingerprint": "01bc7de693aeb14e095b13f52d4528a9efb628e780f3cd1dc2556f3fd1d28e07",
     "blocked_network_operations": 0,
-    "layer": "T0",
-    "scope_note": "historical full963 before local batching/deadline slice; current affected107 only, not a new full run"
+    "layer": "T0, not live quality/capacity pass"
   },
   "rerank_budget_slice": {
     "document": "docs/M5-RERANK-BUDGET-v1.md",
@@ -860,5 +875,48 @@
     "real_background_smoke": "reports/gpu-pair/background-budget-20261104.json",
     "business_gpu_route_changed": false,
     "whole_m5_pass": false
-  }
+  },
+  "whole_request_admission_candidate": {
+    "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+    "default_mode": "process",
+    "business_mode_changed": false,
+    "business_gpu_route_changed": false,
+    "offline_report": "reports/offline/20261104-164455-476590",
+    "offline_passed": 1038,
+    "source_fingerprint": "9b410f32a2a597879b40aeb7e90920c9d1bb1eb2c99f5943469b35a9728da902",
+    "real_redis_report": "reports/gpu-pair/redis-admission-20261104-164358/report.json",
+    "real_redis_cases_passed": 7,
+    "pressure_report": "reports/gpu-pair/acceptance-20261104-164455/report.json",
+    "pressure_status": "FAIL",
+    "concurrency1": {
+      "completed": 24,
+      "busy": 70,
+      "deadline": 6,
+      "busy_after_partial_model_dispatch": 0
+    },
+    "concurrency10": {
+      "completed": 1,
+      "busy": 99,
+      "deadline": 0,
+      "busy_after_partial_model_dispatch": 0
+    },
+    "whole_m5_pass": false,
+    "scope_limit": "cooperating clients same standalone Redis+namespace; not GPU-driver mutex/server-side cancellation, realGPU pressure single process, multiprocessRedis synthetic CPU stages"
+  },
+  "offline_full_history": [
+    {
+      "report": "reports/offline/20261104-113638-736165",
+      "passed": 963,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 415.49,
+      "source_tree_stable": true,
+      "source_snapshot_complete": true,
+      "source_fingerprint": "01bc7de693aeb14e095b13f52d4528a9efb628e780f3cd1dc2556f3fd1d28e07",
+      "blocked_network_operations": 0,
+      "layer": "T0",
+      "scope_note": "historical full963 before local batching/deadline slice; current affected107 only, not a new full run"
+    }
+  ]
 }

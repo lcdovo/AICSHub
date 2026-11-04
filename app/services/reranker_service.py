@@ -20,6 +20,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from contextvars import ContextVar
+from contextvars import copy_context
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -105,9 +106,10 @@ class _RerankProvider:
         return scored
 
     def _post(self, url: str, payload: Dict[str, Any]) -> Any:
-        from app.services.local_inference import SCHEDULER, is_local_endpoint
+        from app.services.local_inference import is_local_endpoint
+        from app.services.local_admission import run_http
         if self.name == PROVIDER_LOCAL and is_local_endpoint(self.base):
-            return SCHEDULER.run(lambda remaining: self._post_uncoordinated(url, payload, remaining),
+            return run_http(lambda remaining: self._post_uncoordinated(url, payload, remaining),
                                  purpose="rerank", deadline=_RERANK_DEADLINE.get())
         return self._post_uncoordinated(url, payload)
 
@@ -273,7 +275,7 @@ class RerankerService:
                             raise RuntimeError("rerank_batch_pool_busy")
                     texts = docs[offset:offset + LOCAL_BATCH_SIZE]
                     try:
-                        future = _LOCAL_BATCH_POOL.submit(infer, offset, texts)
+                        future = _LOCAL_BATCH_POOL.submit(copy_context().run, infer, offset, texts)
                     except BaseException:
                         slots.release()
                         raise

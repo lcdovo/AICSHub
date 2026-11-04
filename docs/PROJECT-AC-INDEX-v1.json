@@ -1823,6 +1823,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },
@@ -1961,6 +1967,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },
@@ -2019,6 +2031,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },
@@ -2344,6 +2362,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },
@@ -2390,6 +2414,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },
@@ -2424,6 +2454,12 @@
           "status": "PASS_T1",
           "document": "docs/M4-GATES-v1.json",
           "limit": "SQL独立于Redis；旧slot过期精确标unknown，未知预留保留，重启检查通过"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },
@@ -2453,6 +2489,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },
@@ -2731,6 +2773,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },
@@ -2805,6 +2853,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
           "document": "docs/LOCAL-INFERENCE-BUDGET-v1.md",
           "limit": "bounded same-process local modelHTTP and Job backoff;real concurrency10 only5/100 complete,94busy1deadline;not crossworker/globalGPU guarantee;no quality/performance pass"
+        },
+        {
+          "stage": "whole local request Redis candidate slice",
+          "status": "PARTIAL_FUNCTIONAL_PASS_CAPACITY_FAIL",
+          "document": "docs/WHOLE-REQUEST-ADMISSION-v1.md",
+          "limit": "1038T0/7realRedis scenarios;actualGPU serial24/100 and concurrency10 1/100 completed, BUSY pre-dispatch;production mode remainsprocess;noGPUhardware mutex or quality/throughput acceptance"
         }
       ]
     },

@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str = Field(default="")
     REDIS_DB: int = Field(default=0)
     REDIS_ENABLED: bool = Field(default=True)
+    # 默认保留进程模式；Redis模式需所有本地模型worker共享同一Redis与namespace。
+    LOCAL_MODEL_COORDINATOR: str = Field(default="process", pattern="^(process|redis)$")
+    LOCAL_MODEL_COORDINATOR_NAMESPACE: str = Field(default="aicshub:local-models:whole-v1", min_length=1, max_length=120)
 
     LLM_API_BASE: str = Field(default="http://localhost:8001")
     LLM_API_KEY: str = Field(default="")

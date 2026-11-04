@@ -1,6 +1,7 @@
 """M3幂等索引阶段；外部写只写不可变version的chunkID，发布由SQL最终fence控制。"""
 
 from datetime import datetime, timedelta
+from contextlib import nullcontext
 from app.config.config import settings
 import hashlib
 from sqlalchemy import select, update
@@ -67,15 +68,17 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
                 current = owned(db, jid, token)
                 current.lease_expires_at = datetime.utcnow() + timedelta(seconds=120)
             from app.services.local_inference import inference_scope
+            from app.services.local_admission import request_scope, uses_local_models
             with inference_scope(priority="background"):
-                vectors.extend(
-                    embedding.encode_batch(
-                        [
-                            c["content"]
-                            for c in chunks[offset : offset + settings.EMBEDDING_BATCH_SIZE]
-                        ]
+                with (request_scope(purpose="index_batch") if uses_local_models(embedding) else nullcontext()):
+                    vectors.extend(
+                        embedding.encode_batch(
+                            [
+                                c["content"]
+                                for c in chunks[offset : offset + settings.EMBEDDING_BATCH_SIZE]
+                            ]
+                        )
                     )
-                )
         if len(vectors) != len(chunks):
             raise ValueError("embedding_count_mismatch")
         vectors = [validate_vector(v, metadata["dim"]) for v in vectors]
