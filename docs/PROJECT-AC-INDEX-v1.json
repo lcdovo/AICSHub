@@ -1627,6 +1627,12 @@
           "status": "PASS_LOCAL_REAL_OLLAMA_AND_REVISION_ISOLATION",
           "document": "docs/M3-GATES-v1.json",
           "meaning": "historical frozen scope only; final current integration audit still required"
+        },
+        {
+          "stage": "GPU pair pre-switch slice",
+          "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
         }
       ]
     },
@@ -1793,6 +1799,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_PERFORMANCE_FAIL",
           "document": "docs/M5-RERANK-BUDGET-v1.md",
           "limit": "complete pool/shared deadline tests pass107; actual local8/12,4timeouts,5005.732ms P95>2000ms; no independent quality acceptance"
+        },
+        {
+          "stage": "GPU pair pre-switch slice",
+          "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
         }
       ]
     },
@@ -1971,6 +1983,12 @@
           "status": "PARTIAL_FUNCTIONAL_PASS_PERFORMANCE_FAIL",
           "document": "docs/M5-RERANK-BUDGET-v1.md",
           "limit": "complete pool/shared deadline tests pass107; actual local8/12,4timeouts,5005.732ms P95>2000ms; no independent quality acceptance"
+        },
+        {
+          "stage": "GPU pair pre-switch slice",
+          "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
         }
       ]
     },
@@ -1988,6 +2006,12 @@
           "status": "NOT_ACCEPTED_QUALITY_REVIEW_PENDING",
           "document": "docs/M5-GATES-v1.json",
           "limit": "Historical full963 before rerank slice; current affected107 pass. Selected historical T1 and local development evidence only; new5s local rerank8/12,4fallback,P95>2s.595 draft candidates await user review; real chat/Judge/rewrite/upstreamM4 not passed."
+        },
+        {
+          "stage": "GPU pair pre-switch slice",
+          "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
         }
       ]
     },
@@ -2318,6 +2342,12 @@
           "status": "PASS_T1",
           "document": "docs/M4-GATES-v1.json",
           "limit": "SQL共享槽跨真实进程竞争，非单例进程内宣称"
+        },
+        {
+          "stage": "GPU pair pre-switch slice",
+          "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
         }
       ]
     },
@@ -2369,6 +2399,12 @@
           "status": "PARTIAL",
           "document": "docs/M4-GATES-v1.json",
           "limit": "修复LangChain全局共享HTTP池跨实例关闭及主lifespan遗漏聊天图池；38项T0通过；真实本机HTTP/SDK/MySQL260请求、12生命周期、68 SDK客户端关闭、活动TCP0峰值3、20连续请求1连接，Embedding/Reranker配置独立；仅约40秒，未证明多小时/真实供应商持续负载，保持PARTIAL"
+        },
+        {
+          "stage": "GPU pair pre-switch slice",
+          "status": "FAIL_FINITE_LOAD_NO_MIXING_APPROVAL",
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "limit": "direct provider200load requests, serial4 and concurrency10 43timeouts; small isolated12-query index observation only; no production data/config change; whole original criterion not accepted"
         }
       ]
     },

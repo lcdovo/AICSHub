@@ -136,6 +136,12 @@
           "report": "reports/offline/20261104-120133-332724",
           "passed": 107,
           "limit": "T0 full20 candidate coverage/shared deadline/malformed batch/cache; real local8/12 success4/12 timeout; P95>2s, no overall performance PASS"
+        },
+        {
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "report": "reports/gpu-pair/acceptance-20261104-153203/report.json",
+          "status": "FAIL_PERFORMANCE",
+          "limit": "direct provider load, not full app;200distinct strings/12clusters,47timeouts retained;no quality/production switching pass"
         }
       ]
     },
@@ -324,6 +330,12 @@
           "report": "reports/offline/20261104-120133-332724",
           "passed": 107,
           "limit": "T0 full20 candidate coverage/shared deadline/malformed batch/cache; real local8/12 success4/12 timeout; P95>2s, no overall performance PASS"
+        },
+        {
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "report": "reports/gpu-pair/acceptance-20261104-153203/report.json",
+          "status": "FAIL_PERFORMANCE",
+          "limit": "direct provider load, not full app;200distinct strings/12clusters,47timeouts retained;no quality/production switching pass"
         }
       ]
     },
@@ -356,6 +368,12 @@
           "layer": "T0 full regression",
           "passed": 963,
           "limit": "automated regression only; does not fill independent labels/model/performance layers"
+        },
+        {
+          "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+          "report": "reports/gpu-pair/acceptance-20261104-153203/report.json",
+          "status": "FAIL_PERFORMANCE",
+          "limit": "direct provider load, not full app;200distinct strings/12clusters,47timeouts retained;no quality/production switching pass"
         }
       ]
     },
@@ -645,7 +663,8 @@
     "Independent human-reviewed 300/60/100/100 holdout and output claims candidates prepared, not approved; user assigned reviewer",
     "New chat/Judge model evaluation not authorized; supplier calls used 660/660",
     "Isolated GPU candidate 2x12 repeated development cold queries: one stageP95 2.501s, one 1.863s, end-to-end both >2s. Not200 unique samples, no 20-long-candidate/load/concurrency or business integration/rollback evidence",
-    "Retrieval rewrite ablation, independent performance/concurrency/quality evaluation not run"
+    "Retrieval rewrite ablation, independent performance/concurrency/quality evaluation not run",
+    "Finite200-request provider pressure FAIL: serial96/100 and concurrency10 57/100;47ReadTimeout retained; rerankP95 3.377/5.015s exceeds2s. Not independent semantic holdout. Mixed index only12-query observation, no approval; business unchanged."
   ],
   "integrations": [
     {
@@ -735,5 +754,41 @@
     "business_route_changed": false,
     "whole_m5_pass": false,
     "vector_compatibility": "limited4 synthetic examples, not accepted for business index mixing"
+  },
+  "gpu_pair_pressure_acceptance": {
+    "document": "docs/GPU-PAIR-ACCEPTANCE-v1.md",
+    "pressure_report": "reports/gpu-pair/acceptance-20261104-153203/report.json",
+    "compatibility_report": "reports/gpu-pair/acceptance-20261104-153010/compatibility.json",
+    "status": "FAIL",
+    "load_requests": 200,
+    "semantic_clusters": 12,
+    "independent_quality_samples": false,
+    "candidates_per_request": 20,
+    "candidate_chars": [
+      369,
+      425
+    ],
+    "concurrency1": {
+      "requests": 100,
+      "passed": 96,
+      "timeouts": 4,
+      "rerank_p95_ms": 3376.8249,
+      "total_p95_ms": 5206.7748
+    },
+    "concurrency10": {
+      "requests": 100,
+      "passed": 57,
+      "timeouts": 43,
+      "rerank_p95_ms": 5015.4702,
+      "total_p95_ms": 6906.4482
+    },
+    "memory_samples": 388,
+    "max_sampled_used_mib": 6805,
+    "min_sampled_free_mib": 1152,
+    "container_oom_killed": false,
+    "production_route_switched": false,
+    "mixed_index_approved": false,
+    "affected_offline_tests": 75,
+    "offline_report": "reports/offline/20261104-154007-035105"
   }
 }

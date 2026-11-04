@@ -23,3 +23,5 @@
 资源对照切片：scripts/evaluate_m5_local.py隔离loopback端点；tests/test_m5_local_endpoint.py九项边界测试；更新M5设备对照、证据、验收门禁和本清单。业务生产代码与部署未修改。
 
 双GPU候选切片：新增compose.gpu-candidates.yaml与docs/GPU-PAIR-DEPLOYMENT-v1.md；修改scripts/evaluate_m5_local.py、tests/test_m5_local_endpoint.py、M5证据/门禁/清单。候选已运行，业务路由未切换；原文件和数据保留。
+
+双GPU压力与兼容切片：新增scripts/verify_gpu_pair.py、tests/test_gpu_pair_acceptance.py、docs/GPU-PAIR-ACCEPTANCE-v1.md；更新候选部署记录、M5验收/门禁/证据及清单、全项目JSON索引。压力结果FAIL、业务保持，75项受影响T0通过。
