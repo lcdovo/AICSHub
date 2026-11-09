@@ -152,14 +152,14 @@ def compatibility(output: Path) -> dict:
 
 
 @contextmanager
-def scheduled_services():
+def scheduled_services(reranker_port=7999):
     """一个应用生命周期内复用服务；由创建者统一关闭，不由单条请求关闭。"""
     from app.services.embedding_service import APIEmbedding
     from app.services.reranker_service import RerankerService
     embedding = APIEmbedding("http://127.0.0.1:8013/v1", "local-only", "qwen3-embedding:0.6b",
                              dim=1024, max_retries=0, timeout=5, batch_size=4)
     try:
-        reranker = RerankerService(local_base="http://127.0.0.1:7999", local_model="BAAI/bge-reranker-v2-m3")
+        reranker = RerankerService(local_base=f"http://127.0.0.1:{reranker_port}", local_model="BAAI/bge-reranker-v2-m3")
         try:
             yield embedding, reranker
         finally:
@@ -190,6 +190,7 @@ def run_case_scheduled(case: dict, whole_request=False, services=None) -> dict:
                     if not result or len(result) != 20 or len({r["id"] for r in result}) != 20:
                         raise RuntimeError("rerank_failed_or_incomplete")
                     row["status"], row["rank"] = "PASS", [r["id"] for r in result]
+                    row["rerank_scores"] = {r["id"]:r["rerank_score"] for r in result if "rerank_score" in r}
                 finally:
                     row["rerank_ms"] = (time.perf_counter() - start) * 1000
     except Exception as exc:
@@ -240,7 +241,9 @@ def main():
     parser.add_argument("--scheduled", action="store_true")
     parser.add_argument("--shared-services", action="store_true")
     parser.add_argument("--whole-request",action="store_true")
-    parser.add_argument("--coordinator",choices=["process","redis"],default="process")
+    parser.add_argument("--coordinator",choices=["process","redis","batch"],default="process")
+    parser.add_argument("--reranker-container", default="aicshub-gpu-v2m3-candidate")
+    parser.add_argument("--reranker-port", type=int, default=7999)
     args = parser.parse_args()
     if args.whole_request and not args.scheduled:
         parser.error("--whole-request requires --scheduled")
@@ -248,6 +251,11 @@ def main():
         parser.error("--shared-services requires --scheduled")
     if args.coordinator=="redis" and not args.scheduled:
         parser.error("--coordinator redis requires --scheduled")
+    if args.coordinator=="batch" and not (args.scheduled and args.shared_services and args.whole_request):
+        parser.error("--coordinator batch requires --scheduled --shared-services --whole-request")
+    if (args.reranker_container != "aicshub-gpu-v2m3-candidate" or args.reranker_port != 7999) and not (
+            args.scheduled and args.shared_services and args.skip_compatibility):
+        parser.error("temporary endpoint requires --scheduled --shared-services --skip-compatibility")
     from scripts.test_provenance import snapshot_sources, compare_sources
     output = ROOT / "reports/gpu-pair" / datetime.now().strftime("acceptance-%Y%m%d-%H%M%S")
     output.mkdir(parents=True)
@@ -263,6 +271,8 @@ def main():
     if args.scheduled:
         from app.config.config import settings
         settings.LOCAL_MODEL_COORDINATOR=args.coordinator
+        if args.coordinator=="batch":
+            settings.WORKERS=1
         if args.coordinator=="redis":
             from scripts.test_m1_real import verified_runtime
             _,runtime,owner=verified_runtime(ROOT,reuse_m3=True)
@@ -278,7 +288,11 @@ def main():
     if args.scheduled:
         from app.services.local_admission import VERSION
         report["scheduler"] = {"version": VERSION, "scope": args.coordinator, "whole_request":args.whole_request,
-                               "active": 1, "waiters": 2, "queue_ms": 500, "background_wait_ms": 50}
+                               "active": 10 if args.coordinator=="batch" else 1,
+                               "waiters": 2, "queue_ms": 500, "background_wait_ms": 50}
+        if args.coordinator=="batch":
+            report["scheduler"].update({"embedding_active":1,"embedding_batch_items":20,
+                "embedding_batch_window_ms":3,"rerank_active":2,"cross_worker":False})
     stop = threading.Event()
     memory = []
 
@@ -294,18 +308,19 @@ def main():
     sampler.start()
     resources = ExitStack()
     try:
+        from scripts.evaluate_gpu_arrivals import verify_reranker
         report["runtime"] = [inspect_candidate("aicshub-gpu-embedding-candidate", 8013, "11434/tcp"),
-                             inspect_candidate("aicshub-gpu-v2m3-candidate", 7999, "7997/tcp")]
+                             verify_reranker(args.reranker_container, args.reranker_port)]
         import httpx
         with httpx.Client(timeout=5, trust_env=False) as client:
             tags = client.get("http://127.0.0.1:8013/api/tags").raise_for_status().json()
             report["embedding_digest"] = next(m["digest"] for m in tags["models"] if m["name"] == "qwen3-embedding:0.6b")
-            models = client.get("http://127.0.0.1:7999/models").raise_for_status().json()
+            models = client.get(f"http://127.0.0.1:{args.reranker_port}/models").raise_for_status().json()
             if not any(m["id"] == "BAAI/bge-reranker-v2-m3" for m in models["data"]):
                 raise RuntimeError("wrong_reranker_model")
         if not args.skip_compatibility:
             report["compatibility"] = compatibility(output)
-        services = resources.enter_context(scheduled_services()) if args.shared_services else None
+        services = resources.enter_context(scheduled_services(args.reranker_port)) if args.shared_services else None
         cases = workload(args.count)
         serialized = json.dumps(cases, ensure_ascii=False, sort_keys=True).encode()
         report["workload_sha256"] = hashlib.sha256(serialized).hexdigest()
@@ -326,7 +341,11 @@ def main():
             summary = summarize(rows, len(group))
             summary["busy_rejections"] = sum(r["status"] == "BUSY" for r in rows)
             summary["busy_after_partial_model_dispatch"] = sum(r["status"]=="BUSY" and any(e["dispatched"] for e in r.get("local_inference",[])) for r in rows)
-            summary["provider_dispatches"] = sum(e["dispatched"] for r in rows for e in r.get("local_inference", []))
+            summary["logical_model_dispatches"] = sum(e["dispatched"] for r in rows for e in r.get("local_inference", []))
+            batch_events = [e for r in rows for e in r.get("local_inference", []) if e["purpose"]=="embedding_batch"]
+            summary["embedding_batches_observed"] = len({e["batch_id"] for e in batch_events})
+            summary["merged_embedding_batches_observed"] = len({e["batch_id"] for e in batch_events if e["requests"]>1})
+            summary["dispatch_count_scope"] = "logical stages, not physical HTTP attempts; shared batch events counted separately"
             summary["queue_p95_ms"] = percentile([e["queue_ms"] for r in rows for e in r.get("local_inference", [])])
             summary["inference_p95_ms"] = percentile([e["inference_ms"] for r in rows for e in r.get("local_inference", []) if e["inference_ms"] is not None])
             report["groups"].append({"concurrency": concurrency, "summary": summary, "rows": rows})

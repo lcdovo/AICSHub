@@ -58,8 +58,12 @@ async def rewrite_query(dependencies: QueryRewriteDependencies, state: AgentStat
     组合改写：保守规则优先，规则未命中且 LLM 可用时由模型做语义改写。
     """
     if state.understanding is not None:
-        state.rewritten_query=state.understanding.retrieval_query
-        state.query_rewrite_reason="unified_understanding"
+        query = state.understanding.retrieval_query
+        state.record_query_rewrite({
+            "original_query": state.user_message, "rewritten_query": query,
+            "applied": " ".join(query.split()) != " ".join(state.user_message.split()),
+            "reason": "unified_understanding", "confidence": 0., "simple": False,
+        }, "unified_understanding")
         return AgentNode.RAG_RETRIEVAL
     result = await dependencies.rewriter.rewrite(
         query=state.user_message,
@@ -67,22 +71,14 @@ async def rewrite_query(dependencies: QueryRewriteDependencies, state: AgentStat
         collected_info=state.current_business_parameters().model_dump(exclude_none=True),
     )
 
-    state.rewritten_query = result.rewritten_query
-    state.query_rewrite_applied = result.applied
-    state.query_rewrite_reason = result.reason
-    state.collected_info["query_rewrite"] = {
-        "original_query": result.original_query,
-        "rewritten_query": result.rewritten_query,
-        "applied": result.applied,
-        "reason": result.reason,
-        "confidence": result.confidence,
-        "simple": result.simple,
-    }
+    state.record_query_rewrite({key: getattr(result, key, None) for key in (
+        "original_query", "rewritten_query", "applied", "reason", "confidence", "simple",
+    )}, "rewriter")
     return AgentNode.RAG_RETRIEVAL
 
 
 async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentState) -> str:
-    query = state.rewritten_query or state.user_message
+    query = state.current_retrieval_query()
     top_k = dependencies.top_k()
 
     # The chat path and the admin knowledge APIs must share one source of truth.
@@ -121,15 +117,15 @@ async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentSta
         state.collected_info["rag_fallback_reason"] = (
             state.retrieval_error or ("no_results" if not state.collected_info["kb_results"] else "low_score")
         )
-        state.reply = (
-            "我暂时没有在知识库中找到足够可靠的答案。"
-            "请补充更多细节，或回复“转人工”获取客服协助。"
-        )
+        state.set_workflow_reply("我暂时没有在知识库中找到足够可靠的答案。"
+            "请补充更多细节，或回复“转人工”获取客服协助。")
         admission = search_result.get("meta", {}).get("local_model_admission")
         if admission == "busy":
-            state.reply = "本地检索模型繁忙，本轮未取得足够可靠的依据。请稍后重试；尚未创建人工或其他业务请求。"
+            state.set_workflow_reply("本地检索模型繁忙，本轮未取得足够可靠的依据。请稍后重试；尚未创建人工或其他业务请求。")
         elif admission == "deadline":
-            state.reply = "本地检索模型等待或推理超时，本轮未核实答案。请稍后重试；尚未创建人工或其他业务请求。"
+            state.set_workflow_reply("本地检索模型等待或推理超时，本轮未核实答案。请稍后重试；尚未创建人工或其他业务请求。")
+        elif (search_result.get("meta", {}).get("product_scope") or {}).get("reason") == "device_not_in_retrieved_sources":
+            state.set_workflow_reply("本轮检索未取得与该设备匹配的操作依据。请补充设备品牌、型号和具体故障现象；在核实前我不会提供拆机或重置步骤，尚未创建人工请求。")
     else:
         state.set_flow(rag_grounded=True)
 

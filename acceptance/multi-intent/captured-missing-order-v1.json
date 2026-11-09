@@ -1,0 +1,149 @@
+{
+  "origin": "real_provider_failure_preserved_not_a_pass",
+  "report_sha256": "b8fddf2c024283b57659f6409bc134e459d0207ee175c58a65e6b2ae080b2c05",
+  "scenario": {
+    "case_id": "MI-04",
+    "family": "missing_order",
+    "split": "development",
+    "message": "查我的订单状态，退货包装有什么要求。",
+    "items": [
+      {
+        "text": "查我的订单状态",
+        "kind": "query_order"
+      },
+      {
+        "text": "退货包装有什么要求",
+        "kind": "knowledge"
+      }
+    ],
+    "knowledge": [
+      "",
+      "退货需保留原包装。"
+    ],
+    "order_id": null,
+    "order_denied": false,
+    "order_status": "delivered",
+    "preview": false,
+    "conditions": [],
+    "good_answers": [
+      "请提供订单号，目前尚无法查询订单。",
+      "退货需保留原包装。"
+    ],
+    "good_statuses": [
+      "limited",
+      "answered"
+    ],
+    "bad_item": 0,
+    "bad_answer": "订单已签收。",
+    "attack": "semantic"
+  },
+  "understanding": {
+    "topic": "query_order",
+    "request_type": "query",
+    "entities": {
+      "order_id": null,
+      "product": null
+    },
+    "conditions": [],
+    "subrequests": [
+      {
+        "topic": "query_order",
+        "request_type": "query"
+      },
+      {
+        "topic": "refund",
+        "request_type": "inquiry"
+      }
+    ],
+    "service_preference": "unspecified",
+    "emotion": "neutral",
+    "clarification": null,
+    "retrieval_query": "查我的订单状态，退货包装有什么要求",
+    "entity_source": "none",
+    "itemization_version": "intent-items.v1",
+    "task_kind": "multi",
+    "items": [
+      {
+        "text": "查我的订单状态",
+        "kind": "query_order"
+      },
+      {
+        "text": "退货包装有什么要求",
+        "kind": "knowledge"
+      }
+    ],
+    "missing_information": [
+      "order_id"
+    ],
+    "parameters": {
+      "reason": null,
+      "refund_type": null,
+      "complaint_content": null
+    },
+    "read_tasks": [
+      {
+        "tool": "get_user_history",
+        "resource_id": null
+      }
+    ],
+    "continue_task": false
+  },
+  "good_verdict": {
+    "grounded": true,
+    "fact_score": 0.9,
+    "has_unsupported_claim": false,
+    "refuse_recommended": false,
+    "reason": "两项均忠实于限定来源：i1因缺少订单号无法查询，回答补问订单号并说明无法查询，符合missing_order_id工具结果；i2直接引用K1（MI-04-i2, synthetic-v1）\"退货需保留原包装\"，无臆造。无证据外政策、金额或执行事实。",
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "waiting_feedback",
+        "answer_quote": "请提供订单号，目前尚无法查询订单。",
+        "evidence_ids": [],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "partial"
+      },
+      {
+        "item_id": "i2",
+        "status": "answered",
+        "answer_quote": "退货需保留原包装。",
+        "evidence_ids": [
+          "K1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      }
+    ]
+  },
+  "bad_verdict": {
+    "grounded": false,
+    "fact_score": 0.3,
+    "has_unsupported_claim": true,
+    "refuse_recommended": true,
+    "reason": "i1：查询订单工具返回 error_code=missing_order_id，无任何订单证据，回答却断言“订单已签收”，属无据臆造，应改为补问订单号。i2：回答“退货需保留原包装”与K1（MI-04-i2, synthetic-v1）一致，有据可答。整体存在无依据事实陈述，可信度低，建议对i1采用无据不答/补问话术。",
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "missing",
+        "answer_quote": "订单已签收。",
+        "evidence_ids": [],
+        "supported": false,
+        "conditions_preserved": false,
+        "answerability": "unanswerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "answered",
+        "answer_quote": "退货需保留原包装。",
+        "evidence_ids": [
+          "K1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      }
+    ]
+  }
+}

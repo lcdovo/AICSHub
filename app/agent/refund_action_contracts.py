@@ -20,6 +20,7 @@ class RefundActionView(BaseModel):
     expires_at: str = Field(max_length=64)
     application_id: str | None = Field(default=None, max_length=36)
     is_simulated: bool
+    preconditions: list[Literal["order_not_shipped", "order_delivered"]] = Field(default_factory=list, max_length=3)
 
     @model_validator(mode="after")
     def valid_display(self):

@@ -10,7 +10,8 @@ from app.agent.state import AgentState, AgentNode, IntentType
 from app.agent.tools import ToolExecutionResult
 from app.agent.mcp_client import invoke_tool
 from app.agent.ticket_authorization import authorize_ticket
-from app.agent.refund_authorization import authorize_refund, CONFIRMATIONS
+from app.agent.refund_authorization import (authorize_refund, CONFIRMATIONS,
+    is_refund_confirmation_message, is_refund_cancellation_message)
 
 logger = logging.getLogger(__name__)
 
@@ -86,23 +87,60 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
                                     result.error, result.error_type)
             state.reply = summarize_reads(state.read_plan, results,
                                           has_conditions=bool(state.understanding.conditions))
+            if all(task.tool == "query_order" for task in state.read_plan) and all(
+                result is not None and result.success and isinstance(result.data, dict)
+                and result.data.get("order_id") == task.resource_id
+                for task, (_, result) in zip(state.read_plan, results)
+            ):
+                # 仅服务端固定订单回显可作通知；历史自由文本仍需独立语义审查。
+                state.set_workflow_reply(state.reply)
         except (ValueError, TypeError, TimeoutError):
-            state.reply = "本轮只读查询未完成，请核对查询对象后重试；后续业务操作尚未执行。"
+            state.set_workflow_reply("本轮只读查询未完成，请核对查询对象后重试；后续业务操作尚未执行。")
             state.needs_clarification = True
             return AgentNode.RESPONSE_GENERATION
         return AgentNode.RESULT_VERIFICATION
     state.current_refund_preview()
     state.current_refund_action()
     if state.refund_preview_error or state.refund_action_error:
-        state.reply, state.needs_clarification = "退款预览无效或已变化，请重新核对并生成预览。", True
+        state.set_workflow_reply("退款预览无效或已变化，请重新核对并生成预览。")
+        state.needs_clarification = True
         return AgentNode.RESPONSE_GENERATION
     state.collected_info["user_id"] = state.user_id
     state.collected_info["session_id"] = state.session_id
-    extracted_info = dependencies.extract_info(state.user_message)
-
-    if not state.merge_extracted_business_parameters(extracted_info, model_selected_order=state.understanding is not None):
-        state.reply, state.needs_clarification = "本轮业务参数无效，请核对订单号、原因和申请类型。", True
-        return AgentNode.RESPONSE_GENERATION
+    if state.understanding is None:
+        extracted_info = dependencies.extract_info(state.user_message)
+        if not state.merge_extracted_business_parameters(extracted_info, model_selected_order=False):
+            state.set_workflow_reply("本轮业务参数无效，请核对订单号、原因和申请类型。")
+            state.needs_clarification = True
+            return AgentNode.RESPONSE_GENERATION
+    else:
+        from app.agent.request_understanding import validate_semantics, execution_request_type, execution_missing_information
+        from app.agent.routing_policy import DEFAULT_ROUTING_POLICY
+        try:
+            value = state.understanding
+            validate_semantics(value, state)
+            expected_topic = "query_order" if value.conditions else value.topic
+            if state.detected_intent != expected_topic:
+                raise ValueError("understood_topic_changed")
+            if state.current_business_parameters().order_id != value.entities.order_id:
+                raise ValueError("understood_order_changed")
+            for key, selected in value.parameters.model_dump(exclude_none=True).items():
+                if getattr(state.current_business_parameters(), key) != selected:
+                    raise ValueError("understood_parameter_changed")
+            decision = DEFAULT_ROUTING_POLICY.decide_structured(
+                topic=expected_topic, request_type=execution_request_type(value),
+                parameters=state.current_business_parameters().model_dump(exclude_none=True),
+                missing_information=execution_missing_information(value))
+        except ValueError:
+            state.set_workflow_reply("本轮业务对象或理解已变化，请重新核实；未执行后续操作。")
+            state.needs_clarification = True
+            return AgentNode.RESPONSE_GENERATION
+        if decision.next_node != AgentNode.TOOL_EXECUTION:
+            state.missing_slots = list(decision.missing_slots)
+            if decision.reply:
+                state.reply = decision.reply
+            state.needs_clarification = True
+            return decision.next_node
 
     tools_to_execute = dependencies.select_tools(
         state.detected_intent, {**state.current_business_parameters().model_dump(exclude_none=True),
@@ -114,7 +152,8 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
     if state.detected_intent == IntentType.REFUND and tools_to_execute:
         if not dependencies.confirmed(state):
             if re.search(r"部分退款|只退|(?:退款|退回|退还)\s*\d+(?:\.\d+)?\s*(?:元|块|CNY)", state.user_message, re.I):
-                state.reply, state.needs_clarification = "本版仅支持模拟全额申请，不支持指定金额或部分退款；请确认是否申请订单全额退款。", True
+                state.set_workflow_reply("本版仅支持模拟全额申请，不支持指定金额或部分退款；请确认是否申请订单全额退款。")
+                state.needs_clarification = True
                 return AgentNode.RESPONSE_GENERATION
             if state.source_message_id is not None:
                 from fastapi import HTTPException
@@ -125,7 +164,8 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
                     if not isinstance(action, dict) or not state.record_refund_action(action):
                         if not isinstance(action, dict):
                             state.record_refund_action({})
-                        state.reply, state.needs_clarification = "无法核实退款动作回执，请查询当前记录或重新生成预览；未提交退款申请。", True
+                        state.set_workflow_reply("无法核实退款动作回执，请查询当前记录或重新生成预览；未提交退款申请。")
+                        state.needs_clarification = True
                         return AgentNode.RESPONSE_GENERATION
                     tools_to_execute[0][1].update(action_id=action["action_id"], action_version=action["version"],
                                                   idempotency_key=f"refund-action:{action['action_id']}")
@@ -139,7 +179,8 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
         if state.source_message_id is not None:
             pending_count = await dependencies.actions.pending_count(state.user_id, state.session_id)
             if pending_count > 1 and state.requested_action_id is None:
-                state.reply, state.needs_clarification = "有多个待确认退款动作，请指定action_id与版本。", True
+                state.set_workflow_reply("有多个待确认退款动作，请指定action_id与版本。")
+                state.needs_clarification = True
                 return AgentNode.RESPONSE_GENERATION
             if state.requested_action_id and preview:
                 preview = {**preview, "action_id": state.requested_action_id,
@@ -227,29 +268,33 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
 def is_refund_confirmed(state: AgentState) -> bool:
     """识别显式确认，避免将“好的/谢谢”等普通回复当作授权。"""
     message = state.user_message.strip()
-    return message in CONFIRMATIONS or state.has_current_refund_confirmation()
+    preview = state.refund_preview_data() or {}
+    return is_refund_confirmation_message(message, preview.get("type")) or state.has_current_refund_confirmation()
 
 
 
 def refund_cancelled(state: AgentState) -> bool:
-    return state.user_message.strip() in {"取消", "不同意", "先不退", "不提交", "算了", "false", "0"}
+    return is_refund_cancellation_message(state.user_message)
 
 
 async def confirm_action(dependencies: "ConfirmationDependencies", state: AgentState) -> str:
     preview = state.refund_preview_data()
     action = state.current_refund_action()
     if state.refund_preview_error or state.refund_action_error:
-        state.reply, state.needs_clarification = "退款预览无效或已变化，请重新生成后确认。", True
+        state.set_workflow_reply("退款预览无效或已变化，请重新生成后确认。")
+        state.needs_clarification = True
         return AgentNode.RESPONSE_GENERATION
     if action is not None and (not action.matches(state.refund_preview) or not action.is_pending()):
-        state.reply, state.needs_clarification = "当前动作回执与预览不一致、已过期或已不是待确认状态，请查询记录或重新生成预览。", True
+        state.set_workflow_reply("当前动作回执与预览不一致、已过期或已不是待确认状态，请查询记录或重新生成预览。")
+        state.needs_clarification = True
         state.pending_confirmations = [value for value in state.pending_confirmations if value != "apply_refund"]
         return AgentNode.RESPONSE_GENERATION
     if dependencies.confirmed(state):
-        if state.user_message.strip() in CONFIRMATIONS:
+        if is_refund_confirmation_message(state.user_message, preview.get("type")):
             state.record_refund_confirmation("current_message")
         elif not state.has_current_refund_confirmation():
-            state.reply, state.needs_clarification = "请在本轮明确确认当前退款预览。", True
+            state.set_workflow_reply("请在本轮明确确认当前退款预览。")
+            state.needs_clarification = True
             return AgentNode.RESPONSE_GENERATION
         state.pending_confirmations = []
         return AgentNode.TOOL_EXECUTION
@@ -260,10 +305,13 @@ async def confirm_action(dependencies: "ConfirmationDependencies", state: AgentS
     label = {"return": "退货退款", "exchange": "换货"}.get(refund_type, "仅退款")
     detail = (f"模拟金额{action.amount} {action.currency}；动作{action.action_id}，版本{action.version}，"
               f"有效至{action.expires_at}。" if action is not None else "")
-    state.reply = detail + (
+    if action is not None and action.preconditions:
+        labels = {"order_not_shipped": "订单未发货", "order_delivered": "订单已签收"}
+        detail += "办理前提：" + "、".join(labels[item] for item in action.preconditions) + "，提交时会再次核验。"
+    state.set_workflow_reply(detail + (
         f"即将为订单 {order_id} 提交{label}申请，原因：{reason or '未填写'}。"
         "该操作提交后将进入审核，是否确认提交？（请回复“确认”）"
-    )
+    ))
     decision = dependencies.pause({
         "type": "refund_confirmation", "order_id": order_id,
         "refund_type": refund_type, "reason": reason,
@@ -351,6 +399,18 @@ async def verify_tool_result(state: AgentState) -> str:
         last_call = state.tool_calls[-1]
 
         if not last_call.success:
+            if last_call.tool_name == "apply_refund":
+                # Only fixed server text is trusted. Unknown outcomes must not be
+                # described as a failed submission or retried by the model.
+                known_rejection = last_call.error_type in {"conflict", "validation", "permission", "not_found"}
+                state.set_workflow_reply(
+                    "本次退款提交未通过条件、权限或预览一致性校验，未登记新申请。请重新核实订单和预览后再确认。"
+                    if known_rejection else
+                    "当前退款提交结果暂时无法核实，请使用原请求查询记录；不要重复提交。"
+                )
+                state.needs_clarification = True
+                state.need_human = False
+                return AgentNode.RESPONSE_GENERATION
             tool_count = len(state.tool_calls)
             if tool_count < 3:
                 state.reply = f"抱歉，操作遇到问题：{last_call.error_message or '未知错误'}"

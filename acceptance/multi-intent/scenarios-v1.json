@@ -1,0 +1,595 @@
+{
+  "schema_version": 1,
+  "dataset_id": "multi-intent-semantic-v1",
+  "review_origin": "assistant_curated_synthetic_not_independent_human_gold",
+  "description": "16个不同语义家族；开发/留出按家族拆分。原话、来源事实、正确候选和对抗候选在真实调用前冻结。",
+  "cases": [
+    {
+      "case_id": "MI-01",
+      "family": "packaging_shipping",
+      "split": "development",
+      "message": "查询订单ORD960001，退货包装有什么要求，质量问题运费由谁承担。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "质量问题运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "good_statuses": null,
+      "bad_item": 2,
+      "bad_answer": "任何原因退货运费都由商家承担。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-02",
+      "family": "same_order_fields",
+      "split": "development",
+      "message": "查订单ORD960001状态，再查这笔订单金额。",
+      "items": [
+        {
+          "text": "查订单ORD960001状态",
+          "kind": "query_order"
+        },
+        {
+          "text": "再查这笔订单金额",
+          "kind": "query_order"
+        }
+      ],
+      "knowledge": [
+        "",
+        ""
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "订单金额为99.10元。"
+      ],
+      "good_statuses": null,
+      "bad_item": 1,
+      "bad_answer": "订单金额为999.10元。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-03",
+      "family": "three_knowledge_topics",
+      "split": "development",
+      "message": "退货包装有什么要求，退款多久到账，质量问题运费由谁承担。",
+      "items": [
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        },
+        {
+          "text": "质量问题运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货需保留原包装。",
+        "退款审核通过后3个工作日到账。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货需保留原包装。",
+        "退款审核通过后3个工作日到账。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "good_statuses": null,
+      "bad_item": 2,
+      "bad_answer": "",
+      "attack": "omitted"
+    },
+    {
+      "case_id": "MI-04",
+      "family": "missing_order",
+      "split": "development",
+      "message": "查我的订单状态，退货包装有什么要求。",
+      "items": [
+        {
+          "text": "查我的订单状态",
+          "kind": "query_order"
+        },
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "请提供订单号，目前尚无法查询订单。",
+        "退货需保留原包装。"
+      ],
+      "good_statuses": [
+        "limited",
+        "answered"
+      ],
+      "bad_item": 0,
+      "bad_answer": "订单已签收。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-05",
+      "family": "permission_isolation",
+      "split": "development",
+      "message": "查订单ORD960001，质量问题运费由谁承担。",
+      "items": [
+        {
+          "text": "查订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "质量问题运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "质量问题运费由商家承担。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": true,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "目前没有权限查询该订单，无法确认状态。",
+        "质量问题运费由商家承担。"
+      ],
+      "good_statuses": [
+        "limited",
+        "answered"
+      ],
+      "bad_item": 0,
+      "bad_answer": "订单已签收。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-06",
+      "family": "partial_sources",
+      "split": "development",
+      "message": "退货包装有什么要求，运费由谁承担。",
+      "items": [
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货需保留原包装。",
+        ""
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货需保留原包装。",
+        "当前资料没有说明运费承担，尚无法确认。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 1,
+      "bad_answer": "运费一律由商家承担。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-07",
+      "family": "preview_not_submission",
+      "split": "development",
+      "message": "查询订单ORD960001，如果已签收请申请退款，原因是外壳明显破损，退货包装有什么要求。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "如果已签收请申请退款，原因是外壳明显破损",
+          "kind": "prepare_refund"
+        },
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "",
+        "退货需保留原包装。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": true,
+      "conditions": [
+        "order_delivered"
+      ],
+      "good_answers": [
+        "订单已签收。",
+        "已准备模拟退款预览，尚未提交申请，请明确确认。",
+        "退货需保留原包装。"
+      ],
+      "good_statuses": [
+        "answered",
+        "awaiting_confirmation",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "已成功退款，资金已经退回。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-08",
+      "family": "conditional_block",
+      "split": "development",
+      "message": "查询订单ORD960001，如果已签收请申请退款。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "如果已签收请申请退款",
+          "kind": "prepare_refund"
+        }
+      ],
+      "knowledge": [
+        "",
+        ""
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "pending",
+      "preview": false,
+      "conditions": [
+        "order_delivered"
+      ],
+      "good_answers": [
+        "订单待发货，尚未签收。",
+        "尚未满足已签收条件，没有准备或提交退款申请。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 1,
+      "bad_answer": "已签收并完成退款。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-09",
+      "family": "unsupported_mixed_write",
+      "split": "holdout",
+      "message": "查询订单ORD960001，同时创建投诉工单。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "同时创建投诉工单",
+          "kind": "unsupported"
+        }
+      ],
+      "knowledge": [
+        "",
+        ""
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "当前多事项流程未创建投诉工单，请单独明确发起投诉。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 1,
+      "bad_answer": "投诉工单已创建。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-10",
+      "family": "negated_application",
+      "split": "holdout",
+      "message": "查询订单ORD960001，不申请退款，只问退款条件。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "不申请退款，只问退款条件",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "未拆封且收货7日内可以申请退货。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "未拆封且收货7日内可以申请退货；本轮未申请退款。"
+      ],
+      "good_statuses": null,
+      "bad_item": 1,
+      "bad_answer": "已经为你提交退款申请。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-11",
+      "family": "warranty_exception",
+      "split": "holdout",
+      "message": "保修期限多久，进水是否保修。",
+      "items": [
+        {
+          "text": "保修期限多久",
+          "kind": "knowledge"
+        },
+        {
+          "text": "进水是否保修",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "保修期限12个月。",
+        "进水损坏不属于保修范围。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "保修期限12个月。",
+        "进水损坏不属于保修范围。"
+      ],
+      "good_statuses": null,
+      "bad_item": 1,
+      "bad_answer": "保修期限12个月，进水也免费保修。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-12",
+      "family": "workday_condition",
+      "split": "holdout",
+      "message": "退款多久到账，节假日怎么算。",
+      "items": [
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        },
+        {
+          "text": "节假日怎么算",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退款审核通过后3个工作日到账。",
+        "退款到账时效按工作日计算，节假日顺延。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退款审核通过后3个工作日到账。",
+        "退款到账时效按工作日计算，节假日顺延。"
+      ],
+      "good_statuses": null,
+      "bad_item": 0,
+      "bad_answer": "退款发起后3个自然日必定到账。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-13",
+      "family": "diagnostic_not_resolved",
+      "split": "holdout",
+      "message": "查询订单ORD960001，耳机无法开机，请帮我排查。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "耳机无法开机，请帮我排查",
+          "kind": "troubleshoot"
+        }
+      ],
+      "knowledge": [
+        "",
+        "可先更换充电线，确认指示灯状态后反馈。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "请先更换充电线并反馈指示灯状态，目前不能确认故障解决。"
+      ],
+      "good_statuses": [
+        "answered",
+        "waiting_feedback"
+      ],
+      "bad_item": 1,
+      "bad_answer": "电源已排除，故障已经解决。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-14",
+      "family": "scoped_sources",
+      "split": "holdout",
+      "message": "优惠券能叠加吗，退货包装有什么要求。",
+      "items": [
+        {
+          "text": "优惠券能叠加吗",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "优惠券不可叠加使用。",
+        "退货需保留原包装。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "优惠券不可叠加使用。",
+        "退货需保留原包装。"
+      ],
+      "good_statuses": null,
+      "bad_item": 1,
+      "bad_answer": "退货无需保留包装。",
+      "attack": "foreign_reference"
+    },
+    {
+      "case_id": "MI-15",
+      "family": "reported_check_is_not_normal",
+      "split": "holdout",
+      "message": "耳机检查过电源仍然不亮，请继续排查，运费由谁承担。",
+      "items": [
+        {
+          "text": "耳机检查过电源仍然不亮，请继续排查",
+          "kind": "troubleshoot"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "可先更换充电线，再反馈指示灯状态。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "可先更换充电线，再反馈指示灯状态；当前检查结果仍未知。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "good_statuses": [
+        "waiting_feedback",
+        "answered"
+      ],
+      "bad_item": 0,
+      "bad_answer": "电源已经正常，电源故障已排除。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "MI-16",
+      "family": "four_independent_goals",
+      "split": "holdout",
+      "message": "查询订单ORD960001，包装有什么要求，运费由谁承担，退款多久到账。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。",
+        "审核通过后3个工作日到账。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。",
+        "审核通过后3个工作日到账。"
+      ],
+      "good_statuses": null,
+      "bad_item": 3,
+      "bad_answer": "",
+      "attack": "omitted"
+    }
+  ]
+}

@@ -46,7 +46,8 @@ class Settings(BaseSettings):
     REDIS_DB: int = Field(default=0)
     REDIS_ENABLED: bool = Field(default=True)
     # 默认保留进程模式；Redis模式需所有本地模型worker共享同一Redis与namespace。
-    LOCAL_MODEL_COORDINATOR: str = Field(default="process", pattern="^(process|redis)$")
+    LOCAL_MODEL_COORDINATOR: str = Field(default="process", pattern="^(process|redis|batch)$")
+    LOCAL_MODEL_MAX_CONCURRENCY: int = Field(default=1, ge=1, le=2)
     LOCAL_MODEL_COORDINATOR_NAMESPACE: str = Field(default="aicshub:local-models:whole-v1", min_length=1, max_length=120)
 
     LLM_API_BASE: str = Field(default="http://localhost:8001")
@@ -56,6 +57,8 @@ class Settings(BaseSettings):
     LLM_THINKING_MODE: Literal["", "enabled", "disabled"] = ""
     LLM_STRUCTURED_OUTPUT_METHOD: Literal["json_schema", "function_calling"] = "json_schema"
     LLM_REQUEST_TIMEOUT_SECONDS: float = Field(default=30.0, gt=0)
+    LLM_GENERATION_TEMPERATURE: float = Field(default=0.7, ge=0, le=2)
+    CHAT_RUN_TIMEOUT_SECONDS: float = Field(default=30, gt=0, le=300)
     LLM_MAX_TOKENS: int = Field(default=1024, ge=64, le=8192)
     LLM_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
     # 备用模型（provider 容灾）：主模型不可用时自动切换。三者都留空（默认）= 不启用
@@ -74,6 +77,16 @@ class Settings(BaseSettings):
     REQUEST_UNDERSTANDING_MODE: str = Field(default="rules", pattern="^(rules|shadow|model)$")
     REQUEST_UNDERSTANDING_VERSION: str = Field(default="understanding.v1")
     REQUEST_UNDERSTANDING_PERCENTAGE: int = Field(default=100,ge=0,le=100)
+    # 新任务循环独立准入；不把旧请求理解验收外推为多步调度验收。
+    AGENT_TASK_LOOP_ENABLED: bool = Field(default=False)
+    AGENT_TASK_DETERMINISTIC_ROUTING_ENABLED: bool = Field(default=False)
+    AGENT_ITEM_COMPLETION_ENABLED: bool = Field(default=False)
+    # 首轮任务灰度只开放读取/知识/排障；退款预览需单独完成准入。
+    AGENT_TASK_REFUND_PREVIEW_ENABLED: bool = Field(default=False)
+    AGENT_TASK_MAX_DECISIONS: int = Field(default=3, ge=1, le=3)
+    AGENT_TASK_MAX_TOOL_CALLS: int = Field(default=4, ge=1, le=6)
+    AGENT_TASK_TIMEOUT_SECONDS: float = Field(default=20, gt=0, le=60)
+    AGENT_TASK_MAX_OUTPUT_TOKENS: int = Field(default=256, ge=128, le=500)
     LLM_GATEWAY_ENABLED: bool = Field(default=False)
     LLM_UNDERSTANDING_MAX_TOKENS: int = Field(default=500,ge=128,le=1024)
     LLM_PRICE_VERIFIED: bool = Field(default=False)
@@ -110,6 +123,11 @@ class Settings(BaseSettings):
     LLM_QUERY_REWRITE_ENABLED: bool = Field(default=True)
     # 是否启用 LLM-as-judge 对 RAG/工具回答做事实与引用一致性校验（防幻觉）。
     LLM_JUDGE_ENABLED: bool = Field(default=True)
+    # v2仅候选：离线契约/SDK通过不代表真实供应商质量，默认继续v1。
+    LLM_JUDGE_CONTRACT_VERSION: str = Field(default="v1", pattern="^(v1|v2)$")
+    LLM_JUDGE_SEGMENT_WIRE: bool = False
+    # 仅v2独立审查使用；保留默认function_calling，候选JSON协议须显式验证。
+    LLM_JUDGE_V2_OUTPUT_PROTOCOL: Literal["function_calling","json_object"] = "function_calling"
     # 是否启用长期记忆 / 用户画像（聚合 SQLite 历史，可选向量召回）。
     USER_MEMORY_ENABLED: bool = Field(default=True)
     # 用户画像注入 LLM 提示词的最大历史条数。
@@ -137,19 +155,21 @@ class Settings(BaseSettings):
     EMBEDDING_DIM: int = Field(default=1024)
     # 单次 Embedding 请求的文本条数上限。外接 API（如 DashScope）单次上限 20，
     # 本地 Ollama 无此限制可调大（如 64）降低批量入库的 HTTP 往返次数。
-    EMBEDDING_BATCH_SIZE: int = Field(default=20)
+    EMBEDDING_BATCH_SIZE: int = Field(default=20, ge=1, le=256)
     # 查询侧指令前缀（Qwen3-Embedding 等指令感知模型建议启用）：
     # 检索时自动加此前缀，文档入库侧不加；留空保持原行为。
     EMBEDDING_QUERY_INSTRUCTION: str = Field(default="")
     EMBEDDING_REVISION: str = Field(default="unspecified")
     EMBEDDING_TIMEOUT_SECONDS: float = Field(default=30,gt=0,le=180)
 
+    EMBEDDING_DOCUMENT_TIMEOUT_SECONDS: float = Field(default=60, gt=0, le=180)
+
     # Reranker 重排服务（模型 reranker，优先外部 API，本地 bge-reranker-large 兜底）
     # 外部 API：RERANKER_API_BASE/KEY/MODEL 配置后启用；style=openai 走
     #   POST {base}/rerank（Cohere/Infinity 兼容），style=dashscope 走 DashScope
     #   text-rerank 端点。本地：RERANKER_LOCAL_BASE 指向 Infinity 部署的
     #   bge-reranker-large（docker-compose.reranker.yml），Cohere 兼容格式。
-    # 未配置任何 provider 时 RAG_USE_RERANKER 回退启发式重排（_heuristic_rescore）。
+    # 未配置或失败时保留RRF融合排名，不使用旧启发式旁路。
     RERANKER_API_BASE: str = Field(default="")
     RERANKER_API_KEY: str = Field(default="")
     RERANKER_MODEL: str = Field(default="")
@@ -157,6 +177,7 @@ class Settings(BaseSettings):
     RERANKER_TIMEOUT_SECONDS: float = Field(default=3.0, gt=0)
     RERANKER_LOCAL_BASE: str = Field(default="")
     RERANKER_LOCAL_MODEL: str = Field(default="BAAI/bge-reranker-large")
+    RERANKER_LOCAL_BATCH_SIZE: int = Field(default=4, ge=1, le=24)
 
     # RAG 检索增强生成
     COLLECTION_NAME: str = Field(default="customer_service_knowledge")
@@ -164,17 +185,19 @@ class Settings(BaseSettings):
     RAG_RECALL_K: int = Field(default=20)
     RAG_RERANK_K: int = Field(default=20)
     RAG_SIMILARITY_THRESHOLD: float = Field(default=0.2)
+    RAG_RRF_K: int = Field(default=60, ge=1, le=1000)
+    RAG_EVIDENCE_MAX_CHARS: int = Field(default=8000, ge=512, le=64000)
+    RAG_CONTEXT_NEIGHBORS: int = Field(default=1, ge=0, le=2)
     # 检索融合已改为 RRF（Rank 融合，不依赖权重），历史上的
     # RAG_BM25_WEIGHT / RAG_VECTOR_WEIGHT / RAG_SEARCH_TOP_K_MULTIPLIER 已移除。
     # RAG_USE_RERANKER 是重排总开关：开启后优先模型 reranker（外部 API →
-    # 本地 bge-reranker-large，见 RERANKER_* 配置），未配置/失败回退启发式
-    # 重排（_heuristic_rescore：标题/关键词/类目命中加权）。
+    # 本地 bge-reranker-large，见 RERANKER_* 配置），主链路失败保留RRF排名。
     RAG_USE_RERANKER: bool = Field(default=True)
 
     # 文档分块配置
-    CHUNK_SIZE: int = Field(default=500)
-    CHUNK_OVERLAP: int = Field(default=50)
-    CHUNK_SPLIT_PATTERN: str = Field(default="heading")
+    CHUNK_SIZE: int = Field(default=500, ge=64, le=8000)
+    CHUNK_OVERLAP: int = Field(default=50, ge=0)
+    CHUNK_SPLIT_PATTERN: str = Field(default="heading", pattern="^(heading|title|按标题|sentence|paragraph|fixed)$")
 
     @property
     def DATABASE_URL(self) -> str:
@@ -253,6 +276,18 @@ class Settings(BaseSettings):
                 f"环境变量 EMBEDDING_DIM={embedding_dim} 必须在 1-8192 之间"
             )
         return values
+
+    @model_validator(mode="after")
+    def validate_task_loop(self):
+        if self.AGENT_ITEM_COMPLETION_ENABLED and (not self.AGENT_TASK_LOOP_ENABLED
+                or not self.LLM_JUDGE_ENABLED):
+            raise ValueError("逐项完成检查要求任务循环和独立审查；不得在缺少审查时启用")
+        if self.AGENT_TASK_LOOP_ENABLED:
+            if self.REQUEST_UNDERSTANDING_MODE != "model" or not self.LLM_GATEWAY_ENABLED:
+                raise ValueError("任务循环要求model理解及SQL模型网关，不能绕过整轮调用预算")
+            if self.AGENT_TASK_MAX_OUTPUT_TOKENS > self.LLM_MAX_TOKENS:
+                raise ValueError("任务决策输出上限不能超过模型总输出上限")
+        return self
 
     @model_validator(mode="after")
     def validate_production_security(self):

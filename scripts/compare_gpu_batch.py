@@ -16,7 +16,7 @@ ORIGINAL = "aicshub-gpu-v2m3-candidate"
 
 
 def docker(*args, timeout=25):
-    return subprocess.check_output(["docker",*args],text=True,timeout=timeout).strip()
+    return subprocess.check_output(["docker",*args],text=True,encoding="utf-8",timeout=timeout).strip()
 
 
 def batch_command(command, size):
@@ -27,6 +27,14 @@ def batch_command(command, size):
     result = list(command)
     result[result.index("--batch-size")+1] = str(size)
     return result
+
+
+def attention_command(command, size=4):
+    # 复用原命令严格检查，但不改变batch、精度、模型或截断行为。
+    changed = batch_command(command, 8)
+    if size not in (4, 8):
+        raise RuntimeError("unverified_attention_batch_size")
+    return [*(command if size == 4 else changed), "--no-bettertransformer"]
 
 
 def health(port, seconds=60):
@@ -43,11 +51,12 @@ def health(port, seconds=60):
 
 
 @contextmanager
-def isolated_batch(report):
+def isolated_batch(report, *, native_attention=False, native_batch_size=4):
     from scripts.verify_gpu_pair import inspect_candidate
     verified = inspect_candidate(ORIGINAL,7999,"7997/tcp")
     obj = json.loads(docker("inspect",ORIGINAL))[0]
-    command = batch_command(obj["Config"]["Cmd"],8)
+    command = (attention_command(obj["Config"]["Cmd"], native_batch_size) if native_attention
+               else batch_command(obj["Config"]["Cmd"],8))
     mounts = [m for m in obj["Mounts"] if m["Destination"] == "/app/.cache/huggingface"]
     if len(mounts) != 1 or mounts[0].get("Name") != "aicustomer_reranker_hf_cache":
         raise RuntimeError("unverified_model_cache")
@@ -57,12 +66,20 @@ def isolated_batch(report):
     report["original"] = verified
     report["temporary_name"] = name
     try:
+        probe_args = []
+        if native_attention:
+            probe = ROOT/"scripts/runtime_attention_probe"
+            if not (probe/"sitecustomize.py").is_file():
+                raise RuntimeError("attention_probe_missing")
+            probe_args = ["--env", "PYTHONPATH=/app:/attention-probe", "--mount",
+                f"type=bind,source={probe},target=/attention-probe,readonly"]
         temporary = docker("create","--name",name,"--pull","never","--gpus","all",
                            "--label","aicshub.test.owner=gpu-batch-capacity",
                            "--publish","127.0.0.1::7997",
                            "--env","OMP_NUM_THREADS=2","--env","MKL_NUM_THREADS=2",
                            "--env","HF_HUB_OFFLINE=1","--env","TRANSFORMERS_OFFLINE=1",
                            "--mount","type=volume,source=aicustomer_reranker_hf_cache,target=/app/.cache/huggingface,readonly",
+                           *probe_args,
                            obj["Image"],*command)
         # 再核对ID，避免名称重用后停止其他容器。
         assert json.loads(docker("inspect",ORIGINAL))[0]["Id"] == verified["id"]
@@ -82,9 +99,8 @@ def isolated_batch(report):
         errors = []
         if temporary:
             try:
-                info = json.loads(docker("inspect",temporary))[0]
-                if info["State"]["Running"]:
-                    docker("stop","--time","10",temporary)
+                # 创建返回的不可变ID属于本轮；即使inspect/日志解码失败也先停止。
+                docker("stop","--time","10",temporary)
                 report["temporary_final_state"] = json.loads(docker("inspect",temporary))[0]["State"]["Status"]
             except Exception as exc:errors.append("temporary_stop:"+type(exc).__name__)
         if stopped:

@@ -7,12 +7,15 @@ from pydantic import BaseModel, Field
 from copy import deepcopy
 from datetime import datetime
 from app.agent.read_plan import ReadTask
+from app.agent.task_contracts import TaskProgress, TaskRuntime
+from app.agent.request_context import RequestContext
 from app.agent.flow_contracts import FlowFlag, TurnFlow
 from app.agent.generation_contracts import GenerationMetadata
 from app.agent.business_contracts import BusinessParameters
 from app.agent.confirmation_contracts import TurnRefundConfirmation
 from app.agent.refund_preview_contracts import RefundPreview
 from app.agent.refund_action_contracts import RefundActionView
+from app.agent.query_rewrite_contracts import QueryRewriteObservation, RewriteOrigin
 from app.agent.tool_contracts import ToolObservation, BusinessToolName, TOOL_RESULT_COMPAT_KEYS, TOOL_IDENTIFIER_PROJECTIONS
 
 
@@ -29,6 +32,8 @@ class ToolCall(BaseModel):
 
 from app.agent.request_understanding import (
     RequestUnderstanding,
+    TaskRequestUnderstanding,
+    ItemizedTaskUnderstanding,
     ConversationContext,
     ActionIntent,
     ReviewResult,
@@ -44,15 +49,24 @@ class AgentState(BaseModel):
     user_id: int
     user_message: str
     session_version: Optional[int] = None
-    understanding: Optional[RequestUnderstanding] = None
+    understanding: Optional[ItemizedTaskUnderstanding | TaskRequestUnderstanding | RequestUnderstanding] = None
+    understanding_context: Optional[RequestContext] = None
     conversation_context: Optional[ConversationContext] = None
     action_intent: Optional[ActionIntent] = None
     review_result: Optional[ReviewResult] = None
+    # 仅服务端确定性通知生产者写入；模型补问和任意工具正文不得标记。
+    workflow_reply_digest: Optional[str] = None
     evidence_bundle: Optional[EvidenceBundle] = None
     retrieval_metadata: Dict[str, Any] = Field(default_factory=dict)
     retrieval_error: Optional[str] = None
     understanding_mode: Optional[str] = None
     strategy_version: Optional[str] = None
+    # 任务恢复提示与本轮执行分别存储；新轮次不带入旧观察/预算/计划。
+    run_id: Optional[str] = None
+    task_loop_enabled: Optional[bool] = None
+    task: Optional[TaskProgress] = None
+    task_runtime: Optional[TaskRuntime] = None
+    superseded_task_id: Optional[str] = None
     node_steps: int = 0
     flow: TurnFlow = Field(default_factory=TurnFlow)
     generation_metadata: Optional[GenerationMetadata] = None
@@ -92,6 +106,9 @@ class AgentState(BaseModel):
     rewritten_query: Optional[str] = None
     query_rewrite_applied: bool = False
     query_rewrite_reason: Optional[str] = None
+    query_rewrite: Optional[QueryRewriteObservation] = None
+    query_rewrite_error: Optional[str] = None
+    query_rewrite_established: bool = False
     collected_info: Dict[str, Any] = Field(
         default_factory=dict
     )  # 已收集的信息（如订单号等）
@@ -110,6 +127,66 @@ class AgentState(BaseModel):
 
     # 用户情绪
     user_emotion: str = "neutral"  # neutral, positive, negative, angry
+
+    def _query_rewrite_digest(self) -> str:
+        import hashlib
+        import json
+        payload = [self.session_id, self.user_id, self.session_version, self.source_message_id,
+                   self.user_message]
+        return hashlib.sha256(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
+
+    def record_query_rewrite(self, raw: Dict[str, Any], origin: RewriteOrigin) -> bool:
+        keys = {"original_query", "rewritten_query", "applied", "reason", "confidence", "simple"}
+        try:
+            if not isinstance(raw, dict) or set(raw) - keys:
+                raise ValueError("query_rewrite_not_observation")
+            parsed = QueryRewriteObservation.model_validate({
+                **raw, "origin": origin, "context_digest": self._query_rewrite_digest(),
+            })
+            if " ".join(parsed.original_query.split()) != " ".join(self.user_message.split()):
+                raise ValueError("query_rewrite_wrong_original")
+        except (ValueError, TypeError):
+            self._reset_query_rewrite("query_rewrite_invalid")
+            return False
+        self.query_rewrite = parsed
+        self.query_rewrite_error = None
+        self.query_rewrite_established = True
+        self._project_query_rewrite()
+        return True
+
+    def _project_query_rewrite(self) -> None:
+        parsed = self.query_rewrite
+        self.rewritten_query = parsed.rewritten_query
+        self.query_rewrite_applied = parsed.applied
+        self.query_rewrite_reason = parsed.reason
+        self.collected_info["query_rewrite"] = parsed.model_dump(exclude={"origin", "context_digest"})
+
+    def _reset_query_rewrite(self, reason: str) -> None:
+        self.query_rewrite = QueryRewriteObservation(
+            original_query=self.user_message, rewritten_query=self.user_message, applied=False,
+            reason=reason, confidence=0., origin="fallback", context_digest=self._query_rewrite_digest())
+        self.query_rewrite_established = True
+        self.query_rewrite_error = reason
+        self._project_query_rewrite()
+
+    def current_retrieval_query(self) -> str:
+        if self.query_rewrite is not None:
+            if self.query_rewrite.context_digest != self._query_rewrite_digest():
+                self._reset_query_rewrite("query_rewrite_context_changed")
+            return self.query_rewrite.rewritten_query
+        if self.query_rewrite_established:
+            self._reset_query_rewrite("query_rewrite_missing")
+            return self.user_message
+        if self.rewritten_query is not None:
+            # 旧内部调用仅一次导入经过校验的平铺字段，不读取collected_info中的改写字典。
+            rewritten = self.rewritten_query
+            self.record_query_rewrite({
+                "original_query": self.user_message, "rewritten_query": rewritten,
+                "applied": isinstance(rewritten, str) and " ".join(rewritten.split()) != " ".join(self.user_message.split()),
+                "reason": self.query_rewrite_reason or "legacy", "confidence": 0., "simple": False,
+            }, "legacy")
+            return self.query_rewrite.rewritten_query
+        return self.user_message
 
     def flow_value(self, flag: FlowFlag) -> bool | None:
         if not isinstance(flag, FlowFlag):
@@ -236,8 +313,9 @@ class AgentState(BaseModel):
         return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
 
     def record_refund_confirmation(self, origin: str) -> None:
-        from app.agent.refund_authorization import CONFIRMATIONS
-        if origin == "current_message" and self.user_message.strip() not in CONFIRMATIONS:
+        from app.agent.refund_authorization import is_refund_confirmation_message
+        if origin == "current_message" and not is_refund_confirmation_message(
+                self.user_message, (self.refund_preview_data() or {}).get("type")):
             raise ValueError("current_message_not_confirmation")
         self.current_refund_preview()
         self.current_refund_action()
@@ -419,6 +497,12 @@ class AgentState(BaseModel):
             )
         return {key: deepcopy(value) for key, value in info.items() if key in persistent_keys}
 
+    def set_workflow_reply(self, text: str) -> None:
+        """绑定当前请求的服务端通知；新轮次不继承，文本修改立即失效。"""
+        from app.agent.answer_contracts import workflow_binding
+        self.reply = text
+        self.workflow_reply_digest = workflow_binding(self, text)
+
     def for_next_turn(self, user_id: int, message: str) -> "AgentState":
         """Copy conversation facts and unfinished actions; reset every turn artifact."""
         # 兼容字段导入会建立类型状态，必须在副本中进行，不能修改上轮缓存/调用方对象。
@@ -436,7 +520,10 @@ class AgentState(BaseModel):
             detected_intent=self.detected_intent,
             intent_confidence=self.intent_confidence,
             needs_clarification=self.needs_clarification,
+            missing_slots=list(self.missing_slots),
             pending_confirmations=pending,
+            task=(self.task.model_copy(deep=True) if self.task and self.task.user_id == user_id
+                  and self.task.status in {"waiting_input", "waiting_confirmation"} else None),
             collected_info=self.carryover_context(
                 context, unfinished=bool(self.missing_slots or pending)
             ),
@@ -521,6 +608,9 @@ class AgentNode:
     TOOL_EXECUTION = "tool_execution"
     CONFIRMATION = "confirmation"
     RESULT_VERIFICATION = "result_verification"
+    TASK_DECISION = "task_decision"
+    TASK_EXECUTION = "task_execution"
+    TASK_OBSERVATION = "task_observation"
     RESPONSE_GENERATION = "response_generation"
     HUMAN_HANDOFF = "human_handoff"
     END = "end"

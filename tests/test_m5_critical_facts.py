@@ -65,6 +65,81 @@ def test_partial_success_receipt_is_not_an_application_fact():
     assert not ResponseValidator().validate("退款申请已提交。", "申请退款", "refund", tools).passed
 
 
+@pytest.mark.parametrize("reply", [
+    "本订单提供终身免费换新服务。", "设备终身无条件保修。", "此商品享受终身免费更换。",
+    "我们保证终身免费维修。",
+])
+def test_lifetime_commitment_with_modifiers_requires_independent_evidence(reply):
+    result = ResponseValidator().validate(reply, "售后保障？", "general", [order()])
+    assert not result.passed and any(i["type"] == "fact_unverified_commitment" for i in result.issues)
+
+
+@pytest.mark.parametrize("reply", [
+    "测试退款已经实际支付成功。", "退款已真实打款。", "本次退款支付已完成。",
+    "退款已经真实完成支付。", "模拟退款支付成功。", "尚未到账，但已实际支付成功。",
+])
+def test_payment_completion_modifiers_do_not_turn_simulated_receipt_into_payment(reply):
+    tools = [{"success": True, "data": {"refund_id": "synthetic-other", "status": "approved", "is_simulated": True}}]
+    result = ResponseValidator().validate(reply, "退款进度？", "refund", tools)
+    assert not result.passed and any(i["type"] == "fact_payment_not_supported" for i in result.issues)
+
+
+@pytest.mark.parametrize("reply", [
+    "尚未实际支付成功。", "模拟申请已登记，不代表真实支付成功。", "退款支付尚未完成。",
+    "不能承诺终身免费维修。", "此商品不提供终身免费换新。", "该记录不表示已经真实完成支付。",
+    "本订单无赔偿。", "请勿相信承诺终身免费换新的消息。",
+])
+def test_denied_payment_or_lifetime_promises_remain_valid(reply):
+    assert ResponseValidator().validate(reply, "合成说明", "general", []).passed
+
+
+@pytest.mark.parametrize("reply", [
+    "关于实际退款到账的时间与规则，当前没有可依据的资料。",
+    "支付成功的条件需要依据实际回执核对。",
+    "打款成功时间尚未确认，请查看已有业务记录。",
+    "退款到账时间尚未核实，当前仍未付款。",
+    "模拟申请不等于实际打款成功。关于退款到账的时间，目前没有资料。",
+])
+def test_payment_policy_topic_is_not_a_completed_payment_claim(reply):
+    assert ResponseValidator().validate(reply, "退款到账时间？", "general", []).passed
+
+
+@pytest.mark.parametrize("reply", [
+    "退款到账时间未核实，但款项已经到账。",
+    "关于退款到账时间我不清楚。退款成功，款项已到账。",
+    "支付成功的条件请查看说明。本次已经真实支付成功。",
+    "退款已到账，时间尚未核实。",
+])
+def test_topic_reference_cannot_hide_another_actual_payment_claim(reply):
+    assert not ResponseValidator().validate(reply, "退款到账时间？", "general", []).passed
+
+
+async def test_simulated_receipt_explanation_with_payment_topic_survives_final_stream_guard():
+    import asyncio
+    from app.agent.state import AgentState, AgentNode
+    from app.agent.nodes.response_node import ResponseNode, ResponseServices
+    from app.agent.stream_context import stream_event_queue
+    from tests.test_chat_turns import Cache
+    from tests.test_chat_turns import allowed_judge
+    reply = "模拟退款申请不等于实际打款成功。当前为待审核。关于实际退款到账的时间与规则，目前没有资料。"
+    state = AgentState(session_id="synthetic-topic", user_id=101, user_message="模拟是否等于支付？",
+                       reply=reply, needs_clarification=True)
+    state.add_tool_call("apply_refund", {}, {"success": True, "data": {
+        "refund_id": "synthetic-topic", "status": "pending_review", "is_simulated": True}}, True)
+    judge = allowed_judge()
+    node = ResponseNode(ResponseServices(lambda: None, ResponseValidator, lambda: judge,
+                                         Cache, lambda: None, lambda: None))
+    queue = asyncio.Queue()
+    token = stream_event_queue.set(queue)
+    try:
+        assert await node(state) == AgentNode.END
+    finally:
+        stream_event_queue.reset(token)
+    assert state.reply == reply and state.collected_info["publication_guard"]["passed"]
+    judge.judge.assert_awaited_once()
+    assert "".join(queue.get_nowait()[1] for _ in range(queue.qsize())) == reply
+
+
 async def test_workflow_flag_cannot_bypass_fixed_business_facts_or_publish_stream():
     import asyncio
     from app.agent.state import AgentState, AgentNode

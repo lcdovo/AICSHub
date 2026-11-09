@@ -1,0 +1,6053 @@
+{
+  "schema_version": 1,
+  "status": "DRAFT_NOT_ADMISSION_GOLD",
+  "human_review_complete": false,
+  "unseen_status": "NOT_ESTABLISHED",
+  "utterance_count": 300,
+  "provisional_family_count": 60,
+  "variant_group_size": 5,
+  "not_300_independent_semantic_needs": true,
+  "may_dispatch_live": false,
+  "cases": [
+    {
+      "case_id": "quality-001",
+      "semantic_family": "draft-family-01",
+      "variant_index": 1,
+      "input": {
+        "message": "耳机如何切换降噪模式？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-002",
+      "semantic_family": "draft-family-01",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：耳机如何切换降噪模式？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-003",
+      "semantic_family": "draft-family-01",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：耳机如何切换降噪模式？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-004",
+      "semantic_family": "draft-family-01",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：耳机如何切换降噪模式？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-005",
+      "semantic_family": "draft-family-01",
+      "variant_index": 5,
+      "input": {
+        "message": "耳机如何切换降噪模式？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-006",
+      "semantic_family": "draft-family-02",
+      "variant_index": 1,
+      "input": {
+        "message": "耳机如何开启麦克风权限？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-007",
+      "semantic_family": "draft-family-02",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：耳机如何开启麦克风权限？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-008",
+      "semantic_family": "draft-family-02",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：耳机如何开启麦克风权限？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-009",
+      "semantic_family": "draft-family-02",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：耳机如何开启麦克风权限？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-010",
+      "semantic_family": "draft-family-02",
+      "variant_index": 5,
+      "input": {
+        "message": "耳机如何开启麦克风权限？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-011",
+      "semantic_family": "draft-family-03",
+      "variant_index": 1,
+      "input": {
+        "message": "耳机如何查看剩余电量？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-012",
+      "semantic_family": "draft-family-03",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：耳机如何查看剩余电量？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-013",
+      "semantic_family": "draft-family-03",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：耳机如何查看剩余电量？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-014",
+      "semantic_family": "draft-family-03",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：耳机如何查看剩余电量？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-015",
+      "semantic_family": "draft-family-03",
+      "variant_index": 5,
+      "input": {
+        "message": "耳机如何查看剩余电量？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-016",
+      "semantic_family": "draft-family-04",
+      "variant_index": 1,
+      "input": {
+        "message": "耳机如何升级固件？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-017",
+      "semantic_family": "draft-family-04",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：耳机如何升级固件？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-018",
+      "semantic_family": "draft-family-04",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：耳机如何升级固件？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-019",
+      "semantic_family": "draft-family-04",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：耳机如何升级固件？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-020",
+      "semantic_family": "draft-family-04",
+      "variant_index": 5,
+      "input": {
+        "message": "耳机如何升级固件？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-021",
+      "semantic_family": "draft-family-05",
+      "variant_index": 1,
+      "input": {
+        "message": "耳机如何同时连接两台设备？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-022",
+      "semantic_family": "draft-family-05",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：耳机如何同时连接两台设备？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-023",
+      "semantic_family": "draft-family-05",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：耳机如何同时连接两台设备？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-024",
+      "semantic_family": "draft-family-05",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：耳机如何同时连接两台设备？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-025",
+      "semantic_family": "draft-family-05",
+      "variant_index": 5,
+      "input": {
+        "message": "耳机如何同时连接两台设备？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-026",
+      "semantic_family": "draft-family-06",
+      "variant_index": 1,
+      "input": {
+        "message": "耳机充电盒不亮时如何排查？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-027",
+      "semantic_family": "draft-family-06",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：耳机充电盒不亮时如何排查？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-028",
+      "semantic_family": "draft-family-06",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：耳机充电盒不亮时如何排查？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-029",
+      "semantic_family": "draft-family-06",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：耳机充电盒不亮时如何排查？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-030",
+      "semantic_family": "draft-family-06",
+      "variant_index": 5,
+      "input": {
+        "message": "耳机充电盒不亮时如何排查？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-031",
+      "semantic_family": "draft-family-07",
+      "variant_index": 1,
+      "input": {
+        "message": "打印机如何清理卡纸？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-032",
+      "semantic_family": "draft-family-07",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：打印机如何清理卡纸？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-033",
+      "semantic_family": "draft-family-07",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：打印机如何清理卡纸？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-034",
+      "semantic_family": "draft-family-07",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：打印机如何清理卡纸？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-035",
+      "semantic_family": "draft-family-07",
+      "variant_index": 5,
+      "input": {
+        "message": "打印机如何清理卡纸？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-036",
+      "semantic_family": "draft-family-08",
+      "variant_index": 1,
+      "input": {
+        "message": "打印机如何校准打印颜色？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-037",
+      "semantic_family": "draft-family-08",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：打印机如何校准打印颜色？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-038",
+      "semantic_family": "draft-family-08",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：打印机如何校准打印颜色？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-039",
+      "semantic_family": "draft-family-08",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：打印机如何校准打印颜色？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-040",
+      "semantic_family": "draft-family-08",
+      "variant_index": 5,
+      "input": {
+        "message": "打印机如何校准打印颜色？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-041",
+      "semantic_family": "draft-family-09",
+      "variant_index": 1,
+      "input": {
+        "message": "打印机如何设置双面打印？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-042",
+      "semantic_family": "draft-family-09",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：打印机如何设置双面打印？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-043",
+      "semantic_family": "draft-family-09",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：打印机如何设置双面打印？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-044",
+      "semantic_family": "draft-family-09",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：打印机如何设置双面打印？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-045",
+      "semantic_family": "draft-family-09",
+      "variant_index": 5,
+      "input": {
+        "message": "打印机如何设置双面打印？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-046",
+      "semantic_family": "draft-family-10",
+      "variant_index": 1,
+      "input": {
+        "message": "打印机如何共享给家庭其他设备？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-047",
+      "semantic_family": "draft-family-10",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：打印机如何共享给家庭其他设备？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-048",
+      "semantic_family": "draft-family-10",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：打印机如何共享给家庭其他设备？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-049",
+      "semantic_family": "draft-family-10",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：打印机如何共享给家庭其他设备？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-050",
+      "semantic_family": "draft-family-10",
+      "variant_index": 5,
+      "input": {
+        "message": "打印机如何共享给家庭其他设备？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-051",
+      "semantic_family": "draft-family-11",
+      "variant_index": 1,
+      "input": {
+        "message": "打印机打印任务一直排队如何排查？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-052",
+      "semantic_family": "draft-family-11",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：打印机打印任务一直排队如何排查？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-053",
+      "semantic_family": "draft-family-11",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：打印机打印任务一直排队如何排查？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-054",
+      "semantic_family": "draft-family-11",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：打印机打印任务一直排队如何排查？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-055",
+      "semantic_family": "draft-family-11",
+      "variant_index": 5,
+      "input": {
+        "message": "打印机打印任务一直排队如何排查？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-056",
+      "semantic_family": "draft-family-12",
+      "variant_index": 1,
+      "input": {
+        "message": "打印机如何更换纸张规格？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-057",
+      "semantic_family": "draft-family-12",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：打印机如何更换纸张规格？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-058",
+      "semantic_family": "draft-family-12",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：打印机如何更换纸张规格？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-059",
+      "semantic_family": "draft-family-12",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：打印机如何更换纸张规格？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-060",
+      "semantic_family": "draft-family-12",
+      "variant_index": 5,
+      "input": {
+        "message": "打印机如何更换纸张规格？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-061",
+      "semantic_family": "draft-family-13",
+      "variant_index": 1,
+      "input": {
+        "message": "投影仪如何调整梯形校正？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-062",
+      "semantic_family": "draft-family-13",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：投影仪如何调整梯形校正？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-063",
+      "semantic_family": "draft-family-13",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：投影仪如何调整梯形校正？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-064",
+      "semantic_family": "draft-family-13",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：投影仪如何调整梯形校正？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-065",
+      "semantic_family": "draft-family-13",
+      "variant_index": 5,
+      "input": {
+        "message": "投影仪如何调整梯形校正？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-066",
+      "semantic_family": "draft-family-14",
+      "variant_index": 1,
+      "input": {
+        "message": "投影仪如何设置蓝牙音箱？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-067",
+      "semantic_family": "draft-family-14",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：投影仪如何设置蓝牙音箱？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-068",
+      "semantic_family": "draft-family-14",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：投影仪如何设置蓝牙音箱？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-069",
+      "semantic_family": "draft-family-14",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：投影仪如何设置蓝牙音箱？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-070",
+      "semantic_family": "draft-family-14",
+      "variant_index": 5,
+      "input": {
+        "message": "投影仪如何设置蓝牙音箱？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-071",
+      "semantic_family": "draft-family-15",
+      "variant_index": 1,
+      "input": {
+        "message": "投影仪如何清理投影镜头？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-072",
+      "semantic_family": "draft-family-15",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：投影仪如何清理投影镜头？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-073",
+      "semantic_family": "draft-family-15",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：投影仪如何清理投影镜头？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-074",
+      "semantic_family": "draft-family-15",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：投影仪如何清理投影镜头？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-075",
+      "semantic_family": "draft-family-15",
+      "variant_index": 5,
+      "input": {
+        "message": "投影仪如何清理投影镜头？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-076",
+      "semantic_family": "draft-family-16",
+      "variant_index": 1,
+      "input": {
+        "message": "投影仪如何选择输入信号源？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-077",
+      "semantic_family": "draft-family-16",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：投影仪如何选择输入信号源？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-078",
+      "semantic_family": "draft-family-16",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：投影仪如何选择输入信号源？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-079",
+      "semantic_family": "draft-family-16",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：投影仪如何选择输入信号源？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-080",
+      "semantic_family": "draft-family-16",
+      "variant_index": 5,
+      "input": {
+        "message": "投影仪如何选择输入信号源？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-081",
+      "semantic_family": "draft-family-17",
+      "variant_index": 1,
+      "input": {
+        "message": "请查询订单ORD990082的当前状态。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990082",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-082",
+      "semantic_family": "draft-family-17",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请查询订单ORD990083的当前状态。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990083",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-083",
+      "semantic_family": "draft-family-17",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请查询订单ORD990084的当前状态。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990084",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-084",
+      "semantic_family": "draft-family-17",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请查询订单ORD990085的当前状态。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990085",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-085",
+      "semantic_family": "draft-family-17",
+      "variant_index": 5,
+      "input": {
+        "message": "请查询订单ORD990086的当前状态。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990086",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-086",
+      "semantic_family": "draft-family-18",
+      "variant_index": 1,
+      "input": {
+        "message": "帮我查看订单ORD990087的预计送达时间。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990087",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-087",
+      "semantic_family": "draft-family-18",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：帮我查看订单ORD990088的预计送达时间。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990088",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-088",
+      "semantic_family": "draft-family-18",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：帮我查看订单ORD990089的预计送达时间。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990089",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-089",
+      "semantic_family": "draft-family-18",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：帮我查看订单ORD990090的预计送达时间。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990090",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-090",
+      "semantic_family": "draft-family-18",
+      "variant_index": 5,
+      "input": {
+        "message": "帮我查看订单ORD990091的预计送达时间。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990091",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-091",
+      "semantic_family": "draft-family-19",
+      "variant_index": 1,
+      "input": {
+        "message": "请核实订单ORD990092的物流单号。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990092",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-092",
+      "semantic_family": "draft-family-19",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请核实订单ORD990093的物流单号。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990093",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-093",
+      "semantic_family": "draft-family-19",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请核实订单ORD990094的物流单号。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990094",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-094",
+      "semantic_family": "draft-family-19",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请核实订单ORD990095的物流单号。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990095",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-095",
+      "semantic_family": "draft-family-19",
+      "variant_index": 5,
+      "input": {
+        "message": "请核实订单ORD990096的物流单号。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990096",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-096",
+      "semantic_family": "draft-family-20",
+      "variant_index": 1,
+      "input": {
+        "message": "查询订单ORD990097是否已经签收。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990097",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-097",
+      "semantic_family": "draft-family-20",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：查询订单ORD990098是否已经签收。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990098",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-098",
+      "semantic_family": "draft-family-20",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：查询订单ORD990099是否已经签收。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990099",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-099",
+      "semantic_family": "draft-family-20",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：查询订单ORD990100是否已经签收。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990100",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-100",
+      "semantic_family": "draft-family-20",
+      "variant_index": 5,
+      "input": {
+        "message": "查询订单ORD990101是否已经签收。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990101",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-101",
+      "semantic_family": "draft-family-21",
+      "variant_index": 1,
+      "input": {
+        "message": "请看看订单ORD990102的商品明细。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990102",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-102",
+      "semantic_family": "draft-family-21",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请看看订单ORD990103的商品明细。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990103",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-103",
+      "semantic_family": "draft-family-21",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请看看订单ORD990104的商品明细。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990104",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-104",
+      "semantic_family": "draft-family-21",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请看看订单ORD990105的商品明细。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990105",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-105",
+      "semantic_family": "draft-family-21",
+      "variant_index": 5,
+      "input": {
+        "message": "请看看订单ORD990106的商品明细。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990106",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-106",
+      "semantic_family": "draft-family-22",
+      "variant_index": 1,
+      "input": {
+        "message": "我想查订单ORD990107的实际支付金额。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990107",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-107",
+      "semantic_family": "draft-family-22",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：我想查订单ORD990108的实际支付金额。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990108",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-108",
+      "semantic_family": "draft-family-22",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：我想查订单ORD990109的实际支付金额。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990109",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-109",
+      "semantic_family": "draft-family-22",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：我想查订单ORD990110的实际支付金额。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990110",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-110",
+      "semantic_family": "draft-family-22",
+      "variant_index": 5,
+      "input": {
+        "message": "我想查订单ORD990111的实际支付金额。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990111",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-111",
+      "semantic_family": "draft-family-23",
+      "variant_index": 1,
+      "input": {
+        "message": "请查询订单ORD990112什么时候发出的。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990112",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-112",
+      "semantic_family": "draft-family-23",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请查询订单ORD990113什么时候发出的。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990113",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-113",
+      "semantic_family": "draft-family-23",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请查询订单ORD990114什么时候发出的。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990114",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-114",
+      "semantic_family": "draft-family-23",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请查询订单ORD990115什么时候发出的。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990115",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-115",
+      "semantic_family": "draft-family-23",
+      "variant_index": 5,
+      "input": {
+        "message": "请查询订单ORD990116什么时候发出的。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990116",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-116",
+      "semantic_family": "draft-family-24",
+      "variant_index": 1,
+      "input": {
+        "message": "帮我查订单ORD990117使用的配送公司。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990117",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-117",
+      "semantic_family": "draft-family-24",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：帮我查订单ORD990118使用的配送公司。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990118",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-118",
+      "semantic_family": "draft-family-24",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：帮我查订单ORD990119使用的配送公司。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990119",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-119",
+      "semantic_family": "draft-family-24",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：帮我查订单ORD990120使用的配送公司。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990120",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-120",
+      "semantic_family": "draft-family-24",
+      "variant_index": 5,
+      "input": {
+        "message": "帮我查订单ORD990121使用的配送公司。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990121",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-121",
+      "semantic_family": "draft-family-25",
+      "variant_index": 1,
+      "input": {
+        "message": "请查询订单ORD990122的收货状态。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990122",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-122",
+      "semantic_family": "draft-family-25",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请查询订单ORD990123的收货状态。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990123",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-123",
+      "semantic_family": "draft-family-25",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请查询订单ORD990124的收货状态。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990124",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-124",
+      "semantic_family": "draft-family-25",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请查询订单ORD990125的收货状态。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990125",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-125",
+      "semantic_family": "draft-family-25",
+      "variant_index": 5,
+      "input": {
+        "message": "请查询订单ORD990126的收货状态。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990126",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-126",
+      "semantic_family": "draft-family-26",
+      "variant_index": 1,
+      "input": {
+        "message": "请查看订单ORD990127的物流轨迹。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990127",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-127",
+      "semantic_family": "draft-family-26",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请查看订单ORD990128的物流轨迹。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990128",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-128",
+      "semantic_family": "draft-family-26",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请查看订单ORD990129的物流轨迹。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990129",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-129",
+      "semantic_family": "draft-family-26",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请查看订单ORD990130的物流轨迹。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990130",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-130",
+      "semantic_family": "draft-family-26",
+      "variant_index": 5,
+      "input": {
+        "message": "请查看订单ORD990131的物流轨迹。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "query_order",
+        "request_type": "query",
+        "order_id": "ORD990131",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-131",
+      "semantic_family": "draft-family-27",
+      "variant_index": 1,
+      "input": {
+        "message": "耳机退货时配件需要一起寄回吗？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-132",
+      "semantic_family": "draft-family-27",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：耳机退货时配件需要一起寄回吗？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-133",
+      "semantic_family": "draft-family-27",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：耳机退货时配件需要一起寄回吗？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-134",
+      "semantic_family": "draft-family-27",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：耳机退货时配件需要一起寄回吗？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-135",
+      "semantic_family": "draft-family-27",
+      "variant_index": 5,
+      "input": {
+        "message": "耳机退货时配件需要一起寄回吗？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-136",
+      "semantic_family": "draft-family-28",
+      "variant_index": 1,
+      "input": {
+        "message": "打印机使用优惠券购买后退款退到哪里？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-137",
+      "semantic_family": "draft-family-28",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：打印机使用优惠券购买后退款退到哪里？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-138",
+      "semantic_family": "draft-family-28",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：打印机使用优惠券购买后退款退到哪里？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-139",
+      "semantic_family": "draft-family-28",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：打印机使用优惠券购买后退款退到哪里？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-140",
+      "semantic_family": "draft-family-28",
+      "variant_index": 5,
+      "input": {
+        "message": "打印机使用优惠券购买后退款退到哪里？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-141",
+      "semantic_family": "draft-family-29",
+      "variant_index": 1,
+      "input": {
+        "message": "投影仪退货的包装要求是什么？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-142",
+      "semantic_family": "draft-family-29",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：投影仪退货的包装要求是什么？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-143",
+      "semantic_family": "draft-family-29",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：投影仪退货的包装要求是什么？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-144",
+      "semantic_family": "draft-family-29",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：投影仪退货的包装要求是什么？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-145",
+      "semantic_family": "draft-family-29",
+      "variant_index": 5,
+      "input": {
+        "message": "投影仪退货的包装要求是什么？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-146",
+      "semantic_family": "draft-family-30",
+      "variant_index": 1,
+      "input": {
+        "message": "耳机退款一般需要哪些凭证？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-147",
+      "semantic_family": "draft-family-30",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：耳机退款一般需要哪些凭证？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-148",
+      "semantic_family": "draft-family-30",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：耳机退款一般需要哪些凭证？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-149",
+      "semantic_family": "draft-family-30",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：耳机退款一般需要哪些凭证？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-150",
+      "semantic_family": "draft-family-30",
+      "variant_index": 5,
+      "input": {
+        "message": "耳机退款一般需要哪些凭证？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "耳机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-151",
+      "semantic_family": "draft-family-31",
+      "variant_index": 1,
+      "input": {
+        "message": "打印机退货运费怎样划分？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-152",
+      "semantic_family": "draft-family-31",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：打印机退货运费怎样划分？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-153",
+      "semantic_family": "draft-family-31",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：打印机退货运费怎样划分？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-154",
+      "semantic_family": "draft-family-31",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：打印机退货运费怎样划分？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-155",
+      "semantic_family": "draft-family-31",
+      "variant_index": 5,
+      "input": {
+        "message": "打印机退货运费怎样划分？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "打印机",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-156",
+      "semantic_family": "draft-family-32",
+      "variant_index": 1,
+      "input": {
+        "message": "投影仪退款审核通常有哪些步骤？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-157",
+      "semantic_family": "draft-family-32",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：投影仪退款审核通常有哪些步骤？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-158",
+      "semantic_family": "draft-family-32",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：投影仪退款审核通常有哪些步骤？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-159",
+      "semantic_family": "draft-family-32",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：投影仪退款审核通常有哪些步骤？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-160",
+      "semantic_family": "draft-family-32",
+      "variant_index": 5,
+      "input": {
+        "message": "投影仪退款审核通常有哪些步骤？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": "投影仪",
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-161",
+      "semantic_family": "draft-family-33",
+      "variant_index": 1,
+      "input": {
+        "message": "订单ORD990162请申请退款，商品外壳明显破损。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990162",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-162",
+      "semantic_family": "draft-family-33",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：订单ORD990163请申请退款，商品外壳明显破损。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990163",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-163",
+      "semantic_family": "draft-family-33",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：订单ORD990164请申请退款，商品外壳明显破损。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990164",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-164",
+      "semantic_family": "draft-family-33",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：订单ORD990165请申请退款，商品外壳明显破损。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990165",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-165",
+      "semantic_family": "draft-family-33",
+      "variant_index": 5,
+      "input": {
+        "message": "订单ORD990166请申请退款，商品外壳明显破损。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990166",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-166",
+      "semantic_family": "draft-family-34",
+      "variant_index": 1,
+      "input": {
+        "message": "订单ORD990167请办理退货退款，实际收到的商品型号错误。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990167",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-167",
+      "semantic_family": "draft-family-34",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：订单ORD990168请办理退货退款，实际收到的商品型号错误。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990168",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-168",
+      "semantic_family": "draft-family-34",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：订单ORD990169请办理退货退款，实际收到的商品型号错误。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990169",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-169",
+      "semantic_family": "draft-family-34",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：订单ORD990170请办理退货退款，实际收到的商品型号错误。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990170",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-170",
+      "semantic_family": "draft-family-34",
+      "variant_index": 5,
+      "input": {
+        "message": "订单ORD990171请办理退货退款，实际收到的商品型号错误。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990171",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-171",
+      "semantic_family": "draft-family-35",
+      "variant_index": 1,
+      "input": {
+        "message": "订单ORD990172我现在申请退款，商品无法正常开机使用。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990172",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-172",
+      "semantic_family": "draft-family-35",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：订单ORD990173我现在申请退款，商品无法正常开机使用。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990173",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-173",
+      "semantic_family": "draft-family-35",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：订单ORD990174我现在申请退款，商品无法正常开机使用。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990174",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-174",
+      "semantic_family": "draft-family-35",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：订单ORD990175我现在申请退款，商品无法正常开机使用。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990175",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-175",
+      "semantic_family": "draft-family-35",
+      "variant_index": 5,
+      "input": {
+        "message": "订单ORD990176我现在申请退款，商品无法正常开机使用。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990176",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-176",
+      "semantic_family": "draft-family-36",
+      "variant_index": 1,
+      "input": {
+        "message": "订单ORD990177请准备退货申请，收到的商品配件缺失严重。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990177",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-177",
+      "semantic_family": "draft-family-36",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：订单ORD990178请准备退货申请，收到的商品配件缺失严重。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990178",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-178",
+      "semantic_family": "draft-family-36",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：订单ORD990179请准备退货申请，收到的商品配件缺失严重。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990179",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-179",
+      "semantic_family": "draft-family-36",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：订单ORD990180请准备退货申请，收到的商品配件缺失严重。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990180",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-180",
+      "semantic_family": "draft-family-36",
+      "variant_index": 5,
+      "input": {
+        "message": "订单ORD990181请准备退货申请，收到的商品配件缺失严重。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990181",
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-181",
+      "semantic_family": "draft-family-37",
+      "variant_index": 1,
+      "input": {
+        "message": "订单ORD990182如果已经签收，请核实后再申请退货。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990182",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-182",
+      "semantic_family": "draft-family-37",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：订单ORD990183如果已经签收，请核实后再申请退货。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990183",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-183",
+      "semantic_family": "draft-family-37",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：订单ORD990184如果已经签收，请核实后再申请退货。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990184",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-184",
+      "semantic_family": "draft-family-37",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：订单ORD990185如果已经签收，请核实后再申请退货。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990185",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-185",
+      "semantic_family": "draft-family-37",
+      "variant_index": 5,
+      "input": {
+        "message": "订单ORD990186如果已经签收，请核实后再申请退货。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990186",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-186",
+      "semantic_family": "draft-family-38",
+      "variant_index": 1,
+      "input": {
+        "message": "订单ORD990187只有已收货我才申请退货退款。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990187",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-187",
+      "semantic_family": "draft-family-38",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：订单ORD990188只有已收货我才申请退货退款。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990188",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-188",
+      "semantic_family": "draft-family-38",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：订单ORD990189只有已收货我才申请退货退款。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990189",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-189",
+      "semantic_family": "draft-family-38",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：订单ORD990190只有已收货我才申请退货退款。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990190",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-190",
+      "semantic_family": "draft-family-38",
+      "variant_index": 5,
+      "input": {
+        "message": "订单ORD990191只有已收货我才申请退货退款。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990191",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-191",
+      "semantic_family": "draft-family-39",
+      "variant_index": 1,
+      "input": {
+        "message": "请查询订单ORD990192，如果已经送达再准备退货申请。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990192",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-192",
+      "semantic_family": "draft-family-39",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请查询订单ORD990193，如果已经送达再准备退货申请。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990193",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-193",
+      "semantic_family": "draft-family-39",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请查询订单ORD990194，如果已经送达再准备退货申请。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990194",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-194",
+      "semantic_family": "draft-family-39",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请查询订单ORD990195，如果已经送达再准备退货申请。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990195",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-195",
+      "semantic_family": "draft-family-39",
+      "variant_index": 5,
+      "input": {
+        "message": "请查询订单ORD990196，如果已经送达再准备退货申请。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990196",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-196",
+      "semantic_family": "draft-family-40",
+      "variant_index": 1,
+      "input": {
+        "message": "如果订单ORD990197已签收，请先核实再考虑退款。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990197",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-197",
+      "semantic_family": "draft-family-40",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：如果订单ORD990198已签收，请先核实再考虑退款。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990198",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-198",
+      "semantic_family": "draft-family-40",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：如果订单ORD990199已签收，请先核实再考虑退款。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990199",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-199",
+      "semantic_family": "draft-family-40",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：如果订单ORD990200已签收，请先核实再考虑退款。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990200",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-200",
+      "semantic_family": "draft-family-40",
+      "variant_index": 5,
+      "input": {
+        "message": "如果订单ORD990201已签收，请先核实再考虑退款。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "refund",
+        "request_type": "apply",
+        "order_id": "ORD990201",
+        "product": null,
+        "conditions": [
+          "order_delivered"
+        ]
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-201",
+      "semantic_family": "draft-family-41",
+      "variant_index": 1,
+      "input": {
+        "message": "投诉处理一般需要哪些材料？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-202",
+      "semantic_family": "draft-family-41",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：投诉处理一般需要哪些材料？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-203",
+      "semantic_family": "draft-family-41",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：投诉处理一般需要哪些材料？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-204",
+      "semantic_family": "draft-family-41",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：投诉处理一般需要哪些材料？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-205",
+      "semantic_family": "draft-family-41",
+      "variant_index": 5,
+      "input": {
+        "message": "投诉处理一般需要哪些材料？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-206",
+      "semantic_family": "draft-family-42",
+      "variant_index": 1,
+      "input": {
+        "message": "投诉流程需要哪些步骤？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-207",
+      "semantic_family": "draft-family-42",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：投诉流程需要哪些步骤？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-208",
+      "semantic_family": "draft-family-42",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：投诉流程需要哪些步骤？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-209",
+      "semantic_family": "draft-family-42",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：投诉流程需要哪些步骤？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-210",
+      "semantic_family": "draft-family-42",
+      "variant_index": 5,
+      "input": {
+        "message": "投诉流程需要哪些步骤？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-211",
+      "semantic_family": "draft-family-43",
+      "variant_index": 1,
+      "input": {
+        "message": "我只咨询投诉处理时限，不提交投诉。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-212",
+      "semantic_family": "draft-family-43",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：我只咨询投诉处理时限，不提交投诉。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-213",
+      "semantic_family": "draft-family-43",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：我只咨询投诉处理时限，不提交投诉。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-214",
+      "semantic_family": "draft-family-43",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：我只咨询投诉处理时限，不提交投诉。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-215",
+      "semantic_family": "draft-family-43",
+      "variant_index": 5,
+      "input": {
+        "message": "我只咨询投诉处理时限，不提交投诉。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-216",
+      "semantic_family": "draft-family-44",
+      "variant_index": 1,
+      "input": {
+        "message": "我现在要提交投诉，客服连续多日未回复我的售后问题。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-217",
+      "semantic_family": "draft-family-44",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：我现在要提交投诉，客服连续多日未回复我的售后问题。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-218",
+      "semantic_family": "draft-family-44",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：我现在要提交投诉，客服连续多日未回复我的售后问题。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-219",
+      "semantic_family": "draft-family-44",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：我现在要提交投诉，客服连续多日未回复我的售后问题。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-220",
+      "semantic_family": "draft-family-44",
+      "variant_index": 5,
+      "input": {
+        "message": "我现在要提交投诉，客服连续多日未回复我的售后问题。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-221",
+      "semantic_family": "draft-family-45",
+      "variant_index": 1,
+      "input": {
+        "message": "请为我创建投诉工单，配送服务多次未按约定联系。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-222",
+      "semantic_family": "draft-family-45",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请为我创建投诉工单，配送服务多次未按约定联系。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-223",
+      "semantic_family": "draft-family-45",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请为我创建投诉工单，配送服务多次未按约定联系。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-224",
+      "semantic_family": "draft-family-45",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请为我创建投诉工单，配送服务多次未按约定联系。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-225",
+      "semantic_family": "draft-family-45",
+      "variant_index": 5,
+      "input": {
+        "message": "请为我创建投诉工单，配送服务多次未按约定联系。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-226",
+      "semantic_family": "draft-family-46",
+      "variant_index": 1,
+      "input": {
+        "message": "我要正式投诉，售后处理长期没有明确进度。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-227",
+      "semantic_family": "draft-family-46",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：我要正式投诉，售后处理长期没有明确进度。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-228",
+      "semantic_family": "draft-family-46",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：我要正式投诉，售后处理长期没有明确进度。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-229",
+      "semantic_family": "draft-family-46",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：我要正式投诉，售后处理长期没有明确进度。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-230",
+      "semantic_family": "draft-family-46",
+      "variant_index": 5,
+      "input": {
+        "message": "我要正式投诉，售后处理长期没有明确进度。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "complaint",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-231",
+      "semantic_family": "draft-family-47",
+      "variant_index": 1,
+      "input": {
+        "message": "会员积分怎样兑换优惠券？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-232",
+      "semantic_family": "draft-family-47",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：会员积分怎样兑换优惠券？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-233",
+      "semantic_family": "draft-family-47",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：会员积分怎样兑换优惠券？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-234",
+      "semantic_family": "draft-family-47",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：会员积分怎样兑换优惠券？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-235",
+      "semantic_family": "draft-family-47",
+      "variant_index": 5,
+      "input": {
+        "message": "会员积分怎样兑换优惠券？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-236",
+      "semantic_family": "draft-family-48",
+      "variant_index": 1,
+      "input": {
+        "message": "活动优惠券是否有使用门槛？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-237",
+      "semantic_family": "draft-family-48",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：活动优惠券是否有使用门槛？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-238",
+      "semantic_family": "draft-family-48",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：活动优惠券是否有使用门槛？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-239",
+      "semantic_family": "draft-family-48",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：活动优惠券是否有使用门槛？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-240",
+      "semantic_family": "draft-family-48",
+      "variant_index": 5,
+      "input": {
+        "message": "活动优惠券是否有使用门槛？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-241",
+      "semantic_family": "draft-family-49",
+      "variant_index": 1,
+      "input": {
+        "message": "新用户优惠一般怎样领取？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-242",
+      "semantic_family": "draft-family-49",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：新用户优惠一般怎样领取？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-243",
+      "semantic_family": "draft-family-49",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：新用户优惠一般怎样领取？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-244",
+      "semantic_family": "draft-family-49",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：新用户优惠一般怎样领取？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-245",
+      "semantic_family": "draft-family-49",
+      "variant_index": 5,
+      "input": {
+        "message": "新用户优惠一般怎样领取？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-246",
+      "semantic_family": "draft-family-50",
+      "variant_index": 1,
+      "input": {
+        "message": "促销赠品的领取规则是什么？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-247",
+      "semantic_family": "draft-family-50",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：促销赠品的领取规则是什么？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-248",
+      "semantic_family": "draft-family-50",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：促销赠品的领取规则是什么？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-249",
+      "semantic_family": "draft-family-50",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：促销赠品的领取规则是什么？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-250",
+      "semantic_family": "draft-family-50",
+      "variant_index": 5,
+      "input": {
+        "message": "促销赠品的领取规则是什么？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-251",
+      "semantic_family": "draft-family-51",
+      "variant_index": 1,
+      "input": {
+        "message": "折扣活动能否与会员优惠一起使用？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-252",
+      "semantic_family": "draft-family-51",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：折扣活动能否与会员优惠一起使用？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-253",
+      "semantic_family": "draft-family-51",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：折扣活动能否与会员优惠一起使用？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-254",
+      "semantic_family": "draft-family-51",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：折扣活动能否与会员优惠一起使用？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-255",
+      "semantic_family": "draft-family-51",
+      "variant_index": 5,
+      "input": {
+        "message": "折扣活动能否与会员优惠一起使用？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-256",
+      "semantic_family": "draft-family-52",
+      "variant_index": 1,
+      "input": {
+        "message": "优惠券过期后有什么处理规则？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-257",
+      "semantic_family": "draft-family-52",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：优惠券过期后有什么处理规则？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-258",
+      "semantic_family": "draft-family-52",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：优惠券过期后有什么处理规则？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-259",
+      "semantic_family": "draft-family-52",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：优惠券过期后有什么处理规则？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-260",
+      "semantic_family": "draft-family-52",
+      "variant_index": 5,
+      "input": {
+        "message": "优惠券过期后有什么处理规则？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "promotion",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-261",
+      "semantic_family": "draft-family-53",
+      "variant_index": 1,
+      "input": {
+        "message": "我需要人工客服，请发起转接请求。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-262",
+      "semantic_family": "draft-family-53",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：我需要人工客服，请发起转接请求。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-263",
+      "semantic_family": "draft-family-53",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：我需要人工客服，请发起转接请求。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-264",
+      "semantic_family": "draft-family-53",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：我需要人工客服，请发起转接请求。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-265",
+      "semantic_family": "draft-family-53",
+      "variant_index": 5,
+      "input": {
+        "message": "我需要人工客服，请发起转接请求。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-266",
+      "semantic_family": "draft-family-54",
+      "variant_index": 1,
+      "input": {
+        "message": "请帮我联系真人客服处理问题。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-267",
+      "semantic_family": "draft-family-54",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请帮我联系真人客服处理问题。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-268",
+      "semantic_family": "draft-family-54",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请帮我联系真人客服处理问题。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-269",
+      "semantic_family": "draft-family-54",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请帮我联系真人客服处理问题。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-270",
+      "semantic_family": "draft-family-54",
+      "variant_index": 5,
+      "input": {
+        "message": "请帮我联系真人客服处理问题。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-271",
+      "semantic_family": "draft-family-55",
+      "variant_index": 1,
+      "input": {
+        "message": "我明确希望转人工，不继续自动回复。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-272",
+      "semantic_family": "draft-family-55",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：我明确希望转人工，不继续自动回复。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-273",
+      "semantic_family": "draft-family-55",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：我明确希望转人工，不继续自动回复。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-274",
+      "semantic_family": "draft-family-55",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：我明确希望转人工，不继续自动回复。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-275",
+      "semantic_family": "draft-family-55",
+      "variant_index": 5,
+      "input": {
+        "message": "我明确希望转人工，不继续自动回复。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-276",
+      "semantic_family": "draft-family-56",
+      "variant_index": 1,
+      "input": {
+        "message": "请登记人工协助请求，我想向真人说明情况。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-277",
+      "semantic_family": "draft-family-56",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请登记人工协助请求，我想向真人说明情况。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-278",
+      "semantic_family": "draft-family-56",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请登记人工协助请求，我想向真人说明情况。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-279",
+      "semantic_family": "draft-family-56",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请登记人工协助请求，我想向真人说明情况。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-280",
+      "semantic_family": "draft-family-56",
+      "variant_index": 5,
+      "input": {
+        "message": "请登记人工协助请求，我想向真人说明情况。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "human",
+        "request_type": "apply",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-281",
+      "semantic_family": "draft-family-57",
+      "variant_index": 1,
+      "input": {
+        "message": "你们能提供哪些客服帮助？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-282",
+      "semantic_family": "draft-family-57",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：你们能提供哪些客服帮助？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-283",
+      "semantic_family": "draft-family-57",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：你们能提供哪些客服帮助？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-284",
+      "semantic_family": "draft-family-57",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：你们能提供哪些客服帮助？",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-285",
+      "semantic_family": "draft-family-57",
+      "variant_index": 5,
+      "input": {
+        "message": "你们能提供哪些客服帮助？请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "inquiry",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-286",
+      "semantic_family": "draft-family-58",
+      "variant_index": 1,
+      "input": {
+        "message": "好的",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "clarify",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-287",
+      "semantic_family": "draft-family-58",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：好的",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "clarify",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-288",
+      "semantic_family": "draft-family-58",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：好的",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "clarify",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-289",
+      "semantic_family": "draft-family-58",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：好的",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "clarify",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-290",
+      "semantic_family": "draft-family-58",
+      "variant_index": 5,
+      "input": {
+        "message": "好的请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "clarify",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-291",
+      "semantic_family": "draft-family-59",
+      "variant_index": 1,
+      "input": {
+        "message": "取消这次操作",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "cancel",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-292",
+      "semantic_family": "draft-family-59",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：取消这次操作",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "cancel",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-293",
+      "semantic_family": "draft-family-59",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：取消这次操作",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "cancel",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-294",
+      "semantic_family": "draft-family-59",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：取消这次操作",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "cancel",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-295",
+      "semantic_family": "draft-family-59",
+      "variant_index": 5,
+      "input": {
+        "message": "取消这次操作请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "cancel",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-296",
+      "semantic_family": "draft-family-60",
+      "variant_index": 1,
+      "input": {
+        "message": "请帮我创作一首与售后无关的诗歌。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "out_of_scope",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-297",
+      "semantic_family": "draft-family-60",
+      "variant_index": 2,
+      "input": {
+        "message": "请帮我处理这个问题：请帮我创作一首与售后无关的诗歌。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "out_of_scope",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-298",
+      "semantic_family": "draft-family-60",
+      "variant_index": 3,
+      "input": {
+        "message": "我的诉求是：请帮我创作一首与售后无关的诗歌。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "out_of_scope",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-299",
+      "semantic_family": "draft-family-60",
+      "variant_index": 4,
+      "input": {
+        "message": "我想明确一下：请帮我创作一首与售后无关的诗歌。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "out_of_scope",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    },
+    {
+      "case_id": "quality-300",
+      "semantic_family": "draft-family-60",
+      "variant_index": 5,
+      "input": {
+        "message": "请帮我创作一首与售后无关的诗歌。请按上述诉求处理。",
+        "history": []
+      },
+      "provisional_expected": {
+        "topic": "general",
+        "request_type": "out_of_scope",
+        "order_id": null,
+        "product": null,
+        "conditions": []
+      },
+      "label_source": "assistant_authored_draft",
+      "review_status": "pending",
+      "reviewer": null,
+      "notes": "同family的5条为表达变体，非5个独立信息需求；需复核标签和语义泄漏，未用于真实评测。"
+    }
+  ]
+}

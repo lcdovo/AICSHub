@@ -5,7 +5,7 @@ from app.agent.state import AgentState, AgentNode
 from app.agent.nodes.intent_node import (
     IntentNode, IntentDependencies, RoutingNode, RoutingDependencies,
     ClarificationNode, ClarificationDependencies, detect_escalation,
-    is_refund_inquiry, is_complaint_inquiry, required_slots, intent_destination, fill_slots,
+    fill_slots,
 )
 from app.agent.nodes.tool_node import is_refund_confirmed, refund_cancelled, extract_info
 from app.agent.nodes.response_node import is_smalltalk
@@ -52,8 +52,7 @@ async def test_model_clarification_and_routing_use_only_declared_components():
                        understanding_mode="model")
     assert await node(state) == AgentNode.RAG_RETRIEVAL
     assert state.understanding and not state.pending_confirmations
-    route = RoutingNode(RoutingDependencies(extract_info, is_refund_inquiry,
-                                           is_complaint_inquiry, required_slots, intent_destination))
+    route = RoutingNode(RoutingDependencies(extract_info))
     missing = AgentState(session_id="s", user_id=101, user_message="查订单", detected_intent="query_order")
     assert await route(missing) == AgentNode.SLOT_FILLING
     assert await fill_slots(missing) == AgentNode.RESPONSE_GENERATION

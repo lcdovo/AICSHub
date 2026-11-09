@@ -1,0 +1,1538 @@
+[
+  {
+    "operation": "selectors-v1/MI-01/good",
+    "status": 200,
+    "response": {
+      "id": "340e9705-00b7-41f2-889e-da6d3b264638",
+      "object": "chat.completion",
+      "created": 1794076300,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4223,
+        "completion_tokens": 226,
+        "total_tokens": 4449,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 4223
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-01/bad",
+    "status": 200,
+    "response": {
+      "id": "7091f4f4-320e-466e-9478-0467b9aeef83",
+      "object": "chat.completion",
+      "created": 1794076303,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"scope_expanded\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K2\"],\"issues\":[\"scope_expanded\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"partial\",\"answer_segment_id\":2}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4225,
+        "completion_tokens": 237,
+        "total_tokens": 4462,
+        "prompt_tokens_details": {
+          "cached_tokens": 3328
+        },
+        "prompt_cache_hit_tokens": 3328,
+        "prompt_cache_miss_tokens": 897
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-02/good",
+    "status": 200,
+    "response": {
+      "id": "8f94dc7e-320f-4550-be34-2cbcd9a9ed6c",
+      "object": "chat.completion",
+      "created": 1794076305,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2799,
+        "completion_tokens": 169,
+        "total_tokens": 2968,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2543
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-02/bad",
+    "status": 200,
+    "response": {
+      "id": "4998535e-7a54-40b0-ac86-1c60a37f467e",
+      "object": "chat.completion",
+      "created": 1794076307,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"contradiction\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"T1\"],\"issues\":[\"contradiction\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":false,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2799,
+        "completion_tokens": 181,
+        "total_tokens": 2980,
+        "prompt_tokens_details": {
+          "cached_tokens": 2304
+        },
+        "prompt_cache_hit_tokens": 2304,
+        "prompt_cache_miss_tokens": 495
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-03/good",
+    "status": 200,
+    "response": {
+      "id": "48971aba-4543-4b9d-9eda-ccb33449294d",
+      "object": "chat.completion",
+      "created": 1794076309,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K3\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4350,
+        "completion_tokens": 226,
+        "total_tokens": 4576,
+        "prompt_tokens_details": {
+          "cached_tokens": 1152
+        },
+        "prompt_cache_hit_tokens": 1152,
+        "prompt_cache_miss_tokens": 3198
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-03/bad",
+    "status": 200,
+    "response": {
+      "id": "912de770-5ab8-4ecd-bb51-827c468c7d31",
+      "object": "chat.completion",
+      "created": 1794076311,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":false,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"missing\",\"supported\":false,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":null}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4095,
+        "completion_tokens": 206,
+        "total_tokens": 4301,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 4095
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-04/good",
+    "status": 200,
+    "response": {
+      "id": "dde5a8cc-5e6a-4ea6-8aff-ff1daacb73e3",
+      "object": "chat.completion",
+      "created": 1794076314,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"L1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3251,
+        "completion_tokens": 171,
+        "total_tokens": 3422,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2995
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-04/bad",
+    "status": 200,
+    "response": {
+      "id": "51c35c66-5bef-4ef8-91ba-cf74107a4a78",
+      "object": "chat.completion",
+      "created": 1794076316,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":false,\"response_issues\":[\"unsupported_detail\",\"unanswered_known_question\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"L1\"],\"issues\":[\"unsupported_detail\"]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":true,\"answerability\":\"unanswerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3239,
+        "completion_tokens": 189,
+        "total_tokens": 3428,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2983
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-05/good",
+    "status": 200,
+    "response": {
+      "id": "e0ccc422-f2ad-4f74-bb79-1f784026183b",
+      "object": "chat.completion",
+      "created": 1794076318,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3242,
+        "completion_tokens": 171,
+        "total_tokens": 3413,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2986
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-05/bad",
+    "status": 200,
+    "response": {
+      "id": "57f3c0d2-742f-472d-800a-058c91f8a790",
+      "object": "chat.completion",
+      "created": 1794076320,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"unsupported_detail\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"T1\"],\"issues\":[\"unsupported_detail\"]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":true,\"answerability\":\"unanswerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3230,
+        "completion_tokens": 182,
+        "total_tokens": 3412,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2974
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-06/good",
+    "status": 200,
+    "response": {
+      "id": "eb642add-b082-493e-9aca-991120efd1e8",
+      "object": "chat.completion",
+      "created": 1794076323,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"L2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"unanswerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3299,
+        "completion_tokens": 173,
+        "total_tokens": 3472,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 2787
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-06/bad",
+    "status": 200,
+    "response": {
+      "id": "adbc27cd-dc8f-41e8-a73d-2732202408e5",
+      "object": "chat.completion",
+      "created": 1794076325,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"unsupported_detail\",\"scope_expanded\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"L2\"],\"issues\":[\"unsupported_detail\",\"scope_expanded\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"unanswerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3289,
+        "completion_tokens": 190,
+        "total_tokens": 3479,
+        "prompt_tokens_details": {
+          "cached_tokens": 2560
+        },
+        "prompt_cache_hit_tokens": 2560,
+        "prompt_cache_miss_tokens": 729
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-07/good",
+    "status": 200,
+    "response": {
+      "id": "95e4c315-8722-4bd2-9208-8fae3850ab2a",
+      "object": "chat.completion",
+      "created": 1794076328,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"P1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"awaiting_confirmation\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4189,
+        "completion_tokens": 229,
+        "total_tokens": 4418,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3549
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-07/bad",
+    "status": 200,
+    "response": {
+      "id": "a25b1c49-1c4e-4bf3-a9f7-34a7739486da",
+      "object": "chat.completion",
+      "created": 1794076330,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"unsupported_detail\",\"contradiction\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"P1\"],\"issues\":[\"unsupported_detail\",\"contradiction\"]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4177,
+        "completion_tokens": 245,
+        "total_tokens": 4422,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3537
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-08/good",
+    "status": 200,
+    "response": {
+      "id": "60a6d74a-80b8-46a4-a3ed-271030cf0586",
+      "object": "chat.completion",
+      "created": 1794076333,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2940,
+        "completion_tokens": 168,
+        "total_tokens": 3108,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 2428
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-08/bad",
+    "status": 200,
+    "response": {
+      "id": "0d40e15e-2026-4842-ade3-d42beb424949",
+      "object": "chat.completion",
+      "created": 1794076335,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"contradiction\",\"unsupported_detail\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[],\"issues\":[\"contradiction\",\"unsupported_detail\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":true,\"answerability\":\"unanswerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2926,
+        "completion_tokens": 187,
+        "total_tokens": 3113,
+        "prompt_tokens_details": {
+          "cached_tokens": 2304
+        },
+        "prompt_cache_hit_tokens": 2304,
+        "prompt_cache_miss_tokens": 622
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-09/good",
+    "status": 200,
+    "response": {
+      "id": "6d494c55-440b-43c3-9541-93555e2116e6",
+      "object": "chat.completion",
+      "created": 1794076337,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"E2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3073,
+        "completion_tokens": 171,
+        "total_tokens": 3244,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2817
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-09/bad",
+    "status": 200,
+    "response": {
+      "id": "81f5c0c6-9b9c-4504-8065-35d91f3e38c6",
+      "object": "chat.completion",
+      "created": 1794076339,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"unsupported_detail\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"E2\"],\"issues\":[\"unsupported_detail\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":true,\"answerability\":\"unanswerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3053,
+        "completion_tokens": 182,
+        "total_tokens": 3235,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2797
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-10/good",
+    "status": 200,
+    "response": {
+      "id": "bd235348-43b4-4be0-94d3-74070e547e5e",
+      "object": "chat.completion",
+      "created": 1794076342,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\",\"E2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3513,
+        "completion_tokens": 172,
+        "total_tokens": 3685,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 3257
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-10/bad",
+    "status": 200,
+    "response": {
+      "id": "d823fb78-9288-44ca-8802-e29e49e3940c",
+      "object": "chat.completion",
+      "created": 1794076344,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":false,\"response_issues\":[\"contradiction\",\"unsafe_behavior\",\"unanswered_known_question\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[],\"issues\":[\"contradiction\",\"unsafe_behavior\",\"unanswered_known_question\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"partial\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3493,
+        "completion_tokens": 201,
+        "total_tokens": 3694,
+        "prompt_tokens_details": {
+          "cached_tokens": 2688
+        },
+        "prompt_cache_hit_tokens": 2688,
+        "prompt_cache_miss_tokens": 805
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-11/good",
+    "status": 200,
+    "response": {
+      "id": "acd7abed-4bfc-4cd7-afe2-3da2bf89a76d",
+      "object": "chat.completion",
+      "created": 1794076346,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3299,
+        "completion_tokens": 169,
+        "total_tokens": 3468,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 2531
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-11/bad",
+    "status": 200,
+    "response": {
+      "id": "fa69533b-6c5c-4f90-a0fe-6d66add5d82a",
+      "object": "chat.completion",
+      "created": 1794076348,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"contradiction\",\"unsupported_detail\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K2\"],\"issues\":[\"contradiction\",\"unsupported_detail\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3307,
+        "completion_tokens": 189,
+        "total_tokens": 3496,
+        "prompt_tokens_details": {
+          "cached_tokens": 2560
+        },
+        "prompt_cache_hit_tokens": 2560,
+        "prompt_cache_miss_tokens": 747
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-12/good",
+    "status": 200,
+    "response": {
+      "id": "a5e0b91f-a154-4a8e-8a64-525e996ad373",
+      "object": "chat.completion",
+      "created": 1794076350,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3333,
+        "completion_tokens": 169,
+        "total_tokens": 3502,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "prompt_cache_hit_tokens": 1536,
+        "prompt_cache_miss_tokens": 1797
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-12/bad",
+    "status": 200,
+    "response": {
+      "id": "8d56e8e3-d1b4-42e8-bc52-e6b5950ed5c4",
+      "object": "chat.completion",
+      "created": 1794076353,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":false,\"response_issues\":[\"condition_missing\",\"unsupported_detail\",\"contradiction\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K1\"],\"issues\":[\"condition_missing\",\"unsupported_detail\",\"contradiction\"]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"partial\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3335,
+        "completion_tokens": 196,
+        "total_tokens": 3531,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 2567
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-13/good",
+    "status": 200,
+    "response": {
+      "id": "096dc6f7-1b73-4248-938d-8a1ddcc0d765",
+      "object": "chat.completion",
+      "created": 1794076355,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\",\"U1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"waiting_feedback\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3579,
+        "completion_tokens": 175,
+        "total_tokens": 3754,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 2939
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-13/bad",
+    "status": 200,
+    "response": {
+      "id": "45eb519c-4473-4574-8f14-03d5d6c3fa61",
+      "object": "chat.completion",
+      "created": 1794076357,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":false,\"response_issues\":[\"unsupported_detail\",\"contradiction\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"U1\",\"K1\",\"S2\"],\"issues\":[\"unsupported_detail\",\"contradiction\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"partial\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3563,
+        "completion_tokens": 194,
+        "total_tokens": 3757,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 2923
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-14/good",
+    "status": 200,
+    "response": {
+      "id": "9c7d8f5f-c4e6-4480-8bf0-98a66090989f",
+      "object": "chat.completion",
+      "created": 1794076360,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3323,
+        "completion_tokens": 169,
+        "total_tokens": 3492,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "prompt_cache_hit_tokens": 1536,
+        "prompt_cache_miss_tokens": 1787
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-14/bad",
+    "status": 200,
+    "response": {
+      "id": "d50df644-31be-4793-a7b5-76bdf56d8880",
+      "object": "chat.completion",
+      "created": 1794076362,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"contradiction\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K2\"],\"issues\":[\"contradiction\",\"negation_changed\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3321,
+        "completion_tokens": 186,
+        "total_tokens": 3507,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "prompt_cache_hit_tokens": 1536,
+        "prompt_cache_miss_tokens": 1785
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-15/good",
+    "status": 200,
+    "response": {
+      "id": "3eb5d653-4699-4561-bb38-961ac897b6c9",
+      "object": "chat.completion",
+      "created": 1794076364,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\",\"U1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"waiting_feedback\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3725,
+        "completion_tokens": 175,
+        "total_tokens": 3900,
+        "prompt_tokens_details": {
+          "cached_tokens": 384
+        },
+        "prompt_cache_hit_tokens": 384,
+        "prompt_cache_miss_tokens": 3341
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-15/bad",
+    "status": 200,
+    "response": {
+      "id": "31d0e1b5-5678-4200-9644-c3e379cc3266",
+      "object": "chat.completion",
+      "created": 1794076366,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":false,\"response_issues\":[\"contradiction\",\"unsupported_detail\",\"unanswered_known_question\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"U1\",\"K1\",\"S1\"],\"issues\":[\"contradiction\",\"unsupported_detail\"]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\",\"S2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"partial\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3709,
+        "completion_tokens": 204,
+        "total_tokens": 3913,
+        "prompt_tokens_details": {
+          "cached_tokens": 384
+        },
+        "prompt_cache_hit_tokens": 384,
+        "prompt_cache_miss_tokens": 3325
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-16/good",
+    "status": 200,
+    "response": {
+      "id": "111a7b43-d38d-4468-af66-7a403188dd80",
+      "object": "chat.completion",
+      "created": 1794076368,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]},\"s3\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K3\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2},{\"item_id\":\"i4\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":3}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 5284,
+        "completion_tokens": 283,
+        "total_tokens": 5567,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 4516
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/MI-16/bad",
+    "status": 200,
+    "response": {
+      "id": "b994657d-5f07-4c17-a0f8-8d9c86b7f286",
+      "object": "chat.completion",
+      "created": 1794076371,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":false,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2},{\"item_id\":\"i4\",\"status\":\"missing\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"unanswerable\",\"answer_segment_id\":null}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 5027,
+        "completion_tokens": 264,
+        "total_tokens": 5291,
+        "prompt_tokens_details": {
+          "cached_tokens": 1024
+        },
+        "prompt_cache_hit_tokens": 1024,
+        "prompt_cache_miss_tokens": 4003
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2N-01/good",
+    "status": 200,
+    "response": {
+      "id": "b030b4de-1644-467a-a7ca-a5435296a18b",
+      "object": "chat.completion",
+      "created": 1794076373,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4283,
+        "completion_tokens": 226,
+        "total_tokens": 4509,
+        "prompt_tokens_details": {
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 3387
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2N-01/bad",
+    "status": 200,
+    "response": {
+      "id": "764e4325-0dd7-434b-8592-5921f62983c8",
+      "object": "chat.completion",
+      "created": 1794076376,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"contradiction\",\"scope_expanded\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K1\"],\"issues\":[\"contradiction\",\"scope_expanded\"]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4271,
+        "completion_tokens": 246,
+        "total_tokens": 4517,
+        "prompt_tokens_details": {
+          "cached_tokens": 3328
+        },
+        "prompt_cache_hit_tokens": 3328,
+        "prompt_cache_miss_tokens": 943
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2N-02/good",
+    "status": 200,
+    "response": {
+      "id": "c65b31b1-e34e-4c51-a5fa-06a792bda185",
+      "object": "chat.completion",
+      "created": 1794076378,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3426,
+        "completion_tokens": 169,
+        "total_tokens": 3595,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "prompt_cache_hit_tokens": 1536,
+        "prompt_cache_miss_tokens": 1890
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2N-02/bad",
+    "status": 200,
+    "response": {
+      "id": "8ce8d6a3-a3b0-4c82-a4c3-4413437ce09c",
+      "object": "chat.completion",
+      "created": 1794076381,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"contradiction\",\"negation_changed\",\"scope_expanded\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K1\"],\"issues\":[\"contradiction\",\"negation_changed\",\"scope_expanded\"]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3414,
+        "completion_tokens": 199,
+        "total_tokens": 3613,
+        "prompt_tokens_details": {
+          "cached_tokens": 2688
+        },
+        "prompt_cache_hit_tokens": 2688,
+        "prompt_cache_miss_tokens": 726
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2N-03/good",
+    "status": 200,
+    "response": {
+      "id": "291da7e5-4322-4dd4-83f2-ad023da90bad",
+      "object": "chat.completion",
+      "created": 1794076383,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3460,
+        "completion_tokens": 169,
+        "total_tokens": 3629,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "prompt_cache_hit_tokens": 1536,
+        "prompt_cache_miss_tokens": 1924
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2N-03/bad",
+    "status": 200,
+    "response": {
+      "id": "346060d8-d287-4b89-8878-9377edb34d0b",
+      "object": "chat.completion",
+      "created": 1794076385,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"condition_missing\",\"unsupported_detail\",\"contradiction\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K2\"],\"issues\":[\"condition_missing\",\"unsupported_detail\",\"contradiction\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"partial\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3446,
+        "completion_tokens": 196,
+        "total_tokens": 3642,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "prompt_cache_hit_tokens": 1536,
+        "prompt_cache_miss_tokens": 1910
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2N-04/good",
+    "status": 200,
+    "response": {
+      "id": "cf89cfff-7298-4505-9d6e-ca78004fc990",
+      "object": "chat.completion",
+      "created": 1794076387,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"L1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3348,
+        "completion_tokens": 171,
+        "total_tokens": 3519,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "prompt_cache_hit_tokens": 1664,
+        "prompt_cache_miss_tokens": 1684
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2N-04/bad",
+    "status": 200,
+    "response": {
+      "id": "4daf3226-2df4-4a12-af0d-4d4b71f8558d",
+      "object": "chat.completion",
+      "created": 1794076389,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"contradiction\",\"negation_changed\",\"scope_expanded\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"L1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K1\"],\"issues\":[\"contradiction\",\"negation_changed\",\"scope_expanded\"]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"answerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3332,
+        "completion_tokens": 198,
+        "total_tokens": 3530,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "prompt_cache_hit_tokens": 1664,
+        "prompt_cache_miss_tokens": 1668
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2G-01/good",
+    "status": 200,
+    "response": {
+      "id": "36da75e0-5a7a-48d3-86d8-22b6530372b8",
+      "object": "chat.completion",
+      "created": 1794076392,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"L2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"unanswerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3325,
+        "completion_tokens": 173,
+        "total_tokens": 3498,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "prompt_cache_hit_tokens": 1664,
+        "prompt_cache_miss_tokens": 1661
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2G-01/bad",
+    "status": 200,
+    "response": {
+      "id": "4c6ba268-2547-48a3-9e84-625b0049bf52",
+      "object": "chat.completion",
+      "created": 1794076394,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"unsupported_detail\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K1\"],\"issues\":[\"unsupported_detail\"]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"L2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3351,
+        "completion_tokens": 179,
+        "total_tokens": 3530,
+        "prompt_tokens_details": {
+          "cached_tokens": 2560
+        },
+        "prompt_cache_hit_tokens": 2560,
+        "prompt_cache_miss_tokens": 791
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2G-02/good",
+    "status": 200,
+    "response": {
+      "id": "78f287bf-2a9f-4c4f-9fd7-a09eca6dec7f",
+      "object": "chat.completion",
+      "created": 1794076396,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"L2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"unanswerable\",\"answer_segment_id\":1}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3289,
+        "completion_tokens": 173,
+        "total_tokens": 3462,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "prompt_cache_hit_tokens": 1664,
+        "prompt_cache_miss_tokens": 1625
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2G-02/bad",
+    "status": 200,
+    "response": {
+      "id": "0fb4c0d8-a36e-4aeb-895b-59e9f4e96990",
+      "object": "chat.completion",
+      "created": 1794076398,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[],\"issues\":[\"unsupported_detail\"]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"L2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"limited\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\",\"answer_segment_id\":2}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3546,
+        "completion_tokens": 196,
+        "total_tokens": 3742,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 3034
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2S-01/good",
+    "status": 200,
+    "response": {
+      "id": "e8dd2036-142f-4f91-b6c8-ec055df716ea",
+      "object": "chat.completion",
+      "created": 1794076400,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\",\"S3\"],\"issues\":[]},\"s3\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K3\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2},{\"item_id\":\"i4\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":3}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 5346,
+        "completion_tokens": 286,
+        "total_tokens": 5632,
+        "prompt_tokens_details": {
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 2914
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2S-01/bad",
+    "status": 200,
+    "response": {
+      "id": "97867a4b-eb02-4ac3-816e-367b0c94afe5",
+      "object": "chat.completion",
+      "created": 1794076403,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"scope_expanded\",\"unsupported_detail\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K2\",\"S3\"],\"issues\":[\"scope_expanded\",\"unsupported_detail\"]},\"s3\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K3\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"partial\",\"answer_segment_id\":2},{\"item_id\":\"i4\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":3}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 5328,
+        "completion_tokens": 305,
+        "total_tokens": 5633,
+        "prompt_tokens_details": {
+          "cached_tokens": 896
+        },
+        "prompt_cache_hit_tokens": 896,
+        "prompt_cache_miss_tokens": 4432
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2S-02/good",
+    "status": 200,
+    "response": {
+      "id": "bc9c2d38-3fad-4dfd-ab01-e79dfaf7b7a4",
+      "object": "chat.completion",
+      "created": 1794076406,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\",\"S3\"],\"issues\":[]},\"s3\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K3\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":2},{\"item_id\":\"i4\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":3}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 5288,
+        "completion_tokens": 286,
+        "total_tokens": 5574,
+        "prompt_tokens_details": {
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 2856
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/V2S-02/bad",
+    "status": 200,
+    "response": {
+      "id": "e0f2059c-56b3-472d-9441-7e54ed04a398",
+      "object": "chat.completion",
+      "created": 1794076409,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"invalid\",\"claims_complete\":true,\"response_issues\":[\"unsupported_detail\"],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"facts\",\"support\":\"unsupported\",\"evidence\":[\"K2\"],\"issues\":[\"unsupported_detail\"]},\"s3\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K3\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"limited\",\"supported\":false,\"conditions_preserved\":false,\"answerability\":\"partial\",\"answer_segment_id\":2},{\"item_id\":\"i4\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":3}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 5274,
+        "completion_tokens": 294,
+        "total_tokens": 5568,
+        "prompt_tokens_details": {
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 2842
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  }
+]

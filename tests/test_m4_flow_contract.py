@@ -67,9 +67,10 @@ async def test_string_handoff_marker_cannot_skip_independent_response_review(mon
     state = AgentState(session_id="s", user_id=101, user_message="合成问题", detected_intent="technical",
                        collected_info={"handoff_attempted": "false", "answer_validated": "true"})
     graph._generate_response_with_llm = AsyncMock(return_value="合成拒绝草稿")
-    assert await response_generation_node(graph, state) == AgentNode.HUMAN_HANDOFF
+    assert await response_generation_node(graph, state) == AgentNode.END
     assert len(graph.validator.responses) == 2
     assert state.flow_value(FlowFlag.VALIDATED) is False
+    assert not state.need_human and not state.tool_calls
 
 
 def test_evidence_invalidation_clears_typed_cache_and_review_decisions():

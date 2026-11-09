@@ -3,7 +3,7 @@
 实现订单查询、工单创建、退换货申请等8个结构化工具
 支持重试机制、参数校验、错误处理、执行追踪
 """
-import uuid
+import uuid as uuid  # 保留既有故障注入接口，验证失败时不会构造回执ID。
 import asyncio
 import time
 import logging
@@ -35,6 +35,7 @@ class ToolDefinition(BaseModel):
 
 class ToolExecutionResult(BaseModel):
     """工具执行结果"""
+    model_config = ConfigDict(strict=True, extra="forbid")
     success: bool
     data: Any = None
     error: Optional[str] = None
@@ -42,6 +43,10 @@ class ToolExecutionResult(BaseModel):
     execution_time_ms: int = 0
     retry_count: int = 0
     error_type: Optional[str] = None
+    call_id: str | None = None
+    observed_at: str | None = None
+    transport: Literal["mcp", "direct", "receipt"] | None = None
+    outcome: Literal["succeeded", "rejected", "failed", "unknown"] | None = None
 
 
 def _level_label(value: Any) -> str:
@@ -116,7 +121,11 @@ class BaseTool:
         if self.cache_success and idempotency_key and idempotency_key in self._idempotency_cache:
             return self._idempotency_cache[idempotency_key].model_copy(deep=True)
 
-        for attempt in range(self.max_retries):
+        from app.agent.capabilities import CAPABILITIES
+        spec = CAPABILITIES.get(self.name)
+        # Registered business writes always get one dispatch, including future subclasses.
+        attempts = min(self.max_retries, spec.attempts) if spec else self.max_retries
+        for attempt in range(attempts):
             try:
                 if attempt > 0:
                     delay = self.retry_delay_ms * (2 ** (attempt - 1)) / 1000
@@ -142,7 +151,7 @@ class BaseTool:
                 else:
                     last_error = result.get("error", "未知错误")
                     # 业务校验/权限错误不可通过重试修复；只有适配器明确标记的瞬时错误才重试。
-                    if result.get("retryable", False) and attempt < self.max_retries - 1:
+                    if result.get("retryable", False) and attempt < attempts - 1:
                         continue
                     return ToolExecutionResult(
                         success=False,
@@ -156,14 +165,14 @@ class BaseTool:
             except asyncio.TimeoutError:
                 last_error = f"执行超时 (>{self.timeout_ms}ms)"
                 self._consecutive_failures += 1
-                if attempt < self.max_retries - 1:
+                if attempt < attempts - 1:
                     continue
 
             except Exception as e:
                 last_error = "工具依赖或执行服务异常，请按原请求核查结果"
                 self._consecutive_failures += 1
                 logger.error("工具 %s 执行异常: %s", self.name, type(e).__name__)
-                if attempt < self.max_retries - 1:
+                if attempt < attempts - 1:
                     continue
 
         if self._consecutive_failures >= self.circuit_failure_threshold:
@@ -175,7 +184,7 @@ class BaseTool:
             error=last_error or "未知错误",
             hint="请稍后重试或联系人工客服",
             execution_time_ms=execution_time,
-            retry_count=self.max_retries,
+            retry_count=attempts,
             error_type="timeout" if "超时" in (last_error or "") else "execution",
         )
 
@@ -645,6 +654,8 @@ class GetUserHistoryTool(BaseTool):
             level = _level_label(profile.get("user_level", "normal"))
             history = [
                 {
+                    "message_id": item.get("message_id"),
+                    "role": item.get("role"),
                     "date": (item.get("timestamp") or "")[:10],
                     "type": "用户咨询" if item.get("role") == "user" else "客服回复",
                     "summary": str(item.get("content", ""))[:200],

@@ -1,0 +1,116 @@
+{
+  "label_source": "captured_synthetic_provider_outputs_not_independent_gold",
+  "original_report_sha256": "0b860c593106f98ae74a8068b31273570e922c245c4f64961791e8793f36f320",
+  "mixed_message": "退货是否需要保留包装？顺便查询订单ORD960001。",
+  "mixed_understanding": {
+    "topic": "refund",
+    "request_type": "inquiry",
+    "entities": {
+      "order_id": "ORD960001",
+      "product": null
+    },
+    "conditions": [],
+    "subrequests": [
+      {
+        "topic": "refund",
+        "request_type": "inquiry"
+      },
+      {
+        "topic": "query_order",
+        "request_type": "query"
+      }
+    ],
+    "service_preference": "unspecified",
+    "emotion": "neutral",
+    "clarification": null,
+    "retrieval_query": "退货是否需要保留包装；查询订单ORD960001",
+    "entity_source": "current_message",
+    "missing_information": [],
+    "parameters": {
+      "reason": null,
+      "refund_type": null,
+      "complaint_content": null
+    },
+    "read_tasks": [
+      {
+        "tool": "query_order",
+        "resource_id": "ORD960001"
+      }
+    ],
+    "task_kind": "multi",
+    "continue_task": false
+  },
+  "invalid_decisions": [
+    {
+      "operation": "conditional-01/turn-1/http-3",
+      "output": {
+        "action": "prepare_refund",
+        "knowledge_focus": "refund_policy"
+      }
+    },
+    {
+      "operation": "conditional-02/turn-1/http-3",
+      "output": {
+        "action": "prepare_refund",
+        "knowledge_focus": "refund_policy",
+        "question": "reason",
+        "reads": []
+      }
+    },
+    {
+      "operation": "conditional-03/turn-1/http-3",
+      "output": {
+        "action": "prepare_refund",
+        "knowledge_focus": "refund_policy"
+      }
+    },
+    {
+      "operation": "diagnostic-01/turn-1/http-2",
+      "output": {
+        "action": "ask_user",
+        "question": "diagnostic_feedback",
+        "knowledge_focus": "troubleshooting"
+      }
+    },
+    {
+      "operation": "diagnostic-02/turn-1/http-2",
+      "output": {
+        "action": "ask_user",
+        "question": "diagnostic_feedback",
+        "knowledge_focus": "troubleshooting"
+      }
+    },
+    {
+      "operation": "diagnostic-02/turn-2/http-2",
+      "output": {
+        "action": "ask_user",
+        "question": "diagnostic_feedback",
+        "knowledge_focus": "troubleshooting"
+      }
+    },
+    {
+      "operation": "diagnostic-03/turn-1/http-2",
+      "output": {
+        "action": "ask_user",
+        "question": "diagnostic_feedback",
+        "knowledge_focus": "troubleshooting"
+      }
+    },
+    {
+      "operation": "diagnostic-03/turn-2/http-2",
+      "output": {
+        "action": "ask_user",
+        "question": "diagnostic_feedback",
+        "knowledge_focus": "troubleshooting"
+      }
+    },
+    {
+      "operation": "diagnostic-04/turn-1/http-2",
+      "output": {
+        "action": "ask_user",
+        "question": "diagnostic_feedback",
+        "knowledge_focus": "troubleshooting"
+      }
+    }
+  ]
+}

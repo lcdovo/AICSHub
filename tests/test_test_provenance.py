@@ -60,6 +60,18 @@ def test_same_source_after_commit_has_same_fingerprint_independent_of_dirty_stat
     assert evidence_exit_code(0, compare_sources(before, after)) == 0
 
 
+def test_stable_deleted_source_is_recorded_and_does_not_mask_during_run_deletion(repository):
+    before = snapshot_sources(repository)
+    (repository / "app/main.py").unlink()
+    deleted = snapshot_sources(repository)
+    assert deleted["deleted_input_paths"] == ["app/main.py"]
+    assert not deleted["unsupported_paths"] and "app/main.py" not in deleted["files"]
+    assert evidence_exit_code(0, compare_sources(before, deleted)) == 2
+    assert evidence_exit_code(0, compare_sources(deleted, snapshot_sources(repository))) == 0
+    subprocess.run(["git", "add", "-u"], cwd=repository, check=True, capture_output=True)
+    assert deleted["fingerprint"] == snapshot_sources(repository)["fingerprint"]
+
+
 def test_actual_offline_runner_rejects_successful_tests_when_source_changes(repository):
     # 在另一临时仓库运行真实执行器，不修改本项目或业务配置。
     project_root = Path(__file__).resolve().parents[1]

@@ -1,0 +1,40 @@
+{
+  "topic": "refund",
+  "request_type": "apply",
+  "entities": {
+    "order_id": "ORD980105",
+    "product": null
+  },
+  "conditions": [],
+  "subrequests": [
+    {
+      "topic": "refund",
+      "request_type": "apply"
+    }
+  ],
+  "service_preference": "unspecified",
+  "emotion": "neutral",
+  "clarification": null,
+  "retrieval_query": "ORD980105 外壳破损 退货退款",
+  "entity_source": "current_message",
+  "itemization_version": "intent-items.v1",
+  "items": [
+    {
+      "text": "ORD980105外壳破损，请帮我准备退货退款。",
+      "kind": "prepare_refund"
+    }
+  ],
+  "missing_information": [],
+  "parameters": {
+    "reason": "外壳破损",
+    "refund_type": "return",
+    "complaint_content": null
+  },
+  "read_tasks": [
+    {
+      "tool": "query_order",
+      "resource_id": "ORD980105"
+    }
+  ],
+  "continue_task": false
+}

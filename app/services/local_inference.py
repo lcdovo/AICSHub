@@ -27,7 +27,7 @@ class InferenceContext:
 
 
 CONTEXT: ContextVar[InferenceContext] = ContextVar("local_inference_context", default=InferenceContext())
-SCHEDULER_VERSION = "process-local-active1-waiters2-queue500ms-background50ms-v1"
+SCHEDULER_VERSION = "process-local-active1-waiters2-priority-v2"
 
 
 @contextmanager

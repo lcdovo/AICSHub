@@ -1,0 +1,17 @@
+{
+  "dataset_sha256": "e78eb1de4cd9459e2f1f8145ec3bac2a1073ac1e38eed952ba759474c420fc3f",
+  "source_hashes": {
+    "acceptance/m5/adjudicated-v2/dataset.json": "095f28eae0023283216b52cee13daa91375b4053459f890ad4a04abe8ed0fd87",
+    "acceptance/m5/adjudicated-v2/corpus.json": "66cfcdb0514dcae56a352e13bda04fdb0ea6b8f88e277cc74a54b78f5d0ecef1"
+  },
+  "total_cases": 256,
+  "counts": {
+    "smoke": 6,
+    "known": 30,
+    "new_negative": 100,
+    "new_positive": 100,
+    "boundary": 20
+  },
+  "label_source": "assistant_authored_frozen_diagnostic",
+  "whole_m5_pass": false
+}

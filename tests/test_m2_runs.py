@@ -226,7 +226,8 @@ async def test_cancelled_accepted_run_cannot_write_user_message(tmp_path):
 
 
 @pytest.mark.parametrize("corrupt_preview", [False, True])
-async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,monkeypatch,corrupt_preview):
+@pytest.mark.parametrize("confirmation", ["确认", "确认提交这笔退货退款申请。"])
+async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,monkeypatch,corrupt_preview,confirmation):
     from app.models.models import Order,RefundApplication
     from app.services.refund_actions import prepare
     from app.services.refund_application import submit
@@ -234,10 +235,10 @@ async def test_refund_committed_receipt_recovery_does_not_submit_again(tmp_path,
         async with factory() as db:
             db.add(Order(order_id="ORD900001",user_id=101,status="已发货",status_code="shipped",total_amount="0.10",items=[]))
             await db.commit()
-        payload=dict(user_id=101,session_id="session-101",order_id="ORD900001",type="refund",reason="合成破损")
+        payload=dict(user_id=101,session_id="session-101",order_id="ORD900001",type="return" if "退货退款" in confirmation else "refund",reason="合成破损")
         action=await prepare(factory,101,payload)
         async with factory() as db:
-            run,_=await runs.accept(db,await db.get(User,101),ChatRequest(user_id=101,session_id="session-101",message="确认",
+            run,_=await runs.accept(db,await db.get(User,101),ChatRequest(user_id=101,session_id="session-101",message=confirmation,
                 action_id=action["action_id"],action_version=action["version"],client_message_id="refund-crash"))
         claimed,_=await runs._claim(factory,run.id,"old-refund-worker",None)
         async with factory() as db:

@@ -313,6 +313,10 @@ class KnowledgeRepository:
                 for d in docs
             ]
 
+    def current_epoch(self) -> int:
+        with self.transaction() as db:
+            return db.scalar(select(KnowledgeEpoch.value).where(KnowledgeEpoch.id == 1)) or 0
+
     def snapshot(self) -> tuple[int, list[dict]]:
         with self.transaction() as db:
             epoch = db.get(KnowledgeEpoch, 1)
@@ -336,6 +340,7 @@ class KnowledgeRepository:
                         ["ready", "published", "legacy_unverified"]
                     ),
                 )
+                .order_by(KnowledgeDoc.id, KnowledgeChunk.chunk_index, KnowledgeChunk.id)
                 .limit(10001)
             ).all()
             if len(rows) > 10000:

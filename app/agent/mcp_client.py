@@ -14,6 +14,8 @@ import asyncio
 import json
 import logging
 import sys
+from contextlib import asynccontextmanager
+from contextvars import Context
 from typing import Any, Dict, Optional
 
 from app.agent.tools import TOOL_REGISTRY, ToolExecutionResult
@@ -35,92 +37,135 @@ def _extract_text_content(result: Any) -> str:
     )
 
 
+@asynccontextmanager
+async def _inprocess_session():
+    """Use FastMCP's public transport; its context owns protocol initialization."""
+    from fastmcp import Client
+    from app.agent.mcp_server import mcp as server
+
+    class Session:
+        def __init__(self, client):
+            self.client = client
+
+        async def initialize(self):
+            # Client.__aenter__ already negotiated the protocol (including v2 discover).
+            return None
+
+        async def list_tools(self):
+            return await self.client.list_tools()
+
+        async def call_tool(self, name, arguments):
+            return await self.client.call_tool_mcp(name, arguments)
+
+    async with Client(server) as client:
+        yield Session(client)
+
+
 class _McpToolClient:
-    """进程级单例 MCP 客户端（懒初始化，失败即禁用，调用以锁串行化）。"""
+    """由同一后台协程持有连接生命周期，失败后有界退避重连。"""
+
+    connect_timeout = 2.
+    call_timeout = 5.
+    retry_base = 1.
 
     def __init__(self) -> None:
-        self._ctx = None
         self._session = None
         self._lock = asyncio.Lock()
         self._ready = False
-        self._failed = False
+        self._retry_at = 0.
+        self._failures = 0
+        self._owner = None
+        self._started = asyncio.Event()
+        self._stop = asyncio.Event()
+
+    async def _connect(self) -> None:
+        # AnyIO contexts must be entered and exited by the same task.
+        from contextlib import AsyncExitStack
+        try:
+            async with AsyncExitStack() as stack:
+                async with asyncio.timeout(self.connect_timeout) as budget:
+                    if _TRANSPORT == "stdio":
+                        from mcp import ClientSession, StdioServerParameters
+                        from mcp.client.stdio import stdio_client
+                        streams = await stack.enter_async_context(stdio_client(
+                            StdioServerParameters(command=sys.executable, args=["-m", _ENTRY])))
+                        session = await stack.enter_async_context(ClientSession(*streams))
+                    else:
+                        session = await stack.enter_async_context(_inprocess_session())
+                    await session.initialize()
+                    await session.list_tools()
+                if budget.expired():
+                    raise TimeoutError("late_mcp_connection")
+                self._session, self._ready = session, True
+                self._started.set()
+                await self._stop.wait()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("MCP connection unavailable: %s", type(exc).__name__)
+        finally:
+            self._session, self._ready = None, False
+            self._failures += 1
+            self._retry_at = asyncio.get_running_loop().time() + min(30., self.retry_base * 2 ** min(self._failures - 1, 5))
+            self._started.set()
 
     async def _ensure(self) -> bool:
-        """建立连接（in-process 或 stdio 子进程）；只尝试一次，失败后标记禁用。
-
-        连接初始化由自增锁串行化（幂等置位 _ready/_failed），避免并发首调
-        同时建连竞态；后续工具调用不再持锁，MCP JSON-RPC 以 request-id 匹配
-        响应、FastMCP in-process server 无共享可变状态，天然支持并发 in-flight。
-        """
-        if self._ready or self._failed:
-            return self._ready
+        if self._ready:
+            return True
         async with self._lock:
-            if self._ready or self._failed:  # 双检：等待锁期间可能已被其他协程建连
-                return self._ready
-            try:
-                from mcp.shared.memory import create_connected_server_and_client_session
-
-                if _TRANSPORT == "stdio":
-                    from mcp import ClientSession, StdioServerParameters
-                    from mcp.client.stdio import stdio_client
-
-                    params = StdioServerParameters(command=sys.executable, args=["-m", _ENTRY])
-                    self._ctx = stdio_client(params)
-                    read_stream, write_stream = await self._ctx.__aenter__()
-                    self._session = await ClientSession(read_stream, write_stream).__aenter__()
-                else:  # inprocess：同进程 FastMCP server，无子进程
-                    from app.agent.mcp_server import mcp as fastmcp_app
-
-                    # create_connected_server_and_client_session 期望 MCP Server 抽象，
-                    # 传入 FastMCP 底层 LowLevelServer（._mcp_server），否则缺少
-                    # create_initialization_options 导致 AttributeError。
-                    self._ctx = create_connected_server_and_client_session(fastmcp_app._mcp_server)
-                    self._session = await self._ctx.__aenter__()
-
-                await self._session.initialize()
-                tools = await self._session.list_tools()
-                self._ready = True
-                logger.info("MCP client connected (transport=%s, tools=%d)", _TRANSPORT, len(tools.tools or []))
-            except Exception as exc:  # MCP 初始化失败：降级直调，不阻断主链路
-                logger.warning(
-                    "MCP client unavailable (%s), fallback to direct tool calls: %s",
-                    _TRANSPORT, type(exc).__name__,
-                )
-                self._failed = True
-            return self._ready
+            if self._ready:
+                return True
+            if asyncio.get_running_loop().time() < self._retry_at:
+                return False
+            if self._owner is None or self._owner.done():
+                self._started, self._stop = asyncio.Event(), asyncio.Event()
+                # The persistent protocol server must not retain its first caller's
+                # identity, model budget, Run journal or task ContextVars.
+                self._owner = asyncio.create_task(self._connect(), context=Context())
+            started = self._started
+        try:
+            async with asyncio.timeout(self.connect_timeout + .1):
+                await started.wait()
+        except TimeoutError:
+            self._stop.set()
+            return False
+        return self._ready
 
     async def call(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[ToolExecutionResult]:
-        if not _ENABLED:
-            return None
-        if not await self._ensure():
+        if not _ENABLED or not await self._ensure():
             return None
         try:
-            # 不持调用锁：连接初始化由 _ensure 串行保证，调用阶段并发执行
-            # （MCP JSON-RPC request-id 匹配响应，server 工具实现无共享可变状态）。
-            res = await self._session.call_tool(tool_name, arguments)
+            async with asyncio.timeout(self.call_timeout) as budget:
+                res = await self._session.call_tool(tool_name, arguments)
+            if budget.expired():
+                raise TimeoutError("late_mcp_result")
+            if getattr(res, "is_error", getattr(res, "isError", False)):
+                raise ValueError("mcp_error_response")
             raw = json.loads(_extract_text_content(res)) if _extract_text_content(res) else {}
-            return ToolExecutionResult.model_validate(raw)
+            result = ToolExecutionResult.model_validate(raw)
+            self._failures = 0
+            return result
+        except asyncio.CancelledError:
+            raise
         except Exception as exc:
-            logger.warning("MCP tool call %s failed: %s", tool_name, type(exc).__name__)
-            if tool_name in {"create_ticket", "apply_refund", "update_ticket_status", "escalate_to_human"}:
+            logger.warning("MCP tool %s unavailable: %s", tool_name, type(exc).__name__)
+            self._ready = False
+            self._stop.set()
+            from app.agent.capabilities import CAPABILITIES
+            if CAPABILITIES[tool_name].effect == "write":
                 return ToolExecutionResult(success=False, error="工具执行结果尚不确定，请核查原请求", error_type="outcome_unknown")
             return None
 
     async def aclose(self) -> None:
-        if self._session is not None:
+        self._stop.set()
+        if self._owner and not self._owner.done():
             try:
-                await self._session.__aexit__(None, None, None)
-            except Exception:
-                pass
-            self._session = None
-        if self._ctx is not None:
-            try:
-                await self._ctx.__aexit__(None, None, None)
-            except Exception:
-                pass
-            self._ctx = None
-        self._ready = False
-        self._failed = False
+                async with asyncio.timeout(2.):
+                    await asyncio.shield(self._owner)
+            except TimeoutError:
+                self._owner.cancel()
+                await asyncio.gather(self._owner, return_exceptions=True)
+        self._owner, self._session, self._ready = None, None, False
 
 
 _client: Optional[_McpToolClient] = None
@@ -133,31 +178,77 @@ def _get_client() -> _McpToolClient:
     return _client
 
 
+async def warmup_mcp_client() -> bool:
+    """Load protocol dependencies during startup, outside the per-call deadline."""
+    if not _ENABLED:
+        return False
+    try:
+        if _TRANSPORT == "inprocess":
+            import importlib
+            async with asyncio.timeout(10):
+                await asyncio.to_thread(importlib.import_module, "app.agent.mcp_server")
+        return await _get_client()._ensure()
+    except Exception as exc:
+        logger.warning("MCP startup unavailable: %s", type(exc).__name__)
+        return False
+
+
 async def invoke_tool(tool_name: str, **kwargs: Any) -> Optional[ToolExecutionResult]:
-    """统一工具执行入口：MCP 协议优先，进程内直调兜底。
-
-    未注册工具明确失败；写结果缺少业务回执时不能返回成功。
-    """
-    if tool_name not in TOOL_REGISTRY:
+    """共享能力契约、总截止及结果校验；未知写结果只对账。"""
+    from datetime import datetime, timezone
+    import uuid
+    from app.agent.capabilities import CAPABILITIES, output_issue
+    if tool_name not in TOOL_REGISTRY or tool_name not in CAPABILITIES:
         return ToolExecutionResult(success=False, error="工具不存在", error_type="not_found")
-
-    if _ENABLED:
-        via_mcp = await _get_client().call(tool_name, dict(kwargs))
-        if via_mcp is not None:
-            if via_mcp.error_type == "outcome_unknown":
-                from app.agent.receipt_recovery import recover
-                return await recover(tool_name, dict(kwargs)) or via_mcp
-            return _validate_receipt(tool_name, via_mcp)
-
-    return _validate_receipt(tool_name, await TOOL_REGISTRY[tool_name].execute_with_retry(**kwargs))
+    spec = CAPABILITIES[tool_name]
+    from app.services.capability_journal import JOURNAL
+    journal = JOURNAL.get()
+    call_id = await journal.begin(tool_name, dict(kwargs), spec.effect) if journal else str(uuid.uuid4())
+    transport = "mcp" if _ENABLED else "direct"
+    try:
+        async with asyncio.timeout(spec.timeout_seconds) as budget:
+            result = await _get_client().call(tool_name, dict(kwargs)) if _ENABLED else None
+            if result is not None:
+                transport = "mcp"
+            else:
+                transport = "direct"
+                result = await TOOL_REGISTRY[tool_name].execute_with_retry(**kwargs)
+        if budget.expired():
+            raise TimeoutError("late_tool_result")
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        result = ToolExecutionResult(success=False, error="工具调用未完成，请按原请求核查",
+            error_type="outcome_unknown" if spec.effect == "write" else "timeout" if isinstance(exc, TimeoutError) else "execution")
+    unknown_errors = {"outcome_unknown", "timeout", "execution", "unknown", "dependency_unavailable", "unavailable"}
+    if spec.effect == "write" and result.error_type in unknown_errors:
+        from app.agent.receipt_recovery import recover
+        try:
+            async with asyncio.timeout(1.):
+                recovered = await recover(tool_name, dict(kwargs))
+            if recovered is not None:
+                result, transport = recovered, "receipt"
+        except (TimeoutError, ValueError):
+            pass
+    if result.success:
+        issue = output_issue(tool_name, result.data, kwargs)
+        if issue:
+            result = ToolExecutionResult(success=False, error="工具返回结果未通过契约校验",
+                error_type="unknown" if spec.effect == "write" else "invalid_output")
+    outcome = ("succeeded" if result.success else "unknown" if spec.effect == "write" and result.error_type in unknown_errors else "rejected" if result.error_type in {
+        "validation", "permission", "business", "conflict"} else "failed")
+    result = result.model_copy(update={"call_id": call_id, "observed_at": datetime.now(timezone.utc).isoformat(),
+                                       "transport": transport, "outcome": outcome})
+    if journal:
+        receipt = result.data.get(spec.receipt_key) if spec.receipt_key and isinstance(result.data, dict) else None
+        await journal.finish(call_id, outcome, result.data, error=result.error_type, resource_id=receipt)
+    return result
 
 
 def _validate_receipt(tool_name: str, result: ToolExecutionResult) -> ToolExecutionResult:
-    required = {"create_ticket": "ticket_id", "apply_refund": "refund_id",
-                "update_ticket_status": "ticket_id", "escalate_to_human": "request_id"}.get(tool_name)
-    if required and result.success and (not isinstance(result.data, dict)
-                                       or not isinstance(result.data.get(required), str) or not result.data[required]):
-        return ToolExecutionResult(success=False, error="写操作缺少可信回执", error_type="unknown")
+    from app.agent.capabilities import output_issue
+    if result.success and output_issue(tool_name, result.data, {}):
+        return ToolExecutionResult(success=False, error="工具结果缺少可信回执", error_type="unknown")
     return result
 
 

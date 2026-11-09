@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "status": "PARTIAL_HUMAN_REVIEW",
+  "reviewer": "user",
+  "reviewed_at": "2026-11-05T00:44:48+08:00",
+  "user_statement": "全部通过",
+  "confirmation_context": "针对助手确认的本组打印机6题全部通过；此前用户表示已复核",
+  "dataset_sha256": "f9f6c93ba93844e36a96b9e64206197b3e2d2406b21cd2503f248204b890e692",
+  "corpus_sha256": "c04d21375d743c3eb1d613239dfb46eb7b301fb6de1c6ff8b1b98c779de1c362",
+  "decisions": [
+    {
+      "case_id": "holdout-rag-004-1",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-004-2",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-004-3",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-004-4",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-004-5",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-004-6",
+      "decision": "approved",
+      "kind": "answerable"
+    }
+  ],
+  "approved_count_this_record": 6,
+  "cumulative_approved_count": 24,
+  "remaining_count": 571,
+  "global_holdout_approved": false,
+  "global_semantic_independence_approved": false,
+  "generated_answer_claims_reviewed": false
+}

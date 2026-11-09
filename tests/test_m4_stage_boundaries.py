@@ -18,7 +18,9 @@ from tests.test_ticket_idempotency import api_context
 
 def graph_with_memory():
     from langgraph.checkpoint.memory import InMemorySaver
+    from tests.test_chat_turns import allowed_judge
     graph = AgentGraph()
+    graph.llm_judge = allowed_judge()
     graph.checkpointer = InMemorySaver()
     graph.langgraph = graph._build_langgraph()
     return graph
@@ -84,7 +86,7 @@ async def test_response_regeneration_never_reenters_committed_tool_stage(tmp_pat
                 if second_passes:
                     assert current.result["reply"] == "合成生成结果2"
                 else:
-                    assert "无法确认" in current.result["reply"]
+                    assert "未通过校验" in current.result["reply"]
                 assert await db.scalar(select(func.count()).select_from(Ticket)) == 1
                 assert await db.scalar(select(func.count()).select_from(HandoffRequestRecord)) == 0
                 audit = (await db.scalars(select(OperationAudit))).all()
@@ -92,7 +94,7 @@ async def test_response_regeneration_never_reenters_committed_tool_stage(tmp_pat
             assert executions == ["create_ticket"]
             assert len(drafts) == 2 and drafts[0] == drafts[1]
             assert validations == ["合成生成结果1", "合成生成结果2"]
-            assert handoff.await_count == (0 if second_passes else 1)
+            handoff.assert_not_awaited()
         finally:
             await graph.llm_service.close()
 

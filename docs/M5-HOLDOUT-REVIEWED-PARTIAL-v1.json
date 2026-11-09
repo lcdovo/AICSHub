@@ -1,0 +1,464 @@
+{
+  "schema_version": 1,
+  "split": "holdout",
+  "label_source": "human_reviewed",
+  "reviewer": "user",
+  "cases": [
+    {
+      "case_id": "holdout-rag-001-1",
+      "cluster_id": "holdout-topic-001",
+      "query": "显示器在4K分辨率下最高能用多少刷新率？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-001-c1",
+          "version_id": "m5-candidate-001-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成显示器支持3840×2160分辨率，最高刷新率60Hz。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成显示器支持3840×2160分辨率，最高刷新率60Hz。"
+    },
+    {
+      "case_id": "holdout-rag-001-2",
+      "cluster_id": "holdout-topic-001",
+      "query": "显示器用哪种接口能给笔记本供电、上限多少？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-001-c1",
+          "version_id": "m5-candidate-001-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成显示器必须通过USB-C接口连接才能给笔记本供电，最高65W。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成显示器必须通过USB-C接口连接才能给笔记本供电，最高65W。"
+    },
+    {
+      "case_id": "holdout-rag-001-3",
+      "cluster_id": "holdout-topic-001",
+      "query": "开启HDR后亮度菜单锁定该怎么理解？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-001-c1",
+          "version_id": "m5-candidate-001-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成显示器开启HDR前须在操作系统中启用HDR，菜单亮度会锁定。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成显示器开启HDR前须在操作系统中启用HDR，菜单亮度会锁定。"
+    },
+    {
+      "case_id": "holdout-rag-001-4",
+      "cluster_id": "holdout-topic-001",
+      "query": "给显示器安装支架时孔距和螺丝有什么限制？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-001-c1",
+          "version_id": "m5-candidate-001-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成显示器支持100×100毫米VESA支架，螺丝长度不得超过10毫米。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成显示器支持100×100毫米VESA支架，螺丝长度不得超过10毫米。"
+    },
+    {
+      "case_id": "holdout-rag-001-5",
+      "cluster_id": "holdout-topic-001",
+      "query": "显示器画面闪烁先做哪两步排查？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-001-c1",
+          "version_id": "m5-candidate-001-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成显示器画面闪烁时应先更换认证线缆，再降低刷新率排查。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成显示器画面闪烁时应先更换认证线缆，再降低刷新率排查。"
+    },
+    {
+      "case_id": "holdout-rag-001-6",
+      "cluster_id": "holdout-topic-001",
+      "query": "显示器能否通过DP口串接第二台屏幕？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-001-c1",
+          "version_id": "m5-candidate-001-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成显示器不支持菊花链输出，DP口仅接收信号。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成显示器不支持菊花链输出，DP口仅接收信号。"
+    },
+    {
+      "case_id": "holdout-rag-002-1",
+      "cluster_id": "holdout-topic-002",
+      "query": "第一次让扫地机建图前要如何准备房间？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-002-c1",
+          "version_id": "m5-candidate-002-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成扫地机首次建图须打开全部待清扫房门并收起地面电线。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成扫地机首次建图须打开全部待清扫房门并收起地面电线。"
+    },
+    {
+      "case_id": "holdout-rag-002-2",
+      "cluster_id": "holdout-topic-002",
+      "query": "扫地机在还没扫完时回充是否可能由低电量导致？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-002-c1",
+          "version_id": "m5-candidate-002-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成扫地机在电量低于20%时返回充电，不保证当前区域完成。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成扫地机在电量低于20%时返回充电，不保证当前区域完成。"
+    },
+    {
+      "case_id": "holdout-rag-002-3",
+      "cluster_id": "holdout-topic-002",
+      "query": "扫地机水箱可以加洗涤剂吗？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-002-c1",
+          "version_id": "m5-candidate-002-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成扫地机拖地只可用清水，泡沫清洁剂会损伤水路。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成扫地机拖地只可用清水，泡沫清洁剂会损伤水路。"
+    },
+    {
+      "case_id": "holdout-rag-002-4",
+      "cluster_id": "holdout-topic-002",
+      "query": "18毫米门槛且表面黑亮，扫地机一定能通过吗？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-002-c1",
+          "version_id": "m5-candidate-002-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成扫地机越障上限18毫米，黑色高光门槛可能识别为悬崖。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成扫地机越障上限18毫米，黑色高光门槛可能识别为悬崖。"
+    },
+    {
+      "case_id": "holdout-rag-002-5",
+      "cluster_id": "holdout-topic-002",
+      "query": "删除扫地机地图会一并删除清扫记录吗？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-002-c1",
+          "version_id": "m5-candidate-002-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成扫地机地图删除后不能恢复，清扫记录仍可查看。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成扫地机地图删除后不能恢复，清扫记录仍可查看。"
+    },
+    {
+      "case_id": "holdout-rag-002-6",
+      "cluster_id": "holdout-topic-002",
+      "query": "尘袋满后自动集尘暂停应如何恢复？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-002-c1",
+          "version_id": "m5-candidate-002-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成扫地机尘袋满会暂停集尘，需更换尘袋后重新执行集尘。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成扫地机尘袋满会暂停集尘，需更换尘袋后重新执行集尘。"
+    },
+    {
+      "case_id": "holdout-rag-003-1",
+      "cluster_id": "holdout-topic-003",
+      "query": "墙面凹凸可以靠投影仪自动对焦修好吗？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-003-c1",
+          "version_id": "m5-candidate-003-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成投影仪建议投射距离2至3米，自动对焦不纠正墙面凹凸。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成投影仪建议投射距离2至3米，自动对焦不纠正墙面凹凸。"
+    },
+    {
+      "case_id": "holdout-rag-003-2",
+      "cluster_id": "holdout-topic-003",
+      "query": "为什么投影仪斜投校正后清晰度下降？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-003-c1",
+          "version_id": "m5-candidate-003-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成投影仪梯形校正后会损失部分有效像素，正投画质更好。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成投影仪梯形校正后会损失部分有效像素，正投画质更好。"
+    },
+    {
+      "case_id": "holdout-rag-003-3",
+      "cluster_id": "holdout-topic-003",
+      "query": "投影仪节能模式能否维持标称亮度？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-003-c1",
+          "version_id": "m5-candidate-003-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成投影仪亮度标称基于标准模式，节能模式会降低亮度。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成投影仪亮度标称基于标准模式，节能模式会降低亮度。"
+    },
+    {
+      "case_id": "holdout-rag-003-4",
+      "cluster_id": "holdout-topic-003",
+      "query": "关闭投影仪后能马上拔电源吗？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-003-c1",
+          "version_id": "m5-candidate-003-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成投影仪开机后风扇持续运行正常，关闭后需等风扇停止再断电。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成投影仪开机后风扇持续运行正常，关闭后需等风扇停止再断电。"
+    },
+    {
+      "case_id": "holdout-rag-003-5",
+      "cluster_id": "holdout-topic-003",
+      "query": "投影仪接收4K120输入时没有画面可能是什么原因？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-003-c1",
+          "version_id": "m5-candidate-003-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成投影仪HDMI支持1080p60输入，不接受4K120信号。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成投影仪HDMI支持1080p60输入，不接受4K120信号。"
+    },
+    {
+      "case_id": "holdout-rag-003-6",
+      "cluster_id": "holdout-topic-003",
+      "query": "手机能通过蓝牙把画面投到投影仪吗？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-003-c1",
+          "version_id": "m5-candidate-003-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成投影仪蓝牙仅传输音频，手机画面需使用同网投屏。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成投影仪蓝牙仅传输音频，手机画面需使用同网投屏。"
+    },
+    {
+      "case_id": "holdout-rag-004-1",
+      "cluster_id": "holdout-topic-004",
+      "query": "打印机能否直接打印热敏快递面单？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-004-c1",
+          "version_id": "m5-candidate-004-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成打印机仅接受A4和A5普通纸，不能打印热敏标签。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成打印机仅接受A4和A5普通纸，不能打印热敏标签。"
+    },
+    {
+      "case_id": "holdout-rag-004-2",
+      "cluster_id": "holdout-topic-004",
+      "query": "70克纸能用于打印机自动双面吗？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-004-c1",
+          "version_id": "m5-candidate-004-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成打印机双面模式要求纸张克重80至100克每平方米。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成打印机双面模式要求纸张克重80至100克每平方米。"
+    },
+    {
+      "case_id": "holdout-rag-004-3",
+      "cluster_id": "holdout-topic-004",
+      "query": "喷头清洗两次仍有断线，下一步能立即继续清洗吗？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-004-c1",
+          "version_id": "m5-candidate-004-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成打印机喷头清洗连续最多2次，再清洗前等待30分钟。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成打印机喷头清洗连续最多2次，再清洗前等待30分钟。"
+    },
+    {
+      "case_id": "holdout-rag-004-4",
+      "cluster_id": "holdout-topic-004",
+      "query": "更换墨盒后出现条纹需要先做什么？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-004-c1",
+          "version_id": "m5-candidate-004-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成打印机更换墨盒后需执行校准页，不校准可能出现条纹。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成打印机更换墨盒后需执行校准页，不校准可能出现条纹。"
+    },
+    {
+      "case_id": "holdout-rag-004-5",
+      "cluster_id": "holdout-topic-004",
+      "query": "电脑USB打印正常但手机无线打印失败应先检查什么？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-004-c1",
+          "version_id": "m5-candidate-004-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成打印机USB连接不需要网络，手机无线打印需要同一局域网。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成打印机USB连接不需要网络，手机无线打印需要同一局域网。"
+    },
+    {
+      "case_id": "holdout-rag-004-6",
+      "cluster_id": "holdout-topic-004",
+      "query": "打印机扫描双面合同能否自动识别背面？",
+      "kind": "answerable",
+      "relevant": [
+        {
+          "chunk_id": "m5-candidate-004-c1",
+          "version_id": "m5-candidate-004-v1",
+          "grade": 3
+        }
+      ],
+      "required_conditions": [
+        "合成打印机扫描功能只支持单面，双面文档需手动翻页。"
+      ],
+      "expected_support": "supported",
+      "candidate": null,
+      "review_reason": "草拟可允许事实：合成打印机扫描功能只支持单面，双面文档需手动翻页。"
+    }
+  ]
+}

@@ -1,0 +1,1440 @@
+{
+  "oracle_version": "multi-intent.oracle.v2",
+  "review_origin": "assistant_adjudicated_synthetic_not_independent_human_gold",
+  "parent_sources": {
+    "scenarios-v1.json": "0d88270d3e4789f9beb638a11ae457d4ae1947665b38a750fc86b15a1bc4c98b",
+    "v2-fresh-cases-v1.json": "0edfd90c92fc47e8fa6f02efb4aa431b19c8ee9de4b5eb9378682a853f3d37f7",
+    "v2-generation-regressions-v1.json": "4616fb9f49da8c075b41236a2631e8c061d9417166869d25fac590e6b9fce655",
+    "v2-scope-regressions-v1.json": "64c00a62cc178966de4153092cb95b81472bc52d1329a8ae2d2b424c120c2274"
+  },
+  "principles": {
+    "statement_support": "Judge must assess full answer against current per-item evidence; presence of a citation is insufficient",
+    "coverage": "known conditional policy is only partial coverage of a generic question unless other cases are resolved",
+    "task_stage": "publishable limited/partial answer can pass evaluation while task waits for input; no completion required for every safe answer",
+    "policy_not_user_eligibility": "approval-based timing policy does not require proof current application approved; do not invent approval or navigation",
+    "protocol": "malformed output, timeout, unknown, quote-binding failures are separate from unsupported semantics; still cannot pass admission"
+  },
+  "changed_case_ids": [
+    "MI-15",
+    "MI-16",
+    "V2S-01",
+    "V2S-02"
+  ],
+  "limitations": [
+    "not independent human gold",
+    "all old holdout cases have been used in development; no unseen holdout claim",
+    "source versions remain immutable; scores never overwrite v1 results"
+  ],
+  "cases": [
+    {
+      "case_id": "MI-01",
+      "family": "packaging_shipping",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，退货包装有什么要求，质量问题运费由谁承担。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "质量问题运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered",
+        "answered"
+      ],
+      "bad_item": 2,
+      "bad_answer": "任何原因退货运费都由商家承担。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ],
+        "i3": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "development"
+    },
+    {
+      "case_id": "MI-02",
+      "family": "same_order_fields",
+      "split": "reviewed_regression",
+      "message": "查订单ORD960001状态，再查这笔订单金额。",
+      "items": [
+        {
+          "text": "查订单ORD960001状态",
+          "kind": "query_order"
+        },
+        {
+          "text": "再查这笔订单金额",
+          "kind": "query_order"
+        }
+      ],
+      "knowledge": [
+        "",
+        ""
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "订单金额为99.10元。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "订单金额为999.10元。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "development"
+    },
+    {
+      "case_id": "MI-03",
+      "family": "three_knowledge_topics",
+      "split": "reviewed_regression",
+      "message": "退货包装有什么要求，退款多久到账，质量问题运费由谁承担。",
+      "items": [
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        },
+        {
+          "text": "质量问题运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货需保留原包装。",
+        "退款审核通过后3个工作日到账。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货需保留原包装。",
+        "退款审核通过后3个工作日到账。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered",
+        "answered"
+      ],
+      "bad_item": 2,
+      "bad_answer": "",
+      "attack": "omitted",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ],
+        "i3": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "development"
+    },
+    {
+      "case_id": "MI-04",
+      "family": "missing_order",
+      "split": "reviewed_regression",
+      "message": "查我的订单状态，退货包装有什么要求。",
+      "items": [
+        {
+          "text": "查我的订单状态",
+          "kind": "query_order"
+        },
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "请提供订单号，目前尚无法查询订单。",
+        "退货需保留原包装。"
+      ],
+      "good_statuses": [
+        "limited",
+        "answered"
+      ],
+      "bad_item": 0,
+      "bad_answer": "订单已签收。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "limited"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "partial",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "development"
+    },
+    {
+      "case_id": "MI-05",
+      "family": "permission_isolation",
+      "split": "reviewed_regression",
+      "message": "查订单ORD960001，质量问题运费由谁承担。",
+      "items": [
+        {
+          "text": "查订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "质量问题运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "质量问题运费由商家承担。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": true,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "目前没有权限查询该订单，无法确认状态。",
+        "质量问题运费由商家承担。"
+      ],
+      "good_statuses": [
+        "limited",
+        "answered"
+      ],
+      "bad_item": 0,
+      "bad_answer": "订单已签收。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "limited"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "partial",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "development"
+    },
+    {
+      "case_id": "MI-06",
+      "family": "partial_sources",
+      "split": "reviewed_regression",
+      "message": "退货包装有什么要求，运费由谁承担。",
+      "items": [
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货需保留原包装。",
+        ""
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货需保留原包装。",
+        "当前资料没有说明运费承担，尚无法确认。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 1,
+      "bad_answer": "运费一律由商家承担。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "limited"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "partial"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "development"
+    },
+    {
+      "case_id": "MI-07",
+      "family": "preview_not_submission",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，如果已签收请申请退款，原因是外壳明显破损，退货包装有什么要求。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "如果已签收请申请退款，原因是外壳明显破损",
+          "kind": "prepare_refund"
+        },
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "",
+        "退货需保留原包装。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": true,
+      "conditions": [
+        "order_delivered"
+      ],
+      "good_answers": [
+        "订单已签收。",
+        "已准备模拟退款预览，尚未提交申请，请明确确认。",
+        "退货需保留原包装。"
+      ],
+      "good_statuses": [
+        "answered",
+        "awaiting_confirmation",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "已成功退款，资金已经退回。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "awaiting_confirmation"
+        ],
+        "i3": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_confirmation"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "partial",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "development"
+    },
+    {
+      "case_id": "MI-08",
+      "family": "conditional_block",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，如果已签收请申请退款。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "如果已签收请申请退款",
+          "kind": "prepare_refund"
+        }
+      ],
+      "knowledge": [
+        "",
+        ""
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "pending",
+      "preview": false,
+      "conditions": [
+        "order_delivered"
+      ],
+      "good_answers": [
+        "订单待发货，尚未签收。",
+        "尚未满足已签收条件，没有准备或提交退款申请。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 1,
+      "bad_answer": "已签收并完成退款。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "limited"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "partial"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "development"
+    },
+    {
+      "case_id": "MI-09",
+      "family": "unsupported_mixed_write",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，同时创建投诉工单。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "同时创建投诉工单",
+          "kind": "unsupported"
+        }
+      ],
+      "knowledge": [
+        "",
+        ""
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "当前多事项流程未创建投诉工单，请单独明确发起投诉。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 1,
+      "bad_answer": "投诉工单已创建。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "limited"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "partial"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "holdout"
+    },
+    {
+      "case_id": "MI-10",
+      "family": "negated_application",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，不申请退款，只问退款条件。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "不申请退款，只问退款条件",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "未拆封且收货7日内可以申请退货。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "未拆封且收货7日内可以申请退货；本轮未申请退款。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "已经为你提交退款申请。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "holdout"
+    },
+    {
+      "case_id": "MI-11",
+      "family": "warranty_exception",
+      "split": "reviewed_regression",
+      "message": "保修期限多久，进水是否保修。",
+      "items": [
+        {
+          "text": "保修期限多久",
+          "kind": "knowledge"
+        },
+        {
+          "text": "进水是否保修",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "保修期限12个月。",
+        "进水损坏不属于保修范围。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "保修期限12个月。",
+        "进水损坏不属于保修范围。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "保修期限12个月，进水也免费保修。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "holdout"
+    },
+    {
+      "case_id": "MI-12",
+      "family": "workday_condition",
+      "split": "reviewed_regression",
+      "message": "退款多久到账，节假日怎么算。",
+      "items": [
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        },
+        {
+          "text": "节假日怎么算",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退款审核通过后3个工作日到账。",
+        "退款到账时效按工作日计算，节假日顺延。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退款审核通过后3个工作日到账。",
+        "退款到账时效按工作日计算，节假日顺延。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered"
+      ],
+      "bad_item": 0,
+      "bad_answer": "退款发起后3个自然日必定到账。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "holdout"
+    },
+    {
+      "case_id": "MI-13",
+      "family": "diagnostic_not_resolved",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，耳机无法开机，请帮我排查。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "耳机无法开机，请帮我排查",
+          "kind": "troubleshoot"
+        }
+      ],
+      "knowledge": [
+        "",
+        "可先更换充电线，确认指示灯状态后反馈。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "请先更换充电线并反馈指示灯状态，目前不能确认故障解决。"
+      ],
+      "good_statuses": [
+        "answered",
+        "waiting_feedback"
+      ],
+      "bad_item": 1,
+      "bad_answer": "电源已排除，故障已经解决。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "waiting_feedback"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "partial"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "holdout"
+    },
+    {
+      "case_id": "MI-14",
+      "family": "scoped_sources",
+      "split": "reviewed_regression",
+      "message": "优惠券能叠加吗，退货包装有什么要求。",
+      "items": [
+        {
+          "text": "优惠券能叠加吗",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "优惠券不可叠加使用。",
+        "退货需保留原包装。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "优惠券不可叠加使用。",
+        "退货需保留原包装。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "退货无需保留包装。",
+      "attack": "foreign_reference",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "holdout"
+    },
+    {
+      "case_id": "MI-15",
+      "family": "reported_check_is_not_normal",
+      "split": "reviewed_regression",
+      "message": "耳机检查过电源仍然不亮，请继续排查，运费由谁承担。",
+      "items": [
+        {
+          "text": "耳机检查过电源仍然不亮，请继续排查",
+          "kind": "troubleshoot"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "可先更换充电线，再反馈指示灯状态。",
+        "质量问题退货运费由商家承担。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "可先更换充电线，再反馈指示灯状态；当前检查结果仍未知。",
+        "质量问题退货运费由商家承担；其他退货情形的运费承担规则，当前资料未说明，暂无法确认。"
+      ],
+      "good_statuses": [
+        "waiting_feedback",
+        "limited"
+      ],
+      "bad_item": 0,
+      "bad_answer": "电源已经正常，电源故障已排除。",
+      "attack": "semantic",
+      "oracle_revision_reason": "generic question exceeds quality-only evidence; faithful partial answer is successful but does not fully resolve this item",
+      "expected_item_statuses": {
+        "i1": [
+          "waiting_feedback"
+        ],
+        "i2": [
+          "limited"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "partial",
+        "partial"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "holdout"
+    },
+    {
+      "case_id": "MI-16",
+      "family": "four_independent_goals",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，包装有什么要求，运费由谁承担，退款多久到账。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。",
+        "审核通过后3个工作日到账。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担；其他退货情形的运费承担规则，当前资料未说明，暂无法确认。",
+        "审核通过后3个工作日到账。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered",
+        "limited",
+        "answered"
+      ],
+      "bad_item": 3,
+      "bad_answer": "",
+      "attack": "omitted",
+      "oracle_revision_reason": "generic question exceeds quality-only evidence; faithful partial answer is successful but does not fully resolve this item",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ],
+        "i3": [
+          "limited"
+        ],
+        "i4": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable",
+        "partial",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "holdout"
+    },
+    {
+      "case_id": "V2N-01",
+      "family": "insured_shipping_not_guaranteed",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，有运费险就一定赔运费吗，审核要多久。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "有运费险就一定赔运费吗",
+          "kind": "knowledge"
+        },
+        {
+          "text": "审核要多久",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "投保运费险不保证赔付，实际是否赔付以理赔审核结果为准。",
+        "理赔审核通常需要2个工作日，不含节假日。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "有运费险也不保证赔付，需以理赔审核结果为准。",
+        "理赔审核通常需要2个工作日，不含节假日。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "有运费险就一定赔付全部运费。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ],
+        "i3": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "fresh_synthetic"
+    },
+    {
+      "case_id": "V2N-02",
+      "family": "same_connector_not_same_capability",
+      "split": "reviewed_regression",
+      "message": "接口一样就能输出视频吗，使用前要看什么标识。",
+      "items": [
+        {
+          "text": "接口一样就能输出视频吗",
+          "kind": "knowledge"
+        },
+        {
+          "text": "使用前要看什么标识",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "接口外形相同不代表支持视频输出，需同时核对设备和线缆支持的视频协议。",
+        "使用前核对设备说明书及线缆上的视频协议标识。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "接口外形相同不代表能输出视频，还需核对设备和线缆的视频协议。",
+        "使用前核对设备说明书及线缆上的视频协议标识。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered"
+      ],
+      "bad_item": 0,
+      "bad_answer": "只要接口外形一样，就都可以输出视频。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "fresh_synthetic"
+    },
+    {
+      "case_id": "V2N-03",
+      "family": "two_independent_refund_clocks",
+      "split": "reviewed_regression",
+      "message": "退货申请审核多久，寄回后退款到账又要多久。",
+      "items": [
+        {
+          "text": "退货申请审核多久",
+          "kind": "knowledge"
+        },
+        {
+          "text": "寄回后退款到账又要多久",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货申请提交后通常1个工作日完成审核。",
+        "退回商品验收通过后通常3个工作日退款到账；寄出时间不是退款到账计时起点。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货申请提交后通常1个工作日完成审核。",
+        "退款通常在退回商品验收通过后3个工作日到账，不从寄出时间起算。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "从寄出商品起3个工作日内必定退款到账。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "completed"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "fresh_synthetic"
+    },
+    {
+      "case_id": "V2N-04",
+      "family": "missing_private_order_and_known_exclusion",
+      "split": "reviewed_regression",
+      "message": "查我的订单金额，拆封后的个人护理用品可以无理由退货吗。",
+      "items": [
+        {
+          "text": "查我的订单金额",
+          "kind": "query_order"
+        },
+        {
+          "text": "拆封后的个人护理用品可以无理由退货吗",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "已拆封的个人护理用品不适用无理由退货；质量问题另按售后检测结果处理。"
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "尚未提供订单号，无法查询订单金额，请补充订单号。",
+        "已拆封的个人护理用品不适用无理由退货；质量问题另按售后检测结果处理。"
+      ],
+      "good_statuses": [
+        "limited",
+        "answered"
+      ],
+      "bad_item": 1,
+      "bad_answer": "个人护理用品即使拆封也都可以无理由退货。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "limited"
+        ],
+        "i2": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "partial",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "fresh_synthetic"
+    },
+    {
+      "case_id": "V2G-01",
+      "family": "unsupported_material_or_processing_consequence",
+      "split": "reviewed_regression",
+      "message": "退货包装有什么要求，运费由谁承担。",
+      "items": [
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货需保留原包装。",
+        ""
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货需保留原包装。",
+        "当前资料没有说明运费承担，尚无法确认。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 0,
+      "bad_answer": "退货需保留原包装，并须将配件一并寄回，否则会影响退货处理。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "limited"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "partial"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "captured_regression"
+    },
+    {
+      "case_id": "V2G-02",
+      "family": "unsupported_material_or_processing_consequence",
+      "split": "reviewed_regression",
+      "message": "退货包装有什么要求，运费由谁承担。",
+      "items": [
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货需保留原包装。",
+        ""
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货需保留原包装。",
+        "当前资料没有说明运费承担，尚无法确认。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 0,
+      "bad_answer": "退货需保留原包装。建议将配件一并寄回，以免影响退货处理。",
+      "attack": "semantic",
+      "oracle_revision_reason": "reviewed; original candidate and per-item stage retained",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "limited"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "partial"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "captured_regression"
+    },
+    {
+      "case_id": "V2S-01",
+      "family": "bounded_material_scope_not_global_or_eligibility",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，包装有什么要求，运费由谁承担，退款多久到账。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。",
+        "审核通过后3个工作日到账。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担；其他退货情形的运费承担规则，当前资料未说明，暂无法确认。",
+        "审核通过后3个工作日到账。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered",
+        "limited",
+        "answered"
+      ],
+      "bad_item": 2,
+      "bad_answer": "整个知识库都不存在非质量问题的运费规定。",
+      "attack": "semantic",
+      "oracle_revision_reason": "generic question exceeds quality-only evidence; faithful partial answer is successful but does not fully resolve this item",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ],
+        "i3": [
+          "limited"
+        ],
+        "i4": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable",
+        "partial",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "captured_scope_regression"
+    },
+    {
+      "case_id": "V2S-02",
+      "family": "bounded_material_scope_not_global_or_eligibility",
+      "split": "reviewed_regression",
+      "message": "查询订单ORD960001，包装有什么要求，运费由谁承担，退款多久到账。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。",
+        "审核通过后3个工作日到账。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担；其他退货情形的运费承担规则，当前资料未说明，暂无法确认。",
+        "审核通过后3个工作日到账。"
+      ],
+      "good_statuses": [
+        "answered",
+        "answered",
+        "limited",
+        "answered"
+      ],
+      "bad_item": 2,
+      "bad_answer": "您的订单已符合质量问题退货条件，运费由商家承担。",
+      "attack": "semantic",
+      "oracle_revision_reason": "generic question exceeds quality-only evidence; faithful partial answer is successful but does not fully resolve this item",
+      "expected_item_statuses": {
+        "i1": [
+          "answered"
+        ],
+        "i2": [
+          "answered"
+        ],
+        "i3": [
+          "limited"
+        ],
+        "i4": [
+          "answered"
+        ]
+      },
+      "expected_task_statuses": [
+        "waiting_input"
+      ],
+      "reference_answerability": [
+        "answerable",
+        "answerable",
+        "partial",
+        "answerable"
+      ],
+      "review_status": "assistant_adjudicated_not_independent_human_gold",
+      "historical_split": "captured_scope_regression"
+    }
+  ]
+}

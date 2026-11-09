@@ -17,6 +17,8 @@ import time
 import uuid
 import json
 import logging
+import math
+from collections import deque
 from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime
 
@@ -192,6 +194,12 @@ class Tracer:
     def record_response(self, response_time_ms: int, is_successful: bool = True):
         self._metrics.record_response(response_time_ms, is_successful)
 
+    def record_chat(self, **kwargs):
+        self._metrics.record_chat(**kwargs)
+
+    def record_local_model_events(self, events):
+        self._metrics.record_local_model_events(events)
+
     def record_error(self, error_type: str, error_message: str = ""):
         self._metrics.record_error(error_type, error_message)
 
@@ -215,6 +223,40 @@ class MetricsCollector:
         self._response_times: List[int] = []
         self._error_counts: Dict[str, int] = {}
         self._csat_scores: List[int] = []
+        self._chat_times = deque(maxlen=2000)
+        self._local_queue_times = deque(maxlen=2000)
+        self._local_inference_times = deque(maxlen=2000)
+        self._local_queue_by_purpose = {}
+        self._local_inference_by_purpose = {}
+
+    def record_chat(self, *, latency_ms: float, accepted: bool):
+        self._chat_times.append(max(0, latency_ms))
+        self.increment_counter("chat.total")
+        self.increment_counter("chat.accepted" if accepted else "chat.rejected")
+
+    def record_local_model_events(self, events):
+        for event in events:
+            if event.get("admission_scope"):
+                self.increment_counter("local.admission." + str(event.get("status", "unknown")))
+                value = event.get("queue_ms")
+                if isinstance(value, (int, float)) and math.isfinite(value):
+                    self._local_queue_times.append(max(0, value))
+                    self._local_queue_by_purpose.setdefault(str(event.get("purpose", "unknown")), deque(maxlen=2000)).append(max(0, value))
+            if event.get("dispatched"):
+                self.increment_counter("local.dispatches")
+                self.increment_counter("local.dispatches." + str(event.get("purpose", "unknown")))
+                value = event.get("inference_ms")
+                if isinstance(value, (int, float)) and math.isfinite(value):
+                    self._local_inference_times.append(max(0, value))
+                    self._local_inference_by_purpose.setdefault(str(event.get("purpose", "unknown")), deque(maxlen=2000)).append(max(0, value))
+
+    @staticmethod
+    def _window_stats(values):
+        ordered = sorted(values)
+        count = len(ordered)
+        return {"count":count, "p95_ms":ordered[math.ceil(count*.95)-1] if count else 0,
+            "p50_ms":ordered[math.ceil(count*.5)-1] if count else 0,
+            "max_ms":ordered[-1] if count else 0}
 
     def increment_counter(self, name: str, value: int = 1):
         self._counters[name] = self._counters.get(name, 0) + value
@@ -325,6 +367,22 @@ class MetricsCollector:
             "timestamp": datetime.utcnow().isoformat(),
             "counters": dict(self._counters),
             "response_time": response_time_stats,
+            "chat_response_time": {**self._window_stats(self._chat_times),
+                "scope":"completed graph execution, REST and WebSocket, process-local last 2000 samples",
+                "total":self.get_counter("chat.total"), "rejected":self.get_counter("chat.rejected")},
+            "local_models": {"dispatches":self.get_counter("local.dispatches"),
+                "embedding_dispatches":self.get_counter("local.dispatches.embedding"),
+                "rerank_dispatches":self.get_counter("local.dispatches.rerank"),
+                "busy":self.get_counter("local.admission.busy"),
+                "deadline":self.get_counter("local.admission.deadline"),
+                "dispatches_by_purpose":{key:self.get_counter("local.dispatches."+key)
+                    for key in sorted(self._local_inference_by_purpose)},
+                "admission_queue":self._window_stats(self._local_queue_times),
+                "admission_queue_by_purpose":{key:self._window_stats(value)
+                    for key,value in sorted(self._local_queue_by_purpose.items())},
+                "inference":self._window_stats(self._local_inference_times),
+                "inference_by_purpose":{key:self._window_stats(value)
+                    for key,value in sorted(self._local_inference_by_purpose.items())}},
             "intent_distribution": dict(self._intent_counts),
             "tool_statistics": tool_stats,
             "error_counts": dict(self._error_counts),
@@ -367,6 +425,14 @@ class MetricsCollector:
             f"app_response_success_rate {metrics['success_rate'] / 100}",
             "# TYPE app_response_latency_p95_ms gauge",
             f"app_response_latency_p95_ms {metrics['response_time'].get('p95_ms', 0)}",
+            "# TYPE app_chat_latency_p95_ms gauge",
+            f"app_chat_latency_p95_ms {metrics['chat_response_time']['p95_ms']}",
+            "# TYPE app_chat_samples gauge",
+            f"app_chat_samples {metrics['chat_response_time']['count']}",
+            "# TYPE app_local_model_dispatches_total counter",
+            f"app_local_model_dispatches_total {metrics['local_models']['dispatches']}",
+            "# TYPE app_local_model_queue_p95_ms gauge",
+            f"app_local_model_queue_p95_ms {metrics['local_models']['admission_queue']['p95_ms']}",
             "# TYPE app_rag_empty_rate gauge",
             f"app_rag_empty_rate {metrics['rag']['empty_rate'] / 100}",
             "# TYPE app_tool_success_rate gauge",
@@ -400,6 +466,11 @@ class MetricsCollector:
         self._response_times.clear()
         self._error_counts.clear()
         self._csat_scores.clear()
+        self._chat_times.clear()
+        self._local_queue_times.clear()
+        self._local_inference_times.clear()
+        self._local_queue_by_purpose.clear()
+        self._local_inference_by_purpose.clear()
 
 
 tracer = Tracer()

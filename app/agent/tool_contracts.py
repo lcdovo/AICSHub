@@ -19,6 +19,10 @@ class ToolObservation(BaseModel):
     execution_time_ms: int = 0
     retry_count: int = 0
     error_type: str | None = None
+    call_id: str | None = None
+    observed_at: str | None = None
+    transport: Literal["mcp", "direct", "receipt"] | None = None
+    outcome: Literal["succeeded", "rejected", "failed", "unknown"] | None = None
 
 
 TOOL_RESULT_COMPAT_KEYS: dict[str, str] = {

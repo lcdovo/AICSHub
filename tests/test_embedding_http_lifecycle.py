@@ -157,3 +157,19 @@ def test_admission_rejection_does_not_construct_client_or_cache(monkeypatch):
         factory.assert_not_called()
         assert item._text_cache=={}
     finally:item.close()
+
+
+def test_query_and_document_http_timeouts_are_independent(monkeypatch):
+    client = Mock(is_closed=False)
+    client.post.return_value = response()
+    monkeypatch.setattr(module.httpx, "Client", Mock(return_value=client))
+    item = module.APIEmbedding("https://synthetic.invalid/v1", "synthetic-only",
+                               "synthetic", dim=3, max_retries=0, timeout=10,
+                               document_timeout=60)
+    try:
+        item.encode_query("query")
+        item.encode_batch(["document"])
+        assert [call.kwargs["timeout"] for call in client.post.call_args_list] == [10, 60]
+        assert item.timeout == 10
+    finally:
+        item.close()

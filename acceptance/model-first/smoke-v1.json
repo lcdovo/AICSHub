@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "purpose": "actual-schema-smoke-not-independent-quality-gold",
+  "label_source": "assistant_authored_protocol_fixtures",
+  "independent_human_review": false,
+  "cases": [
+    {
+      "case_id": "smoke-001",
+      "message": "你好，打印机如何连接无线网络",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": []
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "打印机"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "打印机如何连接无线网络",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      }
+    },
+    {
+      "case_id": "smoke-002",
+      "message": "订单ORD970101请申请退款，外壳破损无法正常使用",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "apply"
+        ],
+        "order_id": "ORD970101",
+        "reason": "外壳破损无法正常使用",
+        "required_reads": []
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD970101",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD970101退款申请",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": "外壳破损无法正常使用",
+          "refund_type": "refund",
+          "complaint_content": null
+        },
+        "missing_information": []
+      }
+    },
+    {
+      "case_id": "smoke-003",
+      "message": "请查询我的订单物流",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": []
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "查询订单物流",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      }
+    },
+    {
+      "case_id": "smoke-004",
+      "message": "订单ORD970102如果还没发货就帮我退款",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query"
+        ],
+        "order_id": "ORD970102",
+        "condition": "order_not_shipped",
+        "required_reads": []
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "query",
+        "entities": {
+          "order_id": "ORD970102",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD970102发货状态",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD970102"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      }
+    },
+    {
+      "case_id": "smoke-005",
+      "message": "不要申请退款，请转真人客服",
+      "expected": {
+        "topics": [
+          "human"
+        ],
+        "types": [
+          "apply"
+        ],
+        "order_id": null,
+        "required_reads": []
+      },
+      "mock": {
+        "topic": "human",
+        "request_type": "apply",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "human",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "转真人客服",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      }
+    },
+    {
+      "case_id": "smoke-006",
+      "message": "查询ORD970103的订单信息，同时查看我的历史咨询",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query"
+        ],
+        "order_id": "ORD970103",
+        "required_reads": [
+          "query_order",
+          "get_user_history"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "query",
+        "entities": {
+          "order_id": "ORD970103",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "查询ORD970103的订单信息和我的历史咨询",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD970103"
+          },
+          {
+            "tool": "get_user_history",
+            "resource_id": null
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      }
+    }
+  ]
+}

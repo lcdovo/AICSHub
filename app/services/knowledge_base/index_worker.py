@@ -13,6 +13,8 @@ from app.models.models import (
 )
 from app.services.embedding_service import validate_vector
 from .lifecycle import source_chunks, embedding_identity
+from .chunking import CHUNK_POLICY_VERSION
+from .retrieval_text import TEXT_POLICY_VERSION, retrieval_text
 
 
 def owned(db, jid: str, token: str) -> BackgroundJob:
@@ -47,6 +49,17 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
                 )
                 return
             version.status = "indexing"
+            # 冻结切分参数；失败重试不能随进程配置变化重写同一chunk身份。
+            plan = (version.embedding_metadata or {}).get("index_plan")
+            if plan is None:
+                plan = {"size": settings.CHUNK_SIZE, "overlap": settings.CHUNK_OVERLAP,
+                        "split_pattern": settings.CHUNK_SPLIT_PATTERN,
+                        "chunk_policy": CHUNK_POLICY_VERSION, "text_policy": TEXT_POLICY_VERSION}
+                version.embedding_metadata = {"index_plan": plan}
+            if plan.get("chunk_policy") != CHUNK_POLICY_VERSION or plan.get("text_policy") != TEXT_POLICY_VERSION:
+                raise ValueError("index_policy_version_unsupported")
+            version.chunk_policy = CHUNK_POLICY_VERSION
+            title, keywords = version.title, version.keywords or []
             job.lease_expires_at = datetime.utcnow() + timedelta(seconds=120)
             content, vid, number, did = (
                 version.content,
@@ -56,12 +69,13 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
             )
         if settings.USE_MILVUS and vector_store is None:
             raise RuntimeError("required_milvus_unavailable")
-        chunks = source_chunks(content)
+        chunks = source_chunks(content, plan["size"], plan["overlap"], plan["split_pattern"])
         if not chunks or len(chunks) > 10000:
             raise ValueError("chunk_count_invalid")
         for i, c in enumerate(chunks):
             c["id"] = "chunk_" + hashlib.sha256(f"{vid}:{i}".encode()).hexdigest()[:48]
         fingerprint, metadata = embedding_identity(embedding)
+        metadata["index_plan"] = plan
         vectors = []
         for offset in range(0, len(chunks), max(1, settings.EMBEDDING_BATCH_SIZE)):
             with repository.transaction() as db:
@@ -74,7 +88,7 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
                     vectors.extend(
                         embedding.encode_batch(
                             [
-                                c["content"]
+                                retrieval_text({**c, "title": title, "keywords": keywords})
                                 for c in chunks[offset : offset + settings.EMBEDDING_BATCH_SIZE]
                             ]
                         )

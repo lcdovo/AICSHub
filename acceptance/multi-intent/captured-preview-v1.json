@@ -1,0 +1,194 @@
+{
+  "origin": "real_provider_failure_preserved_not_a_pass",
+  "report_sha256": "9b88f11534591b0c63ec6482f134386b62e695b277658efe080dce964b2f466b",
+  "scenario": {
+    "case_id": "MI-07",
+    "family": "preview_not_submission",
+    "split": "development",
+    "message": "查询订单ORD960001，如果已签收请申请退款，原因是外壳明显破损，退货包装有什么要求。",
+    "items": [
+      {
+        "text": "查询订单ORD960001",
+        "kind": "query_order"
+      },
+      {
+        "text": "如果已签收请申请退款，原因是外壳明显破损",
+        "kind": "prepare_refund"
+      },
+      {
+        "text": "退货包装有什么要求",
+        "kind": "knowledge"
+      }
+    ],
+    "knowledge": [
+      "",
+      "",
+      "退货需保留原包装。"
+    ],
+    "order_id": "ORD960001",
+    "order_denied": false,
+    "order_status": "delivered",
+    "preview": true,
+    "conditions": [
+      "order_delivered"
+    ],
+    "good_answers": [
+      "订单已签收。",
+      "已准备模拟退款预览，尚未提交申请，请明确确认。",
+      "退货需保留原包装。"
+    ],
+    "good_statuses": [
+      "answered",
+      "awaiting_confirmation",
+      "answered"
+    ],
+    "bad_item": 1,
+    "bad_answer": "已成功退款，资金已经退回。",
+    "attack": "semantic"
+  },
+  "understanding": {
+    "topic": "refund",
+    "request_type": "apply",
+    "entities": {
+      "order_id": "ORD960001",
+      "product": null
+    },
+    "conditions": [
+      {
+        "check": "order_delivered",
+        "source": "current_message"
+      }
+    ],
+    "subrequests": [
+      {
+        "topic": "query_order",
+        "request_type": "query"
+      },
+      {
+        "topic": "refund",
+        "request_type": "apply"
+      },
+      {
+        "topic": "refund",
+        "request_type": "inquiry"
+      }
+    ],
+    "service_preference": "unspecified",
+    "emotion": "neutral",
+    "clarification": null,
+    "retrieval_query": "查询订单ORD960001，如果已签收请申请退款，原因是外壳明显破损，退货包装有什么要求",
+    "entity_source": "current_message",
+    "itemization_version": "intent-items.v1",
+    "items": [
+      {
+        "text": "查询订单ORD960001",
+        "kind": "query_order"
+      },
+      {
+        "text": "如果已签收请申请退款，原因是外壳明显破损",
+        "kind": "prepare_refund"
+      },
+      {
+        "text": "退货包装有什么要求",
+        "kind": "knowledge"
+      }
+    ],
+    "missing_information": [],
+    "parameters": {
+      "reason": "外壳明显破损",
+      "refund_type": "return",
+      "complaint_content": null
+    },
+    "read_tasks": [
+      {
+        "tool": "query_order",
+        "resource_id": "ORD960001"
+      }
+    ],
+    "continue_task": false
+  },
+  "good_verdict": {
+    "grounded": true,
+    "fact_score": 0.9,
+    "has_unsupported_claim": false,
+    "refuse_recommended": false,
+    "reason": "三项均有对应证据：i1 引用 T1 工具结果（status=已签收），i2 引用 P1 预览（stage=awaiting_confirmation，application_submitted=false），回答明确说明“已准备预览、尚未提交、请确认”，未把预览说成已提交或退款成功；i3 引用 K1 知识“退货需保留原包装”。无证据外臆造信息，条件（已签收）已由 T1 满足，故可进入退款预览确认阶段。",
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "answered",
+        "answer_quote": "订单已签收。",
+        "evidence_ids": [
+          "T1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "awaiting_confirmation",
+        "answer_quote": "已准备模拟退款预览，尚未提交申请，请明确确认。",
+        "evidence_ids": [
+          "P1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i3",
+        "status": "answered",
+        "answer_quote": "退货需保留原包装。",
+        "evidence_ids": [
+          "K1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      }
+    ]
+  },
+  "bad_verdict": {
+    "grounded": false,
+    "fact_score": 0.35,
+    "has_unsupported_claim": true,
+    "refuse_recommended": true,
+    "reason": "i1 有 T1 工具结果支撑（订单已签收），忠实。i2 严重臆造：P1 仅为 awaiting_confirmation 的退款预览，application_submitted=false，回答却称“已成功退款，资金已经退回”，属无据不实陈述，且未说明需用户确认。i3 与 K1 一致，但仅复述“保留原包装”，未补充其他包装要求（证据本身有限，可接受）。整体存在关键无据论断，建议对退款部分采用“无据不答/需确认”话术。",
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "answered",
+        "answer_quote": "订单已签收。",
+        "evidence_ids": [
+          "T1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "limited",
+        "answer_quote": "已成功退款，资金已经退回。",
+        "evidence_ids": [
+          "P1"
+        ],
+        "supported": false,
+        "conditions_preserved": false,
+        "answerability": "partial"
+      },
+      {
+        "item_id": "i3",
+        "status": "answered",
+        "answer_quote": "退货需保留原包装。",
+        "evidence_ids": [
+          "K1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      }
+    ]
+  }
+}

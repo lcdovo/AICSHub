@@ -4,10 +4,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import re
 from urllib.parse import urlsplit
 from app.config.config import settings
 from app.repositories.knowledge_repository import KnowledgeRepository
+from .chunking import source_chunks as source_chunks
+from .retrieval_text import TEXT_POLICY_VERSION
 
 
 def embedding_identity(service) -> tuple[str, dict]:
@@ -30,60 +31,12 @@ def embedding_identity(service) -> tuple[str, dict]:
         "dim": getattr(service, "_dim", settings.EMBEDDING_DIM),
         "query_instruction": settings.EMBEDDING_QUERY_INSTRUCTION,
         "normalization": "cosine-v1",
+        "document_text_policy": TEXT_POLICY_VERSION,
     }
     return hashlib.sha256(
         json.dumps(metadata, sort_keys=True).encode()
     ).hexdigest(), metadata
 
-
-def source_chunks(content: str, size: int = 400, overlap: int = 50) -> list[dict]:
-    if size < 64 or overlap < 0 or overlap >= size:
-        raise ValueError("invalid_chunk_policy")
-    chunks = []
-    start = 0
-    section = ""
-    while start < len(content):
-        end = min(len(content), start + size)
-        # 在上限内尽量选择完整行/句；原文范围完整覆盖，长句硬边界有明确重叠。
-        if end < len(content):
-            boundaries = [
-                content.rfind(mark, start + size // 2, end)
-                for mark in ("\n", "。", "；")
-            ]
-            if max(boundaries) >= 0:
-                end = max(boundaries) + 1
-        body = content[start:end]
-        headings = list(re.finditer(r"(?m)^#{1,6}\s+(.+)$", content[:end]))
-        if headings:
-            section = headings[-1].group(1)[:200]
-        before = content[:start]
-        questions = list(re.finditer(r"(?m)^\s*(?:Q\d*|问)[:：].+$", before))
-        table_headers = []
-        lines = before.splitlines()
-        for row in range(len(lines) - 1, 0, -1):
-            if re.match(r"^\s*\|?\s*:?-{3,}", lines[row]):
-                table_headers = lines[row - 1 : row + 1]
-                break
-        context = {
-            "heading": section,
-            "faq_question": questions[-1].group(0) if questions else "",
-            "table_header": "\n".join(table_headers),
-        }
-        chunks.append(
-            {
-                "content": body,
-                "source_context": context,
-                "start_offset": start,
-                "end_offset": end,
-                "section": section,
-                "content_hash": hashlib.sha256(body.encode()).hexdigest(),
-                "chunk_policy": "bounded-source-v1",
-            }
-        )
-        if end == len(content):
-            break
-        start = max(start + 1, end - overlap)
-    return chunks
 
 
 class LifecycleMixin:

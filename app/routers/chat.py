@@ -382,6 +382,31 @@ async def get_run(run_id: str, db: AsyncSession=Depends(get_db), current_user: U
             "sequence":run.sequence,"result":run.result,"error_code":run.error_code}}
 
 
+@router.get("/tasks/{task_id}", response_model=APIResponse)
+async def get_agent_task(task_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """仅返回本人任务进度和能力审计，不返回旧证据或内部确认凭据。"""
+    from app.models.models import AgentTask, AgentTaskStep
+    task = await db.get(AgentTask, task_id)
+    if task is None:
+        raise HTTPException(404, "任务不存在")
+    ensure_owner_or_admin(current_user, task.user_id)
+    session = await db.get(Session, task.session_id)
+    if session is None or session.deleted_at is not None or session.user_id != task.user_id:
+        raise HTTPException(404, "会话不存在")
+    steps = (await db.execute(select(AgentTaskStep).where(AgentTaskStep.task_id == task.id)
+        .order_by(AgentTaskStep.created_at.desc(), AgentTaskStep.sequence.desc()).limit(30))).scalars().all()
+    return APIResponse(code=0, message="任务进度", data={"task_id": task.id, "session_id": task.session_id,
+        "status": task.status, "version": task.version, "last_run_id": task.last_run_id,
+        "goal": task.progress.get("goal"), "waiting_for": task.progress.get("waiting_for"),
+        "stop_reason": task.progress.get("stop_reason"),
+        "items": [{"item_id": item.get("item_id"), "text": item.get("text"), "kind": item.get("kind"),
+                   "source_message_id": item.get("source_message_id"),
+                   "status": task.progress.get("item_outcomes", {}).get(item.get("item_id"), "pending")}
+                  for item in task.progress.get("items", [])],
+        "steps": [{"action": s.action, "capability": s.capability, "status": s.status,
+                   "sequence": s.sequence, "run_key": s.run_key, "error_code": s.error_code} for s in reversed(steps)]})
+
+
 @router.get("/sessions/{session_id}/runs/{client_message_id}")
 async def resolve_run(session_id: str, client_message_id: str, db: AsyncSession=Depends(get_db),
                       current_user: User=Depends(get_current_user)):

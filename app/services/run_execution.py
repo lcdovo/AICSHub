@@ -22,7 +22,9 @@ from app.security import ensure_owner_or_admin, authenticate_access_token
 
 FINAL = {"succeeded", "awaiting_confirmation", "failed", "cancelled"}
 LEASE_SECONDS = 45
-RUN_TIMEOUT_SECONDS = 30
+from app.config.config import settings
+
+RUN_TIMEOUT_SECONDS = settings.CHAT_RUN_TIMEOUT_SECONDS
 TASKS: dict[str, asyncio.Task] = {}
 
 
@@ -111,6 +113,7 @@ async def accept(db: AsyncSession, actor: User, body) -> tuple[ChatRun, bool]:
     if selected_mode=='model' and not stable_gray_assignment(str(body.user_id),settings.REQUEST_UNDERSTANDING_PERCENTAGE):selected_mode='rules'
     payload["_understanding_mode"]=selected_mode
     payload["_strategy_version"]=settings.REQUEST_UNDERSTANDING_VERSION
+    payload["_task_loop_enabled"] = settings.AGENT_TASK_LOOP_ENABLED
     run = ChatRun(id=str(uuid.uuid4()), user_id=body.user_id, actor_id=actor.id, session_id=sid,
                   client_message_id=cid, request_hash=digest, request_data=payload,
                   lease_expires_at=datetime.utcnow() + timedelta(seconds=LEASE_SECONDS))
@@ -198,6 +201,7 @@ async def _renew(factory: async_sessionmaker[AsyncSession], run: ChatRun, token:
 async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, manager, access_token: str | None, streaming: bool) -> None:
     renewer = None
     gateway_token = None
+    journal_token = None
     token = str(uuid.uuid4())
     try:
         async with factory() as db:
@@ -207,17 +211,22 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
             run, version = await _claim(factory, rid, token, access_token, getattr(assert_owner,"redis_lock_token",None))
             renewer = asyncio.create_task(_renew(factory, run, token, assert_owner, asyncio.current_task()))
             state = await service.hydrate_state(sid, run.user_id, run.request_data["message"],
-                action_id=run.request_data.get("action_id"), recover_from_db=True)
+                action_id=run.request_data.get("action_id"), recover_from_db=True,
+                task_loop_enabled=run.request_data.get("_task_loop_enabled", False))
             state.source_message_id, state.actor_id = run.user_message_id, run.actor_id
             state.requested_action_id = run.action_id or run.request_data.get("action_id")
             state.requested_action_version = run.request_data.get("action_version")
             state.session_version = version
             state.understanding_mode=run.request_data.get("_understanding_mode","rules")
             state.strategy_version=run.request_data.get("_strategy_version","legacy")
+            state.run_id = run.id
+            state.task_loop_enabled = run.request_data.get("_task_loop_enabled", False)
             from app.services.model_gateway import CALL_CONTEXT
             run_deadline = time.monotonic() + RUN_TIMEOUT_SECONDS
             gateway_token=CALL_CONTEXT.set({"user_id":run.user_id,"run_id":run.id,"factory":factory,
                 "route_version":state.strategy_version,"deadline":run_deadline,"attempts":0})
+            from app.services.capability_journal import JOURNAL, CapabilityJournal
+            journal_token = JOURNAL.set(CapabilityJournal(factory, run.id, token, version))
             async with factory() as db:
                 current = await db.get(ChatRun,rid)
                 current.action_id = state.refund_preview_data().get("action_id")
@@ -253,6 +262,8 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
                 if time.monotonic() >= run_deadline:
                     raise TimeoutError("late_run_result_rejected")
                 session = await db.get(Session, sid, populate_existing=True)
+                from app.services.capability_journal import settle_open_calls
+                await settle_open_calls(db, current)
                 current.action_id = state.refund_preview_data().get("action_id") or current.action_id
                 message, _ = await service.persist_result(db, session, state, run.request_data["message"], rid, commit=False)
                 message.run_id = rid
@@ -289,6 +300,9 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
                                      .values(lease_expires_at=datetime.utcnow()))
                     await db.commit()
     finally:
+        if journal_token is not None:
+            from app.services.capability_journal import JOURNAL
+            JOURNAL.reset(journal_token)
         if gateway_token is not None:
             from app.services.model_gateway import CALL_CONTEXT
             CALL_CONTEXT.reset(gateway_token)
@@ -303,9 +317,11 @@ def finish(db: AsyncSession, run: ChatRun, message: Message, state: AgentState) 
     run.assistant_message_id = message.id
     run.result = dict(run_id=run.id, run_status=run.status, message_id=message.id, session_id=run.session_id,
                       reply=state.reply, intent=state.detected_intent, response_time_ms=state.execution_time_ms, trace_id=run.id)
+    task_payload = {"task_id": state.task.task_id, "task_status": state.task.status} if state.task else {}
+    run.result.update(task_payload)
     run.updated_at = datetime.utcnow()
     append_event(db, run, "token", {"content": state.reply, "provider": "validated"})
-    append_event(db, run, "done", {"reply": state.reply, "intent": state.detected_intent})
+    append_event(db, run, "done", {"reply": state.reply, "intent": state.detected_intent, **task_payload})
     append_event(db, run, "stream_end", {"message_id": message.id, "status": run.status})
 
 
@@ -329,6 +345,10 @@ async def recover(factory: async_sessionmaker[AsyncSession], rid: str) -> None:
         # 不抢走其他Run的新租约。
         if session.lease_token and session.lease_token != run.lease_token and session.lease_expires_at > datetime.utcnow():
             return
+        from app.services.capability_journal import recover_calls
+        recovery = await recover_calls(db, run)
+        if recovery["calls"]:
+            append_event(db, run, "run_status", {"status": "capability_records_reconciled", **recovery})
         receipt_parts = []
         receipt_evidence = []
         for operation, prefix in (("create_ticket", "chat-ticket"), ("request_handoff", "chat-handoff")):
@@ -343,27 +363,29 @@ async def recover(factory: async_sessionmaker[AsyncSession], rid: str) -> None:
         # action可由本轮创建或显式确认；仅submitted动作证明已提交，pending绝不自动确认。
         action_id = run.action_id or run.request_data.get("action_id")
         action = await db.get(RefundAction, action_id) if action_id else None
-        from app.agent.refund_authorization import CONFIRMATIONS
-        if (action and run.request_data["message"].strip() in CONFIRMATIONS
+        from app.agent.refund_authorization import is_refund_confirmation_message
+        if (action and is_refund_confirmation_message(run.request_data["message"], action.type)
                 and action.user_id == run.user_id and action.session_id == run.session_id and action.status == "submitted"):
             audit = await db.scalar(select(OperationAudit).where(OperationAudit.operation == "apply_refund", OperationAudit.resource_id == action.application_id))
             if audit and audit.user_id == run.user_id and audit.status == "succeeded":
                 # 审查与恢复文案使用同一已持久审计回执，不能仅投影ID丢失状态/金额。
                 receipt_evidence.append({"success": True, "data": audit.result_payload})
                 from app.agent.nodes.response_node import build_refund_reply_template
-                receipt_parts.append(build_refund_reply_template(audit.result_payload))
+                # 恢复只渲染持久回执字段，不发布任意next_steps文案，也不调用模型。
+                receipt_parts.append(build_refund_reply_template({**audit.result_payload, "next_steps": []}))
         if receipt_parts:
             # 恢复模板也经过响应节点的独立校验；不调用模型、不重做业务工具。
             from types import SimpleNamespace
             from app.agent.validation import create_validator
-            from app.agent.nodes.response_node import validate_candidate
+            from app.agent.nodes.response_node import validate_candidate, tool_evidence_text
             from app.agent.state import ToolCall
             restored = AgentState(session_id=run.session_id, user_id=run.user_id,
                                   user_message=run.request_data["message"], reply="\n".join(receipt_parts))
             restored.tool_calls = [ToolCall(tool_name="persisted_receipt", arguments={}, result=evidence, success=True)
                                    for evidence in receipt_evidence]
-            gate = SimpleNamespace(validator=create_validator(), _rag_judge_applicable=lambda state: False)
-            if not await validate_candidate(gate, restored):
+            restored.set_workflow_reply(restored.reply)
+            gate = SimpleNamespace(validator=create_validator(), _tool_evidence_text=tool_evidence_text)
+            if not await validate_candidate(gate, restored, trusted_notice=True):
                 run.status, run.error_code = "failed", "recovery_validation_failed"
                 append_event(db, run, "error", {"code":503,"message":"原回执存在，但恢复文本未通过校验，请独立查询业务记录"})
                 session.lease_token, session.lease_expires_at = None, None

@@ -1,0 +1,38 @@
+{
+  "topic": "query_order",
+  "request_type": "change",
+  "entities": {
+    "order_id": "ORD981099",
+    "product": null
+  },
+  "conditions": [],
+  "subrequests": [
+    {
+      "topic": "query_order",
+      "request_type": "query"
+    }
+  ],
+  "service_preference": "unspecified",
+  "emotion": "neutral",
+  "clarification": null,
+  "retrieval_query": "ORD981099 只查这笔订单，不退款",
+  "entity_source": "current_message",
+  "itemization_version": "intent-items.v1",
+  "items": [
+    {
+      "text": "改成ORD981099，只查这笔",
+      "kind": "query_order"
+    },
+    {
+      "text": "先不要退款",
+      "kind": "unsupported"
+    }
+  ],
+  "missing_information": [],
+  "parameters": {
+    "reason": null,
+    "refund_type": null,
+    "complaint_content": null
+  },
+  "continue_task": true
+}

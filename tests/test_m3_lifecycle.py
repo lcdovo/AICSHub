@@ -187,13 +187,41 @@ def test_source_context_keeps_faq_question_table_units_and_exception_tail():
     )
 
 
-def test_100_chunks_use_five_worker_batches_with_exact_counts(kb):
+def test_100_chunks_use_five_worker_batches_with_exact_counts(kb, monkeypatch):
+    from app.config.config import settings
+
+    # This tests worker batching, independently of the default chunk policy.
+    monkeypatch.setattr(settings, "CHUNK_SIZE", 400)
+    monkeypatch.setattr(settings, "CHUNK_OVERLAP", 50)
+    monkeypatch.setattr(settings, "CHUNK_SPLIT_PATTERN", "fixed")
+    monkeypatch.setattr(settings, "EMBEDDING_BATCH_SIZE", 20)
     result = kb.add_document("100 chunks", "X" * 35050)
     execute(kb, result)
     assert len(kb._embedding_service.calls) == 5
     assert all(len(batch) == 20 for batch in kb._embedding_service.calls)
     with kb._repository.transaction() as db:
         assert db.scalar(select(func.count()).select_from(KnowledgeChunk)) == 100
+
+
+@pytest.mark.parametrize("chunk_count", [1, 20, 21])
+def test_worker_keeps_partial_batch_and_every_chunk(kb, monkeypatch, chunk_count):
+    from app.config.config import settings
+
+    monkeypatch.setattr(settings, "CHUNK_SIZE", 400)
+    monkeypatch.setattr(settings, "CHUNK_OVERLAP", 50)
+    monkeypatch.setattr(settings, "CHUNK_SPLIT_PATTERN", "fixed")
+    monkeypatch.setattr(settings, "EMBEDDING_BATCH_SIZE", 20)
+    result = kb.add_document("batch boundary", "X" * (400 + 350 * (chunk_count - 1)))
+    execute(kb, result)
+    batches = kb._embedding_service.calls
+    assert [len(batch) for batch in batches] == [
+        min(20, chunk_count - offset) for offset in range(0, chunk_count, 20)
+    ]
+    with kb._repository.transaction() as db:
+        chunks = db.scalars(select(KnowledgeChunk)).all()
+        assert len(chunks) == chunk_count
+        assert len({chunk.chunk_id for chunk in chunks}) == chunk_count
+        assert sorted(chunk.chunk_index for chunk in chunks) == list(range(chunk_count))
 
 
 async def test_real_job_consumer_retry_and_exhaustion_converge(kb, monkeypatch):

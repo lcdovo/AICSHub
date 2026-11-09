@@ -91,7 +91,7 @@ def verify_reranker(name, port):
     from scripts.verify_gpu_pair import inspect_candidate
     if name == "aicshub-gpu-v2m3-candidate" and port == 7999:
         return inspect_candidate(name,port,"7997/tcp")
-    obj = json.loads(subprocess.check_output(["docker","inspect",name],text=True))[0]
+    obj = json.loads(subprocess.check_output(["docker","inspect",name],text=True,encoding="utf-8"))[0]
     labels = obj["Config"].get("Labels") or {}
     ports = obj["NetworkSettings"]["Ports"].get("7997/tcp") or []
     if (not name.startswith("aicshub-batch-capacity-") or labels.get("aicshub.test.owner") != "gpu-batch-capacity"

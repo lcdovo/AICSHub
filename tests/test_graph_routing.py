@@ -196,14 +196,14 @@ def test_default_reply_general_farewell_template():
     assert graph._get_default_reply(IntentType.GENERAL, "再见") == "再见，祝您生活愉快，有需要随时找我。"
 
 
-def test_slot_filling_order_guidance_not_bare_request():
-    """缺订单号时给出查找指引话术，而非单句索要参数。"""
+def test_slot_filling_order_does_not_invent_ui_lookup_path():
+    """缺订单号只补必要参数；未接入真实App时不编造菜单和短信路径。"""
     graph = _make_graph()
     state = _state_with_intent(IntentType.QUERY_ORDER)
     state.missing_slots = ["order_id"]
     assert asyncio.run(graph._node_slot_filling(state)) == AgentNode.RESPONSE_GENERATION
-    assert "我的订单" in state.reply
-    assert "ORD" in state.reply
+    assert state.reply == "为了查询您的订单，请提供订单号。"
+    assert "App" not in state.reply and "短信" not in state.reply
 
 
 def test_slot_filling_refund_keeps_argument_labels():

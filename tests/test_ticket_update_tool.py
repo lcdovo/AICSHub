@@ -275,15 +275,13 @@ async def test_same_key_ten_requests_only_update_once(tmp_path, monkeypatch):
 
 
 async def test_inprocess_mcp_has_same_update_receipt(tmp_path, monkeypatch):
-    from mcp.shared.memory import create_connected_server_and_client_session
-    from app.agent.mcp_server import mcp
-    from app.agent.mcp_client import _extract_text_content
+    from app.agent.mcp_client import _extract_text_content, _inprocess_session
     from app.agent.ticket_authorization import authorize_ticket_update
     async with api_context(tmp_path / "update.db") as (_, factory):
         monkeypatch.setattr("app.utils.database.async_session", factory)
         await seed(factory)
         payload = args()
-        async with create_connected_server_and_client_session(mcp._mcp_server) as client:
+        async with _inprocess_session() as client:
             await client.initialize()
             raw = await client.call_tool("update_ticket_status", {**payload, "authorization": authorize_ticket_update(payload, 999)})
             result = json.loads(_extract_text_content(raw))

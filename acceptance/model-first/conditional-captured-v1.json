@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "captured_supplier_output_offline_regression_not_new_quality",
+  "source_report_sha256": "d70878ae10a2dec3afbabc41df2d89197aeab1eb34a28803ba5e54d85012b456",
+  "original_case_id": "smoke-004",
+  "message": "订单ORD970102如果还没发货就帮我退款",
+  "parsed": {
+    "topic": "refund",
+    "request_type": "apply",
+    "entities": {
+      "order_id": "ORD970102",
+      "product": null
+    },
+    "conditions": [
+      {
+        "check": "order_not_shipped",
+        "source": "current_message"
+      }
+    ],
+    "subrequests": [
+      {
+        "topic": "query_order",
+        "request_type": "query"
+      },
+      {
+        "topic": "refund",
+        "request_type": "apply"
+      }
+    ],
+    "service_preference": "unspecified",
+    "emotion": "neutral",
+    "clarification": null,
+    "retrieval_query": "订单ORD970102 是否已发货 未发货则退款",
+    "entity_source": "current_message",
+    "read_tasks": [
+      {
+        "tool": "query_order",
+        "resource_id": "ORD970102"
+      }
+    ],
+    "parameters": {
+      "reason": null,
+      "refund_type": null,
+      "complaint_content": null
+    },
+    "missing_information": [
+      "reason"
+    ]
+  },
+  "original_smoke_pass": false,
+  "independent_human_label": false
+}

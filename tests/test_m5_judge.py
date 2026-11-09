@@ -12,7 +12,7 @@ from tests.test_chat_turns import graph_for_response, rag_state
 
 
 def test_stricter_review_uses_new_cache_namespace():
-    assert graph_for_response()._build_answer_cache_key(rag_state()).startswith("validated-v3:")
+    assert graph_for_response()._build_answer_cache_key(rag_state()).startswith("validated-v4:")
 
 
 @pytest.mark.parametrize("failure", ["disabled", "unavailable", "none", "invalid", "timeout", "exception"])

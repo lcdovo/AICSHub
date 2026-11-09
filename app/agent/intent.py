@@ -5,8 +5,9 @@
 第三层：上下文推断（基于历史对话）
 """
 import re
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
+from app.agent.routing_policy import is_follow_up, explicit_action, technical_inquiry
 
 
 @dataclass
@@ -18,6 +19,7 @@ class IntentResult:
     # ⑤ 分层阈值：规则对当前消息是否足够自信。False 时上层可跳过 LLM 兜底复审，
     # 避免"top1 已明显领先"的低置信样本再白耗一次模型调用。
     needs_llm_fallback: bool = False
+    emotion: str = "neutral"
 
 
 # 意图关键词映射 - 带有权重的关键词
@@ -143,7 +145,7 @@ class EnhancedIntentRecognizer:
                 )
         else:
             keyword_result = IntentResult(intent="general", confidence=0.0)
-        if context and keyword_result.confidence < 0.3:
+        if context and keyword_result.confidence < 0.3 and self._is_continuation(message):
             context_intent = self._context_inference(context, message)
             if context_intent:
                 keyword_result.intent = context_intent
@@ -216,6 +218,9 @@ class EnhancedIntentRecognizer:
                 and any(cue in message for cue in ("退", "坑", "差", "坏"))):
             keyword_result.needs_llm_fallback = True
             keyword_result.needs_clarification = True
+        keyword_result.emotion = "negative" if any(
+            word in message for word in (*STRONG_EMOTION_WORDS, *QUALITY_NEGATIVE_WORDS)
+        ) else "neutral"
         return keyword_result
 
     def _is_non_domain_template(self, message: str) -> bool:
@@ -336,6 +341,12 @@ class EnhancedIntentRecognizer:
         if scores.get("human", 0) > 0 and self._is_service_info_query(message):
             scores["human"] = max(scores["human"] - 2.0, 0.0)
 
+        # 具体维修/使用咨询不被情绪词压成投诉；明确办理诉求仍保留。
+        if (technical_inquiry(message)
+                and not any(explicit_action(topic, message) for topic in ("refund", "complaint", "human"))):
+            scores["technical"] = max(scores.get("technical", 0), 3.0)
+            scores["complaint"] = 0.0
+            scores["human"] = 0.0
         return scores
 
     # LLM 主判路径下仍由规则拍板的硬性优先意图：这些场景确定性高，
@@ -476,31 +487,9 @@ class EnhancedIntentRecognizer:
 
     def _is_continuation(self, message: str) -> bool:
         """判断是否为延续性追问"""
-        continuation_patterns = [
-            r"^[好嗯哦啊]",
-            r"^(那|然后|接着|还有)",
-            r"^(好的?|行(?:吧|的)?|可以(?:的)?|明白(?:了)?|知道了)",
-            r"^(谢谢|感谢|多谢)",
-            r"^\d+$",  # 纯数字，可能是在提供订单号
-            r"^(对|是|没错|正确)",
-            r"^(现在|目前|大概|预计|什么时候)",
-            r"^(还是|仍然|依然|重试|重置).*(没用|不行|失败)",
-        ]
-        
-        for pattern in continuation_patterns:
-            if re.match(pattern, message):
-                return True
-        return False
+        return is_follow_up(message)
 
     def get_clarification_question(self, intent: str) -> str:
         """获取澄清问题"""
-        questions = {
-            "query_order": "您想查询订单的什么信息呢？请提供订单号，我可以帮您查询物流状态和订单详情。",
-            "refund": "您是想申请仅退款还是退货退款呢？另外，请提供订单号以便我为您处理。",
-            "complaint": "非常抱歉给您带来不好的体验。能否请您详细描述一下遇到的问题？这样我们才能更好地帮助您。",
-            "technical": "请问您具体遇到了什么问题呢？能否描述一下操作步骤和出现的情况？",
-            "promotion": "我们目前有多种优惠活动，您想了解哪方面的信息呢？",
-            "human": "好的，正在为您转接人工客服。请问有什么特别需要备注的信息吗？",
-            "general": "我可以帮助您查询订单、处理退换货、解答产品问题等。请问有什么可以帮您的？",
-        }
-        return questions.get(intent, "请问您需要什么帮助呢？")
+        from app.agent.answer_contracts import CLARIFICATION_QUESTIONS
+        return CLARIFICATION_QUESTIONS.get(intent, "请问您需要什么帮助呢？")

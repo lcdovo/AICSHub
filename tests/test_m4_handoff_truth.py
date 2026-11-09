@@ -52,7 +52,8 @@ async def test_handoff_recommendation_does_not_override_actual_ticket_receipt_wi
     state = AgentState(session_id="s", user_id=101, user_message="我要投诉服务态度",
                        detected_intent="complaint", need_human=True, human_reason="历史意图升级建议")
     state.add_tool_call("create_ticket", {}, {"success": True, "data": {
-        "ticket_id": "synthetic-ticket", "message": "投诉工单 synthetic-ticket 已创建，请查看后续处理状态。"}}, True)
+        "ticket_id": "synthetic-ticket", "user_id": 101, "session_id": "s", "status": "pending",
+        "message": "投诉工单 synthetic-ticket 已创建，请查看后续处理状态。"}}, True)
     assert await node(state) == AgentNode.END
     assert "synthetic-ticket" in state.reply
     assert "正在为您转接" not in state.reply

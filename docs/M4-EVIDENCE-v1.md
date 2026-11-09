@@ -360,3 +360,9 @@ T0专项及相关回归86 passed（reports/offline/20261104-093809-934039），s
 compileall app scripts、本切片Ruff F401/F821、git diff --check通过。本切片未进行真实MySQL/Redis、浏览器、真实供应商或部署验收；660/660调用额度保持，M4实体95.67%未达97%的质量失败及rules/灰度0不变。原未跟踪方案/验收文档与开发脚本保留且不入提交。
 
 本切片最终全量T0：python scripts/test_offline.py -q tests，863 passed、0失败/0错误/0跳过（reports/offline/20261104-093844-105880，382.13秒）。开始/结束源码指纹同为9f901389856b152b10b9cce65cd5d82a2bfa0e38343c24af0c21e978c6f4fed8，源码稳定且快照完整，禁止网络且blocked_network_operations=0。9838项警告主要为既有datetime.utcnow弃用及依赖弃用提示，保留日志。该结果含当前人工事实改动与已提交退款展示/确认/参数代码；启动HEAD=dd0c212且存在dirty输入，按清单/指纹解释，不能伪称已提交版本的真实部署验收。全部原195项仍保留；三项相关AC仅增加局部证据，不提升为整项PASS。
+
+## 2026-11-05离线实体重算与查询改写契约
+
+历史287/300重算一致、6商品实体差异+7无效输出，未调用供应商。查询改写两个缺陷先红后绿、170项相关通过，详见M4-OFFLINE-RECHECK-v1.md与M4-QUERY-REWRITE-CONTRACT-v1.md；AC-07-01仍PARTIAL，原质量及660/660门禁不变。
+
+2026-11-05最终全量T0：1195 passed、0失败/错误/跳过、246.48秒，10009条既有依赖及datetime弃用警告。报告`reports/offline/20261105-000417-430263`，源码指纹`143c7f6599015f930987c662199699bf7e24d47682983ac06698b6ac126155dd`起止稳定完整、blocked_network_operations=0。包括本轮查询改写修复、ONNX工具及之前已有未提交批处理实现；不是纯已提交HEAD、模型质量或容量/部署验收。

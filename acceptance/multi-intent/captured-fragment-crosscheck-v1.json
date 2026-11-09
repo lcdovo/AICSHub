@@ -1,0 +1,64 @@
+{
+  "origin": "real_provider_failure_preserved_not_pass",
+  "case_id": "MI-13",
+  "verdict": {
+    "schema_version": 2,
+    "answerability": "full",
+    "response_behavior": "answer_with_limits",
+    "response_validity": "valid",
+    "claims_complete": true,
+    "claims": [
+      {
+        "segment_id": 0,
+        "text": "【i1】订单已签收。",
+        "support": "supported",
+        "evidence": [
+          {
+            "fragment_id": "ff9455c781b199ca9d666325399af7c5cc4b0073d0b73dbdee7ff90488635d51c"
+          }
+        ],
+        "issues": []
+      },
+      {
+        "segment_id": 1,
+        "text": "【i2】请先更换充电线并反馈指示灯状态，目前不能确认故障解决。",
+        "support": "supported",
+        "evidence": [
+          {
+            "fragment_id": "f4e6d6348f1c2cb751e8343c775aab7076732abb075b40ad84e9c56e220a00910"
+          }
+        ],
+        "issues": []
+      }
+    ],
+    "nonfact_segments": [],
+    "response_issues": [],
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "answered",
+        "answer_quote": "【i1】订单已签收。",
+        "evidence_ids": [
+          "T1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "waiting_feedback",
+        "answer_quote": "【i2】请先更换充电线并反馈指示灯状态，目前不能确认故障解决。",
+        "evidence_ids": [
+          "U1",
+          "K1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "partial"
+      }
+    ],
+    "source_contract_version": "server-fragments.v1"
+  },
+  "failure": "item_completion_reference_not_reviewed"
+}

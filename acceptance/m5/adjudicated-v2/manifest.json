@@ -1,0 +1,560 @@
+{
+  "schema_version": 1,
+  "status": "ADJUDICATED_SYNTHETIC_NOT_INDEPENDENT_ACCEPTANCE",
+  "reviewer": "assistant",
+  "original_cases_preserved_by_id": 595,
+  "total_cases": 616,
+  "case_counts": {
+    "answerable": 351,
+    "unanswerable": 60,
+    "review_negative": 100,
+    "review_positive": 105
+  },
+  "resolved_review_items": [
+    "holdout-negative-policy-005-2",
+    "holdout-negative-policy-008-1",
+    "holdout-negative-policy-025-1",
+    "holdout-negative-policy-026-2",
+    "holdout-noanswer-006",
+    "holdout-noanswer-007",
+    "holdout-noanswer-008",
+    "holdout-noanswer-026",
+    "holdout-noanswer-027",
+    "holdout-noanswer-028",
+    "holdout-noanswer-029",
+    "holdout-noanswer-030",
+    "holdout-noanswer-031",
+    "holdout-noanswer-032",
+    "holdout-noanswer-033",
+    "holdout-noanswer-034",
+    "holdout-noanswer-035",
+    "holdout-noanswer-036",
+    "holdout-noanswer-037",
+    "holdout-noanswer-038",
+    "holdout-noanswer-039",
+    "holdout-noanswer-040",
+    "holdout-noanswer-041",
+    "holdout-noanswer-042",
+    "holdout-noanswer-043",
+    "holdout-noanswer-044",
+    "holdout-noanswer-045",
+    "holdout-noanswer-046",
+    "holdout-noanswer-047",
+    "holdout-noanswer-048",
+    "holdout-noanswer-049",
+    "holdout-noanswer-050",
+    "holdout-noanswer-051",
+    "holdout-noanswer-052",
+    "holdout-noanswer-053",
+    "holdout-noanswer-054",
+    "holdout-noanswer-055",
+    "holdout-noanswer-056",
+    "holdout-noanswer-057",
+    "holdout-noanswer-058",
+    "holdout-noanswer-059",
+    "holdout-noanswer-060",
+    "holdout-positive-safety-1",
+    "holdout-positive-safety-2",
+    "holdout-positive-safety-4",
+    "holdout-rag-045-2",
+    "holdout-rag-051-1",
+    "holdout-rag-051-5"
+  ],
+  "resolved_review_count": 48,
+  "changed_existing_cases": [
+    {
+      "case_id": "holdout-rag-045-2",
+      "old_case_sha256": "677cdeec316a0bb5dd4d4440dbb78aef31b9fc3f4cba59e532dd143389ec9818",
+      "new_case_sha256": "3a8d7f1bbdd3113d786e535484310eae48424ddbe68ef562527436548f635fb3",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-rag-051-1",
+      "old_case_sha256": "9384e0206cdaaf9f0f7ad1026bd75c3728995145f0d64efe3e9bb3e92cc58dee",
+      "new_case_sha256": "f3ed94405c61c001bf06174271acb4616de6f8a69c0aa8bca3f4822fc8d54994",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-rag-051-2",
+      "old_case_sha256": "d614cf607bc6b0222826da58ded7e7b6149398c6dbc5d7440759e10c297f3404",
+      "new_case_sha256": "f92cfa588ed590580acc0d79d70b3847d876b48781cd4c438f62153acd6eb312",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-rag-051-3",
+      "old_case_sha256": "1e85f603ce6cae0194c75f02008a23b4c15c43353241c25ac425da9d96092e99",
+      "new_case_sha256": "4ef72c2c5a5d8af62c7591b571a8b1d7bf803866223dd0ba00ed846631849ace",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-rag-051-4",
+      "old_case_sha256": "a35fc429b34baf0b239d8d3a95f2899e6a4a365163af68d6dfdecfd640454611",
+      "new_case_sha256": "94aeb629c7c8f406dbf2c76bfef79697dcf5de3daeadd62cae3957c7056d38d1",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-rag-051-5",
+      "old_case_sha256": "7f0b764dc584a1a38157e484598deb46758996ebba04abe4b272c8c425c885aa",
+      "new_case_sha256": "dedc04b70437822d8170de45ae742b7c687f23d8e88f30b6539ceb640a09b0eb",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-rag-051-6",
+      "old_case_sha256": "c286690171e1b0d05c8b42b35c8b6cea771825b90811003b236be5d40260c808",
+      "new_case_sha256": "53bdc811507c82d0f49a029e5341ac7564cdee0e1705c1beec884908b40e1073",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-001",
+      "old_case_sha256": "dc013bfabaebdf788acde112c7639a6cc65b3d0df7e031a0cf8bc7afb32bc80a",
+      "new_case_sha256": "0382048cbed80d4455b84774c2eefe17354a79c869383a5e5258fad2e5f13778",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-002",
+      "old_case_sha256": "857e7d64a48f717d21a7c5e1bd2d46bd8144688bbdee2daebc41ac44d55e2b8c",
+      "new_case_sha256": "0d20a676472d79411ff896e143915f863a8261b494ee9a3d81f28ae408a73f71",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-003",
+      "old_case_sha256": "4c5b020802a7022f71778a7fbacee4751359cac2e43cc263ac61d92b1d8db6de",
+      "new_case_sha256": "e9b16ca8d545ed6a92c1c273cf68ff17c18009429cfd2ef7f0c18042df6d927d",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-004",
+      "old_case_sha256": "899150746a9c2b7ed3620bd51dbfb6bc821d7c1cf8c3ef5b7e9e98c786457088",
+      "new_case_sha256": "74a8309087d0138a179fbaa72fdfed8122c189f39ff21b0d7c80988849ceb2f3",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-005",
+      "old_case_sha256": "b54536bcf6b7232977202dc763431b1c3a5e4c81b0ba8a6512012757feb0ebaa",
+      "new_case_sha256": "8e379360b1ff45f35a3a6dac71cc21d0ff3962571a6a4f809a2ffd2898ba90fb",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-006",
+      "old_case_sha256": "a058116f3506916f8f1d6305e32467c05bc5a34712d54631bf4b090350273119",
+      "new_case_sha256": "b29635d92cf6dea8b0e626db2aaff296e1a64e234b9e6aefdd5fba2f52d3c857",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-007",
+      "old_case_sha256": "7c858f95e9a461fc3b1c4a15312bd5efb5784b309a5cb773621fbe3abd36fce9",
+      "new_case_sha256": "8ac527d3f51e6c6eda75e5508c6c903c4bc04bf213d398ef4111f8d33b639d79",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-008",
+      "old_case_sha256": "09626244010e1e431d2464bd71bce740b0a87ce160d4c4d47fd5abf1fa2344f8",
+      "new_case_sha256": "9d759d0d3e80a1c26b6236e51ff2d6730b2732d1aa3df5b30ef8ab05a58b249b",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-009",
+      "old_case_sha256": "269f95c781b05de155f543336bb150e48aab5094b52edf0dc01ef106de1b1810",
+      "new_case_sha256": "6f0c340ceb3425cf0681ddd0ed90878645c86eb802150b7744fc9bf0df878320",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-010",
+      "old_case_sha256": "96127db128ff605390c6ce07ceea8192e00bfae9bd977bbd71565185510cec2e",
+      "new_case_sha256": "fa564fe51a9bd45e5c1aae7910f831120bfb0c9f39cb2b6123cd8669028f520c",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-011",
+      "old_case_sha256": "6706f810f9cd4c5ea4599ec19853bec48dfd52363235feded29bedada49b15ea",
+      "new_case_sha256": "637f53e79a700bea6b2ea006e04d7c7840bf1cad7e1dd59bdc9d4dbc3141c610",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-012",
+      "old_case_sha256": "d0d1da7db1f619b46a4eebcac1ff1e9bd7eb0a0ca946d216c21a7cb2bcc0b75f",
+      "new_case_sha256": "d2795df388440b3919d80020548cedc17f9f6356cb7659af804959b4d88d6b16",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-013",
+      "old_case_sha256": "2890f7d3e92911a1e45ed5432967146452b6fa0f73bcee4fde3b83e4306c55fd",
+      "new_case_sha256": "f0a7a9de433ac009bd9afcad23a9e54b11712f69ff54dc02c62d4031b20bda07",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-014",
+      "old_case_sha256": "d18ab9e61793ac3498076fabfccf20debe6317826f074c84abb2ae18a16a44de",
+      "new_case_sha256": "91387b72a79474e2a2e661df39f6fea83acce78d9911d10d9ee63d0aefa88c7c",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-015",
+      "old_case_sha256": "b3ee9f1a3bbafe444093675da0db9f16446d27f53fdfe7411bc47dda1dd095f4",
+      "new_case_sha256": "297749dcc097901dd452c68e3c0b0f72c757c9493bcce5103a79d89c1fea6880",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-016",
+      "old_case_sha256": "7372feea78e299a8fccb1a5b4ef1b40a4636a59ba3e4074872c73fd8d8d46712",
+      "new_case_sha256": "c4fffbe2dcba3657dcf353561912ecad37b0459b84112bbba3a7aa956d998677",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-017",
+      "old_case_sha256": "2acd9f74118f4e066d2e505bd81349279668316a606c0b0d1b53ab6d87fd0656",
+      "new_case_sha256": "b0446c69f39b1926ea45668c34e0a6a539876542e51395e792759e3b988aa5a7",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-018",
+      "old_case_sha256": "912482547ab995d03e5a91b55507664beeeddf83e212594a2dc8c4c58fbc3e3e",
+      "new_case_sha256": "ce5c51526290670efca26af0175a46e66e2b13388f9d9ef47960bcdfbe8ec92a",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-019",
+      "old_case_sha256": "3f2cb16ac8c63a7f077ab8488ca55d2d2ac2478f505785dc6a0e2a14f2f7a9a8",
+      "new_case_sha256": "b1bbf51a43942e0b36104d1b55289b12a175521bff9664517350f1a25f2b64a6",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-020",
+      "old_case_sha256": "5b4a64c2e7d898b658df4b2434fe57fa1bfd51850537623910582a1584137c54",
+      "new_case_sha256": "364b2df2cbf85f610dc1d2067e22390b7b3f2c7d37fecb538c16275f6cfefb2b",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-021",
+      "old_case_sha256": "57de9b18659f5653b3f6d4c69bdb6f8e4c981fa046e5112ac9f02054246913ab",
+      "new_case_sha256": "8bc5c709588028d73da781d3ab1fec1433c4869fdcf31d03d96ef152cbc4607e",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-022",
+      "old_case_sha256": "4d88d2ce074e6810653c79044416693660d7def255e43171c5bf62dd642e76d4",
+      "new_case_sha256": "5a1b40bb23a9c081db1bbfcd161367f5dd4f4d4f6d8f5b20fa481c251cc8953e",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-023",
+      "old_case_sha256": "cc59158057223b38c644f34d767673dd7dc8543ba13d9ddbe880286f7c755236",
+      "new_case_sha256": "b281d8576036fa36b229cd9ae3b4e8e30d1aab5fac983ea6e9040c7d585b2d4a",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-024",
+      "old_case_sha256": "70fdf76a0120f8f97e49dd581db6052f0a2459b337e0d0520aa1b5def6717cf3",
+      "new_case_sha256": "f9779d47d3de582345025e2e5502b26277091efbe78d7f10dff19353fdb0cb46",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-025",
+      "old_case_sha256": "cd7b4278c5b6131e124d86f2b5d5d2912c01598a80bf039a6ba4cd33797b6505",
+      "new_case_sha256": "de14412b0be7a2133cc84f3cbc89716b71939c4030f293fae33e1f07f9ab08af",
+      "review_issue_resolved": false
+    },
+    {
+      "case_id": "holdout-noanswer-026",
+      "old_case_sha256": "58c666fc7e8979065149230319d98e5ee6d57412ec0884ad6f03c8d5359297c3",
+      "new_case_sha256": "383c629a8fbedff5be6df3fdb8bf7a6e6aa083c1b2cfb13e1cde636527c2c0db",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-027",
+      "old_case_sha256": "ea163dc4702fa5d22492a4f15e2a1ac1b9db50c2f1b5558042ba08d6d7c68f32",
+      "new_case_sha256": "952e471e8329feddef957eb1ddbd273671738fd43958122dd93842122a01bd23",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-028",
+      "old_case_sha256": "09acadae96ee9ebcf282d7de174c73daf08f58e90808d44edc79d46079b67f66",
+      "new_case_sha256": "0c96f31c28db1364d8e107188c9c115fe4d0319328425e451031c6f60ac50474",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-029",
+      "old_case_sha256": "17e5ef49ee70ec4a1caa52ce84f51eb7fd7083ffc0f5f9a2ee367e7516090d73",
+      "new_case_sha256": "44056d01958cc61061c50766f653c76b97fff3970df64b772da6bae259d7df6c",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-030",
+      "old_case_sha256": "4de498971e36ab944d9156954dda6a28dc85c92d41950e0a838027a115cf652d",
+      "new_case_sha256": "b01014c81ecc7213e2bf0132c4f05ed619c07d865be30e0a1f6f95e80bbc09f8",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-031",
+      "old_case_sha256": "ff719420dc5f3c26d1909849667d4fb013d17b33632251c847c7b6ae22658d74",
+      "new_case_sha256": "c0c89509607843386ceabd4270484cb823b3577ca95090866903a6bd71d20d11",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-032",
+      "old_case_sha256": "a33a5a1f8ecee73ff405ce35a71b58a986c6d5692b6c4ee817ac44e115181076",
+      "new_case_sha256": "454436d2fb3195cf99b1abcfe377b7acb54188baef07bc62ea704b1139739d16",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-033",
+      "old_case_sha256": "9cc163e764f1953434a58245360a258491052ec3386a1c8084d30c49e57f1390",
+      "new_case_sha256": "ab87743e266e9529951a6a9cf1c44fee4698b0541dd379c381dfc9273760074a",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-034",
+      "old_case_sha256": "8776174bd20d258c6127a91fe05bddf775f04b2237fdf965692c15afbecc928c",
+      "new_case_sha256": "7bec21313374cc7fef08b79ece8f054d78def4dff986ca7cdc690b40a39d3d71",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-035",
+      "old_case_sha256": "656c32e58a645af2c4c616ec98ad8fb5349764a51cd276d5979cf8001c906b6f",
+      "new_case_sha256": "a15cda4178ea464ad60383bd8bf899d0ca7be9a49280b2da9f3785ae71692228",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-036",
+      "old_case_sha256": "e0dc23a0699dd75e1574f66af2f8a627da0e279400f3fbb573a121a14c59868b",
+      "new_case_sha256": "decf7a24f0d4fe8113a9524301c3fe91f1f35ef77f632e5e69fa9976660cd648",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-037",
+      "old_case_sha256": "c02b4b158c829a34f905b3f9b31cf88bd75e1dbdb992f746e1d9fb48f1aee2da",
+      "new_case_sha256": "707750be857f5328d73df6f6b5371538515c98f6bcc544a5fced086cc33f0eb2",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-038",
+      "old_case_sha256": "be20d05bd0bfb9d3ab661ce00e1d2bd11e45136f8aa70a806c906aeaf2d5b5a4",
+      "new_case_sha256": "dd9f6ec7121e56fb325140fcb8c933f4d5e2ba3189587e85f494ef1cded4b228",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-039",
+      "old_case_sha256": "7a10ce72d3bccbfde7a5b785be5f17c34de3491a367f3c6548e07c966ab5dd7d",
+      "new_case_sha256": "5c1c0b4cbdd7ca9383d99976205db96f1b3bbe6dc2f6cc5b89aa5b7adff5842c",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-040",
+      "old_case_sha256": "9c74cbbb0827f26eef298384455b9ff6571cc307d6c09b32aa4d8da26c3ac8c3",
+      "new_case_sha256": "91b0a270e9a10823013f86b0852063dd61d8262b93b779101e6d4e28f1e66479",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-041",
+      "old_case_sha256": "8528a620e4372fd2ace49162e1dfb0e659dfb20162ec9729afc98bf9886afc34",
+      "new_case_sha256": "813afe549902b98974bef04fb94dfbe346265d7587c398a27feb01201d0199a8",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-042",
+      "old_case_sha256": "e1a0512c05162823bbf044f95ca2b64bdffe0c2095815ce9e9dfb2f338e8b78b",
+      "new_case_sha256": "1d19c43b2a3e79ef0a0c8acdb09ffdfcae2ea2e9e0e3f424ad2ecaa6333c498b",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-043",
+      "old_case_sha256": "55203e8bf1a21ec212c90826ad430a8bf0844ff4cbcfd71ee17c3470aa483e89",
+      "new_case_sha256": "eb0dfde0477765684de11d3e1816a64b690a6c0ad1eefad0eff4f9a1613e16f7",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-044",
+      "old_case_sha256": "6ab2207a5ea8b396f8320508710e93afd6729023bf3cbf25d9c4b5382de1c6d7",
+      "new_case_sha256": "0a9c0ae8cd326f7af653e7e03b25f6cebd84faf02cf0e5e2520e7bd3332e3677",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-045",
+      "old_case_sha256": "6ad5bfd0f48e55b24437687c9910d9c2f976ab2adfa7a1550317cee0fff4c7a7",
+      "new_case_sha256": "45f2564e89c80bd2d6575e25917acc3fa10be41e0a795daaeac7e5fcee662902",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-046",
+      "old_case_sha256": "717e85497b5fa0e13ee6dd3d7b840de55b6d393a2d0b44d6554c9037be0816f2",
+      "new_case_sha256": "f77822deaefd7e519f107cfee89643a7f30d3088eef6cbf90ac9a64ee3c26814",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-047",
+      "old_case_sha256": "f3e02c6a2190d40211f932770faa7b4cd6152e291acf5ac46305f2fc55b69709",
+      "new_case_sha256": "1627bb478adfa561194316ed9b8b8457bf93d0a7f475929b66da7b783c4f02c3",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-048",
+      "old_case_sha256": "c99f6a9fdc52099e16fc9dbde0f9e5822dce6991502a8a72cc6b6048b1e5b288",
+      "new_case_sha256": "23396a5edaa2d29ef8e100ec44c2238c8a789ce06cab93bc9bd05b2c2634aa41",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-049",
+      "old_case_sha256": "c9c3f09128e3473ed730e50a02a4a7481596b4727661be09c02052503e846198",
+      "new_case_sha256": "884bfa611758a17d1865b4d04a9ae21d5254dd32f5fe370757bf7ef45ad19ed5",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-050",
+      "old_case_sha256": "d683300e2dc5d99f97d51ccdfd89a57051789ff60aae1629ea98cc8614563b88",
+      "new_case_sha256": "b498e8088913a0be2e501f8a5213ba3762b4fc177d2e9eb583f2f09d639b0117",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-051",
+      "old_case_sha256": "963929ea91fa50aa7d86ec9c3fef36b301eb86104343ac4f9f8ac29b58721a96",
+      "new_case_sha256": "f9b55ef21427269b8cd7c0df6d9ffecc679b46739494bf12a8b3b7a4613f55c5",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-052",
+      "old_case_sha256": "6d1368da83fdf1a002b89453a4b0ca5773757e5e5b3c004e4776398254d0100b",
+      "new_case_sha256": "4dda51c6c83b33c040436538cf4a6eb510b5b681d7f118fecdf74f64f0d47d85",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-053",
+      "old_case_sha256": "0902c5d7a48f66ac93488e00e4820f541cdb3113ae704fb159c653c8a99c3c93",
+      "new_case_sha256": "ca589afe4c65a205305f517e616bc0584fe6fcb3e5307dc4482ad40efd7758bd",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-054",
+      "old_case_sha256": "1f176e50bb434e9cafc3a5541f0964e6f87e633ec89b2b6606ed8353a1eef500",
+      "new_case_sha256": "4e01b262fd045e99c312eca54fc0b9dd0a0ac10a94cd187c03cb256834afcf79",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-055",
+      "old_case_sha256": "f250c06975262fc8ba08724806906d311fb76953f15eb18eb579df0df286b338",
+      "new_case_sha256": "5478fcdc8ab9edb976d96a24ff7a91b61bbe8a82d042685379f506938333d9be",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-056",
+      "old_case_sha256": "7badbbf03e47733b97a2b767f45d9cbb47206555fb715b03b38d367cac895b66",
+      "new_case_sha256": "64c542dd8294bf9df3df116d3369f0c2aaaa7bee0f31be4c7ed6b5ccf2082dea",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-057",
+      "old_case_sha256": "e962bf39e32687736598fc66502ca16a92dc7351df7ea2fa51c7aa07819e5e99",
+      "new_case_sha256": "7f010f216ec42c0890be973f6cf3a10ea2f142fc2a1bd2f860161b793bb8938b",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-058",
+      "old_case_sha256": "add01b74efe8f13d5c50a5dfaf82998604a4b2c388534eb3046d4af2ee4bd3e5",
+      "new_case_sha256": "a0499aad56e41c446f0f3a7b5d82dab504bdd4f9bb823be2d14877d12a1b9a23",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-059",
+      "old_case_sha256": "fdac21c7a92189c9dd8b52c2c69aeaa4d426f62ba11bc2ad20d9fe4f6c4992e5",
+      "new_case_sha256": "52a3ab5bc83462dd22533744f67f5d8608da457f6bf9dae86c8874830359053c",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-noanswer-060",
+      "old_case_sha256": "023bea6cee2f0d4681164ba9760ab1e8694c0fdf50260f9ec729b69bec689057",
+      "new_case_sha256": "0c3aacc8631617272115a02e2d0075e6cd11539ef3660eb2b9bb35d3f02a2be5",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-negative-policy-005-2",
+      "old_case_sha256": "38059635862b2a594e820ca517132e0a435be6a01f43206d565b154aaa80b761",
+      "new_case_sha256": "6f74b5de8b98b192f74967cd02767ab33d5f6e8d90be20b83e0faded0da1b851",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-negative-policy-008-1",
+      "old_case_sha256": "5c7eca1f878f2e877e85442c9c5016c7ec19d6fb54aa07834280312afea47dcb",
+      "new_case_sha256": "ada41eeab4aa46fab33a9790935a99757b0dd1e7e73eb75192171d15b8a78f2d",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-negative-policy-025-1",
+      "old_case_sha256": "d11c8dde11a6f68d8f2239def7b6dfa0fa526f862a139e74e6a5eb4a62467893",
+      "new_case_sha256": "974252d6bb402a1c175dc3a924b2371e6d707aeb93103dedb333522198253f0b",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-negative-policy-026-2",
+      "old_case_sha256": "544da4e12901efe0a7f2eb20dd00be59a6dbedf82560997632d32fc625029884",
+      "new_case_sha256": "6a0181ba47bb473eef6491c419b085685d5b2865ceab429cdae13aa8811348a9",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-positive-safety-1",
+      "old_case_sha256": "c950271bb28e6bdcbc73c2277699357467abe64fcb083df11baf6da05d1ae6d7",
+      "new_case_sha256": "858864a7470ab3cc775b0785d5bb0550ece073eaa8c0ccdd594987791a5a158c",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-positive-safety-2",
+      "old_case_sha256": "9d445efb0fa6ffd67af54b8f9ebbd449943e0b61b5ff41a9108f9aefb474cc89",
+      "new_case_sha256": "6fdc8aee6775617f328e514c405e6c4b81b0f1fec4aab5ebc31cb727e10c8a20",
+      "review_issue_resolved": true
+    },
+    {
+      "case_id": "holdout-positive-safety-4",
+      "old_case_sha256": "c07bc6f7a35effb143cfb24d036fb28c61b3d27b087457ab10431bc433438bc6",
+      "new_case_sha256": "eb2377f2e1c541181e3427345e25914dabc7ff687c08de01674efbb18537da05",
+      "review_issue_resolved": true
+    }
+  ],
+  "added_case_ids": [
+    "holdout-noanswer-v2-061",
+    "holdout-noanswer-v2-062",
+    "holdout-noanswer-v2-063",
+    "holdout-noanswer-v2-064",
+    "holdout-noanswer-v2-065",
+    "holdout-noanswer-v2-066",
+    "holdout-noanswer-v2-067",
+    "holdout-noanswer-v2-068",
+    "holdout-noanswer-v2-069",
+    "holdout-noanswer-v2-070",
+    "holdout-noanswer-v2-071",
+    "holdout-noanswer-v2-072",
+    "holdout-noanswer-v2-073",
+    "holdout-noanswer-v2-074",
+    "holdout-noanswer-v2-075",
+    "holdout-noanswer-v2-076",
+    "holdout-noanswer-v2-077",
+    "holdout-noanswer-v2-078",
+    "holdout-noanswer-v2-079",
+    "holdout-noanswer-v2-080",
+    "holdout-noanswer-v2-081"
+  ],
+  "human_labels_not_reassigned": true,
+  "original_files_changed": false,
+  "external_model_calls": 0,
+  "independent_human_quality_gate_pass": false,
+  "whole_m5_pass": false,
+  "limit": "assistant adjudicated synthetic material; no new real model outputs or independent human labels; original thresholds retained",
+  "original_material_hashes": {
+    "dataset_sha256": "f9f6c93ba93844e36a96b9e64206197b3e2d2406b21cd2503f248204b890e692",
+    "corpus_sha256": "c04d21375d743c3eb1d613239dfb46eb7b301fb6de1c6ff8b1b98c779de1c362",
+    "human_partial_sha256": "3dfbc89f9a5cecdc50a805ebf5c922ae0ce15f4ff85b1a6214de5c731d0aab59",
+    "source_sha256": "4571e54ebc7759f044042367e8be0e4776eea219af3ed27593e1680b988ef9a7"
+  },
+  "files": {
+    "dataset.json": "095f28eae0023283216b52cee13daa91375b4053459f890ad4a04abe8ed0fd87",
+    "corpus.json": "66cfcdb0514dcae56a352e13bda04fdb0ea6b8f88e277cc74a54b78f5d0ecef1"
+  },
+  "original_materials_stable": true,
+  "source_changes_during_build": {
+    "source_tree_stable": false,
+    "source_snapshot_complete": true,
+    "changed_input_paths": [
+      "acceptance/m5/adjudicated-v2/corpus.json",
+      "acceptance/m5/adjudicated-v2/dataset.json"
+    ],
+    "start_source_fingerprint": "a78b2e95711bee277df7f73fe95c6ac10cbee5498d34b1f8a7b549cf5cc9e915",
+    "end_source_fingerprint": "40a0dff87103457aee71e1a91f8d2cf95df753feb10f55c77559618a232d04f8"
+  }
+}

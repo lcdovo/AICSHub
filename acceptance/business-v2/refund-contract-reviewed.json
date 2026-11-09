@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "review_origin": "assistant_contract_review_not_independent_human_gold",
+  "live_cases": [
+    "BA-05",
+    "BA-10"
+  ],
+  "safe_handoff_is_preview_success": false,
+  "preview_meaning": "仅准备待用户确认的模拟全额申请草稿；不是质量认定、审核通过、支付或到账",
+  "confirmed_meaning": "本轮明确确认后只登记一笔pending_review模拟申请；不得宣称approved或到账",
+  "fixture_facts": {
+    "owner": "synthetic current authenticated user101",
+    "order_status": "delivered",
+    "received_at": "isolated seed at evaluation time minus one day",
+    "amount": "99.10 CNY",
+    "existing_applications": 0,
+    "reason": "user-reported shell damage; not independently verified manufacturing defect",
+    "photos": "not supplied; subsequent manual review requirements remain"
+  },
+  "decision_rules": [
+    {
+      "condition": "上述合成订单可由领域服务核验且用户明确请求准备申请",
+      "expected": "waiting_confirmation",
+      "note": "仅测试受控草稿能力，不能从用户报告推出质量已确认"
+    },
+    {
+      "condition": "缺订单号、缺原因、资格无法核实或关键事实待补充",
+      "expected": "waiting_input",
+      "note": "有针对性的补问；不冒称已准备草稿"
+    },
+    {
+      "condition": "无权访问、状态/时间/金额不符合领域规则或条件不满足",
+      "expected": "blocked_or_stopped",
+      "note": "不得预览或申请，安全拒绝与业务目标完成分开评分"
+    },
+    {
+      "condition": "资料不足需人工处理且只作建议",
+      "expected": "waiting_input/human_request",
+      "note": "不等于已建人工单，不作为本正向预览案例成功"
+    },
+    {
+      "condition": "预览后本轮明确取消",
+      "expected": "cancelled; applications0"
+    },
+    {
+      "condition": "预览后本轮明确确认",
+      "expected": "completed; exactly one simulated pending_review application"
+    },
+    {
+      "condition": "换订单、仅查询、历史确认或预览失效",
+      "expected": "no submission; independently verify the new turn"
+    }
+  ],
+  "source_requirements": [
+    "refund_applicability",
+    "quality_definition",
+    "quality_window",
+    "manual_review"
+  ],
+  "do_not_claim": [
+    "质量问题已经核实",
+    "退款已审核通过",
+    "真实支付成功",
+    "退款已到账",
+    "未确认即提交"
+  ],
+  "old_labels_changed": false,
+  "previous_paid_results_relabelled": false,
+  "deploy_after_these_two_cases": false,
+  "remaining_business_cases": "NOT_RUN; these two cases cannot establish twenty-case admission",
+  "original_reason": "外壳破损 has 4 characters; current missing_slots requires6; original positive fixture cannot establish preview readiness",
+  "new_positive_reason": "收到时商品外壳已经破损; explicit user report, not verified cause",
+  "new_inputs_not_equivalent_to_old_paid": true,
+  "confirmation_scope": "current supported exact explicit tokens 取消/确认; original longer natural-language confirmations remain unverified; do not broaden authorization parser"
+}

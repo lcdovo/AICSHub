@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import time
+import threading
 from typing import Any, Dict, Optional, Tuple
 
 from app.config.config import settings
@@ -22,21 +23,24 @@ class QueryCache:
         self._cache: Dict[str, Tuple[Any, float]] = {}
         self._max_size = max_size
         self._ttl = ttl
+        self._lock = threading.RLock()
 
     def get(self, key: str) -> Optional[Any]:
-        if key not in self._cache:
-            return None
-        value, ts = self._cache[key]
-        if time.time() - ts > self._ttl:
-            del self._cache[key]
-            return None
-        return value
+        with self._lock:
+            if key not in self._cache:
+                return None
+            value, ts = self._cache[key]
+            if time.monotonic() - ts > self._ttl:
+                del self._cache[key]
+                return None
+            return value
 
     def set(self, key: str, value: Any):
-        if len(self._cache) >= self._max_size:
-            oldest = min(self._cache, key=lambda k: self._cache[k][1])
-            del self._cache[oldest]
-        self._cache[key] = (value, time.time())
+        with self._lock:
+            if key not in self._cache and len(self._cache) >= self._max_size:
+                oldest = min(self._cache, key=lambda k: self._cache[k][1])
+                del self._cache[oldest]
+            self._cache[key] = (value, time.monotonic())
 
     async def aget(self, key: str) -> Optional[Any]:
         """异步读取：Redis 共享缓存优先（多 worker 共享，避免重复 embedding），
@@ -47,7 +51,8 @@ class QueryCache:
                 raw = await redis.get(f"kb_cache:{key}")
                 if raw is not None:
                     return json.loads(raw)
-                self._cache.pop(key, None)
+                with self._lock:
+                    self._cache.pop(key, None)
                 return None
             except Exception:
                 pass
@@ -77,7 +82,8 @@ class QueryCache:
             return None
 
     def clear(self):
-        self._cache.clear()
+        with self._lock:
+            self._cache.clear()
 
     async def _flush_redis_kb_cache(self) -> None:
         """清 Redis 侧 kb_cache:* 键（文档变更后共享缓存立即失效）。

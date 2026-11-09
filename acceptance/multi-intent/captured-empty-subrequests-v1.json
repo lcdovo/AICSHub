@@ -1,0 +1,43 @@
+{
+  "operation": "atomic-v1/E2E-MI-06/http-1",
+  "status": 200,
+  "response": {
+    "id": "5fe0e853-fdc9-4c21-9d44-482f884091f3",
+    "object": "chat.completion",
+    "created": 1794073332,
+    "model": "deepseek-flash",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "index": 0,
+              "id": "call_00_CEtdwl8rrbNsq8WKr1UA1306",
+              "type": "function",
+              "function": {
+                "name": "ItemizedTaskUnderstanding",
+                "arguments": "{\"topic\": \"refund\", \"request_type\": \"inquiry\", \"entities\": {\"order_id\": null, \"product\": null}, \"conditions\": [], \"subrequests\": [], \"service_preference\": \"unspecified\", \"emotion\": \"neutral\", \"clarification\": null, \"retrieval_query\": \"退货包装要求 运费由谁承担\", \"entity_source\": \"none\", \"itemization_version\": \"intent-items.v1\", \"items\": [{\"text\": \"退货包装有什么要求\", \"kind\": \"knowledge\"}, {\"text\": \"运费由谁承担\", \"kind\": \"knowledge\"}], \"missing_information\": [], \"read_tasks\": [], \"parameters\": {\"reason\": null, \"refund_type\": null, \"complaint_content\": null}, \"continue_task\": false}"
+              }
+            }
+          ]
+        },
+        "logprobs": null,
+        "finish_reason": "tool_calls"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 2405,
+      "completion_tokens": 362,
+      "total_tokens": 2767,
+      "prompt_tokens_details": {
+        "cached_tokens": 2176
+      },
+      "prompt_cache_hit_tokens": 2176,
+      "prompt_cache_miss_tokens": 229
+    },
+    "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+  }
+}

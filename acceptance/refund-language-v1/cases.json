@@ -1,0 +1,392 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "case_id": "LC-01",
+      "name": "short_cancel",
+      "transport": "rest",
+      "turns": [
+        {
+          "turn_id": "t1",
+          "message": "ORD981001外壳破损，请帮我准备退货退款。",
+          "expected_task_states": [
+            "waiting_input"
+          ],
+          "applications": 0,
+          "previews": 0,
+          "waiting_for": "reason"
+        },
+        {
+          "turn_id": "t2",
+          "message": "收到时商品外壳已经破损",
+          "expected_task_states": [
+            "waiting_confirmation"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": "refund_confirmation"
+        },
+        {
+          "turn_id": "t3",
+          "message": "取消刚才的申请，不要提交。",
+          "expected_task_states": [
+            "cancelled"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": null
+        }
+      ],
+      "orders": [
+        {
+          "order_id": "ORD981001",
+          "user_id": 101,
+          "status_code": "delivered",
+          "status": "已签收",
+          "total_amount": "99.10"
+        }
+      ],
+      "source_ids": [
+        "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+        "chunk_1dd23947b028c6b4b897896aedb99e66acd1b631fa191c26",
+        "chunk_33c838be7974efc6368cb6dab4d32af37e9cee895117102f",
+        "chunk_b69eb70ae899c940c1421cefacf8442bdc5b68e1ab0dafa9",
+        "chunk_22a0d6f5c5258226685fde1763b4ebb3f4ec1e038f0e56db",
+        "chunk_f6bb89c549eadc134a46a2302556e2985b91cf6917ff1122"
+      ],
+      "same_request_replay": false,
+      "fault": null,
+      "refund_type": "return",
+      "label_origin": "assistant_authored_synthetic_not_human_gold"
+    },
+    {
+      "case_id": "LC-02",
+      "name": "short_confirm",
+      "transport": "websocket",
+      "turns": [
+        {
+          "turn_id": "t1",
+          "message": "ORD981002外壳破损，请帮我准备退货退款。",
+          "expected_task_states": [
+            "waiting_input"
+          ],
+          "applications": 0,
+          "previews": 0,
+          "waiting_for": "reason"
+        },
+        {
+          "turn_id": "t2",
+          "message": "收到时商品外壳已经破损",
+          "expected_task_states": [
+            "waiting_confirmation"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": "refund_confirmation"
+        },
+        {
+          "turn_id": "t3",
+          "message": "确认提交这笔退货退款申请。",
+          "expected_task_states": [
+            "completed"
+          ],
+          "applications": 1,
+          "previews": 1,
+          "waiting_for": null
+        }
+      ],
+      "orders": [
+        {
+          "order_id": "ORD981002",
+          "user_id": 101,
+          "status_code": "delivered",
+          "status": "已签收",
+          "total_amount": "99.10"
+        }
+      ],
+      "source_ids": [
+        "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+        "chunk_1dd23947b028c6b4b897896aedb99e66acd1b631fa191c26",
+        "chunk_33c838be7974efc6368cb6dab4d32af37e9cee895117102f",
+        "chunk_b69eb70ae899c940c1421cefacf8442bdc5b68e1ab0dafa9",
+        "chunk_22a0d6f5c5258226685fde1763b4ebb3f4ec1e038f0e56db",
+        "chunk_f6bb89c549eadc134a46a2302556e2985b91cf6917ff1122"
+      ],
+      "same_request_replay": false,
+      "fault": null,
+      "refund_type": "return",
+      "label_origin": "assistant_authored_synthetic_not_human_gold"
+    },
+    {
+      "case_id": "LC-03",
+      "name": "negative",
+      "transport": "rest",
+      "turns": [
+        {
+          "turn_id": "t1",
+          "message": "ORD981003收到时商品外壳已经破损，请帮我准备退货退款。",
+          "expected_task_states": [
+            "waiting_confirmation"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": "refund_confirmation"
+        },
+        {
+          "turn_id": "t2",
+          "message": "不确认提交这笔退货退款申请。",
+          "expected_task_states": [
+            "waiting_confirmation",
+            "waiting_input",
+            "cancelled",
+            "stopped",
+            "completed"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": null
+        }
+      ],
+      "orders": [
+        {
+          "order_id": "ORD981003",
+          "user_id": 101,
+          "status_code": "delivered",
+          "status": "已签收",
+          "total_amount": "99.10"
+        }
+      ],
+      "source_ids": [
+        "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+        "chunk_1dd23947b028c6b4b897896aedb99e66acd1b631fa191c26",
+        "chunk_33c838be7974efc6368cb6dab4d32af37e9cee895117102f",
+        "chunk_b69eb70ae899c940c1421cefacf8442bdc5b68e1ab0dafa9",
+        "chunk_22a0d6f5c5258226685fde1763b4ebb3f4ec1e038f0e56db",
+        "chunk_f6bb89c549eadc134a46a2302556e2985b91cf6917ff1122"
+      ],
+      "same_request_replay": false,
+      "fault": null,
+      "refund_type": "return",
+      "label_origin": "assistant_authored_synthetic_not_human_gold"
+    },
+    {
+      "case_id": "LC-04",
+      "name": "conditional",
+      "transport": "websocket",
+      "turns": [
+        {
+          "turn_id": "t1",
+          "message": "ORD981004收到时商品外壳已经破损，请帮我准备退货退款。",
+          "expected_task_states": [
+            "waiting_confirmation"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": "refund_confirmation"
+        },
+        {
+          "turn_id": "t2",
+          "message": "如果已签收，就确认提交这笔退货退款申请。",
+          "expected_task_states": [
+            "waiting_confirmation",
+            "waiting_input",
+            "cancelled",
+            "stopped",
+            "completed"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": null
+        }
+      ],
+      "orders": [
+        {
+          "order_id": "ORD981004",
+          "user_id": 101,
+          "status_code": "delivered",
+          "status": "已签收",
+          "total_amount": "99.10"
+        }
+      ],
+      "source_ids": [
+        "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+        "chunk_1dd23947b028c6b4b897896aedb99e66acd1b631fa191c26",
+        "chunk_33c838be7974efc6368cb6dab4d32af37e9cee895117102f",
+        "chunk_b69eb70ae899c940c1421cefacf8442bdc5b68e1ab0dafa9",
+        "chunk_22a0d6f5c5258226685fde1763b4ebb3f4ec1e038f0e56db",
+        "chunk_f6bb89c549eadc134a46a2302556e2985b91cf6917ff1122"
+      ],
+      "same_request_replay": false,
+      "fault": null,
+      "refund_type": "return",
+      "label_origin": "assistant_authored_synthetic_not_human_gold"
+    },
+    {
+      "case_id": "LC-05",
+      "name": "change_order",
+      "transport": "rest",
+      "turns": [
+        {
+          "turn_id": "t1",
+          "message": "ORD981005收到时商品外壳已经破损，请帮我准备退货退款。",
+          "expected_task_states": [
+            "waiting_confirmation"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": "refund_confirmation"
+        },
+        {
+          "turn_id": "t2",
+          "message": "改成ORD981099，只查这笔，先不要退款。",
+          "expected_task_states": [
+            "waiting_confirmation",
+            "waiting_input",
+            "cancelled",
+            "stopped",
+            "completed"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": null
+        }
+      ],
+      "orders": [
+        {
+          "order_id": "ORD981005",
+          "user_id": 101,
+          "status_code": "delivered",
+          "status": "已签收",
+          "total_amount": "99.10"
+        },
+        {
+          "order_id": "ORD981099",
+          "user_id": 101,
+          "status_code": "delivered",
+          "status": "已签收",
+          "total_amount": "59.10"
+        }
+      ],
+      "source_ids": [
+        "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+        "chunk_1dd23947b028c6b4b897896aedb99e66acd1b631fa191c26",
+        "chunk_33c838be7974efc6368cb6dab4d32af37e9cee895117102f",
+        "chunk_b69eb70ae899c940c1421cefacf8442bdc5b68e1ab0dafa9",
+        "chunk_22a0d6f5c5258226685fde1763b4ebb3f4ec1e038f0e56db",
+        "chunk_f6bb89c549eadc134a46a2302556e2985b91cf6917ff1122"
+      ],
+      "same_request_replay": false,
+      "fault": null,
+      "refund_type": "return",
+      "label_origin": "assistant_authored_synthetic_not_human_gold"
+    },
+    {
+      "case_id": "LC-06",
+      "name": "type_mismatch",
+      "transport": "websocket",
+      "turns": [
+        {
+          "turn_id": "t1",
+          "message": "ORD981006收到时商品外壳已经破损，请帮我准备换货申请。",
+          "expected_task_states": [
+            "waiting_confirmation"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": "refund_confirmation"
+        },
+        {
+          "turn_id": "t2",
+          "message": "确认提交这笔退货退款申请。",
+          "expected_task_states": [
+            "waiting_confirmation",
+            "waiting_input",
+            "cancelled",
+            "stopped",
+            "completed"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": null
+        }
+      ],
+      "orders": [
+        {
+          "order_id": "ORD981006",
+          "user_id": 101,
+          "status_code": "delivered",
+          "status": "已签收",
+          "total_amount": "99.10"
+        }
+      ],
+      "source_ids": [
+        "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+        "chunk_1dd23947b028c6b4b897896aedb99e66acd1b631fa191c26",
+        "chunk_33c838be7974efc6368cb6dab4d32af37e9cee895117102f",
+        "chunk_b69eb70ae899c940c1421cefacf8442bdc5b68e1ab0dafa9",
+        "chunk_22a0d6f5c5258226685fde1763b4ebb3f4ec1e038f0e56db",
+        "chunk_f6bb89c549eadc134a46a2302556e2985b91cf6917ff1122"
+      ],
+      "same_request_replay": false,
+      "fault": null,
+      "refund_type": "exchange",
+      "label_origin": "assistant_authored_synthetic_not_human_gold"
+    },
+    {
+      "case_id": "LC-07",
+      "name": "historical",
+      "transport": "rest",
+      "turns": [
+        {
+          "turn_id": "t1",
+          "message": "ORD981007收到时商品外壳已经破损，请帮我准备退货退款。",
+          "expected_task_states": [
+            "waiting_confirmation"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": "refund_confirmation"
+        },
+        {
+          "turn_id": "t2",
+          "message": "之前说过确认提交这笔退货退款申请，现在先不要提交。",
+          "expected_task_states": [
+            "waiting_confirmation",
+            "waiting_input",
+            "cancelled",
+            "stopped",
+            "completed"
+          ],
+          "applications": 0,
+          "previews": 1,
+          "waiting_for": null
+        }
+      ],
+      "orders": [
+        {
+          "order_id": "ORD981007",
+          "user_id": 101,
+          "status_code": "delivered",
+          "status": "已签收",
+          "total_amount": "99.10"
+        }
+      ],
+      "source_ids": [
+        "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+        "chunk_1dd23947b028c6b4b897896aedb99e66acd1b631fa191c26",
+        "chunk_33c838be7974efc6368cb6dab4d32af37e9cee895117102f",
+        "chunk_b69eb70ae899c940c1421cefacf8442bdc5b68e1ab0dafa9",
+        "chunk_22a0d6f5c5258226685fde1763b4ebb3f4ec1e038f0e56db",
+        "chunk_f6bb89c549eadc134a46a2302556e2985b91cf6917ff1122"
+      ],
+      "same_request_replay": false,
+      "fault": null,
+      "refund_type": "return",
+      "label_origin": "assistant_authored_synthetic_not_human_gold"
+    }
+  ],
+  "fixed_turns": 16,
+  "max_new_http": 96,
+  "stop_on_first_failure": true,
+  "automatic_retry": false
+}

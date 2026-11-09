@@ -69,15 +69,20 @@ try {
     foreach ($p in $profiles) {
         $composeArgs += @("--profile", $p)
     }
-    docker compose @composeArgs up -d --build
-    if ($LASTEXITCODE -ne 0) { throw "docker compose up 失败（退出码 $LASTEXITCODE）" }
+    docker compose @composeArgs build app
+    if ($LASTEXITCODE -ne 0) { throw "docker compose build 失败（退出码 $LASTEXITCODE）" }
+    docker compose @composeArgs up -d mysql redis milvus
+    if ($LASTEXITCODE -ne 0) { throw "依赖启动失败（退出码 $LASTEXITCODE）" }
 
     # 4. 可选：数据库迁移
     if (-not $NoMigrate) {
         Write-Host "[4/4] 执行数据库迁移：alembic upgrade head …"
-        docker compose run --rm app alembic upgrade head
+        docker compose run --rm --no-deps app alembic upgrade head
         if ($LASTEXITCODE -ne 0) { throw "alembic 迁移失败（退出码 $LASTEXITCODE）" }
     }
+
+    docker compose @composeArgs up -d --no-build
+    if ($LASTEXITCODE -ne 0) { throw "应用及Worker启动失败（退出码 $LASTEXITCODE）" }
 
     # 可选：灌入演示数据
     if (-not $SkipSeed) {

@@ -8,11 +8,13 @@ from contextvars import ContextVar
 from copy import deepcopy
 import time
 import logging
+import json
 from typing import Optional, Tuple, List, Dict, Any, Literal
-from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from app.agent.request_context import bounded_history
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
 
 from app.config.config import settings
@@ -85,6 +87,8 @@ class LLMResponse(BaseModel):
 
 class IntentClassification(BaseModel):
     """Structured intent contract used only for low-confidence fallback."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
 
     intent: Literal[
         "query_order",
@@ -365,9 +369,17 @@ class LLMService:
         if not self.is_available():
             return None
 
-        prompt = "你是客服意图分类器。返回query_order/refund/complaint/technical/promotion/human/general、confidence和need_clarification。"
+        prompt = (
+            "你是客服意图分类器。返回query_order/refund/complaint/technical/promotion/human/general、"
+            "confidence和need_clarification。负面情绪不代表提交投诉，维修/使用问题优先归technical；"
+            "政策咨询与现在办理分开，客服转述不代表转人工。历史只解释指代，不能授权动作或证明当前事实。"
+            "对象不明、多订单不明或信息不足时need_clarification=true。confidence只是模型自报观察。"
+        )
         payload = __import__("json").dumps(
-            {"current": message, "history": (context or [])[-6:]}, ensure_ascii=False
+            {"current": message, "history": [
+                {"role": item.role, "content": item.content}
+                for item in bounded_history(context or [], message, remove_current=False)
+            ]}, ensure_ascii=False
         )
         parsed = await self.run_structured(
             prompt, payload, IntentClassification, tags=["intent"], prefer_local=True
@@ -383,6 +395,8 @@ class LLMService:
         tags: Optional[list[str]] = None,
         prefer_local: bool = False,
         max_tokens: int | None = None,
+        single_attempt: bool = False,
+        strict_json_object: bool = False,
     ) -> Optional[BaseModel]:
         """Run one structured (JSON-schema) completion against the active models.
 
@@ -393,28 +407,32 @@ class LLMService:
         prefer_local=True（查询改写）时本地模型优先、主链兜底；默认（judge 等）
         仅走主链外接。
         """
+        self.last_call_metadata = {"purpose": (tags or ["structured"])[0], "failure_code": None}
         if not self.is_available():
+            self.last_call_metadata["failure_code"] = "provider_not_configured"
             return None
 
+        if strict_json_object:
+            system_prompt += ('\n返回一个严格JSON对象。所有字段名与字符串枚举必须使用双引号；'
+                '例如"answerability":"full"。禁止Markdown、函数调用和额外文本。'
+                '\n完整JSON Schema（严格遵循，枚举仍由客户端校验）：\n'+
+                json.dumps(contract.model_json_schema(),ensure_ascii=False,separators=(',',':')))
         messages = [
             SystemMessage(content=_ensure_json_hint(system_prompt)),
             HumanMessage(content=self.redactor.redact(user_text)),
         ]
-        for attempt, model in enumerate(
-            self._analytic_models(prefer_local=prefer_local)
-        ):
+        models = self._analytic_models(prefer_local=prefer_local)
+        for attempt, model in enumerate(models[:1] if single_attempt else models):
             if not model.api_key or not self.circuit_breaker.can_execute(model.name):
                 continue
             try:
-                structured_model = self._with_structured_output(
-                    self._get_chat_model(
+                chat_model = self._get_chat_model(
                         model,
                         temperature=ANALYTIC_TEMPERATURE,
                         max_tokens=max_tokens or ANALYTIC_MAX_TOKENS,
-                    ),
-                    contract,
-                    model,
-                )
+                    )
+                structured_model = (self._strict_json_output(chat_model,contract)
+                    if strict_json_object else self._with_structured_output(chat_model,contract,model))
                 result = await self._gateway_invoke(
                     model,
                     messages,
@@ -432,15 +450,26 @@ class LLMService:
                     else contract.model_validate(result)
                 )
                 self.circuit_breaker.record_success(model.name)
+                self.last_call_metadata["failure_code"] = None
+                if (tags or [""])[0] == "llm_judge" and self.last_call_metadata.get("judge_receipt"):
+                    object.__setattr__(parsed, "_judge_diagnostic_receipt", self.last_call_metadata["judge_receipt"])
                 return parsed
             except Exception as exc:
+                from app.services.model_failure import failure_code, ADMISSION_CODES
+                code = failure_code(exc)
+                self.last_call_metadata["failure_code"] = code
+                # Local budget/scope refusal is not a supplier outage and must
+                # not open its circuit breaker or try another provider.
+                if code in ADMISSION_CODES:
+                    return None
                 self.circuit_breaker.record_failure(model.name)
                 logger.warning(
                     "结构化 LLM 调用失败 (%s): %s",
                     getattr(contract, "__name__", "contract"),
                     type(exc).__name__,
                 )
-                await asyncio.sleep(self.RETRY_DELAY * (2**attempt))
+                if not single_attempt:
+                    await asyncio.sleep(self.RETRY_DELAY * (2**attempt))
         return None
 
     async def _gateway_invoke(
@@ -474,6 +503,19 @@ class LLMService:
                 and isinstance(result, dict)
                 and "parsed" in result
             ):
+                if purpose == "llm_judge":
+                    import hashlib
+                    raw = result.get("raw")
+                    body = getattr(raw, "content", "")
+                    body = body if isinstance(body, str) else ""
+                    self.last_call_metadata["judge_receipt"] = {
+                        "body_sha256": hashlib.sha256(body.encode()).hexdigest(),
+                        "body_bytes": len(body.encode()),
+                        "redacted_excerpt": self.redactor.redact(body)[:2048],
+                        "finish_reason": getattr(raw, "response_metadata", {}).get("finish_reason"),
+                        "parsed": self.redactor.redact_value(result["parsed"].model_dump()) if result.get("parsed") is not None else None,
+                        "parse_failure": bool(result.get("parsing_error")),
+                    }
                 if result.get("parsing_error") or result["parsed"] is None:
                     raise ValueError("structured_contract_invalid")
                 self.last_call_metadata.update(
@@ -652,9 +694,15 @@ class LLMService:
         # 结构化输出路径：保留 JSON 提示（部分供应商 json_object 模式要求 messages 含 json 字样）。
         messages = self._build_messages(message, context, force_json=True)
 
+        from app.agent.item_reply import ITEM_REPLY_IDS,reply_contract,render_reply
+        ids=ITEM_REPLY_IDS.get()
+        contract=reply_contract(LLMResponse,ids) if ids else LLMResponse
+        if ids:
+            messages[0].content+='\n逐项正文只填写item_replies固定字段，每项回答对应诉求；服务端生成编号和排版，不输出reply，不在正文写【i编号】。'
+
         chat_model = self._get_chat_model(model)
         structured_model = (
-            self._with_structured_output(chat_model, LLMResponse, model)
+            self._with_structured_output(chat_model, contract, model)
             if hasattr(chat_model, "with_structured_output")
             else chat_model
         )
@@ -664,18 +712,19 @@ class LLMService:
             messages,
             structured_model,
             "generation",
-            LLMResponse.__name__,
+            contract.__name__,
             user_id=user_id,
             run_id=session_id,
             extra_input_tokens=len(
-                __import__("json").dumps(LLMResponse.model_json_schema()).encode()
+                __import__("json").dumps(contract.model_json_schema()).encode()
             ),
         )
 
         if isinstance(response, LLMResponse):
-            reply = response.reply
+            reply = render_reply(response,ids) if ids else response.reply
             response_intent = response.intent
             self.last_call_metadata["structured_output"] = response.model_dump()
+            self.last_call_metadata['structured_output']['reply']=reply
         else:
             reply = self._message_content(response)
             response_intent = self.detect_intent(message)
@@ -890,6 +939,35 @@ class LLMService:
         return messages
 
     @staticmethod
+    def _strict_json_output(chat_model: ChatOpenAI, contract: type[BaseModel]):
+        """Request constrained JSON; never use a partial/Markdown/repair parser."""
+        target=chat_model.bind(response_format={"type":"json_object"})
+        async def invoke(messages):
+            raw=await target.ainvoke(messages)
+            try:
+                if (getattr(raw,"tool_calls",None) or getattr(raw,"invalid_tool_calls",None)
+                        or raw.additional_kwargs.get("tool_calls")
+                        or raw.response_metadata.get("finish_reason")!='stop'
+                        or not isinstance(raw.content,str)):
+                    raise ValueError("strict_json_response_incomplete_or_wrong_channel")
+                def pairs(entries):
+                    result={}
+                    for key,value in entries:
+                        if key in result: raise ValueError("duplicate_json_key")
+                        result[key]=value
+                    return result
+                def reject_constant(value): raise ValueError("nonfinite_json_constant")
+                value=json.loads(raw.content,object_pairs_hook=pairs,parse_constant=reject_constant)
+                if not isinstance(value,dict): raise ValueError("json_object_required")
+                parsed=contract.model_validate(value)
+            except (ValueError,TypeError) as exc:
+                if settings.LLM_GATEWAY_ENABLED:
+                    return {"raw":raw,"parsed":None,"parsing_error":exc}
+                raise
+            return {"raw":raw,"parsed":parsed,"parsing_error":None} if settings.LLM_GATEWAY_ENABLED else parsed
+        return RunnableLambda(invoke)
+
+    @staticmethod
     def _with_structured_output(
         chat_model: ChatOpenAI, contract: type[BaseModel], model: ModelConfig
     ):
@@ -907,10 +985,11 @@ class LLMService:
         self,
         model: ModelConfig,
         streaming: bool = False,
-        temperature: float = 0.7,
+        temperature: float | None = None,
         max_tokens: Optional[int] = None,
     ) -> ChatOpenAI:
         """Create one LangChain ChatOpenAI instance per configured model."""
+        temperature = settings.LLM_GENERATION_TEMPERATURE if temperature is None else temperature
         limit = min(settings.LLM_MAX_TOKENS, self.budget_manager.policy.max_tokens)
         max_tokens = max_tokens or limit
         cache_key = f"{model.name}:{model.thinking_mode}:{'stream' if streaming else 'invoke'}:{temperature}:{max_tokens}"

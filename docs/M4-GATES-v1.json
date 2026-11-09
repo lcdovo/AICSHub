@@ -54,7 +54,7 @@
     },
     "AC-07-01": {
       "status": "PARTIAL",
-      "evidence_and_limit": "主请求/业务参数/预览/动作展示/同轮确认/证据/审查/工具观察/流程/计量已有类型；动作展示匹配预览与精确金额/状态，159项最新T0与2项真实MySQL/Redis业务复验通过。其他改写/观察/兼容键全面声明仍待收口，保持PARTIAL"
+      "evidence_and_limit": "主请求/业务参数/预览/动作展示/同轮确认/证据/审查/工具观察/流程/计量已有类型；动作展示匹配预览与精确金额/状态，159项最新T0与2项真实MySQL/Redis业务复验通过。其他改写/观察/兼容键全面声明仍待收口，保持PARTIAL；2026-11-05查询改写观察有界类型/轮次摘要/检索缓存同源已补齐，170项相关T0通过；其他兼容观察状态及真实质量仍未收口"
     },
     "AC-07-02": {
       "status": "PASS_C_ISOLATED",
@@ -622,5 +622,19 @@
     "partial": 11,
     "fail": 1,
     "layer_limited_pass": 18
+  },
+  "latest_offline_followup": {
+    "report": "reports/offline/20261105-000417-430263",
+    "passed": 1195,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 246.48,
+    "warnings": 10009,
+    "source_fingerprint": "143c7f6599015f930987c662199699bf7e24d47682983ac06698b6ac126155dd",
+    "source_tree_stable": true,
+    "source_snapshot_complete": true,
+    "blocked_network_operations": 0,
+    "layer": "T0 only; no model quality/capacity or deployment pass"
   }
 }

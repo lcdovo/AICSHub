@@ -1,0 +1,113 @@
+{
+  "origin": "real_provider_capture_synthetic_input",
+  "known_failure": "MI06 business consequence hidden as general_advice; MI16 answered+partial correctly blocked",
+  "responses": [
+    {
+      "operation": "layout-v1/E2E-MI-06/http-2",
+      "status": 200,
+      "response": {
+        "id": "2bff5313-45a9-4964-a6ad-06eb9267241b",
+        "object": "chat.completion",
+        "created": 1794072360,
+        "model": "deepseek-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "tool_calls": [
+                {
+                  "index": 0,
+                  "id": "call_00_xN6P18mhYK4Jq6OorWkp7625",
+                  "type": "function",
+                  "function": {
+                    "name": "LLMResponse",
+                    "arguments": "{\"item_replies\": {\"i1\": \"退货时请保留原包装。建议您将商品连同原包装、配件一并寄回，以免影响退货处理。\", \"i2\": \"关于退货运费由谁承担，目前我这边没有查到明确的运费承担规则，无法给您准确答复。建议您转接人工客服确认具体运费责任，或告知您的订单情况以便进一步核实。\"}, \"intent\": \"refund\", \"need_human\": true, \"grounded\": true, \"has_unsupported_claim\": false, \"fact_score\": 0.5, \"confidence\": 0.7}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 2355,
+          "completion_tokens": 224,
+          "total_tokens": 2579,
+          "prompt_tokens_details": {
+            "cached_tokens": 512
+          },
+          "prompt_cache_hit_tokens": 512,
+          "prompt_cache_miss_tokens": 1843
+        },
+        "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+      }
+    },
+    {
+      "operation": "layout-v1/E2E-MI-06/http-3",
+      "status": 200,
+      "response": {
+        "id": "85dc7b63-c8e6-414a-a29b-17044eb78cfe",
+        "object": "chat.completion",
+        "created": 1794072363,
+        "model": "deepseek-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"schema_version\":2,\"answerability\":\"partial\",\"response_behavior\":\"answer_with_limits\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"answer_quote\":\"退货时请保留原包装。\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\"},{\"item_id\":\"i2\",\"status\":\"limited\",\"answer_quote\":\"关于退货运费由谁承担，目前我这边没有查到明确的运费承担规则，无法给您准确答复。\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"unanswerable\"}],\"source_contract_version\":\"server-sentences.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"claims\":[{\"text\":\"退货时请保留原包装。\",\"support\":\"supported\",\"evidence\":[{\"fragment_id\":\"rjfeeefgigpejlikmcfcijaicjlipfbdmhgmbelaplkcglocnlpefkpodiinlbkno\"}],\"issues\":[]}]},\"s1\":{\"kind\":\"general_advice\"},\"s2\":{\"kind\":\"insufficient_notice\"},\"s3\":{\"kind\":\"clarification\"}}}"
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 4179,
+          "completion_tokens": 259,
+          "total_tokens": 4438,
+          "prompt_tokens_details": {
+            "cached_tokens": 1920
+          },
+          "prompt_cache_hit_tokens": 1920,
+          "prompt_cache_miss_tokens": 2259
+        },
+        "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+      }
+    },
+    {
+      "operation": "layout-v1/E2E-MI-16/http-6",
+      "status": 200,
+      "response": {
+        "id": "15490dd6-5022-4e42-b6a3-e8cdcc88aa77",
+        "object": "chat.completion",
+        "created": 1794072379,
+        "model": "deepseek-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"answer_quote\":\"已为您查询到订单ORD960001，当前状态为「已签收」，订单金额99.10元。\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\"},{\"item_id\":\"i2\",\"status\":\"answered\",\"answer_quote\":\"退货时需保留原包装，请勿丢弃或损坏。\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\"},{\"item_id\":\"i3\",\"status\":\"answered\",\"answer_quote\":\"因质量问题产生的退货运费由商家承担；非质量问题情况下的运费承担规则暂未查到，建议转接人工客服确认。\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"partial\"},{\"item_id\":\"i4\",\"status\":\"answered\",\"answer_quote\":\"退款将在审核通过后3个工作日内到账。\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\"}],\"source_contract_version\":\"server-sentences.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"claims\":[{\"text\":\"已为您查询到订单ORD960001，当前状态为「已签收」，订单金额99.10元。\",\"support\":\"supported\",\"evidence\":[{\"fragment_id\":\"rlnomliipggmcahnneebcldaefmpkkkichmfeiljnkafhfbmmfpiionamanknkbdk\"}],\"issues\":[]}]},\"s1\":{\"kind\":\"facts\",\"claims\":[{\"text\":\"退货时需保留原包装，请勿丢弃或损坏。\",\"support\":\"supported\",\"evidence\":[{\"fragment_id\":\"rmjlngfjbmfchmmiaapdnfmbpdhkmafcleiifdiplaepkbocipmalglhejnapacgg\"}],\"issues\":[]}]},\"s2\":{\"kind\":\"facts\",\"claims\":[{\"text\":\"因质量问题产生的退货运费由商家承担；非质量问题情况下的运费承担规则暂未查到，建议转接人工客服确认。\",\"support\":\"supported\",\"evidence\":[{\"fragment_id\":\"roecghckkpihnaflfjnmfabgllfpfhpabnmgmkjhcohfodmaoceljpdeeddpeimai\"}],\"issues\":[]}]},\"s3\":{\"kind\":\"facts\",\"claims\":[{\"text\":\"退款将在审核通过后3个工作日内到账。\",\"support\":\"supported\",\"evidence\":[{\"fragment_id\":\"rldhndcgjiabdhnlbekgnmooajoahndodcgbkpcccemcoieknmjlaielmlnhippdk\"}],\"issues\":[]}]}}}"
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 5381,
+          "completion_tokens": 597,
+          "total_tokens": 5978,
+          "prompt_tokens_details": {
+            "cached_tokens": 4096
+          },
+          "prompt_cache_hit_tokens": 4096,
+          "prompt_cache_miss_tokens": 1285
+        },
+        "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+      }
+    }
+  ]
+}

@@ -1,11 +1,11 @@
 """
-Agent 编排 - 基于官方 LangGraph 状态机的 13 节点业务编排（Phase 3 增强版）
+Agent 编排 - 基于官方 LangGraph 状态机的 16 节点业务编排
 
 图的骨架（StateGraph / interrupt / checkpointer）由官方 LangGraph 提供；
 本模块只保留图的装配与路由：LangGraph 编译、节点注册、run/run_stream/resume
 执行入口、意图→节点路由表，以及观察（Langfuse）注入。
 
-13 个节点的业务编排实现已拆分到 app/agent/nodes/ 包（按域划分意图识别、RAG、
+业务节点实现位于 app/agent/nodes/ 与 task_loop.py（按域划分意图识别、RAG、
 工具执行、响应生成、人工转接等），主图注册显式依赖组件及独立状态函数。
 类属性绑定仅保留旧内部兼容，保持
 ``self._node_xxx()`` 的既有调用契约不变，避免扩散修改调用方。
@@ -15,14 +15,14 @@ import asyncio
 import contextlib
 import logging
 import random
-from typing import AsyncGenerator, Dict, List, Optional, Any, Callable, TypedDict
+from typing import AsyncGenerator, Dict, Any, Callable, TypedDict
 from datetime import datetime
 
 from langchain_core.runnables import RunnableLambda
 from langgraph.graph import END as LANGGRAPH_END
 from langgraph.graph import StateGraph
 
-from app.agent.state import AgentState, AgentNode, IntentType
+from app.agent.state import AgentState, AgentNode
 from app.agent.redis_checkpoint import RedisCheckpointSaver
 from app.agent.intent import EnhancedIntentRecognizer
 from app.services.llm_governance import stable_gray_assignment
@@ -100,7 +100,7 @@ class AgentGraph:
     RAG_MIN_SCORE = 0.35
 
     # ---------- 节点实现绑定（app/agent/nodes/ 包） ----------
-    # 13 个 LangGraph 节点的业务编排已拆分至 nodes 包；此处通过类属性绑定，
+    # 旧内部节点入口通过类属性绑定保留；
     # 以下绑定仅保留旧内部直调契约，主图_register_nodes不使用这些私有方法。
     _node_start = start_node
     _node_end = end_node
@@ -247,7 +247,11 @@ class AgentGraph:
             state.add_trace(
                 node_name=node_name,
                 input_data={"message": state.user_message, "intent": state.detected_intent},
-                output_data={"next_node": next_node, "reply": state.reply[:100] if state.reply else ""},
+                output_data={"next_node": next_node, "reply": state.reply[:100] if state.reply else "",
+                    **({"task": {"task_id": state.task.task_id, "status": state.task.status,
+                        "decisions": state.task_runtime.decisions, "tool_calls": state.task_runtime.tool_calls,
+                        "next_action": state.task_runtime.next_step.action if state.task_runtime.next_step else None,
+                        "stop_reason": state.task.stop_reason}} if state.task and state.task_runtime else {})},
                 duration_ms=int((time.time() - node_start) * 1000),
             )
             if next_node == AgentNode.END:
@@ -269,16 +273,14 @@ class AgentGraph:
         from app.agent.nodes.intent_node import (
             IntentNode, IntentDependencies, RoutingNode, RoutingDependencies,
             ClarificationNode, ClarificationDependencies, fill_slots,
-            detect_escalation, is_refund_inquiry, is_complaint_inquiry, required_slots, intent_destination,
+            detect_escalation,
         )
         self.nodes[AgentNode.START] = begin_turn
         self.nodes[AgentNode.INTENT_RECOGNITION] = IntentNode(IntentDependencies(
             self.intent_recognizer, lambda: self.llm_service, is_refund_confirmed, refund_cancelled,
             is_smalltalk, detect_escalation, persistent_actions(),
         ))
-        self.nodes[AgentNode.ROUTE_DECISION] = RoutingNode(RoutingDependencies(
-            extract_info, is_refund_inquiry, is_complaint_inquiry, required_slots, intent_destination,
-        ))
+        self.nodes[AgentNode.ROUTE_DECISION] = RoutingNode(RoutingDependencies(extract_info))
         self.nodes[AgentNode.SLOT_FILLING] = fill_slots
         self.nodes[AgentNode.QUERY_REWRITE] = QueryRewriteNode(QueryRewriteDependencies(self.llm_rewriter))
         self.nodes[AgentNode.CLARIFICATION] = ClarificationNode(ClarificationDependencies(self.intent_recognizer))
@@ -291,6 +293,11 @@ class AgentGraph:
             extract_info, select_tools, is_refund_confirmed, invoke_registered_tool, persistent_actions(),
         ))
         self.nodes[AgentNode.RESULT_VERIFICATION] = verify_tool_result
+        from app.agent.task_loop import TaskDecisionNode, TaskExecutionNode, observe_task
+        self.nodes[AgentNode.TASK_DECISION] = TaskDecisionNode(lambda: self.llm_service)
+        self.nodes[AgentNode.TASK_EXECUTION] = TaskExecutionNode(
+            self.nodes[AgentNode.RAG_RETRIEVAL], persistent_actions())
+        self.nodes[AgentNode.TASK_OBSERVATION] = observe_task
         from app.agent.nodes.response_node import ResponseNode, ResponseServices
         from app.services.user_memory import get_user_memory_service
         self.nodes[AgentNode.RESPONSE_GENERATION] = ResponseNode(ResponseServices(

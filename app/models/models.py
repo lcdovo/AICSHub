@@ -173,6 +173,7 @@ class RefundAction(Base):
     status = Column(String(20), nullable=False, default="pending")
     expires_at = Column(DateTime, nullable=False)
     application_id = Column(String(36), nullable=True)
+    preconditions = Column(JSON, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
@@ -550,3 +551,57 @@ class ModelConcurrencySlot(Base):
     id=Column(Integer,primary_key=True)
     call_id=Column(String(36),nullable=True)
     expires_at=Column(DateTime,nullable=True)
+
+
+class AgentTask(Base):
+    """跨轮任务进度；不保存可作为下一轮执行许可的旧事实或确认。"""
+    __tablename__ = "agent_tasks"
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    actor_id = Column(Integer, nullable=False)
+    session_id = Column(String(36), ForeignKey("sessions.id"), nullable=False, index=True)
+    last_run_id = Column(String(36), ForeignKey("chat_runs.id"), nullable=True, index=True)
+    version = Column(Integer, nullable=False, default=1)
+    status = Column(String(30), nullable=False, index=True)
+    progress = Column(JSON, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class AgentTaskStep(Base):
+    """只记录能力执行审计和摘要hash；真实证据仍留在所属Run内。"""
+    __tablename__ = "agent_task_steps"
+    __table_args__ = (UniqueConstraint("task_id", "run_key", "sequence", name="uq_task_run_step"),)
+    id = Column(String(36), primary_key=True)
+    task_id = Column(String(36), ForeignKey("agent_tasks.id"), nullable=False, index=True)
+    run_key = Column(String(80), nullable=False)
+    sequence = Column(Integer, nullable=False)
+    action = Column(String(40), nullable=False)
+    capability = Column(String(80), nullable=False)
+    status = Column(String(20), nullable=False)
+    input_digest = Column(String(64), nullable=False)
+    error_code = Column(String(80), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class AgentCapabilityCall(Base):
+    """派发前后独立提交的执行账本；不保存凭据、原始工具结果或可复用证据。"""
+    __tablename__ = "agent_capability_calls"
+    __table_args__ = (UniqueConstraint("run_id", "call_key", name="uq_run_capability_call"),)
+    id = Column(String(36), primary_key=True)
+    run_id = Column(String(36), ForeignKey("chat_runs.id"), nullable=False, index=True)
+    task_id = Column(String(36), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    actor_id = Column(Integer, nullable=False)
+    session_id = Column(String(36), ForeignKey("sessions.id"), nullable=False)
+    capability = Column(String(80), nullable=False)
+    effect = Column(String(10), nullable=False)
+    call_key = Column(String(64), nullable=False)
+    input_digest = Column(String(64), nullable=False)
+    status = Column(String(20), nullable=False, default="running")
+    resource_id = Column(String(100), nullable=True)
+    result_digest = Column(String(64), nullable=True)
+    error_code = Column(String(80), nullable=True)
+    task_progress = Column(JSON, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    finished_at = Column(DateTime, nullable=True)

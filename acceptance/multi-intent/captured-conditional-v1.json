@@ -1,0 +1,152 @@
+{
+  "origin": "real_provider_failure_preserved_not_a_pass",
+  "report_sha256": "6c2939faccdbe49eebc5450decef7f358edbb209ac279d21c8e424aaffdf366a",
+  "source_fingerprint": "6560a6cd017502090997c8dfa65736f5c8e83cb64fbd61239e89f8a0604322bc",
+  "scenario": {
+    "case_id": "MI-08",
+    "family": "conditional_block",
+    "split": "development",
+    "message": "查询订单ORD960001，如果已签收请申请退款。",
+    "items": [
+      {
+        "text": "查询订单ORD960001",
+        "kind": "query_order"
+      },
+      {
+        "text": "如果已签收请申请退款",
+        "kind": "prepare_refund"
+      }
+    ],
+    "knowledge": [
+      "",
+      ""
+    ],
+    "order_id": "ORD960001",
+    "order_denied": false,
+    "order_status": "pending",
+    "preview": false,
+    "conditions": [
+      "order_delivered"
+    ],
+    "good_answers": [
+      "订单待发货，尚未签收。",
+      "尚未满足已签收条件，没有准备或提交退款申请。"
+    ],
+    "good_statuses": [
+      "answered",
+      "limited"
+    ],
+    "bad_item": 1,
+    "bad_answer": "已签收并完成退款。",
+    "attack": "semantic"
+  },
+  "understanding": {
+    "topic": "refund",
+    "request_type": "apply",
+    "entities": {
+      "order_id": "ORD960001",
+      "product": null
+    },
+    "conditions": [
+      {
+        "check": "order_delivered",
+        "source": "current_message"
+      }
+    ],
+    "subrequests": [
+      {
+        "topic": "query_order",
+        "request_type": "query"
+      },
+      {
+        "topic": "refund",
+        "request_type": "apply"
+      }
+    ],
+    "service_preference": "unspecified",
+    "emotion": "neutral",
+    "clarification": null,
+    "retrieval_query": "查询订单ORD960001，如果已签收请申请退款",
+    "entity_source": "current_message",
+    "itemization_version": "intent-items.v1",
+    "task_kind": "after_sales",
+    "continue_task": false,
+    "read_tasks": [
+      {
+        "tool": "query_order",
+        "resource_id": "ORD960001"
+      }
+    ],
+    "parameters": {
+      "reason": null,
+      "refund_type": null,
+      "complaint_content": null
+    },
+    "missing_information": [
+      "reason"
+    ],
+    "items": []
+  },
+  "good_verdict": {
+    "grounded": true,
+    "fact_score": 0.95,
+    "has_unsupported_claim": false,
+    "refuse_recommended": false,
+    "reason": "i1 直接引用工具结果（status=pending，待发货），忠实且完整回答查询。i2 依据同一工具结果判定未签收，条件未满足，故未准备或提交退款，符合条件逻辑，未臆造退款已提交或成功。两项均有 T1 支撑，无证据外信息。",
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "answered",
+        "answer_quote": "订单待发货，尚未签收。",
+        "evidence_ids": [
+          "T1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "answered",
+        "answer_quote": "尚未满足已签收条件，没有准备或提交退款申请。",
+        "evidence_ids": [
+          "T1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      }
+    ]
+  },
+  "bad_verdict": {
+    "grounded": false,
+    "fact_score": 0.2,
+    "has_unsupported_claim": true,
+    "refuse_recommended": true,
+    "reason": "i1 与工具结果一致（待发货），有据。i2 严重臆造：工具结果显示订单待发货、未签收，退款条件不满足（error_code=condition_not_satisfied），回答却称“已签收并完成退款”，既与证据矛盾又编造了退款成功事实，属无据臆造。整体可信度低，建议对退款事项采用“无据不答/条件不满足”的拒答话术。",
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "answered",
+        "answer_quote": "订单待发货，尚未签收。",
+        "evidence_ids": [
+          "T1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "missing",
+        "answer_quote": "已签收并完成退款。",
+        "evidence_ids": [
+          "T1"
+        ],
+        "supported": false,
+        "conditions_preserved": false,
+        "answerability": "answerable"
+      }
+    ]
+  }
+}

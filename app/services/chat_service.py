@@ -28,7 +28,7 @@ class ChatService:
         self.agent_graph = agent_graph
 
     async def hydrate_state(self, session_id: str, user_id: int, message: str, *, action_id: str | None = None,
-                            recover_from_db: bool = False) -> AgentState:
+                            recover_from_db: bool = False, task_loop_enabled: bool | None = None) -> AgentState:
         try:
             saved = await session_manager.get_state(session_id)
         except SessionLeaseError:
@@ -54,6 +54,10 @@ class ChatService:
                 if persisted.user_id != user_id:
                     raise SessionLeaseError("会话归属不匹配")
                 state.session_version = persisted.version
+                # SQL为任务恢复权威；Redis/checkpoint只能提供历史背景。
+                from app.services.agent_tasks import load_pending_task
+                restore_tasks = settings.AGENT_TASK_LOOP_ENABLED if task_loop_enabled is None else task_loop_enabled
+                state.task = await load_pending_task(db, user_id, session_id) if restore_tasks else None
                 projection = persisted.context_data or {}
                 state.collected_info = dict(projection.get("collected_info") or {})
                 state.pending_confirmations = list(projection.get("pending_confirmations") or [])
@@ -186,6 +190,8 @@ class ChatService:
         ))
 
         tracer = get_tracer()
+        tracer.record_chat(latency_ms=state.execution_time_ms or 0,
+            accepted=bool(state.review_result and state.review_result.passed))
         tracer.record_intent(state.detected_intent, state.intent_confidence)
         tracer.record_evaluation(evaluation.overall_score, evaluation.is_low_score)
         from app.agent.handoff_evidence import matching_handoff_receipt
@@ -217,6 +223,7 @@ class ChatService:
             tracer.record_tool_call(tool_call.tool_name, tool_call.success)
             if tool_call.tool_name == "hybrid_search" and isinstance(tool_call.result, dict):
                 meta = tool_call.result.get("meta", {})
+                tracer.record_local_model_events(meta.get("local_inference", []))
                 tracer.record_rag(
                     latency_ms=tool_call.result.get("execution_time_ms", 0),
                     empty=not bool(tool_call.result.get("results")),
@@ -250,6 +257,9 @@ class ChatService:
         session.message_count += 1
         session.last_intent = state.detected_intent
         session.updated_at = datetime.utcnow()
+        if state.task is not None or state.superseded_task_id:
+            from app.services.agent_tasks import persist_task
+            await persist_task(db, state)
         if not commit:
             return assistant_message, evaluation
         await db.commit()

@@ -10,8 +10,8 @@ Reranker 服务 - RAG 检索结果重排（模型 reranker）
 约定：
 - 未配置任何 provider 时 is_available() 为 False，不创建客户端、不发请求。
 - 单个 provider 失败/超时记 warning 后继续尝试下一个；全部失败返回 None，
-  由调用方（KnowledgeBaseService._rerank）回退启发式重排，不阻塞主链路。
-- 所有调用为同步 httpx（_search_milvus/_compose_result 均在 to_thread 中执行，
+  由版本化检索保留RRF融合排名，不阻塞主链路。
+- 所有调用为同步 httpx（版本化检索在 to_thread 中执行，
   不会阻塞事件循环）；超时严格，无重试。
 """
 import logging
@@ -36,9 +36,8 @@ MAX_CANDIDATES = 24
 # 单个候选输入重排器的内容长度上限，防止超长片段撑爆输入。
 MAX_DOC_CHARS = 2000
 # 仅对已验证逐query/document独立打分的本地BGE模型分批，不改变外部供应商请求数。
-LOCAL_BATCH_SIZE = 4
 LOCAL_BATCH_WORKERS = 2
-RERANK_ALGORITHM_VERSION = "local-bge-batch4-parallel2-v1"
+RERANK_ALGORITHM_VERSION = "local-bge-configurable-batch-parallel2-v2"
 _LOCAL_BATCH_POOL = ThreadPoolExecutor(max_workers=LOCAL_BATCH_WORKERS, thread_name_prefix="rag-rerank")
 _LOCAL_BATCH_SLOTS = threading.BoundedSemaphore(LOCAL_BATCH_WORKERS)
 _RERANK_DEADLINE: ContextVar[float | None] = ContextVar("rerank_deadline", default=None)
@@ -245,10 +244,14 @@ class RerankerService:
             return None
         deadline = deadline if deadline is not None else time.monotonic() + sum(p.timeout for p in self._providers)
 
+        from app.services.knowledge_base.retrieval_text import retrieval_text
         docs = [
-            str(c.get("content") or "")[:MAX_DOC_CHARS]
+            retrieval_text(c)
             for c in candidates[:MAX_CANDIDATES]
         ]
+        if any(len(doc) > MAX_DOC_CHARS for doc in docs):
+            logger.warning("Reranker输入超出文本预算，保留召回排名，避免截断例外条款")
+            return None
         if not docs:
             return None
 
@@ -257,7 +260,10 @@ class RerankerService:
                 return None
             token = _RERANK_DEADLINE.set(deadline)
             try:
-                if provider.name == PROVIDER_LOCAL and provider.model == "BAAI/bge-reranker-large" and len(docs) > LOCAL_BATCH_SIZE:
+                from app.config.config import settings
+                if (provider.name == PROVIDER_LOCAL and provider.model == "BAAI/bge-reranker-large"
+                        and len(docs) > settings.RERANKER_LOCAL_BATCH_SIZE
+                        and (len(docs) + settings.RERANKER_LOCAL_BATCH_SIZE - 1)//settings.RERANKER_LOCAL_BATCH_SIZE > LOCAL_BATCH_WORKERS):
                     scored = self._local_batches(provider, query, docs, deadline)
                 else:
                     scored = provider.rerank(query, docs, top_n=len(docs))
@@ -300,6 +306,8 @@ class RerankerService:
     @staticmethod
     def _local_batches(provider, query: str, docs: list[str], deadline: float):
         """全池最多2个推理任务，无无界等待队列；超时后不再派发后续批次。"""
+        from app.config.config import settings
+        batch_size = settings.RERANKER_LOCAL_BATCH_SIZE
         pending = {}
         scored = []
         offset = 0
@@ -328,7 +336,7 @@ class RerankerService:
                             break
                         if not slots.acquire(timeout=max(0, deadline - time.monotonic())):
                             raise RuntimeError("rerank_batch_pool_busy")
-                    texts = docs[offset:offset + LOCAL_BATCH_SIZE]
+                    texts = docs[offset:offset + batch_size]
                     try:
                         future = _LOCAL_BATCH_POOL.submit(copy_context().run, infer, offset, texts)
                     except BaseException:

@@ -1,0 +1,95 @@
+{
+  "review_origin": "assistant_curated_synthetic_not_independent_human_gold",
+  "cases": [
+    {
+      "case_id": "V2S-01",
+      "family": "bounded_material_scope_not_global_or_eligibility",
+      "split": "captured_scope_regression",
+      "message": "查询订单ORD960001，包装有什么要求，运费由谁承担，退款多久到账。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。",
+        "审核通过后3个工作日到账。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担；非质量问题的运费承担方式，现有资料未说明。",
+        "审核通过后3个工作日到账。"
+      ],
+      "good_statuses": null,
+      "bad_item": 2,
+      "bad_answer": "整个知识库都不存在非质量问题的运费规定。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "V2S-02",
+      "family": "bounded_material_scope_not_global_or_eligibility",
+      "split": "captured_scope_regression",
+      "message": "查询订单ORD960001，包装有什么要求，运费由谁承担，退款多久到账。",
+      "items": [
+        {
+          "text": "查询订单ORD960001",
+          "kind": "query_order"
+        },
+        {
+          "text": "包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        },
+        {
+          "text": "退款多久到账",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担。",
+        "审核通过后3个工作日到账。"
+      ],
+      "order_id": "ORD960001",
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "订单已签收。",
+        "退货需保留原包装。",
+        "质量问题退货运费由商家承担；非质量问题的运费承担方式，现有资料未说明。",
+        "审核通过后3个工作日到账。"
+      ],
+      "good_statuses": null,
+      "bad_item": 2,
+      "bad_answer": "您的订单已符合质量问题退货条件，运费由商家承担。",
+      "attack": "semantic"
+    }
+  ]
+}

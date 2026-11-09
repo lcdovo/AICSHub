@@ -78,16 +78,14 @@ async def test_blocked_send_preserves_pending_business_notification(tmp_path, mo
 
 @pytest.mark.parametrize("channel", ["sms", "email", "inapp"])
 async def test_inprocess_mcp_also_reports_no_delivery(channel, monkeypatch):
-    from mcp.shared.memory import create_connected_server_and_client_session
-    from app.agent.mcp_server import mcp
-    from app.agent.mcp_client import _extract_text_content
+    from app.agent.mcp_client import _extract_text_content, _inprocess_session
 
     database = Mock(side_effect=AssertionError("disabled delivery must not access database"))
     monkeypatch.setattr("app.utils.database.async_session", database)
-    async with create_connected_server_and_client_session(mcp._mcp_server) as client:
+    async with _inprocess_session() as client:
         await client.initialize()
         listed = await client.list_tools()
-        advertised = next(tool for tool in listed.tools if tool.name == "send_notification")
+        advertised = next(tool for tool in listed if tool.name == "send_notification")
         assert "未接入" in advertised.description
         raw = await client.call_tool("send_notification", {"channel": channel, "content": "合成通知内容", "user_id": 101})
         result = json.loads(_extract_text_content(raw))

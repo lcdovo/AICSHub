@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.agent.refund_authorization import CONFIRMATIONS
+from app.agent.refund_authorization import is_refund_confirmation_message
 from app.agent.ticket_authorization import request_hash
 from app.models.models import Message, MessageRole, OperationAudit, Order, RefundApplication, Session, User
 from app.security import ensure_owner_or_admin
@@ -29,7 +29,7 @@ async def context(db: AsyncSession, payload: dict[str, Any], message_id: int, ac
     source = await db.get(Message, message_id)
     session = await db.get(Session, payload["session_id"])
     if (actor is None or not actor.status or actor.disabled_at is not None
-            or source is None or source.role != MessageRole.USER or source.content.strip() not in CONFIRMATIONS
+            or source is None or source.role != MessageRole.USER or not is_refund_confirmation_message(source.content, payload.get("type"))
             or source.session_id != payload["session_id"] or session is None or session.user_id != payload["user_id"]):
         raise HTTPException(status_code=403, detail="退款提交缺少本轮明确确认或有效身份")
     from app.services.run_execution import guard_write
@@ -63,7 +63,7 @@ async def submit(factory: async_sessionmaker[AsyncSession], payload: dict[str, A
     async with factory() as db:
         await context(db, payload, message_id, actor_id)
         await order_amount(db, payload)
-    from app.services.refund_actions import lock_order, resolve_action, qualification, business_digest
+    from app.services.refund_actions import lock_order, resolve_action, qualification, business_digest, check_preconditions
     async with factory() as db:
         await context(db, payload, message_id, actor_id)
         await lock_order(db, payload["user_id"], payload["order_id"])
@@ -76,6 +76,7 @@ async def submit(factory: async_sessionmaker[AsyncSession], payload: dict[str, A
                 OperationAudit.operation == "apply_refund", OperationAudit.resource_id == existing.id))
             return original.result_payload if original and original.result_payload else receipt(existing)
         order, amount, remaining, applications = await qualification(db, payload["user_id"], payload["order_id"])
+        check_preconditions(order, action.preconditions or [])
         if amount != action.amount or order.currency != action.currency:
             raise HTTPException(409, "订单金额已变化，请重新预览并确认")
         business_hash = business_digest(order.order_id, payload["type"], payload["reason"], amount, order.currency)

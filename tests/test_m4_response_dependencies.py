@@ -12,7 +12,8 @@ from tests.test_m4_evidence_contract import result as retrieval_result
 def services(model, validator, cache=None, knowledge=None):
     cache = cache or Cache()
     knowledge = knowledge or SimpleNamespace(evidence_is_current=lambda _: True)
-    judge = SimpleNamespace(DEFAULT_THRESHOLD=.45, judge=AsyncMock(return_value=None))
+    judge = SimpleNamespace(DEFAULT_THRESHOLD=.45, judge=AsyncMock(return_value={
+        "grounded": True, "fact_score": 1.0, "has_unsupported_claim": False, "refuse_recommended": False}))
     memory = SimpleNamespace(get_user_profile=AsyncMock(return_value={"memory_source": "none"}))
     return ResponseServices(lambda: model, lambda: validator, lambda: judge,
                             lambda: cache, lambda: knowledge, lambda: memory), cache

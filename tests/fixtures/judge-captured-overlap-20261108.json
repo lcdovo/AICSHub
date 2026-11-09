@@ -1,0 +1,156 @@
+{
+  "schema_version": 2,
+  "answerability": "full",
+  "response_behavior": "answer",
+  "response_validity": "valid",
+  "claims_complete": true,
+  "claims": [
+    {
+      "segment_id": 0,
+      "text": "需要保留的。",
+      "support": "supported",
+      "evidence": [
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_377f69417f8f625adc1a08af93137e2d1e3959760108735a",
+          "version_id": "121b36dd-a3b9-457a-a16d-2c6f7c3141fb",
+          "quote": "原包装、配件、说明书、保修卡齐全"
+        },
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+          "version_id": "acd43a94-252b-427f-87f8-8a5b44da20ff",
+          "quote": "使用原包装（如原包装损坏，请使用厚实纸箱）"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "segment_id": 1,
+      "text": "退货时建议按以下要求打包：",
+      "support": "supported",
+      "evidence": [
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+          "version_id": "acd43a94-252b-427f-87f8-8a5b44da20ff",
+          "quote": "#### 2.3.2 打包要求"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "segment_id": 2,
+      "text": "- 使用原包装寄回；如原包装已损坏，请改用厚实纸箱。",
+      "support": "supported",
+      "evidence": [
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+          "version_id": "acd43a94-252b-427f-87f8-8a5b44da20ff",
+          "quote": "使用原包装（如原包装损坏，请使用厚实纸箱）"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "segment_id": 3,
+      "text": "- 一并放入商品、配件、赠品和发票。",
+      "support": "supported",
+      "evidence": [
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+          "version_id": "acd43a94-252b-427f-87f8-8a5b44da20ff",
+          "quote": "放入商品、配件、赠品、发票"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "segment_id": 4,
+      "text": "- 附一张退货纸条，写明订单号、姓名和电话。",
+      "support": "supported",
+      "evidence": [
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+          "version_id": "acd43a94-252b-427f-87f8-8a5b44da20ff",
+          "quote": "填写退货纸条（写明订单号、姓名、电话）"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "segment_id": 5,
+      "text": "- 密封包装并贴好快递单。",
+      "support": "supported",
+      "evidence": [
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+          "version_id": "acd43a94-252b-427f-87f8-8a5b44da20ff",
+          "quote": "密封包装，贴好快递单"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "segment_id": 6,
+      "text": "另外，商品完好（原包装、配件、说明书、保修卡齐全，防伪标签和封条未被破坏）是7天无理由退货的认定标准之一；电子类商品也要求配件、包装完整，且需恢复出厂设置。",
+      "support": "supported",
+      "evidence": [
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_377f69417f8f625adc1a08af93137e2d1e3959760108735a",
+          "version_id": "121b36dd-a3b9-457a-a16d-2c6f7c3141fb",
+          "quote": "原包装、配件、说明书、保修卡齐全"
+        },
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_377f69417f8f625adc1a08af93137e2d1e3959760108735a",
+          "version_id": "121b36dd-a3b9-457a-a16d-2c6f7c3141fb",
+          "quote": "防伪标签、封条未被破坏"
+        },
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_4e0e4bb89f8d07286eebd5e459eefe076630d42e77937918",
+          "version_id": "121b36dd-a3b9-457a-a16d-2c6f7c3141fb",
+          "quote": "系统需恢复出厂设置"
+        },
+        {
+          "kind": "knowledge",
+          "source_id": "chunk_4e0e4bb89f8d07286eebd5e459eefe076630d42e77937918",
+          "version_id": "121b36dd-a3b9-457a-a16d-2c6f7c3141fb",
+          "quote": "配件、包装完整"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "segment_id": 7,
+      "text": "建议您寄回前对照检查一下。",
+      "support": "supported",
+      "evidence": [],
+      "issues": []
+    },
+    {
+      "segment_id": 8,
+      "text": "如需办理退货，可提供订单号，我帮您确认流程。",
+      "support": "supported",
+      "evidence": [],
+      "issues": []
+    }
+  ],
+  "nonfact_segments": [
+    {
+      "segment_id": 7,
+      "kind": "general_advice"
+    },
+    {
+      "segment_id": 8,
+      "kind": "clarification"
+    }
+  ],
+  "response_issues": []
+}

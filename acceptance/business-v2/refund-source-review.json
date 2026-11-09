@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "review_origin": "assistant_content_scope_review_not_human_gold",
+  "items": [
+    {
+      "id": "chunk_2e16b9900e10ae3b57f174c173a95f7d3a2ae56f80355c86",
+      "sha256": "59ae52c1e27cac74900c5295ec06e5ee081f4541dba8008f78791bb3e2951de5",
+      "scopes": [
+        "packaging"
+      ]
+    },
+    {
+      "id": "chunk_1dd23947b028c6b4b897896aedb99e66acd1b631fa191c26",
+      "sha256": "13c3871777221bf25e0472dc5158ad35ee780404be00d3dbe66205580381170c",
+      "scopes": [
+        "return_shipping_cost"
+      ]
+    },
+    {
+      "id": "chunk_903cab22057f65ab0308939a07f75dbe69367506736e7596",
+      "sha256": "fe9476abdca87bc24fc56d4b45b295c8712f890f28ebe57107480d8d582931f5",
+      "scopes": [
+        "policy_overview"
+      ]
+    },
+    {
+      "id": "chunk_065ed2405ac58e45ff7e07894fbf1641cd2ecb049fb24b3d",
+      "sha256": "9922b2a17508395c457a2c7937c16419eff59f3b15bb96b29aec052633b6535d",
+      "scopes": [
+        "product_specification"
+      ]
+    },
+    {
+      "id": "chunk_a013a17ec428641752b87062d8fe0f32b5fd89b264176802",
+      "sha256": "1273563e877746b23476381293a223b923b6093839bbf4bddf5cb1680ca90bdc",
+      "scopes": [
+        "troubleshooting"
+      ]
+    },
+    {
+      "id": "chunk_b0197a5dd7169bee7a482a634e348a06f2b5a5d50000b6d6",
+      "sha256": "cc12a094ff80b79c86cce0834ce9ab5c0ca00437eaa6530eb5d83229a88812db",
+      "scopes": [
+        "account_security"
+      ]
+    },
+    {
+      "id": "chunk_b99ee30bdcaafaa48714709128459b6d6af72f8bc1e52048",
+      "sha256": "73975681d3ee132429bfb9ab83923163bdfd4c3d5828eb829e664473039a29ec",
+      "scopes": [
+        "outbound_shipping"
+      ]
+    }
+  ]
+}

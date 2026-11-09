@@ -1,0 +1,93 @@
+{
+  "origin": "failed_real_full_graph_not_a_pass",
+  "generation": {
+    "reply": "您好，关于您的问题逐项回复如下：\n\n【i1】订单ORD960001查询结果：当前状态为\"已签收\"，订单金额99.10元。\n\n【i2】退货包装要求：需保留原包装。\n\n【i3】质量问题退货运费：由商家承担。\n\n如需进一步办理退货，请告诉我商品具体情况，我可以帮您继续处理。",
+    "intent": "query_order",
+    "confidence": 0.95,
+    "fact_score": 0.95,
+    "grounded": true,
+    "has_unsupported_claim": false,
+    "need_human": false
+  },
+  "judge": {
+    "schema_version": 2,
+    "answerability": "full",
+    "response_behavior": "answer",
+    "response_validity": "valid",
+    "claims_complete": true,
+    "claims": [
+      {
+        "segment_id": 1,
+        "text": "【i1】订单ORD960001查询结果：当前状态为\"已签收\"，订单金额99.10元。",
+        "support": "supported",
+        "evidence": [
+          {
+            "fragment_id": "f03f6e99ef06ab1f38a04721f80bf870836311f6ad218dec73f6980b583a1d1f6"
+          }
+        ],
+        "issues": []
+      },
+      {
+        "segment_id": 2,
+        "text": "【i2】退货包装要求：需保留原包装。",
+        "support": "supported",
+        "evidence": [
+          {
+            "fragment_id": "fc7b0e300ac0d04579ffa9628fa16190e7abcb07565bc61aefa4c48d5e1e5110e"
+          }
+        ],
+        "issues": []
+      },
+      {
+        "segment_id": 3,
+        "text": "【i3】质量问题退货运费：由商家承担。",
+        "support": "supported",
+        "evidence": [
+          {
+            "fragment_id": "f65c9f30cafae11a9d3f6f7a48b43fef58fb473bc3e84d18b4fb07fdb4b1a8d3f"
+          }
+        ],
+        "issues": []
+      }
+    ],
+    "nonfact_segments": [
+      {
+        "segment_id": 0,
+        "kind": "social"
+      },
+      {
+        "segment_id": 4,
+        "kind": "general_advice"
+      }
+    ],
+    "response_issues": [],
+    "source_contract_version": "server-fragments.v2",
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "answered",
+        "answer_quote": "【i1】订单ORD960001查询结果：当前状态为\"已签收\"，订单金额99.10元。",
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "answered",
+        "answer_quote": "【i2】退货包装要求：需保留原包装。",
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i3",
+        "status": "answered",
+        "answer_quote": "【i3】质量问题退货运费：由商家承担。",
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      }
+    ]
+  },
+  "failure": "nonfact preamble outside item section rejected by pre-fix bridge; root reproduced offline"
+}

@@ -9,8 +9,12 @@ import copy
 import hashlib
 import json
 import time
-from .bm25 import BM25Scorer
+from .bm25 import BM25Scorer, BM25_VERSION  # noqa: F401 - compatibility patch target
 from .lifecycle import embedding_identity
+from .ranking import cosine_similarity, fuse_candidates
+from .retrieval_text import TEXT_POLICY_VERSION
+from .evidence_assembly import ASSEMBLY_VERSION, assemble_evidence
+from .product_scope import VERSION as PRODUCT_SCOPE_VERSION, scope_candidates
 from app.config.config import settings
 
 
@@ -65,6 +69,8 @@ def search(
         "deadline" if any(e["status"] == "deadline" for e in observations) or "local_model_deadline" in reason else
         "cache" if result.get("from_cache") else "completed_or_not_local")
     result["meta"]["local_model_scheduler_scope"] = settings.LOCAL_MODEL_COORDINATOR
+    result["meta"]["local_model_max_concurrency"] = settings.LOCAL_MODEL_MAX_CONCURRENCY
+    result["meta"]["local_rerank_batch_size"] = settings.RERANKER_LOCAL_BATCH_SIZE
     result["meta"]["local_request_admission"] = [e for e in observations if e.get("purpose")=="retrieval"]
     return result
 
@@ -84,7 +90,7 @@ def _search(
         if similarity_threshold is None
         else float(similarity_threshold)
     )
-    epoch, chunks = service._repository.snapshot()
+    epoch, chunks, snapshot_hit = service._retrieval_runtime.snapshot(service._repository)
     snapshot_ms = round((time.perf_counter() - started) * 1000, 3)
     # 当前知识产品为所有已认证用户可读、仅管理员写。没有未实现的文档ACL绕过。
     fingerprint, identity = embedding_identity(service._embedding_service)
@@ -95,6 +101,7 @@ def _search(
             "RERANKER_MODEL",
             "RERANKER_LOCAL_BASE",
             "RERANKER_LOCAL_MODEL",
+            "RERANKER_LOCAL_BATCH_SIZE",
             "RERANKER_API_STYLE",
             "RERANKER_TIMEOUT_SECONDS",
             "RAG_USE_RERANKER",
@@ -106,10 +113,13 @@ def _search(
     from app.services.local_inference import SCHEDULER_VERSION
     from app.services.local_admission import VERSION
     rerank_identity["local_model_scheduler"] = SCHEDULER_VERSION + VERSION + settings.LOCAL_MODEL_COORDINATOR
+    rerank_identity["local_model_max_concurrency"] = settings.LOCAL_MODEL_MAX_CONCURRENCY
     cache_key = hashlib.sha256(
         json.dumps(
             [
-                "m5-search-v2",
+                "structured-search-v3",
+                BM25_VERSION, TEXT_POLICY_VERSION, ASSEMBLY_VERSION, PRODUCT_SCOPE_VERSION,
+                settings.RAG_RRF_K, settings.RAG_EVIDENCE_MAX_CHARS, settings.RAG_CONTEXT_NEIGHBORS,
                 retrieval_mode,
                 query,
                 epoch,
@@ -133,6 +143,8 @@ def _search(
         )
         result["meta"]["latency_ms"] = result["latency_ms"]
         result["meta"]["cache"] = "hit"
+        result["meta"]["snapshot_cache"] = "hit" if snapshot_hit else "miss"
+        result["meta"]["lexical_index_cache"] = "unused"
         result["meta"]["timings_ms"] = {
             "snapshot_and_cache": result["latency_ms"],
             "encode": 0,
@@ -140,6 +152,7 @@ def _search(
             "bm25": 0,
             "fusion": 0,
             "rerank": 0,
+            "assembly": 0,
         }
         return result
     from app.services.local_admission import request_scope, uses_local_models
@@ -152,14 +165,11 @@ def _search(
         by_id = {c["id"]: c for c in chunks}
         begin = time.perf_counter()
         lexical = []
+        lexical_hit = False
         if retrieval_mode != "dense":
-            bm25 = BM25Scorer()
-            bm25.build_index([c["content"] for c in chunks]) if chunks else None
-            for i, c in enumerate(chunks):
-                score = bm25.score(query, i)
-                if score > 0:
-                    lexical.append({**c, "bm25_score": score, "score_type": "bm25"})
-            lexical = sorted(lexical, key=lambda c: c["bm25_score"], reverse=True)[:recall_k]
+            bm25, lexical_hit = service._retrieval_runtime.lexical(epoch, chunks)
+            lexical = [{**chunks[i], "bm25_score": score, "score_type": "bm25"}
+                       for i, score in bm25.search(query, recall_k) if score > 0]
         timings["bm25"] = round((time.perf_counter() - begin) * 1000, 3)
         dense = []
         begin = time.perf_counter()
@@ -209,7 +219,7 @@ def _search(
                 for c in matching:
                     try:
                         stored = validate_vector(c["_embedding"], identity["dim"])
-                        score = service._cosine_similarity(vector, stored)
+                        score = cosine_similarity(vector, stored)
                         if score >= threshold:
                             dense.append(
                                 {
@@ -226,20 +236,9 @@ def _search(
                 ]
         timings["dense"] = round((time.perf_counter() - begin) * 1000, 3)
         begin = time.perf_counter()
-        merged = {}
-        for route in (dense, lexical):
-            for rank, c in enumerate(route, 1):
-                item = merged.setdefault(
-                    c["id"], {**c, "rrf_score": 0.0, "score_type": "rrf"}
-                )
-                item["rrf_score"] += 1 / (60 + rank)
-                for score_key in ("dense_score", "vector_score", "bm25_score"):
-                    if score_key in c:
-                        item[score_key] = c[score_key]
-        candidates = sorted(merged.values(), key=lambda c: c["rrf_score"], reverse=True)
-        for c in candidates:
-            c["final_score"] = c["rrf_score"]
-            c["score_type"] = "rrf"
+        candidates = fuse_candidates(dense, lexical, settings.RAG_RRF_K)
+        candidates, product_scope = scope_candidates(query, candidates)
+        fused_by_id = {candidate["id"]: candidate for candidate in candidates}
         timings["fusion"] = round((time.perf_counter() - begin) * 1000, 3)
         begin = time.perf_counter()
         reranker = "none"
@@ -256,8 +255,8 @@ def _search(
             def rerank_current():
                 bounded = getattr(service._reranker, "rerank_with_deadline", None)
                 if callable(bounded):
-                    return bounded(query, copy.deepcopy(selected), top_k, deadline=rerank_deadline)
-                return service._reranker.rerank_sync(query, copy.deepcopy(selected), top_k)
+                    return bounded(query, copy.deepcopy(selected), len(selected), deadline=rerank_deadline)
+                return service._reranker.rerank_sync(query, copy.deepcopy(selected), len(selected))
 
             try:
                 reranked = bounded_provider(rerank_current)
@@ -268,13 +267,13 @@ def _search(
                     errors.append("local_model_busy" if isinstance(exc, LocalModelBusy) else "local_model_deadline")
             if (
                 reranked is not None
-                and len(reranked) == min(top_k, len(selected))
+                and len(reranked) == len(selected)
                 and len({c.get("id") for c in reranked}) == len(reranked)
                 and all(c.get("id") in {item["id"] for item in selected} for c in reranked)
             ):
                 candidates = [
                     {
-                        **merged[c["id"]],
+                        **fused_by_id[c["id"]],
                         "rerank_score": c.get("rerank_score", c.get("final_score")),
                     }
                     for c in reranked
@@ -288,23 +287,12 @@ def _search(
                 errors.append("reranker_failed_or_invalid")
                 reranker = "rank_preserved"
         timings["rerank"] = round((time.perf_counter() - begin) * 1000, 3)
-        results = []
-        for c in candidates[:top_k]:
-            item = {k: v for k, v in c.items() if k != "_embedding"}
+        begin = time.perf_counter()
+        results, assembly = assemble_evidence(candidates, chunks, top_k=top_k,
+            max_chars=settings.RAG_EVIDENCE_MAX_CHARS, neighbors=settings.RAG_CONTEXT_NEIGHBORS)
+        for item in results:
             item["index_epoch"] = epoch
-            context = item.get("source_context") or {}
-            item["evidence_text"] = "\n".join(
-                filter(
-                    None,
-                    [
-                        context.get("heading"),
-                        context.get("faq_question"),
-                        context.get("table_header"),
-                        item["content"],
-                    ],
-                )
-            )
-            results.append(item)
+        timings["assembly"] = round((time.perf_counter() - begin) * 1000, 3)
         # 完整有界chunk进入EvidenceBundle，保留原文位置；覆盖校准留M5，不把排名当概率。
         total = round((time.perf_counter() - started) * 1000, 3)
         meta = {
@@ -321,6 +309,11 @@ def _search(
             "rerank_budget_ms": ENCODE_TIMEOUT_SECONDS * 1000,
             "rerank_algorithm_version": RERANK_ALGORITHM_VERSION,
             "cache": "miss",
+            "snapshot_cache": "hit" if snapshot_hit else "miss",
+            "lexical_index_cache": "hit" if lexical_hit else "miss" if retrieval_mode != "dense" else "unused",
+            "bm25_version": BM25_VERSION,
+            "evidence_assembly": assembly,
+            "product_scope": product_scope,
             "timings_ms": timings,
             "latency_ms": total,
             "routes": {
@@ -335,7 +328,7 @@ def _search(
             "success": True,
             "query": query,
             "results": results,
-            "total_candidates": len(merged),
+            "total_candidates": len(fused_by_id),
             "search_strategy": "hybrid"
             if dense and lexical
             else "vector"

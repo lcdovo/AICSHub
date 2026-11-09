@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "origin": "assistant_authored_synthetic_not_human_gold",
+  "cases": [
+    {
+      "case_id": "OG-01",
+      "question": "订单金额和包邮门槛分别是什么？",
+      "candidate": "订单ORD950099金额0.10元。包邮规则为订单金额满99元可以包邮。",
+      "sources": [
+        {
+          "id": "synthetic-order",
+          "version_id": "order-v1",
+          "title": "合成订单只读回执",
+          "content": "订单ORD950099属于当前合成用户101，状态已签收，订单总金额0.10元人民币。"
+        },
+        {
+          "id": "shipping-policy",
+          "version_id": "policy-v1",
+          "title": "合成包邮规则",
+          "content": "订单金额满99元可以包邮。该规则是政策门槛，不是任何具体订单金额。"
+        }
+      ],
+      "expected_publish": true
+    },
+    {
+      "case_id": "OG-02",
+      "question": "订单金额和包邮门槛分别是什么？",
+      "candidate": "订单ORD950099金额99元。",
+      "sources": [
+        {
+          "id": "synthetic-order",
+          "version_id": "order-v1",
+          "title": "合成订单只读回执",
+          "content": "订单ORD950099属于当前合成用户101，状态已签收，订单总金额0.10元人民币。"
+        },
+        {
+          "id": "shipping-policy",
+          "version_id": "policy-v1",
+          "title": "合成包邮规则",
+          "content": "订单金额满99元可以包邮。该规则是政策门槛，不是任何具体订单金额。"
+        }
+      ],
+      "expected_publish": false
+    },
+    {
+      "case_id": "OG-03",
+      "question": "退款到账政策时限是什么？",
+      "candidate": "退款到账：1-7个工作日，具体视支付方式。",
+      "sources": [
+        {
+          "id": "refund-time",
+          "version_id": "policy-v1",
+          "title": "合成退款处理时限",
+          "content": "| 退款到账 | 1-7个工作日 | 视支付方式 |\n本片段仅说明政策时限，不证明任何退款已执行、已支付或已到账。"
+        }
+      ],
+      "expected_publish": true
+    },
+    {
+      "case_id": "OG-04",
+      "question": "退款到账了吗？",
+      "candidate": "本次退款已到账，金额0.10元。",
+      "sources": [
+        {
+          "id": "synthetic-order",
+          "version_id": "order-v1",
+          "title": "合成订单只读回执",
+          "content": "订单ORD950099属于当前合成用户101，状态已签收，订单总金额0.10元人民币。"
+        },
+        {
+          "id": "refund-time",
+          "version_id": "policy-v1",
+          "title": "合成退款处理时限",
+          "content": "| 退款到账 | 1-7个工作日 | 视支付方式 |\n本片段仅说明政策时限，不证明任何退款已执行、已支付或已到账。"
+        }
+      ],
+      "expected_publish": false
+    },
+    {
+      "case_id": "OG-05",
+      "question": "耳机无法配对怎么办？",
+      "candidate": "请确认耳机已开机，检查手机蓝牙是否开启，并删除旧配对记录后重新配对。",
+      "sources": [
+        {
+          "id": "device-earphone",
+          "version_id": "device-v1",
+          "title": "耳机操作说明",
+          "content": "耳机无法配对时：确认耳机已开机，检查手机蓝牙开启，删除旧配对记录后重新配对；仍失败可将耳机放回充电盒，长按盒内按钮10秒重置。"
+        }
+      ],
+      "expected_publish": true
+    },
+    {
+      "case_id": "OG-06",
+      "question": "打印机卡纸怎么办？",
+      "candidate": "长按耳机盒内按钮10秒即可清理打印机卡纸。",
+      "sources": [
+        {
+          "id": "device-earphone",
+          "version_id": "device-v1",
+          "title": "耳机操作说明",
+          "content": "耳机无法配对时：确认耳机已开机，检查手机蓝牙开启，删除旧配对记录后重新配对；仍失败可将耳机放回充电盒，长按盒内按钮10秒重置。"
+        },
+        {
+          "id": "account",
+          "version_id": "account-v1",
+          "title": "账号安全",
+          "content": "不要向陌生人透露密码。修改支付密码不等于清理打印机卡纸。"
+        }
+      ],
+      "expected_publish": false
+    },
+    {
+      "case_id": "OG-07",
+      "question": "打印机卡纸怎么办？",
+      "candidate": "本轮材料未提供打印机卡纸操作步骤，请补充打印机品牌和型号。",
+      "sources": [
+        {
+          "id": "device-earphone",
+          "version_id": "device-v1",
+          "title": "耳机操作说明",
+          "content": "耳机无法配对时：确认耳机已开机，检查手机蓝牙开启，删除旧配对记录后重新配对；仍失败可将耳机放回充电盒，长按盒内按钮10秒重置。"
+        },
+        {
+          "id": "account",
+          "version_id": "account-v1",
+          "title": "账号安全",
+          "content": "不要向陌生人透露密码。修改支付密码不等于清理打印机卡纸。"
+        }
+      ],
+      "expected_publish": true
+    },
+    {
+      "case_id": "OG-08",
+      "question": "打印机卡纸怎么办？",
+      "candidate": "你已完成打印机卡纸处理，设备已恢复正常。",
+      "sources": [
+        {
+          "id": "device-earphone",
+          "version_id": "device-v1",
+          "title": "耳机操作说明",
+          "content": "耳机无法配对时：确认耳机已开机，检查手机蓝牙开启，删除旧配对记录后重新配对；仍失败可将耳机放回充电盒，长按盒内按钮10秒重置。"
+        },
+        {
+          "id": "account",
+          "version_id": "account-v1",
+          "title": "账号安全",
+          "content": "不要向陌生人透露密码。修改支付密码不等于清理打印机卡纸。"
+        }
+      ],
+      "expected_publish": false
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "origin": "real_provider_capture_from_authorized_80_request_phase",
+  "original_report_sha256": "e8c9a8a5d8bb6078dc9bd80c1acbe53d3a377c91d0fed40c9d72811713cae4d1",
+  "original_case_passed": false,
+  "original_good_issues": [
+    "i1:answer_missing",
+    "i2:answer_missing"
+  ],
+  "scenario": {
+    "case_id": "MI-02",
+    "family": "same_order_fields",
+    "split": "development",
+    "message": "查订单ORD960001状态，再查这笔订单金额。",
+    "items": [
+      {
+        "text": "查订单ORD960001状态",
+        "kind": "query_order"
+      },
+      {
+        "text": "再查这笔订单金额",
+        "kind": "query_order"
+      }
+    ],
+    "knowledge": [
+      "",
+      ""
+    ],
+    "order_id": "ORD960001",
+    "order_denied": false,
+    "order_status": "delivered",
+    "preview": false,
+    "conditions": [],
+    "good_answers": [
+      "订单已签收。",
+      "订单金额为99.10元。"
+    ],
+    "good_statuses": null,
+    "bad_item": 1,
+    "bad_answer": "订单金额为999.10元。",
+    "attack": "semantic"
+  },
+  "good_item_checks": [
+    {
+      "item_id": "i1",
+      "status": "answered",
+      "answer_quote": "【i1】订单已签收。",
+      "evidence_ids": [
+        "T1"
+      ],
+      "supported": true,
+      "conditions_preserved": true,
+      "answerability": "answerable"
+    },
+    {
+      "item_id": "i2",
+      "status": "answered",
+      "answer_quote": "【i2】订单金额为99.10元。",
+      "evidence_ids": [
+        "T1"
+      ],
+      "supported": true,
+      "conditions_preserved": true,
+      "answerability": "answerable"
+    }
+  ],
+  "bad_item_checks": [
+    {
+      "item_id": "i1",
+      "status": "answered",
+      "answer_quote": "订单已签收。",
+      "evidence_ids": [
+        "T1"
+      ],
+      "supported": true,
+      "conditions_preserved": true,
+      "answerability": "answerable"
+    },
+    {
+      "item_id": "i2",
+      "status": "answered",
+      "answer_quote": "订单金额为999.10元。",
+      "evidence_ids": [
+        "T1"
+      ],
+      "supported": false,
+      "conditions_preserved": false,
+      "answerability": "answerable"
+    }
+  ]
+}

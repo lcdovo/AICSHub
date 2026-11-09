@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "status": "PARTIAL_HUMAN_REVIEW",
+  "reviewer": "user",
+  "reviewed_at": "2026-11-05T00:05:34+08:00",
+  "user_statement": "显示器6题全部通过",
+  "dataset_sha256": "f9f6c93ba93844e36a96b9e64206197b3e2d2406b21cd2503f248204b890e692",
+  "corpus_sha256": "c04d21375d743c3eb1d613239dfb46eb7b301fb6de1c6ff8b1b98c779de1c362",
+  "decisions": [
+    {
+      "case_id": "holdout-rag-001-1",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-001-2",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-001-3",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-001-4",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-001-5",
+      "decision": "approved",
+      "kind": "answerable"
+    },
+    {
+      "case_id": "holdout-rag-001-6",
+      "decision": "approved",
+      "kind": "answerable"
+    }
+  ],
+  "approved_count": 6,
+  "remaining_count": 589,
+  "global_holdout_approved": false,
+  "global_semantic_independence_approved": false,
+  "generated_answer_claims_reviewed": false
+}

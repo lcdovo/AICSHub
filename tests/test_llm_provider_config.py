@@ -69,3 +69,19 @@ def test_other_providers_keep_default_structured_output():
     model = ModelConfig(name="backup")
     LLMService._with_structured_output(chat, IntentClassification, model)
     chat.with_structured_output.assert_called_once_with(IntentClassification)
+
+
+def test_generation_temperature_preserves_explicit_analytic_override(monkeypatch):
+    factory = Mock(side_effect=lambda **kwargs: object())
+    monkeypatch.setattr("app.services.llm_service.ChatOpenAI", factory)
+    monkeypatch.setattr(settings, "LLM_GENERATION_TEMPERATURE", 0.2)
+    service = LLMService()
+    try:
+        service._get_chat_model(service.models[0])
+        service._get_chat_model(service.models[0], temperature=0.1)
+        service._get_chat_model(service.models[0], temperature=0.0)
+        assert [call.kwargs["temperature"] for call in factory.call_args_list] == [0.2, 0.1, 0.0]
+    finally:
+        for client in service._http_clients:
+            if hasattr(client, "close"):
+                client.close()

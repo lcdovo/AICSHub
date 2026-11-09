@@ -38,10 +38,22 @@ class RefundActionCoordinator:
 
 
 def action_receipt(item: RefundAction) -> dict[str, Any]:
-    return {"action_id": item.id, "version": item.version, "order_id": item.order_id,
+    result = {"action_id": item.id, "version": item.version, "order_id": item.order_id,
             "type": item.type, "reason": item.reason, "amount": format(item.amount, ".2f"),
             "currency": item.currency, "status": item.status, "expires_at": item.expires_at.isoformat(),
             "application_id": item.application_id, "is_simulated": True}
+    if item.preconditions:
+        result["preconditions"] = list(item.preconditions)
+    return result
+
+
+def check_preconditions(order: Order, checks: list[str]) -> None:
+    """只在已锁定的领域订单上判断，不接受模型声称条件已经满足。"""
+    if not isinstance(checks, list) or any(check not in {"order_not_shipped", "order_delivered"} for check in checks):
+        raise HTTPException(409, "办理前提无法核实，请重新说明请求")
+    expected = {"order_not_shipped": {"pending"}, "order_delivered": {"delivered", "completed"}}
+    if any(order.status_code not in expected[check] for check in checks):
+        raise HTTPException(409, "原办理条件已变化，请重新核实并预览")
 
 
 async def lock_order(db: AsyncSession, owner_id: int, order_id: str) -> None:
@@ -99,11 +111,34 @@ def business_digest(order_id: str, kind: str, reason: str, amount: Decimal, curr
                          "amount": format(amount, ".2f"), "currency": currency})
 
 
+def preview_request_key(actor_id: int, owner_id: int, session_id: str, request_key: str) -> str:
+    return "refund-preview-request:" + request_hash({"actor_id": actor_id, "owner_id": owner_id,
+                                                   "session_id": session_id, "request_key": request_key})
+
+
 async def prepare(factory: async_sessionmaker[AsyncSession], actor_id: int, payload: dict[str, Any], previous_id: str | None = None) -> dict[str, Any]:
     async with factory() as db:
         await identity(db, actor_id, payload["user_id"], payload["session_id"])
+        from app.services.capability_journal import JOURNAL
+        journal = JOURNAL.get()
+        if journal is not None:
+            await journal.verify_domain_scope(db, actor_id, payload)
         await lock_order(db, payload["user_id"], payload["order_id"])
         order, total, remaining, applications = await qualification(db, payload["user_id"], payload["order_id"])
+        request_key = payload.get("request_key")
+        audit_key = preview_request_key(actor_id, payload["user_id"], payload["session_id"], request_key) if request_key else None
+        payload_hash = request_hash({k: v for k, v in payload.items() if k != "request_key"})
+        if audit_key:
+            previous = await db.scalar(select(OperationAudit).where(OperationAudit.idempotency_key == audit_key))
+            if previous:
+                if (previous.user_id != payload["user_id"] or previous.operation != "prepare_refund"
+                        or (previous.request_payload or {}).get("request_hash") != payload_hash):
+                    raise HTTPException(409, "原预览请求参数发生变化")
+                prepared = await db.get(RefundAction, previous.resource_id)
+                if (prepared is None or prepared.user_id != payload["user_id"] or prepared.actor_id != actor_id
+                        or prepared.session_id != payload["session_id"]):
+                    raise HTTPException(409, "原预览回执无法核实")
+                return action_receipt(prepared)
         existing = next((a for a in applications if a.type == payload["type"] and a.status == "pending_review"), None)
         digest = business_digest(order.order_id, payload["type"], payload["reason"], total, order.currency)
         if existing is not None and existing.business_hash != digest:
@@ -122,6 +157,9 @@ async def prepare(factory: async_sessionmaker[AsyncSession], actor_id: int, payl
             db.add(item)
         else:
             item.version += 1
+        checks = payload.get("conditions", item.preconditions or [])
+        check_preconditions(order, checks)
+        item.preconditions = list(checks)
         item.order_id, item.type, item.reason = order.order_id, payload["type"], payload["reason"]
         item.amount, item.currency, item.status = total, order.currency, "pending"
         item.expires_at = datetime.utcnow() + timedelta(seconds=settings.REFUND_ACTION_TTL_SECONDS)
@@ -129,6 +167,11 @@ async def prepare(factory: async_sessionmaker[AsyncSession], actor_id: int, payl
                               user_id=item.user_id, resource_id=item.id,
                               request_payload={"actor_id": actor_id, "owner_id": item.user_id},
                               result_payload={"action_id": item.id, "version": item.version}))
+        if audit_key:
+            db.add(OperationAudit(operation="prepare_refund", idempotency_key=audit_key,
+                user_id=item.user_id, resource_id=item.id,
+                request_payload={"actor_id": actor_id, "owner_id": item.user_id, "request_hash": payload_hash},
+                result_payload={"action_id": item.id, "version": item.version}))
         await db.commit()
         return action_receipt(item)
 

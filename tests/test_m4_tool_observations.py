@@ -91,7 +91,8 @@ async def test_returned_handoff_or_validation_flags_cannot_bypass_response_revie
     response = ResponseNode(ResponseServices(
         lambda: None, lambda: validator, lambda: None, lambda: Cache(), lambda: None, lambda: None,
     ), generate=generate, tool_reply=lambda _: None)
-    assert await response(state) == AgentNode.HUMAN_HANDOFF
+    assert await response(state) == AgentNode.END
     assert generate.await_count == 2 and len(validator.responses) == 2
     assert not state.review_result.passed
+    assert not state.need_human and all(call.tool_name != "escalate_to_human" for call in state.tool_calls)
     assert state.collected_info["validation"]["passed"] is False

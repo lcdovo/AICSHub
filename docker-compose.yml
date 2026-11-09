@@ -99,9 +99,9 @@ services:
     build:
       context: .
     image: ai-customer:latest
-    # 多 worker 支撑并发：进程无状态（会话/锁/checkpoint 在 Redis），按 APP_WORKERS 横向扩容。
+    # API与后台索引进程必须共用Redis本地模型准入；增加worker仍需容量验收。
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${APP_WORKERS:-1}
-    environment:
+    environment: &app-environment
       APP_NAME: ${APP_NAME:-智能客服系统}
       APP_VERSION: ${APP_VERSION:-1.1.0}
       ENVIRONMENT: ${ENVIRONMENT:-integration}
@@ -123,7 +123,10 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_DB: ${REDIS_DB:-0}
-      LOCAL_MODEL_COORDINATOR: ${LOCAL_MODEL_COORDINATOR:-process}
+      LOCAL_MODEL_COORDINATOR: ${LOCAL_MODEL_COORDINATOR:-redis}
+      LOCAL_MODEL_MAX_CONCURRENCY: ${LOCAL_MODEL_MAX_CONCURRENCY:-1}
+      RERANKER_LOCAL_BATCH_SIZE: ${RERANKER_LOCAL_BATCH_SIZE:-4}
+      AGENT_TASK_DETERMINISTIC_ROUTING_ENABLED: ${AGENT_TASK_DETERMINISTIC_ROUTING_ENABLED:-false}
       LOCAL_MODEL_COORDINATOR_NAMESPACE: ${LOCAL_MODEL_COORDINATOR_NAMESPACE:-aicshub:local-models:whole-v1}
       LLM_API_BASE: ${LLM_API_BASE:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
@@ -144,6 +147,7 @@ services:
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-20}
       EMBEDDING_QUERY_INSTRUCTION: ${EMBEDDING_QUERY_INSTRUCTION:-}
       EMBEDDING_REVISION: ${EMBEDDING_REVISION:-unspecified}
+      EMBEDDING_DOCUMENT_TIMEOUT_SECONDS: ${EMBEDDING_DOCUMENT_TIMEOUT_SECONDS:-60}
       EMBEDDING_TIMEOUT_SECONDS: ${EMBEDDING_TIMEOUT_SECONDS:-30}
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:8100,http://127.0.0.1:8100}
       AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:?AUTH_SECRET_KEY must be set}
@@ -155,6 +159,8 @@ services:
       CHAT_MESSAGE_MAX_LENGTH: ${CHAT_MESSAGE_MAX_LENGTH:-5000}
       MAX_UPLOAD_FILE_BYTES: ${MAX_UPLOAD_FILE_BYTES:-5242880}
       MAX_BATCH_UPLOAD_FILES: ${MAX_BATCH_UPLOAD_FILES:-10}
+      LLM_GENERATION_TEMPERATURE: ${LLM_GENERATION_TEMPERATURE:-0.7}
+      CHAT_RUN_TIMEOUT_SECONDS: ${CHAT_RUN_TIMEOUT_SECONDS:-30}
       LLM_REQUEST_TIMEOUT_SECONDS: ${LLM_REQUEST_TIMEOUT_SECONDS:-30}
       LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-1024}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
@@ -164,6 +170,18 @@ services:
       REQUEST_UNDERSTANDING_VERSION: ${REQUEST_UNDERSTANDING_VERSION:-understanding.v1}
       REQUEST_UNDERSTANDING_PERCENTAGE: ${REQUEST_UNDERSTANDING_PERCENTAGE:-100}
       LLM_UNDERSTANDING_MAX_TOKENS: ${LLM_UNDERSTANDING_MAX_TOKENS:-500}
+      AGENT_TASK_LOOP_ENABLED: ${AGENT_TASK_LOOP_ENABLED:-false}
+      AGENT_ITEM_COMPLETION_ENABLED: ${AGENT_ITEM_COMPLETION_ENABLED:-false}
+      LLM_JUDGE_ENABLED: ${LLM_JUDGE_ENABLED:-true}
+      LLM_JUDGE_CONTRACT_VERSION: ${LLM_JUDGE_CONTRACT_VERSION:-v1}
+      LLM_JUDGE_V2_OUTPUT_PROTOCOL: ${LLM_JUDGE_V2_OUTPUT_PROTOCOL:-function_calling}
+      AGENT_TASK_REFUND_PREVIEW_ENABLED: ${AGENT_TASK_REFUND_PREVIEW_ENABLED:-false}
+      AGENT_TASK_MAX_DECISIONS: ${AGENT_TASK_MAX_DECISIONS:-3}
+      AGENT_TASK_MAX_TOOL_CALLS: ${AGENT_TASK_MAX_TOOL_CALLS:-4}
+      AGENT_TASK_TIMEOUT_SECONDS: ${AGENT_TASK_TIMEOUT_SECONDS:-20}
+      AGENT_TASK_MAX_OUTPUT_TOKENS: ${AGENT_TASK_MAX_OUTPUT_TOKENS:-256}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-inprocess}
       LLM_PRICE_VERIFIED: ${LLM_PRICE_VERIFIED:-false}
       LLM_PROMPT_VERSION: ${LLM_PROMPT_VERSION:-v1}
       LLM_MODEL_VERSION: ${LLM_MODEL_VERSION:-gpt-4o-mini}
@@ -206,6 +224,26 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  worker:
+    image: ai-customer:latest
+    init: true
+    command: python scripts/run_worker.py --poll 1 --limit 10
+    stop_grace_period: 130s
+    environment:
+      <<: *app-environment
+      LOCAL_MODEL_COORDINATOR: redis
+    depends_on:
+      mysql: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      app: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "scripts/run_worker.py", "--healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
 
   # ==================== Langfuse 自托管观测栈（--profile langfuse） ====================
   langfuse-db:
@@ -339,12 +377,12 @@ services:
     restart: unless-stopped
 
   # ==================== 本地模型栈（--profile reranker / local-models） ====================
-  # 本地重排：bge-reranker-large via Infinity（CPU 推理）。应用侧 RERANKER_LOCAL_BASE=http://reranker:7997。
+  # 本地重排：同一bge-reranker-large via Infinity，GPU float32保留精度并满足本地截止。
   reranker:
     profiles: ["reranker"]
     image: michaelf34/infinity:latest
     # CPU小批推理禁用编译/全尺寸启动基准；就绪后仍需实际合成检索核验。
-    command: v2 --model-id ${RERANKER_LOCAL_MODEL:-BAAI/bge-reranker-large} --port 7997 --batch-size 4 --no-compile --no-model-warmup
+    command: v2 --model-id ${RERANKER_LOCAL_MODEL:-BAAI/bge-reranker-large} --device cuda --dtype float32 --port 7997 --batch-size 4 --no-compile --no-model-warmup
     ports:
       - "${RERANKER_LOCAL_PORT:-7997}:7997"
     environment:
@@ -361,6 +399,14 @@ services:
       retries: 30
       start_period: 60s
     restart: unless-stopped
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   # 本地 LLM：Qwen3-4B-Instruct-2507-AWQ-4bit（意图识别+问题重写）via vLLM（GPU，8GB 卡独占）。
   # 纯文本模型（无视觉权重）；AWQ 4bit (compressed-tensors) 权重约 3.2GB；服务端关闭思考模式。
@@ -407,7 +453,7 @@ services:
               count: 1
               capabilities: [gpu]
 
-  # 本地向量化：Qwen3-Embedding-0.6B via Ollama（CPU 推理，不占 GPU 显存）。
+  # 本机向量化：同一Qwen3-Embedding-0.6B权重通过GPU推理，避免CPU超过本地截止。
   # 应用侧 EMBEDDING_API_BASE=http://embedding-local:11434/v1；启动后需拉模型：
   #   docker exec ai-customer-embedding-local-1 ollama pull qwen3-embedding:0.6b
   embedding-local:
@@ -432,8 +478,13 @@ services:
     restart: unless-stopped
     deploy:
       resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
         limits:
-          # CPU 推理上限，避免与主栈（MySQL/Redis/Milvus）和 reranker 争抢算力。
+          # 限制分词等CPU任务，GPU设备仅由此可选profile申请。
           cpus: "4.0"
 
 volumes:

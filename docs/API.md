@@ -1,5 +1,7 @@
 # API 交付说明
 
+多意图候选在GET /api/v1/chat/tasks/{task_id}追加items列表，包含item_id、原话text、kind、source_message_id和最近已审status。状态可能为pending/answered/limited/waiting_feedback/awaiting_confirmation/submitted/cancelled；不代表跨轮可复用证据或授权。当前默认关闭、未部署，契约及评测见[MULTI-INTENT-COMPLETION-v1.md](MULTI-INTENT-COMPLETION-v1.md)。
+
 ## 版本与访问入口
 
 业务 API 当前版本为 `/api/v1`，版本升级时保留旧版本兼容窗口。OpenAPI 规范由 FastAPI 自动生成：
@@ -231,3 +233,10 @@ POST /search支持独立recall_k/rerank_k/top_k，结果含逐路ID、score_type
 模型调用账本新增status/usage_basis=`not_sent`：已预留但在进入供应商适配器之前因超期或取消而结束，真实输入/输出与费用为0，SQL日预留退还。已发出后失败仍是unknown/unknown_reserved；不能以not_sent清理不确定的外部费用。
 
 `POST /api/v1/knowledge/rag-query`模型费用归require_user认证的实际用户，独立调用有唯一rag-query scope；响应正文不暴露内部scope/凭据，临时模型客户端在成功/异常均关闭。配置use_llm=false不会调用模型。
+
+## Agent任务进度（任务循环候选）
+
+聊天结果新增可选task_id、task_status；持久done事件携带同名字段。原消息、Run幂等及确认契约保留。GET /api/v1/chat/tasks/{task_id}返回任务目标、状态、版本、last_run_id、待补项、停止原因和最近30条能力审计。仅任务所属用户或管理员可读，删除会话返回404；不返回原始工具内容、执行凭据或隐藏推理。
+
+任务状态包括running、waiting_input、waiting_confirmation、completed、stopped、cancelled。退款任务到waiting_confirmation只代表预览已准备；独立当前确认及领域事务成功后才能completed。AGENT_TASK_LOOP_ENABLED默认false，需0012迁移和阶段准入。
+> 2026-11-07 当前本机业务服务已启用任务循环，REST/WS复用Run执行器与同一16节点图，响应可含task_id/task_status，任务进度持久化到0012新增表；模拟退款仍须独立本轮确认。当前部署验证见 [统一升级记录](LATEST-ROLLOUT-20261107.md)。

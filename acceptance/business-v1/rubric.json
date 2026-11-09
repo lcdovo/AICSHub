@@ -1,0 +1,20 @@
+{
+  "version": "business-acceptance.rubric.v1",
+  "axes": [
+    "protocol_valid",
+    "statement_supported",
+    "items_covered",
+    "conditions_and_exceptions_preserved",
+    "task_stage_appropriate",
+    "authorization_and_side_effects_safe"
+  ],
+  "must_all_pass": true,
+  "unknown_is_failure": true,
+  "limited_can_pass": true,
+  "completed_is_not_universal_gate": true,
+  "independent_text_review_required": true,
+  "assistant_review_is_not_human_gold": true,
+  "holdout_policy": "6 fresh authored cases; no independent-blind claim; no prompt tuning or failed operation replay after final phase starts",
+  "first_failure_stops": true,
+  "no_auto_json_repair_or_retry": true
+}

@@ -36,6 +36,10 @@ def is_test_input(path: str) -> bool:
 def snapshot_sources(root: Path) -> dict:
     root = root.resolve()
     paths = _git_paths(root, "ls-files", "--cached", "--others", "--exclude-standard")
+    deleted = _git_paths(root, "ls-files", "--deleted")
+    # A stable Git deletion is part of the source state, not an unreadable file.
+    # Deletions during a run still change the before/after file map and fail evidence.
+    paths -= deleted
     dirty = (_git_paths(root, "diff", "HEAD", "--name-only")
              | _git_paths(root, "ls-files", "--others", "--exclude-standard"))
     hashes = {}
@@ -54,6 +58,7 @@ def snapshot_sources(root: Path) -> dict:
         "fingerprint": hashlib.sha256(encoded).hexdigest(),
         "files": hashes,
         "dirty_input_paths": sorted(path for path in dirty if is_test_input(path)),
+        "deleted_input_paths": sorted(path for path in deleted if is_test_input(path)),
         "scope": "allowlisted source/config from git tracked and nonignored untracked paths; no env/data/reports",
         "unsupported_paths": sorted(path for path, digest in hashes.items() if digest in {"unsupported_link", "missing"}),
     }
@@ -77,3 +82,25 @@ def evidence_exit_code(pytest_exit_code: int, comparison: dict) -> int:
         return pytest_exit_code
     # 用例全绿但源码漂移/读取不完整不能作为可复用的通过证据。
     return 0 if comparison["source_tree_stable"] and comparison["source_snapshot_complete"] else 2
+
+
+def snapshot_filesystem_sources(root: Path) -> dict:
+    """Explicit container snapshot; never infer a Git commit for an image."""
+    root = root.resolve()
+    paths = set()
+    for prefix in SOURCE_PREFIXES:
+        directory = root / prefix
+        if directory.is_dir():
+            paths.update(p.relative_to(root).as_posix() for p in directory.rglob("*")
+                         if (p.is_file() or p.is_symlink()) and is_test_input(p.relative_to(root).as_posix()))
+    paths.update(name for name in ROOT_INPUTS if (root / name).is_file())
+    hashes = {}
+    for relative in sorted(paths):
+        path = root / relative
+        hashes[relative] = ("unsupported_link" if path.is_symlink() or not path.resolve().is_relative_to(root)
+                            else hashlib.sha256(path.read_bytes()).hexdigest())
+    encoded = json.dumps(hashes, sort_keys=True, ensure_ascii=True, separators=(",", ":")).encode()
+    return {"schema": 1, "fingerprint": hashlib.sha256(encoded).hexdigest(), "files": hashes,
+            "dirty_input_paths": [], "deleted_input_paths": [],
+            "unsupported_paths": [k for k,v in hashes.items() if v == "unsupported_link"],
+            "source_mode": "filesystem"}

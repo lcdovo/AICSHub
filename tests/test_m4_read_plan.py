@@ -126,6 +126,8 @@ async def test_main_graph_parallel_reads_use_live_owner_scope_and_never_write(tm
 
         monkeypatch.setattr(mcp, "invoke_tool", invoke)
         graph = AgentGraph()
+        from tests.test_chat_turns import allowed_judge
+        graph.llm_judge = allowed_judge()
         graph.checkpointer = InMemorySaver()
         graph.langgraph = graph._build_langgraph()
         value = understanding(conditions=[{"check": "order_not_shipped", "source": "current_message"}],

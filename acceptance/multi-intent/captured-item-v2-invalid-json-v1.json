@@ -1,0 +1,9 @@
+{
+  "origin": "real_provider_diagnostic_failure_not_a_pass",
+  "response_sha256": "3f9140a7b9a4bef36956770dd3a88de311524ebed134de8014bfe3cb08f1d48d",
+  "case_id": "MI-15",
+  "operation": "item-v2/MI-15/good",
+  "finish_reason": "tool_calls",
+  "arguments": "{\"schema_version\": 2, \"answerability\": full, \"response_behavior\": \"answer\", \"response_validity\": \"valid\", \"claims_complete\": true, \"claims\": [{\"segment_id\": 0, \"text\": \"可先更换充电线，再反馈指示灯状态\", \"support\": \"supported\", \"evidence\": [{\"kind\": \"knowledge\", \"source_id\": \"MI-15-i1\", \"version_id\": \"synthetic-v1\", \"quote\": \"可先更换充电线，再反馈指示灯状态。\"}], \"issues\": []}, {\"segment_id\": 0, \"text\": \"当前检查结果仍未知\", \"support\": \"supported\", \"evidence\": [{\"kind\": \"tool\", \"source_id\": \"tool:0\", \"version_id\": \"c7292f824d922cd54f4581c01d7c7965d95fd1750eed358ec1653ff83fee1b2a\", \"quote\": \"耳机检查过电源仍然不亮，请继续排查，运费由谁承担。\"}], \"issues\": []}, {\"segment_id\": 1, \"text\": \"质量问题退货运费由商家承担\", \"support\": \"supported\", \"evidence\": [{\"kind\": \"knowledge\", \"source_id\": \"MI-15-i2\", \"version_id\": \"synthetic-v1\", \"quote\": \"质量问题退货运费由商家承担。\"}], \"issues\": []}], \"nonfact_segments\": [], \"response_issues\": [], \"item_checks\": [{\"item_id\": \"i1\", \"status\": \"waiting_feedback\", \"answer_quote\": \"【i1】可先更换充电线，再反馈指示灯状态；当前检查结果仍未知。\", \"evidence_ids\": [\"U1\", \"K1\"], \"supported\": true, \"conditions_preserved\": true, \"answerability\": \"answerable\"}, {\"item_id\": \"i2\", \"status\": \"answered\", \"answer_quote\": \"【i2】质量问题退货运费由商家承担。\", \"evidence_ids\": [\"K2\"], \"supported\": true, \"conditions_preserved\": true, \"answerability\": \"answerable\"}]}",
+  "failure": "bare full literal is invalid JSON; do not silently repair"
+}

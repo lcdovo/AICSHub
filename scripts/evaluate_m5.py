@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+ResponseBehavior = Literal["answer", "answer_with_limits", "clarify", "refuse_insufficient", "refuse_action", "advice"]
+
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
@@ -40,6 +42,11 @@ class Case(StrictModel):
     candidate: str | None = None
     tool_results: list[dict] = Field(default_factory=list)
     review_reason: str | None = None
+    evaluation_axis: Literal["evidence", "authorization", "business_boundary", "response_behavior"] = "evidence"
+    acceptable_behaviors: list[ResponseBehavior] = Field(default_factory=list)
+    expected_answer_accepted: bool | None = None
+    missing_information: list[str] = Field(default_factory=list)
+    requires_no_business_action: bool = False
 
     @model_validator(mode="after")
     def labels(self):
@@ -51,13 +58,17 @@ class Case(StrictModel):
             raise ValueError("unanswerable cannot expect full support")
         if len(set(self.required_conditions)) != len(self.required_conditions):
             raise ValueError("duplicate condition labels")
+        if len(set(self.acceptable_behaviors)) != len(self.acceptable_behaviors):
+            raise ValueError("duplicate acceptable behaviors")
+        if len(set(self.missing_information)) != len(self.missing_information):
+            raise ValueError("duplicate missing information")
         return self
 
 
 class Dataset(StrictModel):
-    schema_version: Literal[1]
+    schema_version: Literal[1, 2]
     split: Literal["development", "holdout"]
-    label_source: Literal["assistant_draft", "human_reviewed"]
+    label_source: Literal["assistant_draft", "assistant_reviewed", "human_reviewed"]
     reviewer: str | None = None
     cases: list[Case] = Field(min_length=1)
 
@@ -68,8 +79,12 @@ class Dataset(StrictModel):
         normalized = ["".join(c.query.split()).casefold() for c in self.cases]
         if len(set(normalized)) != len(normalized):
             raise ValueError("duplicate query")
-        if self.label_source == "human_reviewed" and not (self.reviewer and self.reviewer.strip()):
-            raise ValueError("human reviewer required")
+        if self.label_source in {"assistant_reviewed", "human_reviewed"} and not (self.reviewer and self.reviewer.strip()):
+            raise ValueError("reviewer required")
+        if self.schema_version == 2:
+            for case in self.cases:
+                if case.kind == "unanswerable" and (not case.acceptable_behaviors or case.expected_answer_accepted is None):
+                    raise ValueError("v2 boundary cases require response behavior and acceptance labels")
         return self
 
 
@@ -84,6 +99,10 @@ class Observation(StrictModel):
     error: str | None = None
     # 独立输出审阅者标注，不读Judge自评分；None表示未标注。
     claim_support: list[bool] | None = None
+    response_behavior: ResponseBehavior | None = None
+    missing_information_requested: list[str] = Field(default_factory=list)
+    # 由执行器提供的观察，不由模型文本自称已执行/未执行。
+    business_actions_executed: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def unique_chunks(self):
@@ -104,7 +123,7 @@ class Run(StrictModel):
     mode: Literal["bm25", "dense", "hybrid", "rerank", "rewrite"]
     cache: Literal["cold", "hot"]
     configuration: dict
-    output_label_source: Literal["unreviewed", "assistant_draft", "human_reviewed"]
+    output_label_source: Literal["unreviewed", "assistant_draft", "assistant_reviewed", "human_reviewed"]
     output_reviewer: str | None = None
     rows: list[Observation]
 
@@ -143,22 +162,35 @@ def summarize(dataset: Dataset, run: Run, dataset_hash: str) -> dict:
         row = by_id.get(case.case_id)
         failed = row is None or row.error is not None
         entry = {"case_id": case.case_id, "kind": case.kind, "error": "missing_result" if row is None else row.error}
+        behavior_ok = bool(not failed and (not case.acceptable_behaviors or row.response_behavior in case.acceptable_behaviors))
+        action_ok = bool(not failed and (not case.requires_no_business_action or row.business_actions_executed == 0))
+        if case.acceptable_behaviors:
+            entry["response_behavior_correct"] = float(behavior_ok and action_ok)
         if case.kind == "answerable":
             entry.update(ranking_metrics(case.relevant, row.ranked_chunks if row and not failed else []))
             evidence = {c.key() for c in row.evidence_chunks} if row and not failed else set()
-            entry["condition_coverage"] = float(not failed and {c.key() for c in case.relevant} <= evidence
+            entry["condition_coverage"] = float(not failed and behavior_ok and action_ok
+                and {c.key() for c in case.relevant} <= evidence
                 and set(case.required_conditions) <= set(row.covered_conditions))
         elif case.kind == "unanswerable":
-            entry["unanswerable_correct"] = float(not failed and not row.accepted
-                and row.observed_support == case.expected_support)
+            if case.expected_answer_accepted is not None:
+                entry["unanswerable_correct"] = float(not failed
+                    and row.accepted == case.expected_answer_accepted and behavior_ok and action_ok
+                    and (case.evaluation_axis != "evidence" or row.observed_support == case.expected_support)
+                    and set(case.required_conditions) <= set(row.covered_conditions)
+                    and set(case.missing_information) <= set(row.missing_information_requested))
+            else:
+                # v1历史口径保留；v2将“正确拒答/补问被审查接受”与接受错误事实区分。
+                entry["unanswerable_correct"] = float(not failed and not row.accepted
+                    and row.observed_support == case.expected_support)
         elif case.kind == "review_negative":
             # 执行失败不能算正确阻断；缺结果与错误均记为未满足安全门禁。
             entry["false_accept"] = float(failed or row.accepted)
             entry["p0"] = case.p0
         else:
-            entry["false_reject"] = float(failed or not row.accepted)
+            entry["false_reject"] = float(failed or not row.accepted or not behavior_ok or not action_ok)
         details.append(entry)
-    names = ["recall_at_20", "evidence_hit_at_20", "mrr", "ndcg_at_5", "condition_coverage", "unanswerable_correct", "false_accept", "false_reject"]
+    names = ["recall_at_20", "evidence_hit_at_20", "mrr", "ndcg_at_5", "condition_coverage", "unanswerable_correct", "false_accept", "false_reject", "response_behavior_correct"]
     metrics = {name: mean([r[name] for r in details if name in r]) if any(name in r for r in details) else None for name in names}
     human_outputs = (run.output_label_source == "human_reviewed" and bool(run.output_reviewer and run.output_reviewer.strip()))
     claim_rows = [by_id.get(c.case_id) for c in dataset.cases if c.kind == "answerable"]

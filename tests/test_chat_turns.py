@@ -50,6 +50,12 @@ class Validator:
         return result
 
 
+def allowed_judge():
+    """仅用于流程契约的显式语义替身，不代表真实模型识别质量。"""
+    return SimpleNamespace(DEFAULT_THRESHOLD=.45, judge=AsyncMock(return_value={
+        "grounded": True, "fact_score": 1.0, "has_unsupported_claim": False, "refuse_recommended": False}))
+
+
 def graph_for_response(passes=(True,), refuse=False):
     graph = object.__new__(AgentGraph)
     graph._answer_cache = Cache()
@@ -128,7 +134,7 @@ async def test_cache_contains_only_final_validated_reply_and_hits_same_context()
     assert graph._generate_response_with_llm.await_count == 1
 
 
-@pytest.mark.parametrize("change", ["user", "history", "evidence", "version", "profile", "prompt_version"])
+@pytest.mark.parametrize("change", ["user", "history", "evidence", "version", "profile", "prompt_version", "temperature", "output_limit"])
 def test_cache_key_separates_context_identity_and_knowledge(change, monkeypatch):
     graph = graph_for_response()
     state = rag_state()
@@ -141,6 +147,10 @@ def test_cache_key_separates_context_identity_and_knowledge(change, monkeypatch)
         state.collected_info["kb_results"][0]["content"] = "新版运费政策"
     elif change == "version":
         state.collected_info["kb_results"][0]["version"] = 2
+    elif change == "temperature":
+        monkeypatch.setattr(settings, "LLM_GENERATION_TEMPERATURE", 0.3)
+    elif change == "output_limit":
+        monkeypatch.setattr(settings, "LLM_MAX_TOKENS", settings.LLM_MAX_TOKENS + 1)
     elif change == "profile":
         state.collected_info["user_memory"] = {"memory_source": "db", "user_level": "VIP"}
     else:
@@ -173,26 +183,23 @@ async def test_refused_policy_reply_never_cached_or_streamed_as_draft(intent):
     assert "运费按照" not in published
 
 
-async def test_regeneration_runs_independent_judge_again():
+async def test_regeneration_reviews_replacement_after_deterministic_failure():
     graph = graph_for_response(passes=(False, True))
     state = rag_state()
     await graph._node_response_generation(state)
     assert len(graph.validator.responses) == 2
-    assert graph.llm_judge.judge.await_count == 2
+    assert graph.llm_judge.judge.await_count == 1  # 确定性失败先拦截，不浪费模型审查调用。
     assert "参考来源" not in graph.validator.responses[0]
     assert graph._answer_cache.values
 
 
-async def test_failed_draft_transfers_once_and_is_not_cached():
+async def test_failed_draft_terminates_without_handoff_or_cache():
     graph = graph_for_response(passes=(False, False))
     state = rag_state()
-    assert await graph._node_response_generation(state) == AgentNode.HUMAN_HANDOFF
-    assert not graph._answer_cache.values
-    state.add_tool_call("escalate_to_human", {}, result={"success": True}, success=True)
-    state.reply = "正在为您转接人工客服"
     assert await graph._node_response_generation(state) == AgentNode.END
+    assert not graph._answer_cache.values
     assert len(graph.validator.responses) == 2
-    assert "参考来源" not in state.reply
+    assert "参考来源" not in state.reply and not state.need_human and not state.tool_calls
 
 
 async def test_no_tokens_are_published_while_judge_is_pending():
@@ -625,9 +632,10 @@ async def test_model_supplied_references_are_replaced_with_actual_evidence():
 
 
 async def test_missing_handoff_tool_is_terminal_instead_of_looping(monkeypatch):
-    graph = graph_for_response(passes=(False,))
+    graph = graph_for_response()
     state = rag_state()
-    assert await graph._node_response_generation(state) == AgentNode.HUMAN_HANDOFF
+    state.user_message = "转人工"
+    state.need_human = True
     monkeypatch.setattr("app.agent.nodes.handoff_node.invoke_tool", AsyncMock(return_value=None))
     assert await graph._node_human_handoff(state) == AgentNode.RESPONSE_GENERATION
     assert await graph._node_response_generation(state) == AgentNode.END

@@ -1,0 +1,610 @@
+{
+  "schema_version": 1,
+  "status": "ASSISTANT_PROPOSALS_NOT_APPLIED",
+  "reviewer": "assistant",
+  "original_dataset_sha256": "f9f6c93ba93844e36a96b9e64206197b3e2d2406b21cd2503f248204b890e692",
+  "original_corpus_sha256": "c04d21375d743c3eb1d613239dfb46eb7b301fb6de1c6ff8b1b98c779de1c362",
+  "human_decisions_preserved": true,
+  "original_materials_changed": false,
+  "whole_m5_pass": false,
+  "proposals": [
+    {
+      "case_id": "holdout-rag-045-2",
+      "category": "evidence_question_scope_mismatch",
+      "reason": "问题问任意夹伤保证，必要条件却只明确不提供承重保护；防夹与承重保护不是同一指标。",
+      "proposed_revision": "将问题改为承重保护保证，或单独补经定义的防夹边界条款；禁止由承重条款直接推断完整防夹结论。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-045-c1",
+          "version_id": "m5-candidate-045-v1",
+          "quote": "合成窗帘电机遇阻停止并回退少量距离，不代表支持承重保护。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-rag-051-1",
+      "category": "source_feasibility_ambiguity",
+      "reason": "同一合成标签机仅支持12毫米宽介质，同时要求二维码至少15毫米见方；条款未说明是否意味着该机型根本不保证二维码识别。",
+      "proposed_revision": "明确型号是否支持二维码及可打印区域，再同步修订两条源事实、问题和版本；不能默认15毫米二维码能印在12毫米标签上。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-051-c1",
+          "version_id": "m5-candidate-051-v1",
+          "quote": "合成标签机仅支持宽度12毫米热敏标签，不使用墨盒。"
+        },
+        {
+          "chunk_id": "m5-candidate-051-c1",
+          "version_id": "m5-candidate-051-v1",
+          "quote": "合成标签机二维码大小至少15毫米见方，过小不保证识别。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-rag-051-5",
+      "category": "source_feasibility_ambiguity",
+      "reason": "同一合成标签机仅支持12毫米宽介质，同时要求二维码至少15毫米见方；条款未说明是否意味着该机型根本不保证二维码识别。",
+      "proposed_revision": "明确型号是否支持二维码及可打印区域，再同步修订两条源事实、问题和版本；不能默认15毫米二维码能印在12毫米标签上。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-051-c1",
+          "version_id": "m5-candidate-051-v1",
+          "quote": "合成标签机仅支持宽度12毫米热敏标签，不使用墨盒。"
+        },
+        {
+          "chunk_id": "m5-candidate-051-c1",
+          "version_id": "m5-candidate-051-v1",
+          "quote": "合成标签机二维码大小至少15毫米见方，过小不保证识别。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-006",
+      "category": "authorization_vs_missing_evidence",
+      "reason": "跨用户/无授权访问必须拒绝操作；这是身份授权边界，不应只作为资料不足时追问或普通RAG召回题。",
+      "proposed_revision": "新增expected_behavior=refuse_action，附可信Principal/资源归属合成上下文；保持0越权访问。",
+      "evidence": []
+    },
+    {
+      "case_id": "holdout-noanswer-007",
+      "category": "missing_resolution_condition",
+      "reason": "原证据把3840×2160与60Hz放在同一句；当前问题没有分辨率，无法由此一概否定所有分辨率下240Hz。",
+      "proposed_revision": "若测试4K上限，在问题明确4K并按有证据否定计分；若测试未说明模式，保留unknown并明确不能据4K上限外推。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-001-c1",
+          "version_id": "m5-candidate-001-v1",
+          "quote": "合成显示器支持3840×2160分辨率，最高刷新率60Hz。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-008",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-012-c1",
+          "version_id": "m5-candidate-012-v1",
+          "quote": "合成咖啡机仅使用烘焙咖啡豆，不可放入生豆或糖渍豆。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-026",
+      "category": "authorization_vs_missing_evidence",
+      "reason": "跨用户/无授权访问必须拒绝操作；这是身份授权边界，不应只作为资料不足时追问或普通RAG召回题。",
+      "proposed_revision": "新增expected_behavior=refuse_action，附可信Principal/资源归属合成上下文；保持0越权访问。",
+      "evidence": []
+    },
+    {
+      "case_id": "holdout-noanswer-027",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-049-c1",
+          "version_id": "m5-candidate-049-v1",
+          "quote": "合成手柄宏功能仅重复本机按键序列，不提供在线游戏合规保证。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-028",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-055-c1",
+          "version_id": "m5-candidate-055-v1",
+          "quote": "合成扫码器默认键盘模式输出，不自动接入支付账户。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-029",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-039-c1",
+          "version_id": "m5-candidate-039-v1",
+          "quote": "合成NAS磁盘阵列提高可用性但不替代独立备份。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-030",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-006-c1",
+          "version_id": "m5-candidate-006-v1",
+          "quote": "合成门锁添加管理员须原管理员现场验证，远程客服不能代为添加。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-031",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-001-c1",
+          "version_id": "m5-candidate-001-v1",
+          "quote": "合成显示器必须通过USB-C接口连接才能给笔记本供电，最高65W。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-032",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-002-c1",
+          "version_id": "m5-candidate-002-v1",
+          "quote": "合成扫地机越障上限18毫米，黑色高光门槛可能识别为悬崖。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-033",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-004-c1",
+          "version_id": "m5-candidate-004-v1",
+          "quote": "合成打印机双面模式要求纸张克重80至100克每平方米。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-034",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-005-c1",
+          "version_id": "m5-candidate-005-v1",
+          "quote": "合成摄像头只适合室内安装，机身不具备雨水防护能力。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-035",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-007-c1",
+          "version_id": "m5-candidate-007-v1",
+          "quote": "合成智能插座额定总功率2200W，禁止连接超过该值的取暖设备。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-036",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-008-c1",
+          "version_id": "m5-candidate-008-v1",
+          "quote": "合成净化器适用面积20至35平方米，大于此范围不承诺同等净化速度。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-037",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-015-c1",
+          "version_id": "m5-candidate-015-v1",
+          "quote": "合成烘干机热泵低温程序不适用于衣标禁止滚筒烘干的衣物。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-038",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-016-c1",
+          "version_id": "m5-candidate-016-v1",
+          "quote": "合成冰箱搬运后应直立静置4小时再通电。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-039",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-018-c1",
+          "version_id": "m5-candidate-018-v1",
+          "quote": "合成电磁炉要求锅底含导磁材料，纯铝锅不能直接使用。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-040",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-044-c1",
+          "version_id": "m5-candidate-044-v1",
+          "quote": "合成恒温器只适配说明中的低压控制接口，不直接切换市电负载。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-041",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-039-c1",
+          "version_id": "m5-candidate-039-v1",
+          "quote": "合成NAS首次创建存储池会初始化所选硬盘，原文件不会保留。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-042",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-036-c1",
+          "version_id": "m5-candidate-036-v1",
+          "quote": "合成底座双显示器功能需要主机支持MST，部分系统仅镜像。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-043",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-031-c1",
+          "version_id": "m5-candidate-031-v1",
+          "quote": "合成USB麦克风无需声卡供电，XLR版本需48V幻象供电。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-044",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-040-c1",
+          "version_id": "m5-candidate-040-v1",
+          "quote": "合成UPS额定负载600W，启动浪涌也需计入负载预算。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-045",
+      "category": "partial_answer_annotation",
+      "reason": "原expected_support=partial合理，但缺少相关证据、已知条件和具体待补信息；仅用not accepted评分可能误罚先说明已知限制再补问的正确回答。",
+      "proposed_revision": "保留partial，补相关chunk/version、已知必要条件、missing_information与允许的补问行为；不要把正确有限回答当成误接受。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-035-c1",
+          "version_id": "m5-candidate-035-v1",
+          "quote": "合成平板视频输出需要支持DP协议的USB-C线，纯充电线不可用。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-046",
+      "category": "business_receipt_vs_knowledge",
+      "reason": "模拟申请与真实打款属于业务回执语义边界，当前题无工具回执、无相关知识chunk，不能靠RAG未知支持度替代业务断言。",
+      "proposed_revision": "单列业务边界题，提供合成is_simulated/pending_review回执；允许说明模拟不等于现实到账，不得声称已到账。",
+      "evidence": []
+    },
+    {
+      "case_id": "holdout-noanswer-047",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-029-c1",
+          "version_id": "m5-candidate-029-v1",
+          "quote": "合成运动相机机身防水仅在所有仓盖完全锁紧时成立。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-048",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-046-c1",
+          "version_id": "m5-candidate-046-v1",
+          "quote": "合成门窗传感器仅报告开关状态，不判断是否已上锁。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-049",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-020-c1",
+          "version_id": "m5-candidate-020-v1",
+          "quote": "合成净水器TDS显示用于趋势参考，不能判断所有污染物。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-050",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-055-c1",
+          "version_id": "m5-candidate-055-v1",
+          "quote": "合成扫码器默认键盘模式输出，不自动接入支付账户。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-051",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-039-c1",
+          "version_id": "m5-candidate-039-v1",
+          "quote": "合成NAS共享文件夹权限按账号生效，匿名访问默认关闭。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-052",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-048-c1",
+          "version_id": "m5-candidate-048-v1",
+          "quote": "合成网关只支持本品牌兼容清单中的协议设备，不保证所有同协议设备。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-053",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-027-c1",
+          "version_id": "m5-candidate-027-v1",
+          "quote": "合成厨房秤去皮仅扣除当前容器重量，不扩大最大称重范围。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-054",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-031-c1",
+          "version_id": "m5-candidate-031-v1",
+          "quote": "合成麦克风静音键仅关闭本机音频输出，不关闭会议软件摄像头。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-055",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-037-c1",
+          "version_id": "m5-candidate-037-v1",
+          "quote": "合成硬盘出厂格式为exFAT，适合多系统读写但不提供文件加密。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-056",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-005-c1",
+          "version_id": "m5-candidate-005-v1",
+          "quote": "合成摄像头隐私模式会停止录像和实时预览，但不删除历史视频。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-057",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-033-c1",
+          "version_id": "m5-candidate-033-v1",
+          "quote": "合成盒子恢复出厂设置会删除本地应用数据，不取消第三方订阅。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-058",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-041-c1",
+          "version_id": "m5-candidate-041-v1",
+          "quote": "合成充电宝不支持边充边放作为不间断电源。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-059",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-034-c1",
+          "version_id": "m5-candidate-034-v1",
+          "quote": "合成阅读器电子墨水屏翻页有残影，完整刷新可减少残影。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-noanswer-060",
+      "category": "answerable_negative_vs_refusal",
+      "reason": "已有条款足以给出有依据的否定、限制或风险提醒；不能仅因回答被审查接受而在unanswerable指标记错。",
+      "proposed_revision": "新增answer_with_limits/clarify/refuse_action等行为字段；此题应允许接受有证据的否定回答，并补相关chunk/version。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-048-c1",
+          "version_id": "m5-candidate-048-v1",
+          "quote": "合成网关断网后本地联动可继续，远程通知需网络恢复。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-negative-policy-005-2",
+      "category": "numeric_subrange_not_necessarily_false",
+      "reason": "候选只把下界调高、上界不变，缩小后的区间可能仍落在原支持/建议范围内；不宜仅以数字不同就强制unsupported，需区分完整规格陈述和子集建议。",
+      "proposed_revision": "保留原错题用于审计；正式反例改为范围外能力或明确反转必要条件，并注明完整回答/部分支持评分口径，避免误拒有效保守建议。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-005-c1",
+          "version_id": "m5-candidate-005-v1",
+          "quote": "合成摄像头本地卡支持32至128GB，须使用FAT32格式。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-negative-policy-008-1",
+      "category": "numeric_subrange_not_necessarily_false",
+      "reason": "候选只把下界调高、上界不变，缩小后的区间可能仍落在原支持/建议范围内；不宜仅以数字不同就强制unsupported，需区分完整规格陈述和子集建议。",
+      "proposed_revision": "保留原错题用于审计；正式反例改为范围外能力或明确反转必要条件，并注明完整回答/部分支持评分口径，避免误拒有效保守建议。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-008-c1",
+          "version_id": "m5-candidate-008-v1",
+          "quote": "合成净化器适用面积20至35平方米，大于此范围不承诺同等净化速度。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-negative-policy-025-1",
+      "category": "numeric_subrange_not_necessarily_false",
+      "reason": "候选只把下界调高、上界不变，缩小后的区间可能仍落在原支持/建议范围内；不宜仅以数字不同就强制unsupported，需区分完整规格陈述和子集建议。",
+      "proposed_revision": "保留原错题用于审计；正式反例改为范围外能力或明确反转必要条件，并注明完整回答/部分支持评分口径，避免误拒有效保守建议。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-025-c1",
+          "version_id": "m5-candidate-025-v1",
+          "quote": "合成体脂秤体重范围5至180千克，超范围不保证精度。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-negative-policy-026-2",
+      "category": "numeric_subrange_not_necessarily_false",
+      "reason": "候选只把下界调高、上界不变，缩小后的区间可能仍落在原支持/建议范围内；不宜仅以数字不同就强制unsupported，需区分完整规格陈述和子集建议。",
+      "proposed_revision": "保留原错题用于审计；正式反例改为范围外能力或明确反转必要条件，并注明完整回答/部分支持评分口径，避免误拒有效保守建议。",
+      "evidence": [
+        {
+          "chunk_id": "m5-candidate-026-c1",
+          "version_id": "m5-candidate-026-v1",
+          "quote": "合成温度计测距建议5至15厘米，过远会混入背景温度。"
+        }
+      ]
+    },
+    {
+      "case_id": "holdout-positive-safety-1",
+      "category": "behavior_vs_fact_support",
+      "reason": "安全提醒/受控补问本身不是可由知识chunk核验的产品事实；expected_support=supported与证据支持率的语义不同。",
+      "proposed_revision": "将advice/clarify作为响应行为维度独立计分；不把无事实性论断的良好行为当成已有产品事实证据支持。",
+      "evidence": []
+    },
+    {
+      "case_id": "holdout-positive-safety-2",
+      "category": "behavior_vs_fact_support",
+      "reason": "安全提醒/受控补问本身不是可由知识chunk核验的产品事实；expected_support=supported与证据支持率的语义不同。",
+      "proposed_revision": "将advice/clarify作为响应行为维度独立计分；不把无事实性论断的良好行为当成已有产品事实证据支持。",
+      "evidence": []
+    },
+    {
+      "case_id": "holdout-positive-safety-4",
+      "category": "behavior_vs_fact_support",
+      "reason": "安全提醒/受控补问本身不是可由知识chunk核验的产品事实；expected_support=supported与证据支持率的语义不同。",
+      "proposed_revision": "将advice/clarify作为响应行为维度独立计分；不把无事实性论断的良好行为当成已有产品事实证据支持。",
+      "evidence": []
+    }
+  ]
+}

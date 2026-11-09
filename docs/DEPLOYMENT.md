@@ -1,5 +1,9 @@
 # Docker 部署
 
+> 2026-11-07当前本机已迁移0013，默认主栈包含常驻业务worker，API/Worker使用同一镜像与Redis本地模型准入。迁移顺序、备份、容器回归及真实冒烟见[当前部署收口](RELIABILITY-ROLLOUT-20261107.md)。以下分阶段“尚未迁移”陈述为当时记录；不能覆盖此后实查状态。
+
+本地模型`LOCAL_MODEL_COORDINATOR=batch`是默认关闭的单进程实验候选，不能与其他API/Job进程共用同一模型资源并声称全局限流；WORKERS大于1时拒绝。仅隔离候选测试启用，不修改业务`.env`，不在在途执行时热切配置。Embedding微批与重排独立通道的原5秒截止保持，完整压力延迟仍FAIL；运行与回退记录见[M5-CROSS-REQUEST-BATCH-v1.md](M5-CROSS-REQUEST-BATCH-v1.md)。
+
 ## M1固定收尾迁移与验收环境
 
 新增0007_m1_refund_actions：订单金额改Numeric(12,2)，新增签收/币种/已退金额、退款动作与事务闸门、申请审核字段。历史签收保持NULL；缺失时不能批准申请。迁移先拒绝非有限、负数或不能精确表示两位小数的旧金额，不自动猜测或舍入。独立MySQL已演练0006旧列到0007及99.10金额/用户记录保留；真实业务库未迁移。
@@ -91,3 +95,24 @@ M2真实验收入口 `python scripts/test_m2_real.py` 校验专属容器标签/�
 Embedding批量2、导入HTTP时限90秒（检索调用仍有独立5秒外层边界）。Infinity CPU线程2、batch4，禁用torch compile/全尺寸启动warmup；健康后必须实际推理核验，不能只看进程。旧模型权重卷复用，不下载替代模型。主栈迁移到0011；0010新增模型预算/调用/槽，0011补版本/价格快照，升级前备份。
 
 业务显式LLM_GATEWAY_ENABLED=true，REQUEST_UNDERSTANDING_MODE=rules，percentage=0；M4未过门槛时保持此模式。新环境默认网关false为兼容开关，不能宣称已有SQL预算保证；启用前先迁移。旧实例/未升级进程不在新SQL网关并发保证范围。账号实际扣费尚未对账，LLM_PRICE_VERIFIED=false。
+
+Judge契约候选开关LLM_JUDGE_CONTRACT_VERSION默认v1。v2仅完成离线契约/SDK替身验证，真实供应商兼容/质量/成本尚未验收；不能据单元测试自动改业务.env启用。缓存key已区分版本及审查prompt/schema，升级后旧策略缓存不复用。见M5-JUDGE-CONTRACT-v2.md。
+
+
+## RAG结构索引升级（2026-11-07）
+
+本次代码引入structured-source-v2和context-document-v2，Embedding指纹包含文档检索文本策略。旧发布版本保留词法读取，旧指纹不参与新空间dense检索；要取得新分块和完整混合检索能力，需安排读端与worker升级及新版本索引重建/验证后原子切换。没有新增SQL迁移，不删除旧版本/collection。不得把代码更新等同于业务知识已重建；本轮未运行业务reindex或真实模型验收。流程、默认参数和验证边界见RAG-STRUCTURE-v2.md。
+
+## 任务循环候选的部署顺序
+
+本阶段新增0012_agent_tasks（任务/步骤表及refund_actions.preconditions）。新镜像即使关闭任务循环也会读取扩展后的RefundAction模型，因此必须先迁移数据库再切镜像。迁移兼容旧NULL条件，不删除历史动作；回退通过关闭AGENT_TASK_LOOP_ENABLED，不执行有损downgrade。
+
+开关默认false。启用要求REQUEST_UNDERSTANDING_MODE=model、LLM_GATEWAY_ENABLED=true、AGENT_TASK_MAX_OUTPUT_TOKENS不超过LLM_MAX_TOKENS。默认3次决策/4次能力/20秒调度阶段/256决策输出tokens，仍共享整Run网关预算。需先按[验收文档](AGENT-TASK-LOOP-ACCEPTANCE-v1.md)完成真实模型和运行验收；原请求理解通过不能替代新任务准入。
+> 2026-11-07 本机已切换最新16节点Agent及0012迁移，任务循环和模拟退款预览开启；24份发布文档采用structured-source-v2/context-document-v2新索引。Embedding和同模型float32重排使用GPU，Embedding批量1，单Run模型费用预留上限0.2美元，Langfuse未运行故关闭上报。备份、恢复演练、清理与验证见 [统一升级记录](LATEST-ROLLOUT-20261107.md)。这些是本机配置，不自动作为其他主机或生产容量建议。
+
+后续Agent可靠性开发新增0013_agent_reliability（agent_capability_calls独立执行账本）。切换该版本前须备份并先迁移到0013，再一并升级API及Run恢复Worker；旧表、原回执和知识索引不清理。当前业务未应用此迁移或切换镜像，离线验证与限制见[Agent可靠性优化](AGENT-RELIABILITY-v1.md)。
+
+
+### 2026-11-08 最小降级优化发布v2
+
+本机API/Worker目前运行ai-customer:degradation-opt-v2-20261108（20f856b0…），仅8文件覆盖旧d8镜像。其余工作区候选未部署。使用reports/optimization-release-v2/private/candidate-exact.yml和rollback-exact.yml做精确切换，文件含凭据不得输出/提交；不要用latest或普通Compose推定候选。业务配置/SQL0013/数据卷不变，实际回滚演练已执行；九服务healthy。性能先导批次在Judge unknown处停止，各意图仅6-7样本，不代表完整准入。详见OPTIMIZATION-RELEASE-20261108.md。

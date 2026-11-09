@@ -9,8 +9,9 @@ import time
 import uuid
 
 from app.services.local_inference import CONTEXT, LocalModelBusy, LocalModelDeadline
+from app.services.local_batching import ModelLane
 
-VERSION = "whole-request-owner-lease-v2"
+VERSION = "whole-request-owner-lease-v4-bounded-shared-gpu-pool"
 CURRENT: ContextVar[Permit | None] = ContextVar("local_request_permit", default=None)
 
 ACQUIRE = """
@@ -97,9 +98,19 @@ class Permit:
             self.check()
             if self._closed or time.monotonic() >= expires:
                 raise LocalModelDeadline("local_request_http_expired")
-            sent = time.monotonic()
-            dispatched = True
-            result = call(expires-sent)
+            def dispatch(remaining):
+                nonlocal sent, dispatched
+                self.check()
+                if self._closed or time.monotonic() >= expires:
+                    raise LocalModelDeadline("local_request_http_expired")
+                sent = time.monotonic()
+                dispatched = True
+                return call(min(remaining, expires-sent))
+
+            if self.coordinator.scope == "batch" and purpose == "rerank":
+                result = RERANK_LANE.run(dispatch, expires-time.monotonic())
+            else:
+                result = dispatch(expires-time.monotonic())
             self.check()
             if self._closed or time.monotonic() >= expires:
                 raise LocalModelDeadline("late_local_request_http")
@@ -196,6 +207,71 @@ class ProcessCoordinator:
             return released
 
 
+class BatchCoordinator:
+    """单进程实验模式：最多10个整轮身份，模型出口分别有界。"""
+
+    scope = "batch"
+
+    def __init__(self, capacity=10, max_waiters=2):
+        self.capacity = capacity
+        self.max_waiters = max_waiters
+        self.condition = threading.Condition()
+        self.owners: dict[str, str] = {}
+        self.waiters = {"interactive": deque(), "background": deque()}
+        self._interactive_streak = 0
+
+    def acquire(self, *, priority, deadline):
+        began = time.monotonic()
+        until = min(deadline, began+(.5 if priority == "interactive" else .05))
+        token = uuid.uuid4().hex
+        with self.condition:
+            if began >= deadline:
+                raise LocalModelDeadline("local_request_expired")
+            if priority not in self.waiters:
+                raise ValueError("invalid_local_priority")
+            queued = sum(map(len, self.waiters.values()))
+            if queued >= self.max_waiters and (len(self.owners) >= self.capacity or queued):
+                raise LocalModelBusy("local_request_queue_full")
+            queue = self.waiters[priority]
+            queue.append(token)
+            try:
+                while True:
+                    now = time.monotonic()
+                    if now >= deadline:
+                        raise LocalModelDeadline("local_request_expired")
+                    if now >= until:
+                        raise LocalModelBusy("local_request_wait_expired")
+                    background = self.waiters["background"]
+                    interactive = self.waiters["interactive"]
+                    background_available = "background" not in self.owners.values()
+                    first = (background if background and background_available and (not interactive or self._interactive_streak >= 4)
+                             else interactive or background)
+                    # 后台最多占一个资格，其余容量留给交互。
+                    background_free = priority != "background" or "background" not in self.owners.values()
+                    if first[0] == token and len(self.owners) < self.capacity and background_free:
+                        queue.remove(token)
+                        self.owners[token] = priority
+                        self._interactive_streak = self._interactive_streak+1 if priority == "interactive" else 0
+                        self.condition.notify_all()
+                        return Permit(self, token, deadline, (now-began)*1000)
+                    self.condition.wait(until-now)
+            finally:
+                if token in queue:
+                    queue.remove(token)
+                self.condition.notify_all()
+
+    def valid(self, token, renew=False):
+        with self.condition:
+            return token in self.owners
+
+    def release(self, token):
+        with self.condition:
+            existed = token in self.owners
+            self.owners.pop(token, None)
+            self.condition.notify_all()
+            return existed
+
+
 class RedisCoordinator:
     scope = "redis"
     def __init__(self, client, namespace="aicshub:local-models:whole-v1", ttl_ms=15000):
@@ -250,6 +326,9 @@ class RedisCoordinator:
 
 
 PROCESS = ProcessCoordinator()
+BATCH = BatchCoordinator()
+RERANK_LANE = ModelLane(2)
+EMBEDDING_LANE = ModelLane(1)
 _redis_lock = threading.Lock()
 _redis_coordinator = None
 _redis_identity = None
@@ -257,17 +336,27 @@ _redis_identity = None
 
 def get_coordinator():
     from app.config.config import settings
+    if settings.LOCAL_MODEL_MAX_CONCURRENCY != 1 and settings.LOCAL_MODEL_COORDINATOR != "redis":
+        raise LocalModelBusy("local_pool_requires_shared_redis")
     if settings.LOCAL_MODEL_COORDINATOR == "process":
         return PROCESS
+    if settings.LOCAL_MODEL_COORDINATOR == "batch":
+        if settings.WORKERS != 1:
+            raise LocalModelBusy("local_batch_requires_single_worker")
+        return BATCH
     if not settings.REDIS_ENABLED:
         raise LocalModelBusy("local_request_redis_required")
     global _redis_coordinator, _redis_identity
-    identity = (settings.REDIS_URL, settings.LOCAL_MODEL_COORDINATOR_NAMESPACE)
+    identity = (settings.REDIS_URL, settings.LOCAL_MODEL_COORDINATOR_NAMESPACE, settings.LOCAL_MODEL_MAX_CONCURRENCY)
     with _redis_lock:
         if identity != _redis_identity:
             import redis
             client = redis.Redis.from_url(settings.REDIS_URL,socket_timeout=.2,socket_connect_timeout=.2)
-            _redis_coordinator = RedisCoordinator(client,settings.LOCAL_MODEL_COORDINATOR_NAMESPACE)
+            if settings.LOCAL_MODEL_MAX_CONCURRENCY == 2:
+                from app.services.local_pool import RedisPoolCoordinator
+                _redis_coordinator = RedisPoolCoordinator(client, settings.LOCAL_MODEL_COORDINATOR_NAMESPACE)
+            else:
+                _redis_coordinator = RedisCoordinator(client,settings.LOCAL_MODEL_COORDINATOR_NAMESPACE)
             _redis_identity = identity
         return _redis_coordinator
 

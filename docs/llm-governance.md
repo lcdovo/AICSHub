@@ -38,3 +38,13 @@ M4故障补验：同执行上下文并行预留共享锁，跨实例仍依赖SQL
 生成节点与持久评测/Trace使用严格GenerationMetadata观察头，服务last_call_metadata中的structured_output/输入摘要/额外字段不复制到状态。partial/unknown usage明确区分，缺失output不按0计算实际费用；未知头不缓存回答，SQL ModelCallRecord保持计费事实。该头和LLMService展示tokens估算均不替代供应商账单。
 
 Graph模型服务被显式替换时，共享原服务的改写/Judge组件同步重绑定，避免只替换生成/意图而遗留旧请求适配器；专用独立模型不被覆盖。测试捕获与费用授权仍应覆盖所有显式供应商实例，SQL Run预算继续统一约束，旧客户端由调用方关闭。
+
+## Judge v2候选与费用边界
+
+LLM_JUDGE_CONTRACT_VERSION=v1|v2默认v1；v2拆分answerability/response_validity/response_behavior，由服务器核验句子覆盖、当前输入hash及证据ID/版本/quote，最终程序决定publish_allowed。原模型总分不能覆盖明确的范围/否定/条件错误。partial/unknown的合适补问/拒答不视为错误候选，但不进回答缓存。临时原文证明不复制进审查状态，旧契约不能冒充v2。v2单次输出最多min(全局配置,1024)，未做新真实供应商验证；原M4 660和M5 1027调用额度均已耗尽，本片新增0次。详情及未验语义识别见M5-JUDGE-CONTRACT-v2.md。
+
+2026-11-07：回答组件采用确定性检查＋独立Judge＋程序发布决策，Judge失败为审查unknown，与资料不足但补问正确分开。只有明确rejected的模型草稿可修复一次并复审，unknown不重生成，失败不自动转人工；修复原文只在ContextVar临时传递。v2提示新增条件/子问题覆盖及不必要补问检查，契约修订candidate.2；本轮不切业务配置、不新增真实调用，模型语义质量仍未验收。缓存validated-v4隔离旧策略，命中复审；发布前核对输入与策略指纹和知识发布快照。实现与离线范围见[ANSWER-PIPELINE-v1.md](ANSWER-PIPELINE-v1.md)。
+
+## Judge v2 JSON协议候选补充（2026-11-08）
+
+`LLM_JUDGE_V2_OUTPUT_PROTOCOL`默认function_calling；候选可显式使用json_object，仅改变v2独立Judge，不改变v1/理解/生成。json_object请求指定response_format和完整schema，标准json.loads严格验证，拒绝重复键/非有限数字/Markdown/截断/工具回包，无自动修补、重试或失败协议回退；协议纳入回答策略绑定。服务端片段ID改用无数字可逆编码以避免手机号脱敏误伤，真实隐私脱敏保持。此候选未部署，完整真实语义准入仍失败，最新预算21/80及范围见[JUDGE-V2-JSON-PROTOCOL-FIX-v1.md](JUDGE-V2-JSON-PROTOCOL-FIX-v1.md)。

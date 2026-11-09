@@ -48,6 +48,7 @@ class APIEmbedding(BaseEmbedding):
         max_retries: int = 2,
         query_instruction: str = "",
         batch_size: int = 20,
+        document_timeout: float | None = None,
     ):
         self.api_base = api_base.rstrip("/")
         self.api_key = api_key
@@ -55,6 +56,7 @@ class APIEmbedding(BaseEmbedding):
         self.dim = dim
         self.name = f"api({model})"
         self.timeout = timeout
+        self.document_timeout = document_timeout
         self.max_retries = max_retries
         # 兼容 DashScope 等外接 API 的单次输入条数上限（实测 >20 返回 400）；
         # 本地 Ollama 无此限制，可通过 EMBEDDING_BATCH_SIZE 调大以降低往返次数。
@@ -67,6 +69,39 @@ class APIEmbedding(BaseEmbedding):
         self._client_users = 0
         self._closed = False
         self._text_cache: Dict[str, List[float]] = {}
+        from app.services.local_batching import EmbeddingBatcher
+        self._batcher = EmbeddingBatcher(self._infer_shared_batch)
+
+    def _infer_shared_batch(self, texts: List[str], deadline: float, guard=lambda: None) -> List[List[float]]:
+        from app.services.local_admission import EMBEDDING_LANE
+
+        def post(remaining):
+            expires = min(deadline, time.monotonic()+remaining)
+            with self._borrow_client(expires) as client:
+                remaining = expires-time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("embedding_batch_http_deadline")
+                guard()
+                remaining = expires-time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("embedding_batch_guard_deadline")
+                raw = client.post(f"{self.api_base}/embeddings", json={
+                    "model": self.model, "input": texts, "encoding_format": "float",
+                    "dimensions": self.dim}, timeout=remaining).raise_for_status().json()
+            items = raw.get("data") if isinstance(raw, dict) else None
+            if not isinstance(items, list) or len(items) != len(texts):
+                raise ValueError("embedding_batch_count_mismatch")
+            vectors = [None]*len(texts)
+            for item in items:
+                if not isinstance(item, dict):
+                    raise ValueError("embedding_batch_item_invalid")
+                index = item.get("index")
+                if type(index) is not int or not 0 <= index < len(texts) or vectors[index] is not None:
+                    raise ValueError("embedding_batch_index_invalid")
+                vectors[index] = validate_vector(item.get("embedding"), self.dim)
+            return vectors
+
+        return EMBEDDING_LANE.run(post, max(0, deadline-time.monotonic()))
 
     def encode_query(self, text: str) -> List[float]:
         """查询侧编码：自动拼查询指令前缀后走 encode（缓存 key 天然区分）。"""
@@ -144,7 +179,8 @@ class APIEmbedding(BaseEmbedding):
                 uncached_indices.append(i)
 
         if uncached:
-            batch_vectors = self._call_api(uncached)
+            batch_vectors = (self._call_api(uncached, timeout=self.document_timeout)
+                             if self.document_timeout is not None else self._call_api(uncached))
             for idx, vec in zip(uncached_indices, batch_vectors):
                 results[idx] = vec
                 cache_key = f"{self.model}:{texts[idx]}"
@@ -154,24 +190,48 @@ class APIEmbedding(BaseEmbedding):
             raise RuntimeError("embedding_response_missing")
         return results
 
-    def _call_api(self, texts: List[str]) -> List[List[float]]:
+    def _call_api(self, texts: List[str], *, timeout: float | None = None) -> List[List[float]]:
         """调用 Embedding API；大批量按 self.batch_size 分批后合并结果。"""
         vectors: List[List[float]] = []
         for batch in self._iter_batches(texts):
-            vectors.extend(self._call_api_once(batch))
+            vectors.extend(self._call_api_once(batch) if timeout is None
+                           else self._call_api_once(batch, timeout=timeout))
         return vectors
 
     def _iter_batches(self, texts: List[str]) -> List[List[str]]:
         limit = max(1, self.batch_size)
+        from app.config.config import settings
+        from app.services.local_inference import is_local_endpoint
+        if settings.LOCAL_MODEL_COORDINATOR == "batch" and is_local_endpoint(self.api_base):
+            limit = min(limit, self._batcher.max_items)
         return [texts[i : i + limit] for i in range(0, len(texts), limit)]
 
-    def _call_api_once(self, texts: List[str]) -> List[List[float]]:
+    def _call_api_once(self, texts: List[str], *, timeout: float | None = None) -> List[List[float]]:
+        timeout = self.timeout if timeout is None else timeout
         last_error = None
         from app.services.local_inference import CONTEXT, is_local_endpoint, LocalModelBusy, LocalModelDeadline
         from app.services.local_admission import run_http
         local = is_local_endpoint(self.api_base)
-        deadline = min(time.monotonic() + min(self.timeout, 5.0),
+        deadline = min(time.monotonic() + min(timeout, 5.0),
                        CONTEXT.get().deadline or float("inf")) if local else None
+
+        from app.config.config import settings
+        if local and settings.LOCAL_MODEL_COORDINATOR == "batch":
+            from app.services.local_admission import CURRENT
+
+            def batched(remaining):
+                permit = CURRENT.get()
+
+                def guard():
+                    permit.check()
+                    if permit._closed:
+                        raise LocalModelDeadline("closed_embedding_batch_request")
+
+                return self._batcher.submit(tuple(texts),
+                    deadline=min(deadline, time.monotonic()+remaining), guard=guard)
+
+            # 批次异常不自动重试或回退直调，避免重放与额外派发。
+            return run_http(batched, purpose="embedding", deadline=deadline)
 
         for attempt in range(self.max_retries + 1):
             try:
@@ -190,14 +250,14 @@ class APIEmbedding(BaseEmbedding):
                             if remaining_http <= 0:
                                 raise LocalModelDeadline("embedding_deadline_before_http")
                             result = client.post(f"{self.api_base}/embeddings", json=payload,
-                                                 timeout=min(self.timeout, remaining_http))
+                                                 timeout=min(timeout, remaining_http))
                             result.raise_for_status()
                             return result
                     response = run_http(
                         post_local, purpose="embedding", deadline=deadline)
                 else:
-                    with self._borrow_client(time.monotonic()+self.timeout) as client:
-                        response = client.post(f"{self.api_base}/embeddings", json=payload)
+                    with self._borrow_client(time.monotonic()+timeout) as client:
+                        response = client.post(f"{self.api_base}/embeddings", json=payload, timeout=timeout)
                 response.raise_for_status()
                 data = response.json()
 
@@ -241,6 +301,7 @@ class APIEmbedding(BaseEmbedding):
 
 
     def close(self):
+        self._batcher.close()
         closing = None
         with self._client_lock:
             self._closed = True
@@ -292,6 +353,7 @@ class EmbeddingService:
                 query_instruction=settings.EMBEDDING_QUERY_INSTRUCTION or "",
                 batch_size=int(settings.EMBEDDING_BATCH_SIZE or 20),
                 timeout=settings.EMBEDDING_TIMEOUT_SECONDS,
+                document_timeout=settings.EMBEDDING_DOCUMENT_TIMEOUT_SECONDS,
             )
             # 配置初始化不发付费探测；实际请求才验证服务与向量。
             pass

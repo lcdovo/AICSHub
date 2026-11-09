@@ -4,14 +4,13 @@
 1. openai / dashscope / TEI 裸列表三种响应格式解析
 2. 单 provider 失败返回 None；provider 链：外部失败→本地成功
 3. 无 provider 时不可用；rrrank_sync 短路
-4. KnowledgeBaseService._rerank 分发：模型成功 / 回退启发式 / 开关关闭
+4. 生产版本化检索的重排路由另见test_m3_search.py
 5. _flush_shared_caches_sync：清本地 Dict 并触发 Redis 前缀清理
 """
 import asyncio
 
 import pytest
 
-from app.config.config import settings
 from app.services.knowledge_base import KnowledgeBaseService
 from app.services.reranker_service import (
     PROVIDER_EXTERNAL,
@@ -148,62 +147,6 @@ def test_top_k_truncation_and_scores(monkeypatch):
     assert [d["id"] for d in out] == ["d1", "d2"]
     assert out[0]["rerank_score"] == pytest.approx(0.9)
     assert svc.last_used_provider == PROVIDER_EXTERNAL
-
-
-# ---------- KnowledgeBaseService._rerank 分发 ----------
-
-
-def _kb_service():
-    return object.__new__(KnowledgeBaseService)
-
-
-def test_rerank_fallback_heuristic(monkeypatch):
-    svc = _kb_service()
-    svc._reranker = None
-    monkeypatch.setattr(settings, "RAG_USE_RERANKER", True)
-    monkeypatch.setattr(
-        svc, "_heuristic_rescore",
-        lambda q, cands, k: [dict(c, s="h") for c in cands[:k]],
-    )
-    cands = [{"id": "a", "content": "x"}, {"id": "b", "content": "y"}]
-    out = svc._rerank("q", cands, top_k=1)
-    assert len(out) == 1
-    assert out[0]["s"] == "h"
-    assert svc._rerank_backend == "heuristic"
-
-
-def test_rerank_model_priority(monkeypatch):
-    svc = _kb_service()
-    fake = object.__new__(RerankerService)
-    fake.last_used_provider = PROVIDER_EXTERNAL
-    monkeypatch.setattr(fake, "is_available", lambda: True)
-    monkeypatch.setattr(fake, "rerank_sync", lambda q, cs, k: [dict(cs[1], s="model")])
-    svc._reranker = fake
-    monkeypatch.setattr(settings, "RAG_USE_RERANKER", True)
-    cands = [{"id": "a", "content": "x"}, {"id": "b", "content": "y"}]
-    out = svc._rerank("q", cands, top_k=1)
-    assert out[0]["id"] == "b"
-    assert svc._rerank_backend == PROVIDER_EXTERNAL
-
-
-def test_rerank_disabled(monkeypatch):
-    svc = _kb_service()
-    svc._reranker = None
-    monkeypatch.setattr(settings, "RAG_USE_RERANKER", False)
-    cands = [{"id": "a", "content": "x"}, {"id": "b", "content": "y"}]
-    out = svc._rerank("q", cands, top_k=1)
-    assert [c["id"] for c in out] == ["a"]
-    assert svc._rerank_backend == "none"
-
-
-def test_compose_result_includes_reranker_field(monkeypatch):
-    svc = KnowledgeBaseService()
-    svc._reranker = None
-    monkeypatch.setattr(settings, "RAG_USE_RERANKER", True)
-    monkeypatch.setattr(svc, "_heuristic_rescore", lambda q, cands, k: cands[:k], raising=False)
-    vector = [{"id": "a", "content": "x"}]
-    result = svc._compose_result("q", 5, 0.2, vector, [], time := 0.0, "k")
-    assert result["reranker"] == "heuristic"
 
 
 # ---------- 缓存一致性 ----------

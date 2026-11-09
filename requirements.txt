@@ -32,8 +32,8 @@ langchain-openai==1.5.0
 langfuse>=3.8.0  # LLM 可观测性平台（LangChain v1 CallbackHandler 集成），默认关闭
 
 # MCP 工具协议（Agent 工具接入 MCP：FastMCP server + in-process/stdio client）
-mcp>=1.8
-fastmcp>=2.10
+mcp==2.2.0
+fastmcp==4.0.3
 
 # OpenTelemetry（可观测：sdk-only 默认，配置 OTEL_EXPORTER_OTLP_ENDPOINT 后导出）
 opentelemetry-api>=1.30

@@ -4,7 +4,7 @@
 2. 安全校验：敏感词过滤、Prompt注入检测、越权操作拦截
 3. 完整性校验：是否回答了用户所有问题点
 
-角色分工：本模块是响应的「内联质量闸门」——校验不通过会触发重生成或转人工；
+角色分工：本模块是响应的确定性质量闸门；失败由回答编排决定修复或安全终止；
 与之相对，services/evaluation.py 是「离线多维度指标 + 低分样本回流」，
 两者职责不同，刻意保持独立（避免把实时闸门与监控指标耦合）。
 """
@@ -276,11 +276,9 @@ class ResponseValidator:
         if result.fact_score < self.FACT_THRESHOLD:
             return False
 
-        if result.completeness_score < self.COMPLETENESS_THRESHOLD:
-            return False
-
-        overall = (result.fact_score + result.safety_score + result.completeness_score) / 3
-        return overall >= self.OVERALL_THRESHOLD
+        # 词面重叠与固定意图关键词仅作诊断，不能拒绝正确补问或简洁回答。
+        # 子问题、条件及补问必要性由独立语义审查处理。
+        return True
 
     def _check_regeneration(self, result: ValidationResult) -> bool:
         if result.safety_score < 0.5:

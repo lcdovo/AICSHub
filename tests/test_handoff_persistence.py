@@ -215,15 +215,13 @@ async def test_ten_concurrent_calls_only_create_one_request(tmp_path, monkeypatc
 
 
 async def test_inprocess_mcp_returns_persistent_handoff(tmp_path, monkeypatch):
-    from mcp.shared.memory import create_connected_server_and_client_session
-    from app.agent.mcp_server import mcp
-    from app.agent.mcp_client import _extract_text_content
+    from app.agent.mcp_client import _extract_text_content, _inprocess_session
     from app.agent.handoff_authorization import authorize_handoff
     async with api_context(tmp_path / "handoff.db") as (_, factory):
         monkeypatch.setattr("app.utils.database.async_session", factory)
         await seed(factory)
         payload = args()
-        async with create_connected_server_and_client_session(mcp._mcp_server) as client:
+        async with _inprocess_session() as client:
             await client.initialize()
             raw = await client.call_tool("escalate_to_human", {**payload, "authorization": authorize_handoff(payload, 1, 101)})
             result = json.loads(_extract_text_content(raw))

@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import argparse
 import ast
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime
@@ -40,12 +41,23 @@ class Tee:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--profile", choices=("baseline", "active"), default="baseline")
+    parser.add_argument("--source-mode", choices=("git", "filesystem"), default="git")
+    parser.add_argument("--image-id", default=None)
+    options, test_arguments = parser.parse_known_args()
+    if options.source_mode == "filesystem" and not options.image_id:
+        parser.error("filesystem evidence requires --image-id")
     root = Path(__file__).resolve().parents[1]
     output = root / "reports" / "offline" / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     output.mkdir(parents=True)
-    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    commit = (subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+              if options.source_mode == "git" else None)
     sys.path.insert(0, str(root))
     from scripts.test_provenance import snapshot_sources, compare_sources, evidence_exit_code
+    if options.source_mode == "filesystem":
+        from scripts.test_provenance import snapshot_filesystem_sources
+        snapshot_sources = snapshot_filesystem_sources
     source_start = snapshot_sources(root)
     (output / "source-start.json").write_text(
         json.dumps(source_start, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -55,7 +67,8 @@ def main() -> int:
     fields = [node.target.id for cls in tree.body if isinstance(cls, ast.ClassDef)
               and cls.name == "Settings" for node in cls.body
               if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)]
-    for key in fields:
+    for key in [*fields, "OPENAI_API_KEY", "AZURE_OPENAI_API_KEY", "ANTHROPIC_API_KEY",
+                "LANGCHAIN_API_KEY", "LANGSMITH_API_KEY", "LANGCHAIN_TRACING_V2"]:
         os.environ.pop(key, None)
     sys.path.insert(0, str(root))
     original_directory = Path.cwd()
@@ -69,6 +82,11 @@ def main() -> int:
             "AUTH_DEMO_ACCOUNTS_ENABLED": "false", "LLM_API_KEY": "",
             "LLM_API_BASE": "http://offline.invalid/v1",
         }
+        profile_config = {}
+        if options.profile == "active":
+            from scripts.offline_profiles import ACTIVE_CONFIG
+            profile_config = dict(ACTIVE_CONFIG)
+            config.update(profile_config)
         os.environ.update(config)
         blocked_connections: list[str] = []
         internal_pair = threading.local()
@@ -94,12 +112,22 @@ def main() -> int:
 
         # 审计钩子也覆盖异步连接和工作线程；不记录目标地址或凭据。
         sys.addaudithook(block_network)
+        # The process-local marker is not inherited by an unrelated pytest child.
+        sys._aicshub_offline_guard = True
         import pytest
 
-        arguments = sys.argv[1:] or ["-q", "tests"]
+        if test_arguments:
+            arguments = test_arguments
+        elif options.profile == "active":
+            from scripts.offline_profiles import ACTIVE_TESTS
+            arguments = ["-q", *ACTIVE_TESTS]
+        else:
+            arguments = ["-q", "tests"]
         arguments = [str(root / arg) if (root / arg.split("::")[0]).exists()
                      and not arg.startswith("-") else arg for arg in arguments]
         manifest = {
+            "profile": options.profile, "profile_config": profile_config,
+            "source_mode": options.source_mode, "image_id": options.image_id,
             "commit": commit, "python": sys.version.split()[0], "environment": "T0",
             "dependencies": {name: version(name) for name in (
                 "pytest", "pytest-asyncio", "SQLAlchemy", "aiosqlite", "fastapi", "langgraph",
@@ -122,11 +150,13 @@ def main() -> int:
                 json.dumps(source_end, indent=2, ensure_ascii=False), encoding="utf-8"
             )
             evidence_code = evidence_exit_code(code, comparison)
+            if evidence_code == 0 and blocked_connections:
+                evidence_code = 2
             manifest.update(
                 pytest_exit_code=code, exit_code=evidence_code, **comparison,
                 commit_at_end=subprocess.check_output(
                     ["git", "rev-parse", "HEAD"], cwd=root, text=True
-                ).strip(),
+                ).strip() if options.source_mode == "git" else None,
                 dirty_input_paths_at_start=source_start["dirty_input_paths"],
                 blocked_network_operations=len(blocked_connections),
             )

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-07",
+  "status": "PROPOSED_NOT_AUTHORIZED",
+  "purpose": "model-first-understanding-admission-before-default-cutover",
+  "source_fingerprint": "fae537e653a15325e01f82dfa8b31fc6c30013c4ec04385153d5692f4f47ab37",
+  "baseline_report": "reports/offline/20261107-001701-090857",
+  "offline_tests": 1514,
+  "source_matches_offline_baseline": true,
+  "phases": [
+    {
+      "name": "schema_smoke",
+      "logical_cases": 6,
+      "stop_on_schema_or_binding_failure": true
+    },
+    {
+      "name": "fresh_quality_holdout",
+      "logical_cases": 300
+    },
+    {
+      "name": "critical_boundary",
+      "logical_cases": 60
+    },
+    {
+      "name": "post_cutover_smoke",
+      "logical_cases": 6,
+      "only_if_all_admission_gates_pass": true
+    }
+  ],
+  "proposed_limits": {
+    "max_requests": 372,
+    "max_input_tokens": 9142272,
+    "max_output_tokens": 186000
+  },
+  "max_http_input_bytes": 24576,
+  "per_request_output_cap": 500,
+  "input_reservation_basis": "full HTTP JSON UTF-8 bytes; conservative reservation, not actual token usage",
+  "automatic_retry": false,
+  "automatic_repair": false,
+  "fallback_provider": false,
+  "concurrency": 1,
+  "scoring_basis": "first provider output; missing, invalid and timeout remain in denominator",
+  "provider": {
+    "model": "deepseek-flash",
+    "thinking": "disabled",
+    "structured_output_method": "function_calling"
+  },
+  "dataset_status": "NEEDS_FRESH_FROZEN_DATASET_AND_INDEPENDENT_REVIEW",
+  "existing_independent_set": "regression_only_already_seen",
+  "independent_human_review_complete": false,
+  "quality_gates": {
+    "samples": 300,
+    "macro_f1_min": 0.9,
+    "request_type_accuracy_min": 0.95,
+    "entity_accuracy_min": 0.97,
+    "schema_validity_min": 0.99,
+    "condition_and_multi_request_accuracy_min": 0.95,
+    "p95_ms_max": 3000,
+    "critical_unconfirmed_or_unauthorized_actions_max": 0
+  },
+  "cutover_authorized_by_user": true,
+  "cutover_condition": "all applicable gates pass on frozen source, reviewed dataset and actual provider; deployment checks pass",
+  "cutover_target": {
+    "REQUEST_UNDERSTANDING_MODE": "model",
+    "REQUEST_UNDERSTANDING_PERCENTAGE": 100,
+    "REQUEST_UNDERSTANDING_VERSION": "understanding.model-first.v2"
+  },
+  "current_business_configuration_changed": false,
+  "actual_provider_calls_this_turn": 0,
+  "runtime_status": "docker compose reports no running project services; standalone API not yet verified",
+  "prior_limits_exhausted": {
+    "m4": "660/660",
+    "m5_v1": "1027/1027",
+    "judge_v2": "256/256"
+  },
+  "cost": {
+    "price_verified": false,
+    "invoice_verified": false,
+    "monetary_cap_verified": false
+  },
+  "live_ready": false,
+  "blocking_requirements": [
+    "new bounded paid-call authorization",
+    "fresh frozen evaluation inputs and independent label review",
+    "controlled runner and source freeze before dispatch"
+  ],
+  "old_ledgers_must_remain_unchanged": true,
+  "post_cutover_calls_included_in_same_authorization": true
+}

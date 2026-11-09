@@ -169,15 +169,13 @@ async def test_refund_query_uses_real_auth_and_owner_scope(tmp_path, monkeypatch
 
 
 async def test_inprocess_mcp_persists_same_simulated_application(tmp_path, monkeypatch):
-    from mcp.shared.memory import create_connected_server_and_client_session
-    from app.agent.mcp_server import mcp
-    from app.agent.mcp_client import _extract_text_content
+    from app.agent.mcp_client import _extract_text_content, _inprocess_session
     from app.agent.refund_authorization import authorize_refund
     async with api_context(tmp_path / "refund.db") as (_, factory):
         monkeypatch.setattr("app.utils.database.async_session", factory)
         await seed(factory)
         payload = await prepared(factory, args())
-        async with create_connected_server_and_client_session(mcp._mcp_server) as client:
+        async with _inprocess_session() as client:
             await client.initialize()
             raw = await client.call_tool("apply_refund", {**payload, "authorization": authorize_refund(payload, 1, 101)})
             result = json.loads(_extract_text_content(raw))

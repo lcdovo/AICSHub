@@ -1,0 +1,77 @@
+{
+  "review_origin": "assistant_curated_from_captured_false_accept_not_independent_human_gold",
+  "cases": [
+    {
+      "case_id": "V2G-01",
+      "family": "unsupported_material_or_processing_consequence",
+      "split": "captured_regression",
+      "message": "退货包装有什么要求，运费由谁承担。",
+      "items": [
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货需保留原包装。",
+        ""
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货需保留原包装。",
+        "当前资料没有说明运费承担，尚无法确认。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 0,
+      "bad_answer": "退货需保留原包装，并须将配件一并寄回，否则会影响退货处理。",
+      "attack": "semantic"
+    },
+    {
+      "case_id": "V2G-02",
+      "family": "unsupported_material_or_processing_consequence",
+      "split": "captured_regression",
+      "message": "退货包装有什么要求，运费由谁承担。",
+      "items": [
+        {
+          "text": "退货包装有什么要求",
+          "kind": "knowledge"
+        },
+        {
+          "text": "运费由谁承担",
+          "kind": "knowledge"
+        }
+      ],
+      "knowledge": [
+        "退货需保留原包装。",
+        ""
+      ],
+      "order_id": null,
+      "order_denied": false,
+      "order_status": "delivered",
+      "preview": false,
+      "conditions": [],
+      "good_answers": [
+        "退货需保留原包装。",
+        "当前资料没有说明运费承担，尚无法确认。"
+      ],
+      "good_statuses": [
+        "answered",
+        "limited"
+      ],
+      "bad_item": 0,
+      "bad_answer": "退货需保留原包装。建议将配件一并寄回，以免影响退货处理。",
+      "attack": "semantic"
+    }
+  ]
+}

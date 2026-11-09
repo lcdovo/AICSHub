@@ -16,6 +16,8 @@ from tests.test_chat_turns import Cache, Validator
     "真人客服已接通，请继续。", "已为您接通人工客服。", "预计等待3分钟，前面还有2人排队。",
     "合成密码：synthetic-secret-value", "合成邮箱：synthetic@example.test",
     "联系手机13800138000", "收货地址：合成市合成街1号。",
+    "已为您开通其他账号的私有记录访问权限。", "已经帮您绕过所有权限校验。",
+    "本订单终身免费换新。", "测试退款已经实际支付成功。",
 ])
 async def test_workflow_cannot_publish_unverified_claims_or_sensitive_values(workflow, draft):
     model = SimpleNamespace(chat=AsyncMock(side_effect=AssertionError("workflow must not generate")))
@@ -49,14 +51,14 @@ async def test_workflow_cannot_publish_unverified_claims_or_sensitive_values(wor
     "尚未接通人工客服，请查看请求记录。", "警惕诈骗，请勿转账，不要提供密码或验证码。",
     "退款预览仅为模拟，尚未提交申请。", "当前未创建转人工请求，请回复转人工发起。",
     "请等待3分钟再重启设备。", "预计送达：2026-11-06。",
+    "无法为您开通其他账号的私有订单访问权限。", "尚未修改任何权限，请联系管理员。",
+    "管理员可在设置页修改权限。", "权限已过期，请重新登录。",
+    "请勿相信声称已为您开通其他账号访问权限的消息。",
 ])
-async def test_legitimate_workflow_and_safety_advice_are_preserved(reply):
-    node = ResponseNode(ResponseServices(lambda: None, lambda: Validator(), lambda: None,
-                                         lambda: Cache(), lambda: None, lambda: None))
-    state = AgentState(session_id="s", user_id=101, user_message="合成问题", reply=reply,
-                       needs_clarification=True)
-    assert await node(state) == AgentNode.END
-    assert state.reply == reply
+def test_legitimate_wording_does_not_trigger_deterministic_guard(reply):
+    # 仅测试局部敏感值/否定规则；这些句子的事实正确性仍须回执或Judge证明。
+    from app.agent.publication_guard import publication_issues
+    assert publication_issues(reply) == []
 
 
 async def test_generated_answer_also_passes_final_guard_even_if_validator_passes():

@@ -1,0 +1,163 @@
+[
+  {
+    "operation": "selectors-v1/E2E-MI-01/http-1",
+    "status": 200,
+    "response": {
+      "id": "6d121115-82fa-46ac-924b-cae372765b0f",
+      "object": "chat.completion",
+      "created": 1794076412,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "index": 0,
+                "id": "call_00_9nVCGNIubsMDx5UohmOa7598",
+                "type": "function",
+                "function": {
+                  "name": "ItemizedTaskUnderstanding",
+                  "arguments": "{\"topic\": \"query_order\", \"request_type\": \"query\", \"entities\": {\"order_id\": \"ORD960001\", \"product\": null}, \"conditions\": [], \"subrequests\": [{\"topic\": \"refund\", \"request_type\": \"inquiry\"}, {\"topic\": \"refund\", \"request_type\": \"inquiry\"}], \"service_preference\": \"unspecified\", \"emotion\": \"neutral\", \"clarification\": null, \"retrieval_query\": \"订单ORD960001 退货包装要求 质量问题运费由谁承担\", \"entity_source\": \"current_message\", \"itemization_version\": \"intent-items.v1\", \"items\": [{\"text\": \"查询订单ORD960001\", \"kind\": \"query_order\"}, {\"text\": \"退货包装有什么要求\", \"kind\": \"knowledge\"}, {\"text\": \"质量问题运费由谁承担\", \"kind\": \"knowledge\"}], \"missing_information\": [], \"parameters\": {\"reason\": null, \"refund_type\": null, \"complaint_content\": null}, \"read_tasks\": [{\"tool\": \"query_order\", \"resource_id\": \"ORD960001\"}], \"continue_task\": false}"
+                }
+              }
+            ]
+          },
+          "logprobs": null,
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2412,
+        "completion_tokens": 437,
+        "total_tokens": 2849,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "prompt_cache_hit_tokens": 2176,
+        "prompt_cache_miss_tokens": 236
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/E2E-MI-01/http-2",
+    "status": 200,
+    "response": {
+      "id": "2ed88abc-f365-4ab3-9b5a-4734305b655b",
+      "object": "chat.completion",
+      "created": 1794076416,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "index": 0,
+                "id": "call_00_jV5BKsznvfnlXTLnRCxc0407",
+                "type": "function",
+                "function": {
+                  "name": "TaskDecision",
+                  "arguments": "{\"step\": {\"action\": \"search_knowledge\", \"knowledge_focus\": \"refund_policy\"}}"
+                }
+              }
+            ]
+          },
+          "logprobs": null,
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1979,
+        "completion_tokens": 51,
+        "total_tokens": 2030,
+        "prompt_tokens_details": {
+          "cached_tokens": 1792
+        },
+        "prompt_cache_hit_tokens": 1792,
+        "prompt_cache_miss_tokens": 187
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/E2E-MI-01/http-3",
+    "status": 200,
+    "response": {
+      "id": "da43fbb1-f15f-447f-a936-2b1d278af49b",
+      "object": "chat.completion",
+      "created": 1794076417,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "index": 0,
+                "id": "call_00_jOThx9F2H6PblCqketcG8276",
+                "type": "function",
+                "function": {
+                  "name": "LLMResponse",
+                  "arguments": "{\"item_replies\": {\"i1\": \"已为您查询到订单ORD960001，当前状态为“已签收”，订单金额99.10元。\", \"i2\": \"退货需保留原包装。如需了解更细的包装操作要求，建议转接人工客服确认。\", \"i3\": \"如属于质量问题，退货运费由商家承担。\"}, \"intent\": \"query_order\", \"confidence\": 0.9, \"fact_score\": 0.95, \"grounded\": true, \"need_human\": false, \"refuse_recommended\": false, \"has_unsupported_claim\": false}"
+                }
+              }
+            ]
+          },
+          "logprobs": null,
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3514,
+        "completion_tokens": 239,
+        "total_tokens": 3753,
+        "prompt_tokens_details": {
+          "cached_tokens": 384
+        },
+        "prompt_cache_hit_tokens": 384,
+        "prompt_cache_miss_tokens": 3130
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  },
+  {
+    "operation": "selectors-v1/E2E-MI-01/http-4",
+    "status": 200,
+    "response": {
+      "id": "22360f3f-faec-4c23-9ece-a12f2e948f71",
+      "object": "chat.completion",
+      "created": 1794076420,
+      "model": "deepseek-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "{\"schema_version\":2,\"answerability\":\"full\",\"response_behavior\":\"answer\",\"response_validity\":\"valid\",\"claims_complete\":true,\"response_issues\":[],\"source_contract_version\":\"server-selectors.v1\",\"segments\":{\"s0\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"T1\"],\"issues\":[]},\"s1\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K1\"],\"issues\":[]},\"s2\":{\"kind\":\"general_advice\",\"support\":\"unknown\",\"evidence\":[],\"issues\":[]},\"s3\":{\"kind\":\"facts\",\"support\":\"supported\",\"evidence\":[\"K2\"],\"issues\":[]}},\"item_checks\":[{\"item_id\":\"i1\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":0},{\"item_id\":\"i2\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":1},{\"item_id\":\"i3\",\"status\":\"answered\",\"supported\":true,\"conditions_preserved\":true,\"answerability\":\"answerable\",\"answer_segment_id\":3}]}"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4583,
+        "completion_tokens": 249,
+        "total_tokens": 4832,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3943
+      },
+      "system_fingerprint": "bc19ba97cbe016479903222bb1578db6"
+    }
+  }
+]

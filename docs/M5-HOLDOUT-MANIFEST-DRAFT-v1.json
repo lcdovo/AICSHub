@@ -2,7 +2,7 @@
   "date": "2026-11-04",
   "status": "DRAFT_NOT_ACCEPTED",
   "label_source": "assistant_draft",
-  "reviewer_assigned": "user",
+  "reviewer_assigned": "assistant_for_remaining_cases_by_user_delegation",
   "labels_approved": false,
   "case_counts": {
     "answerable": 330,
@@ -20,5 +20,32 @@
     "M5-HOLDOUT-DRAFT-v1.json": "f9f6c93ba93844e36a96b9e64206197b3e2d2406b21cd2503f248204b890e692",
     "M5-HOLDOUT-CORPUS-DRAFT-v1.json": "c04d21375d743c3eb1d613239dfb46eb7b301fb6de1c6ff8b1b98c779de1c362",
     "M5-HOLDOUT-SOURCE-DRAFT-v1.json": "4571e54ebc7759f044042367e8be0e4776eea219af3ed27593e1680b988ef9a7"
+  },
+  "human_review_progress": {
+    "approved": 24,
+    "remaining": 571,
+    "decision_records": [
+      "docs/m5-review/decisions-20261105-display-001.json",
+      "docs/m5-review/decisions-20261105-robot-002.json",
+      "docs/m5-review/decisions-20261105-projector-003.json",
+      "docs/m5-review/decisions-20261105-printer-004.json"
+    ],
+    "whole_dataset_still_draft": true
+  },
+  "assistant_review_progress": {
+    "reviewed": 571,
+    "consistent": 523,
+    "needs_revision": 48,
+    "human_approved_still": 24,
+    "independent_review_established": false,
+    "records": "docs/M5-ASSISTANT-REVIEW-v1.json"
+  },
+  "adjudicated_successor": {
+    "directory": "acceptance/m5/adjudicated-v2",
+    "reviewer": "assistant",
+    "total_cases": 616,
+    "resolved_review_items": 48,
+    "original_v1_preserved": true,
+    "whole_m5_pass": false
   }
 }

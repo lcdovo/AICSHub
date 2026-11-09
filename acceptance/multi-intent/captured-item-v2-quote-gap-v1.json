@@ -1,0 +1,99 @@
+{
+  "origin": "real_v2_verification_failure_preserved_not_a_pass",
+  "case_id": "MI-07",
+  "arguments": {
+    "schema_version": 2,
+    "answerability": "partial",
+    "response_behavior": "answer",
+    "response_validity": "invalid",
+    "claims_complete": true,
+    "claims": [
+      {
+        "segment_id": 0,
+        "text": "【i1】订单已签收。",
+        "support": "supported",
+        "evidence": [
+          {
+            "kind": "tool",
+            "source_id": "tool:0",
+            "version_id": "3e25a11220d82de9ce2ea1d0b130fc9bd1774b3b63825feb9f4f404accd83e3e",
+            "quote": "\"status\": \"已签收\""
+          }
+        ],
+        "issues": []
+      },
+      {
+        "segment_id": 1,
+        "text": "【i2】已成功退款，资金已经退回。",
+        "support": "unsupported",
+        "evidence": [
+          {
+            "kind": "tool",
+            "source_id": "tool:1",
+            "version_id": "f235e2e0ee51ad4acaca8a387465fa43588410063415bb1d7af6a46cd8c0c212",
+            "quote": "\"application_submitted\": false, \"stage\": \"awaiting_confirmation\""
+          }
+        ],
+        "issues": [
+          "contradiction",
+          "unsupported_detail"
+        ]
+      },
+      {
+        "segment_id": 2,
+        "text": "【i3】退货需保留原包装。",
+        "support": "supported",
+        "evidence": [
+          {
+            "kind": "knowledge",
+            "source_id": "MI-07-i3",
+            "version_id": "synthetic-v1",
+            "quote": "退货需保留原包装。"
+          }
+        ],
+        "issues": []
+      }
+    ],
+    "nonfact_segments": [],
+    "response_issues": [
+      "contradiction",
+      "unsupported_detail"
+    ],
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "answered",
+        "answer_quote": "【i1】订单已签收。",
+        "evidence_ids": [
+          "T1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "limited",
+        "answer_quote": "【i2】已成功退款，资金已经退回。",
+        "evidence_ids": [
+          "P1"
+        ],
+        "supported": false,
+        "conditions_preserved": false,
+        "answerability": "partial"
+      },
+      {
+        "item_id": "i3",
+        "status": "answered",
+        "answer_quote": "【i3】退货需保留原包装。",
+        "evidence_ids": [
+          "K1"
+        ],
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      }
+    ]
+  },
+  "failure": "noncontiguous excerpt omitted intervening order_id; retain strict quote validation"
+}

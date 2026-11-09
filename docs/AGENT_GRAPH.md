@@ -1,5 +1,21 @@
 # Agent 主链路
 
+多意图逐项完成检查为默认关闭的工作区候选，见[MULTI-INTENT-COMPLETION-v1.md](MULTI-INTENT-COMPLETION-v1.md)：逐项检索/本轮证据及独立审查，全部answered才completed，不从SDK替身推导真实语义质量。
+
+Judge v2现已接入逐项检查：同次独立调用同时检查逐句claim与逐项阶段，发布时重核本轮输入及来源绑定。v1仍保留，业务默认未切换；v2首组真实诊断因供应商非法JSON停止，未获准入。见[JUDGE-V2-ITEM-INTEGRATION-v1.md](JUDGE-V2-ITEM-INTEGRATION-v1.md)。
+
+> 当前本机状态：16节点任务循环、model/100%、0013能力执行账本及常驻Worker已部署；API/Worker共享SQL与Redis准入。当前验证及限制见[部署收口](RELIABILITY-ROLLOUT-20261107.md)。下文早期rules/灰度0及未部署描述保留为阶段历史。
+
+2026-11-07真实冒烟发现条件诉求的最终apply意向与当前query步骤混淆。现离线分离`execution_request_type`：条件办理当前只能只读查单，后续缺原因不阻止前置查询，条件政策咨询仍查知识；不得自动准备/提交退款。原真实失败保留，新版只完成离线回归，默认仍rules/灰度0。见[MODEL-FIRST-ADMISSION-EVIDENCE-v1.md](MODEL-FIRST-ADMISSION-EVIDENCE-v1.md)。
+
+2026-11-07候选`model`路径拆为确定事件、统一模型理解、程序执行决策：完整寒暄不再进入规则分类器，带问候的业务消息仍交模型；路由/工具不重复regex提参，新增有来源的业务内容与缺参字段，并将理解绑定本轮输入快照。旧rules是独立兼容配置，模型失败不回落触发业务。默认仍rules/灰度0，真实质量尚未复验；详见[MODEL-FIRST-UNDERSTANDING-v1.md](MODEL-FIRST-UNDERSTANDING-v1.md)。
+
+2026-11-06请求理解输入收口为`request_context.py`的有界不可变快照，规则/模型分类和结构化来源校验共用上下文选择；不再按模型自报分数与规则分数直接比较。情绪与业务诉求分开，订单歧义先补问，历史意图升级仅作建议，补参跨轮保留。仅局部实现与离线验证，默认仍rules/灰度0；范围、保护和未验项见[REQUEST-CONTEXT-v1.md](REQUEST-CONTEXT-v1.md)。
+
+2026-11-06普通业务路由统一交由`app/agent/routing_policy.py`：咨询/办理分流、必需参数和意图目标使用共同策略，节点只投影决策。带订单号的政策咨询不再升级为申请；规则模式的条件办理先澄清。历史工具仅为延续性回复提供背景。统一理解候选及原权限/确认机制保留，见[ROUTING-POLICY-v1.md](ROUTING-POLICY-v1.md)。
+
+2026-11-04新增默认关闭的单进程`LOCAL_MODEL_COORDINATOR=batch`候选：每轮独立Permit、有界Embedding跨请求微批、独立重排通道，派发前/返回后检查各自资格；不合并rerank query或共享用户结果。默认process和Redis原模式保留。有限并发10虽100/100完成，重排P95=2970.429ms仍超2000ms，不启用业务；边界和证据见[M5-CROSS-REQUEST-BATCH-v1.md](M5-CROSS-REQUEST-BATCH-v1.md)。
+
 ## 编排入口与轮次边界
 
 `AgentGraph` 编译同一张 LangGraph，`run()` 使用 `ainvoke`，`run_stream()` 使用
@@ -118,7 +134,7 @@ M2最终结果及真实依赖/替身边界见 `M2-EVIDENCE-v1.md`。
 
 生产知识路径现为稳定SQL文档/不可变版本→持久knowledge_index Job→严格batch向量→指纹命名新collection→SQL原子发布指针/epoch。旧IngestionMixin/IndexAdminMixin仅兼容转发，移除手写DDL及按标题删除旧旁路。
 
-每请求独立取SQL发布快照，真实Milvus dense与SQL BM25独立执行并应用层RRF；Embedding异常仍返回关键词降级。recall/rerank/evidence数量独立；score_type保留，RRF不与余弦阈值混比。完整有界chunk与FAQ/表头上下文进入生成/Judge，不再按300/200字前缀裁剪；证据覆盖校准仍属M5，EvidenceBundle.support保持unknown。缓存按epoch/模型/策略/权限范围隔离，生成及校验前复核活动版本。
+每请求检查SQL发布epoch，按epoch复用快照和BM25倒排索引，真实Milvus dense与SQL BM25独立执行并应用层RRF；Embedding异常仍返回关键词降级。recall/rerank/evidence数量独立；score_type保留，RRF不与余弦阈值混比。完整有界chunk与FAQ/表头上下文进入生成/Judge，不再按300/200字前缀裁剪；证据覆盖校准仍属M5，EvidenceBundle.support保持unknown。缓存按epoch/模型/策略/权限范围隔离，生成及校验前复核活动版本。
 
 M3实现、逐项21项范围、隔离真实依赖证据与供应商额度阻塞见M3-CLOSEOUT-v1.md、M3-IMPLEMENTATION-v1.md、M3-EVIDENCE-v1.md；不能以合成向量证明真实模型效果或生产部署完成。
 
@@ -166,6 +182,8 @@ RefundPreview提供预览统一类型入口：归属/形状验证，镜像或当
 
 M5新增所有文本共用的publication_guard：workflow、模板、缓存、生成与服务端引用均在token/回答缓存发布前检查已识别敏感值和未支持的接通/排队承诺。失败发布固定安全说明且不创建新动作。此确定性底线不替代政策Judge、全部事实审查或人工质量验收；范围见M5-EVIDENCE-v1.md。
 
+2026-11-07回答链路拆分为answer_builder/answer_review/answer_publication，响应节点只编排构建、审查、至多一次定向修复与发布。任意补问/工作流不再按业务标记免审，仅由服务端生产者绑定的固定通知和受限回执字段模板可走确定性检查。发布前核对草稿/请求/工具/证据/策略绑定和知识版本；校验失败安全终止，不自动创建人工请求。缓存升级validated-v4并在命中时复审。详见[ANSWER-PIPELINE-v1.md](ANSWER-PIPELINE-v1.md)；以下早期缓存/审查说明保留为历史。
+
 M5政策Judge关闭/不可用/非法/异常/超时均unknown、不得作为放行，未grounded不因高分通过。生成与Judge共用完整format_review_evidence视口，保留每片段ID/版本与后部条件及成功工具完整回执。缓存使用validated-v3隔离旧宽松审查结果；实际模型新schema兼容/质量仍待验。
 
 M5固定业务核验读取全部相关成功回执，状态反转、订单金额/币种矛盾、同订单冲突、无申请回执登记及真实支付承诺critical阻断。最终workflow出口同样检查；长度/敏感名词不等于事实错误。固定规则覆盖及语义限制见M5-EVIDENCE-v1.md，不能据此宣称任意承诺/多对象自然语言已完全可靠。
@@ -181,3 +199,40 @@ M5检索服务search可显式选择retrieval_mode=hybrid/bm25/dense作消融，�
 后续v2在HTTP引用归零后对异常释放最多补偿一次，每次仍比较同owner；`released`/`not_owner`/`unknown`与尝试次数显式进入scope观测，连续失败依TTL回收，不能将尝试过视为删除成功。前/后台ticket分别条件清理。135项受影响回归与11项真实Redis场景通过，非全量/容量验收；详见LOCAL-LEASE-RELEASE-v1.md。
 
 APIEmbedding首次HTTP池创建与关闭由实例锁/引用管理，本地端点不继承环境代理；创建、HTTP及解码计入原截止，迟到不缓存。评测新增常驻服务路径以区分每次初始化开销，原200常驻串行100/100、并发10仅2/100，功能与容量分别记录；详见EMBEDDING-HTTP-LIFECYCLE-v1.md。
+
+### 查询改写观察（2026-11-05）
+
+QueryRewriteObservation冻结本轮原文、查询、applied及scope摘要；统一理解和旧改写器共用record_query_rewrite，检索/答案缓存键共用current_retrieval_query。后改兼容字典和平铺字段不覆盖已立观察；用户/会话/版本/消息变化失效，新轮次清空。详见M4-QUERY-REWRITE-CONTRACT-v1.md。
+
+### 固定业务表述修饰词与权限声明（2026-11-05）
+
+固定事实闸门补齐终身免费/无条件服务、已经真实/实际支付等有界句式；claim_scope按局部否定及转折判断，前半句否定不能豁免后半句肯定。publication_guard同步拒绝聊天声称已授予/修改/绕过权限，所有workflow最终出口适用。该保护不改变SQL授权/动作执行，也不替代独立政策Judge或通用语义校验。固定P0及正确候选的离线诊断边界见M5-OFFLINE-CHAIN-v1.md。
+
+### Judge v2候选分维度审查
+
+LLM_JUDGE_CONTRACT_VERSION默认v1，显式v2才启用候选schema。v2将问题可回答性、回复行为、候选有效性分开，逐句覆盖并绑定当前候选/问题/知识版本/工具回执；引用与quote身份核验不能代替语义蕴含。程序硬约束保留，unknown/partial正确补问可发布但不缓存；纯补问/拒答不附无关引用。缓存key含Judge契约及prompt/schema指纹。仅离线契约/SDK替身通过，真实v2质量未验，不自动切业务，详见M5-JUDGE-CONTRACT-v2.md。
+
+
+## RAG结构检索优化（2026-11-07）
+
+索引Job和DocumentChunker统一使用structured-source-v2：按Markdown标题层级/FAQ划分单元，超长再按配置细分，保留原文偏移。context-document-v2将标题、FAQ和表头用于向量、关键词召回与重排；重排后按预算选原始片段、去除完全重复项并补同单元邻块。新文本策略进入Embedding指纹，旧索引需暂存重建后原子切换，本轮没有执行业务重建。具体参数、降级、迁移与离线证据见RAG-STRUCTURE-v2.md。
+
+## 2026-11-07 任务调度候选
+
+新增task_decision/task_execution/task_observation三个节点，复杂任务可按本轮观察继续选择只读能力、知识检索或补问，并接续既有退款预览和独立确认。任务进度独立SQL保存，下一轮不复用旧事实、证据或确认；原始条件绑定退款动作并在提交事务重新核验。独立开关AGENT_TASK_LOOP_ENABLED默认false，0012迁移及真实模型准入尚未执行。已有model/100%的请求理解与新循环是两个不同范围。详见[任务循环设计](AGENT-TASK-LOOP-v1.md)及[阶段验收](AGENT-TASK-LOOP-ACCEPTANCE-v1.md)。
+> 2026-11-07 当前部署：16节点图、model请求理解、有限任务循环及模拟退款预览已启用；0012迁移和24份文档新结构化索引已发布。回答采用独立构建/审查/发布及精确来源身份，最新切换、清理、真实冒烟和限制见 [统一升级记录](LATEST-ROLLOUT-20261107.md)。下文按阶段追加的13节点、rules/灰度0及未启用描述为相应日期的历史记录，不代表当前运行状态。
+
+2026-11-07后续开发加入能力目录/输出校验、MCP有界重连、带来源的任务对话记录、进展/完成检查及独立派发账本。新账本需0013迁移；本次开发未切换当前0012业务服务。实现、恢复边界及验证见[Agent可靠性优化](AGENT-RELIABILITY-v1.md)。
+
+
+### 2026-11-08 任务决策知识投影候选
+
+工作区task_loop.decision_payload现在保留本轮完整知识片段，取消前三条/每条600字截断；知识投影JSON超过8192 UTF-8字节则在决策模型派发前拒绝。工具白名单、资格/确认、最终独立发布校验保持。仅在两个候选文件覆盖的隔离评测中验证，业务镜像未部署；两例退款通过不代表完整业务准入。证据见BUSINESS-REFUND-REVIEWED-v3.md。
+### 2026-11-08 退款原因与确认语言工作区候选
+
+单项退款任务发现当前原因未满足原6字要求时，由TaskDecisionNode直接提出ask_user/reason，不发规划模型请求、不提前生成预览；补充后按正常任务恢复重新核验。确认/取消的有限长句在聊天、轮次状态、SQL提交和恢复共享严格整句契约；句中退款类型须匹配预览。原本轮消息、主体/参数/版本、领域资格及最终发布检查保留。宿主/断网容器相关各297通过，仅工作区候选，未部署；见REFUND-LANGUAGE-CONTRACT-v1.md。
+
+
+### 2026-11-08 降级诊断与事实作用域候选
+
+结构化理解调用以白名单失败码区分本地预算/并发拒绝与供应商超时/协议错误，拒绝不会被误计供应商熔断。RAG仅对单一明确设备操作查询做来源匹配，无匹配时补问型号/现象；独立证据审查仍保留。事实核验区分政策门槛/时限与个人订单/支付事实。工作区候选相关244项两端通过，未部署；见DEGRADATION-OPTIMIZATION-20261108.md。

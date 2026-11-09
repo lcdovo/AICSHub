@@ -3,7 +3,6 @@ import asyncio
 import logging
 import os
 import time
-import uuid
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -78,6 +77,12 @@ async def lifespan(app: FastAPI):
         pass
 
     try:
+        from app.agent.mcp_client import warmup_mcp_client
+        mcp_ready = await warmup_mcp_client()
+        app.state.dependency_health["mcp"] = {
+            "status": "healthy" if mcp_ready else "degraded",
+            "backend": settings.MCP_TRANSPORT if mcp_ready else "direct",
+        }
         yield
     finally:
         await shutdown_resources()

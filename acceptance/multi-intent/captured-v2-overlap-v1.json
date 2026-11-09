@@ -1,0 +1,59 @@
+{
+  "origin": "real_failure_not_pass",
+  "case_id": "MI-05",
+  "response_sha256": "d838a4d444fc5f8cad4648c63b65b1b5d9bc9944f02861e8b417ccf0ac9d7ac3",
+  "verdict": {
+    "schema_version": 2,
+    "answerability": "partial",
+    "response_behavior": "answer_with_limits",
+    "response_validity": "valid",
+    "claims_complete": true,
+    "claims": [
+      {
+        "segment_id": 0,
+        "text": "【i1】目前没有权限查询该订单，无法确认状态。",
+        "support": "unknown",
+        "evidence": [],
+        "issues": []
+      },
+      {
+        "segment_id": 1,
+        "text": "【i2】质量问题运费由商家承担。",
+        "support": "supported",
+        "evidence": [
+          {
+            "fragment_id": "rlgnbnbegnhcjjagpcdcgkcnhggifojnnbplobjojakbgcdeagjfegncijfnmbmbk"
+          }
+        ],
+        "issues": []
+      }
+    ],
+    "nonfact_segments": [
+      {
+        "segment_id": 0,
+        "kind": "insufficient_notice"
+      }
+    ],
+    "response_issues": [],
+    "source_contract_version": "server-fragments.v2",
+    "item_checks": [
+      {
+        "item_id": "i1",
+        "status": "limited",
+        "answer_quote": "【i1】目前没有权限查询该订单，无法确认状态。",
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "unanswerable"
+      },
+      {
+        "item_id": "i2",
+        "status": "answered",
+        "answer_quote": "【i2】质量问题运费由商家承担。",
+        "supported": true,
+        "conditions_preserved": true,
+        "answerability": "answerable"
+      }
+    ]
+  },
+  "failure": "same segment0 in claims and nonfact_segments; strict exact review violated"
+}

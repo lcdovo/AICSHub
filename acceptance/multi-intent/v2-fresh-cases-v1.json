@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "dataset_id": "item-v2-fresh-synthetic-v1",
+  "review_origin": "assistant_curated_synthetic_not_independent_human_gold",
+  "description": "本轮新编制并在供应商调用前冻结；用于新增诊断，非独立人工金标，非大样本泛化证明。",
+  "cases": [
+    {
+      "case_id": "V2N-01", "family": "insured_shipping_not_guaranteed", "split": "fresh_synthetic",
+      "message": "查询订单ORD960001，有运费险就一定赔运费吗，审核要多久。",
+      "items": [{"text":"查询订单ORD960001","kind":"query_order"},{"text":"有运费险就一定赔运费吗","kind":"knowledge"},{"text":"审核要多久","kind":"knowledge"}],
+      "knowledge": ["","投保运费险不保证赔付，实际是否赔付以理赔审核结果为准。","理赔审核通常需要2个工作日，不含节假日。"],
+      "order_id":"ORD960001", "order_denied":false, "order_status":"delivered", "preview":false, "conditions":[],
+      "good_answers":["订单已签收。","有运费险也不保证赔付，需以理赔审核结果为准。","理赔审核通常需要2个工作日，不含节假日。"],
+      "good_statuses":null, "bad_item":1, "bad_answer":"有运费险就一定赔付全部运费。", "attack":"semantic"
+    },
+    {
+      "case_id":"V2N-02", "family":"same_connector_not_same_capability", "split":"fresh_synthetic",
+      "message":"接口一样就能输出视频吗，使用前要看什么标识。",
+      "items":[{"text":"接口一样就能输出视频吗","kind":"knowledge"},{"text":"使用前要看什么标识","kind":"knowledge"}],
+      "knowledge":["接口外形相同不代表支持视频输出，需同时核对设备和线缆支持的视频协议。","使用前核对设备说明书及线缆上的视频协议标识。"],
+      "order_id":null, "order_denied":false, "order_status":"delivered", "preview":false, "conditions":[],
+      "good_answers":["接口外形相同不代表能输出视频，还需核对设备和线缆的视频协议。","使用前核对设备说明书及线缆上的视频协议标识。"],
+      "good_statuses":null, "bad_item":0, "bad_answer":"只要接口外形一样，就都可以输出视频。", "attack":"semantic"
+    },
+    {
+      "case_id":"V2N-03", "family":"two_independent_refund_clocks", "split":"fresh_synthetic",
+      "message":"退货申请审核多久，寄回后退款到账又要多久。",
+      "items":[{"text":"退货申请审核多久","kind":"knowledge"},{"text":"寄回后退款到账又要多久","kind":"knowledge"}],
+      "knowledge":["退货申请提交后通常1个工作日完成审核。","退回商品验收通过后通常3个工作日退款到账；寄出时间不是退款到账计时起点。"],
+      "order_id":null, "order_denied":false, "order_status":"delivered", "preview":false, "conditions":[],
+      "good_answers":["退货申请提交后通常1个工作日完成审核。","退款通常在退回商品验收通过后3个工作日到账，不从寄出时间起算。"],
+      "good_statuses":null, "bad_item":1, "bad_answer":"从寄出商品起3个工作日内必定退款到账。", "attack":"semantic"
+    },
+    {
+      "case_id":"V2N-04", "family":"missing_private_order_and_known_exclusion", "split":"fresh_synthetic",
+      "message":"查我的订单金额，拆封后的个人护理用品可以无理由退货吗。",
+      "items":[{"text":"查我的订单金额","kind":"query_order"},{"text":"拆封后的个人护理用品可以无理由退货吗","kind":"knowledge"}],
+      "knowledge":["","已拆封的个人护理用品不适用无理由退货；质量问题另按售后检测结果处理。"],
+      "order_id":null, "order_denied":false, "order_status":"delivered", "preview":false, "conditions":[],
+      "good_answers":["尚未提供订单号，无法查询订单金额，请补充订单号。","已拆封的个人护理用品不适用无理由退货；质量问题另按售后检测结果处理。"],
+      "good_statuses":["limited","answered"], "bad_item":1, "bad_answer":"个人护理用品即使拆封也都可以无理由退货。", "attack":"semantic"
+    }
+  ]
+}

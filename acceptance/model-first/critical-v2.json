@@ -1,0 +1,3078 @@
+{
+  "schema_version": 2,
+  "purpose": "fixed_program_boundary_revalidation_not_independent_quality",
+  "label_source": "assistant_authored",
+  "independent_human_review": false,
+  "counts": {
+    "total": 60,
+    "conditional": 20,
+    "policy": 10,
+    "missing_order": 10,
+    "emotional_technical": 10,
+    "negated_write": 10
+  },
+  "cases": [
+    {
+      "case_id": "critical-001",
+      "category": "conditional_read_before_apply",
+      "message": "订单ORD980001如果还没发货，请先查询后再申请退款。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980001",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980001",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980001如果还没发货，请先查询后再申请退款。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980001"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-002",
+      "category": "conditional_read_before_apply",
+      "message": "如果订单ORD980002尚未发货，我希望申请退款。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980002",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980002",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "如果订单ORD980002尚未发货，我希望申请退款。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980002"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-003",
+      "category": "conditional_read_before_apply",
+      "message": "先查订单ORD980003的状态，没发货的话再办理退款。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980003",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980003",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "先查订单ORD980003的状态，没发货的话再办理退款。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980003"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-004",
+      "category": "conditional_read_before_apply",
+      "message": "订单ORD980004若没有发货，就考虑申请退款。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980004",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980004",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980004若没有发货，就考虑申请退款。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980004"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-005",
+      "category": "conditional_read_before_apply",
+      "message": "只有订单ORD980005未发货，我才申请退款，请先核实。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980005",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980005",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "只有订单ORD980005未发货，我才申请退款，请先核实。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980005"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-006",
+      "category": "conditional_read_before_apply",
+      "message": "请核实ORD980006，如果还没发货再给我准备退款申请。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980006",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980006",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "请核实ORD980006，如果还没发货再给我准备退款申请。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980006"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-007",
+      "category": "conditional_read_before_apply",
+      "message": "订单ORD980007假如还未发货，我想退钱，先查状态。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980007",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980007",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980007假如还未发货，我想退钱，先查状态。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980007"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-008",
+      "category": "conditional_read_before_apply",
+      "message": "我想给ORD980008申请退款，前提是订单没有发货。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980008",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980008",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "我想给ORD980008申请退款，前提是订单没有发货。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980008"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-009",
+      "category": "conditional_read_before_apply",
+      "message": "请先查ORD980009有没有发货，未发货才申请退款。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980009",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980009",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "请先查ORD980009有没有发货，未发货才申请退款。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980009"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-010",
+      "category": "conditional_read_before_apply",
+      "message": "订单ORD980010如果还没发出，我要申请退款，但请先查询。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980010",
+        "condition": "order_not_shipped",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980010",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_not_shipped",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980010如果还没发出，我要申请退款，但请先查询。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980010"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-011",
+      "category": "conditional_read_before_apply",
+      "message": "订单ORD980011如果已经签收，请先核实再申请退货。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980011",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980011",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980011如果已经签收，请先核实再申请退货。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980011"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-012",
+      "category": "conditional_read_before_apply",
+      "message": "先查询ORD980012，签收之后我才申请退货退款。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980012",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980012",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "先查询ORD980012，签收之后我才申请退货退款。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980012"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-013",
+      "category": "conditional_read_before_apply",
+      "message": "如果ORD980013已送达，我希望申请退货，请先查订单。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980013",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980013",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "如果ORD980013已送达，我希望申请退货，请先查订单。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980013"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-014",
+      "category": "conditional_read_before_apply",
+      "message": "请核实订单ORD980014是否签收，已签收才办理退货。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980014",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980014",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "请核实订单ORD980014是否签收，已签收才办理退货。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980014"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-015",
+      "category": "conditional_read_before_apply",
+      "message": "只有ORD980015已经签收，我才要申请退货退款。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980015",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980015",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "只有ORD980015已经签收，我才要申请退货退款。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980015"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-016",
+      "category": "conditional_read_before_apply",
+      "message": "订单ORD980016若已经送到，请先确认状态再准备退货。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980016",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980016",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980016若已经送到，请先确认状态再准备退货。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980016"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-017",
+      "category": "conditional_read_before_apply",
+      "message": "先查订单ORD980017，如果已收货就申请退货。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980017",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980017",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "先查订单ORD980017，如果已收货就申请退货。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980017"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-018",
+      "category": "conditional_read_before_apply",
+      "message": "我想对ORD980018申请退货，前提是订单已经签收。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980018",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980018",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "我想对ORD980018申请退货，前提是订单已经签收。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980018"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-019",
+      "category": "conditional_read_before_apply",
+      "message": "请查询ORD980019是否送达，送达后再准备退货申请。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980019",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980019",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "请查询ORD980019是否送达，送达后再准备退货申请。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980019"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-020",
+      "category": "conditional_read_before_apply",
+      "message": "订单ORD980020如果已经收货，我才申请退货，请先核实。",
+      "expected": {
+        "topics": [
+          "refund",
+          "query_order"
+        ],
+        "types": [
+          "apply",
+          "query"
+        ],
+        "order_id": "ORD980020",
+        "condition": "order_delivered",
+        "required_reads": [],
+        "execution": "query",
+        "no_write_plan": true,
+        "next_nodes": [
+          "tool_execution"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "apply",
+        "entities": {
+          "order_id": "ORD980020",
+          "product": null
+        },
+        "conditions": [
+          {
+            "check": "order_delivered",
+            "source": "current_message"
+          }
+        ],
+        "subrequests": [
+          {
+            "topic": "query_order",
+            "request_type": "query"
+          },
+          {
+            "topic": "refund",
+            "request_type": "apply"
+          }
+        ],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980020如果已经收货，我才申请退货，请先核实。",
+        "entity_source": "current_message",
+        "read_tasks": [
+          {
+            "tool": "query_order",
+            "resource_id": "ORD980020"
+          }
+        ],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "reason"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-021",
+      "category": "policy_with_order",
+      "message": "订单ORD980021退款一般需要多久才能到账？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980021",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980021",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980021退款一般需要多久才能到账？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-022",
+      "category": "policy_with_order",
+      "message": "订单ORD980022退货退款的流程是什么？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980022",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980022",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980022退货退款的流程是什么？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-023",
+      "category": "policy_with_order",
+      "message": "订单ORD980023申请退款通常需要哪些材料？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980023",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980023",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980023申请退款通常需要哪些材料？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-024",
+      "category": "policy_with_order",
+      "message": "订单ORD980024退款是否退回原支付渠道？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980024",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980024",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980024退款是否退回原支付渠道？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-025",
+      "category": "policy_with_order",
+      "message": "订单ORD980025退款政策有哪些限制？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980025",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980025",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980025退款政策有哪些限制？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-026",
+      "category": "policy_with_order",
+      "message": "订单ORD980026退货运费通常由谁承担？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980026",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980026",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980026退货运费通常由谁承担？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-027",
+      "category": "policy_with_order",
+      "message": "订单ORD980027退款和退货退款有什么区别？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980027",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980027",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980027退款和退货退款有什么区别？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-028",
+      "category": "policy_with_order",
+      "message": "订单ORD980028退货时包装需要保留吗？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980028",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980028",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980028退货时包装需要保留吗？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-029",
+      "category": "policy_with_order",
+      "message": "订单ORD980029退款到账时间通常如何计算？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980029",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980029",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980029退款到账时间通常如何计算？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-030",
+      "category": "policy_with_order",
+      "message": "订单ORD980030退货前有哪些注意事项？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": "ORD980030",
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": "ORD980030",
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "订单ORD980030退货前有哪些注意事项？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-031",
+      "category": "missing_order",
+      "message": "请查询我的订单物流。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "请查询我的订单物流。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-032",
+      "category": "missing_order",
+      "message": "帮我查一下订单状态。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "帮我查一下订单状态。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-033",
+      "category": "missing_order",
+      "message": "我想知道订单发货了吗。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "我想知道订单发货了吗。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-034",
+      "category": "missing_order",
+      "message": "能查一下我的订单详情吗？",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "能查一下我的订单详情吗？",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-035",
+      "category": "missing_order",
+      "message": "请看看订单配送到了哪里。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "请看看订单配送到了哪里。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-036",
+      "category": "missing_order",
+      "message": "我需要查询订单的物流进度。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "我需要查询订单的物流进度。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-037",
+      "category": "missing_order",
+      "message": "帮我查询刚买的订单。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "帮我查询刚买的订单。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-038",
+      "category": "missing_order",
+      "message": "请核实一下我的订单状态。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "请核实一下我的订单状态。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-039",
+      "category": "missing_order",
+      "message": "我想查订单是否签收。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "我想查订单是否签收。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-040",
+      "category": "missing_order",
+      "message": "订单查询，我还没有提供订单号。",
+      "expected": {
+        "topics": [
+          "query_order"
+        ],
+        "types": [
+          "query",
+          "clarify"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "response_generation",
+          "slot_filling"
+        ]
+      },
+      "mock": {
+        "topic": "query_order",
+        "request_type": "clarify",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": "请提供要查询的订单号。",
+        "retrieval_query": "订单查询，我还没有提供订单号。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": [
+          "order_id"
+        ]
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-041",
+      "category": "emotion_not_complaint",
+      "message": "这耳机太垃圾了，怎么连接电脑？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "耳机"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "这耳机太垃圾了，怎么连接电脑？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-042",
+      "category": "emotion_not_complaint",
+      "message": "打印机真让人生气，如何设置无线网络？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "打印机"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "打印机真让人生气，如何设置无线网络？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-043",
+      "category": "emotion_not_complaint",
+      "message": "投影仪体验太差了，如何调整画面？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "投影仪"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "投影仪体验太差了，如何调整画面？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-044",
+      "category": "emotion_not_complaint",
+      "message": "耳机让我很失望，如何重新配对？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "耳机"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "耳机让我很失望，如何重新配对？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-045",
+      "category": "emotion_not_complaint",
+      "message": "打印机太烂了，怎么安装驱动？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "打印机"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "打印机太烂了，怎么安装驱动？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-046",
+      "category": "emotion_not_complaint",
+      "message": "投影仪让我生气，如何连接笔记本？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "投影仪"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "投影仪让我生气，如何连接笔记本？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-047",
+      "category": "emotion_not_complaint",
+      "message": "耳机太差了，怎么恢复出厂设置？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "耳机"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "耳机太差了，怎么恢复出厂设置？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-048",
+      "category": "emotion_not_complaint",
+      "message": "打印机体验不好，怎么更换墨盒？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "打印机"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "打印机体验不好，怎么更换墨盒？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-049",
+      "category": "emotion_not_complaint",
+      "message": "投影仪很差，如何设置声音输出？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "投影仪"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "投影仪很差，如何设置声音输出？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-050",
+      "category": "emotion_not_complaint",
+      "message": "耳机真让人失望，如何切换连接设备？",
+      "expected": {
+        "topics": [
+          "technical"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "technical",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": "耳机"
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "negative",
+        "clarification": null,
+        "retrieval_query": "耳机真让人失望，如何切换连接设备？",
+        "entity_source": "current_message",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-051",
+      "category": "negated_write_policy_only",
+      "message": "不要申请退款，我只想问退款流程。",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不要申请退款，我只想问退款流程。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-052",
+      "category": "negated_write_policy_only",
+      "message": "不办理退货，我只咨询退货政策。",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不办理退货，我只咨询退货政策。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-053",
+      "category": "negated_write_policy_only",
+      "message": "别提交退款，我想了解到账时间。",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "别提交退款，我想了解到账时间。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-054",
+      "category": "negated_write_policy_only",
+      "message": "不要创建投诉，只想知道投诉流程。",
+      "expected": {
+        "topics": [
+          "complaint"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不要创建投诉，只想知道投诉流程。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-055",
+      "category": "negated_write_policy_only",
+      "message": "不提交投诉，投诉一般需要哪些材料？",
+      "expected": {
+        "topics": [
+          "complaint"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不提交投诉，投诉一般需要哪些材料？",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-056",
+      "category": "negated_write_policy_only",
+      "message": "不用转人工，我想问客服服务时间。",
+      "expected": {
+        "topics": [
+          "general",
+          "human"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "general",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不用转人工，我想问客服服务时间。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-057",
+      "category": "negated_write_policy_only",
+      "message": "不申请退款，退款退回哪个渠道？",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不申请退款，退款退回哪个渠道？",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-058",
+      "category": "negated_write_policy_only",
+      "message": "不要发起投诉，匿名投诉有什么规则？",
+      "expected": {
+        "topics": [
+          "complaint"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "complaint",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不要发起投诉，匿名投诉有什么规则？",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-059",
+      "category": "negated_write_policy_only",
+      "message": "不办理退货，只问包装是否需要保留。",
+      "expected": {
+        "topics": [
+          "refund"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "refund",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不办理退货，只问包装是否需要保留。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    },
+    {
+      "case_id": "critical-060",
+      "category": "negated_write_policy_only",
+      "message": "不要联系真人，我只咨询客服热线的服务时间。",
+      "expected": {
+        "topics": [
+          "general",
+          "human"
+        ],
+        "types": [
+          "inquiry"
+        ],
+        "order_id": null,
+        "required_reads": [],
+        "no_write_plan": true,
+        "next_nodes": [
+          "rag_retrieval"
+        ]
+      },
+      "mock": {
+        "topic": "general",
+        "request_type": "inquiry",
+        "entities": {
+          "order_id": null,
+          "product": null
+        },
+        "conditions": [],
+        "subrequests": [],
+        "service_preference": "unspecified",
+        "emotion": "neutral",
+        "clarification": null,
+        "retrieval_query": "不要联系真人，我只咨询客服热线的服务时间。",
+        "entity_source": "none",
+        "read_tasks": [],
+        "parameters": {
+          "reason": null,
+          "refund_type": null,
+          "complaint_content": null
+        },
+        "missing_information": []
+      },
+      "label_source": "assistant_authored_fixed_boundary_not_human_gold"
+    }
+  ]
+}

@@ -55,6 +55,8 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     run_id: Optional[str] = None
     run_status: Optional[str] = None
+    task_id: Optional[str] = None
+    task_status: Optional[str] = None
     message_id: int
     session_id: str
     reply: str
