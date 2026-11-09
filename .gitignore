@@ -41,3 +41,7 @@ _grep_trace_tmp.py
 # 前端生产构建由 npm run build / Docker 构建生成
 /static/
 /.taste-skill/
+
+# 本地归档与工具缓存
+/.local/
+/.ruff_cache/

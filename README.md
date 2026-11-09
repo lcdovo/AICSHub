@@ -1,5 +1,7 @@
 # AI Customer
 
+项目文件导航：[文档分类](docs/README.md) · [脚本分类](scripts/README.md) · [验收材料](acceptance/README.md) · [协作指南](AGENTS.md)
+
 企业级智能客服与工单自动处理系统。基于 FastAPI + 官方 LangGraph 状态机，图形骨架由 LangGraph 提供，自研 13 节点业务编排（意图识别、RAG 检索、Function Calling 工具调用、人机协同、可观测性与 LLM 治理），覆盖完整闭环，重点展示单体应用内的模型编排与业务落地能力。
 
 ## 核心链路

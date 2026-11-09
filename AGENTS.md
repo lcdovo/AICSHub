@@ -17,6 +17,16 @@
 - `frontend/src/`：React + Vite + Tailwind 前端，页面在 `pages/`、组件在 `components/`；构建输出到 `static/`。
 - `tests/`：pytest 回归测试；`scripts/`：启动、迁移调用、数据导入和评测脚本；`docs/`：架构、API、部署与安全说明。
 
+## 文件组织与维护（2026-11-09）
+
+- 文档分类入口为 `docs/README.md`，脚本分类入口为 `scripts/README.md`，固定场景入口为 `acceptance/README.md`；新增、移动或更名文件时同步维护对应索引。
+- 根目录保留启动入口、依赖、Compose、Docker、迁移配置和项目指南。业务实现放 `app/`，测试放 `tests/`，工具放 `scripts/`；不要把临时排查脚本或日志散放根目录。
+- `文档/` 保存业务知识原文，`docs/` 保存架构、操作和验收说明，两者用途不同。导入器及来源身份引用现有知识路径，整理时不得随意移动或改名。
+- `acceptance/` 的固定输入、版本与标签以及 `reports/` 的派发账本、原始回执、closeout和保护hash需保持可追溯；旧记录不能删除或覆盖为新成绩。目录索引只负责导航，不代表当前部署或验收结论。
+- 本地临时归档统一放 `.local/`，已从Git与Docker构建上下文排除。2026-11-09将根目录 `_grep_trace_tmp.py` 和 `pull_infinity.log` 原样归档至 `.local/archive/2026-11-09/`，原路径和SHA-256记录在同目录 `manifest.json`；不得把含私有信息的归档加入提交。
+- `.pytest_cache/`、`.ruff_cache/`、`__pycache__/` 属于工具缓存；`data/`、`static/`、模型缓存和容器数据卷不能按普通缓存处理。文件整理不自动授权数据删除、服务重启、部署或付费模型调用。
+- Python回归默认通过 `python scripts/test_offline.py` 运行；启用配置链路使用 `--profile active`。下文历史 `python -m pytest` 示例须通过隔离入口执行，直接运行受 `tests/conftest.py` 保护；网络阻断尝试不能算通过证据。
+
 ## 环境与常用命令
 
 Python 3.11+，Windows PowerShell。依赖以 `requirements.txt` 和 `requirements.lock` 为准；Docker 安装时同时使用二者。

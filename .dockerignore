@@ -21,3 +21,6 @@ reports
 .workbuddy
 .gitignore
 README.md
+
+# 本地临时归档不进入镜像
+.local
