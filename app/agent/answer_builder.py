@@ -31,8 +31,14 @@ def trusted_tool_reply(context: ResponseContext, state: AgentState, text: str) -
     data = call.result.get("data")
     if not isinstance(data, dict) or (data.get("next_steps") and call.tool_name != "apply_refund"):
         return False
-    if state.understanding and (state.understanding.conditions or len(state.understanding.subrequests) > 1):
+    if state.understanding and state.understanding.conditions:
         return False
+    # 意图拆分会把“什么时候发货，能查到物流吗”表示成两个
+    # query_order 子项。它们共享同一只读订单回执，合并成一个模板回复
+    # 仍能完整覆盖两项诉求；只有混入其他主题/办理动作时才回到模型审查。
+    if state.understanding and len(state.understanding.subrequests) > 1:
+        if state.task and any(item.kind != "query_order" for item in state.task.items):
+            return False
     if call.tool_name not in {"query_order", "apply_refund", "update_ticket_status", "escalate_to_human", "create_ticket"}:
         return False
     if call.tool_name == "create_ticket" and not (
@@ -103,7 +109,12 @@ async def build_draft(self: ResponseContext, state: AgentState) -> AnswerDraft:
     grounded = bool(not is_shadow and state.flow_value(FlowFlag.GROUNDED) and state.current_evidence())
     answer_cache_key = None
     generated_by_llm = False
-    if not state.reply and not state.task_runtime:
+    # 单一只读工具任务也可以使用服务端字段模板。此前这里排除了
+    # task_runtime，导致“查询订单物流”即使已有可信工具回执也会重新走
+    # LLM 生成，容易被 Judge 因物流字段未完整复述而拒绝。
+    # trusted_tool_reply 仍会校验本轮无条件/无多诉求、工具回执和模板结果，
+    # 因此不会放行条件办理或任意模型正文。
+    if not state.reply:
         templated = self._try_templated_tool_reply(state)
         if templated:
             state.reply = templated

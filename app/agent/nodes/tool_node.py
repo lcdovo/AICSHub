@@ -85,8 +85,12 @@ async def execute_tools(dependencies: "ToolExecutionDependencies", state: AgentS
                 state.record_tool_observation(task.tool, result.model_dump())
                 state.add_tool_call(task.tool, payload, result.model_dump(), result.success,
                                     result.error, result.error_type)
-            state.reply = summarize_reads(state.read_plan, results,
-                                          has_conditions=bool(state.understanding.conditions))
+            state.reply = summarize_reads(
+                state.read_plan,
+                results,
+                has_conditions=bool(state.understanding.conditions),
+                user_message=state.user_message,
+            )
             if all(task.tool == "query_order" for task in state.read_plan) and all(
                 result is not None and result.success and isinstance(result.data, dict)
                 and result.data.get("order_id") == task.resource_id

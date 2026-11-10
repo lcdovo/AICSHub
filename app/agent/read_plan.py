@@ -59,7 +59,7 @@ async def run_authorized_reads(tasks: list[ReadTask], principal: ReadPrincipal):
     return await execute_read_plan(tasks, principal, reader)
 
 
-def summarize_reads(tasks, results, *, has_conditions=False):
+def summarize_reads(tasks, results, *, has_conditions=False, user_message=""):
     """只描述已取得的读结果；部分失败不能被最后一个成功结果覆盖。"""
     lines = []
     for task, (_, result) in zip(tasks, results):
@@ -69,8 +69,14 @@ def summarize_reads(tasks, results, *, has_conditions=False):
             continue
         data = result.data
         if task.tool == "query_order":
-            lines.append(f"订单 {data.get('order_id', task.resource_id)} 当前状态：{data.get('status', '未知')}，"
-                         f"订单金额：{data.get('total_amount', '未知')}。")
+            # 物流查询必须复用订单模板，避免只读计划先写入旧的状态摘要，
+            # 从而跳过 response_node 中的物流字段补充逻辑。
+            if any(word in user_message for word in ("物流", "快递", "运单", "配送", "运输", "到哪", "发货")):
+                from app.agent.nodes.response_node import build_order_reply_template
+                lines.append(build_order_reply_template(data, user_message))
+            else:
+                lines.append(f"订单 {data.get('order_id', task.resource_id)} 当前状态：{data.get('status', '未知')}，"
+                             f"订单金额：{data.get('total_amount', '未知')}。")
         else:
             # 历史是用户陈述，不能证明当前政策、订单状态或授权业务动作。
             history = data.get("history") or []

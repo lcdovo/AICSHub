@@ -128,6 +128,12 @@ class AgentState(BaseModel):
     # 用户情绪
     user_emotion: str = "neutral"  # neutral, positive, negative, angry
 
+    def record_stage_timing(self, stage: str, elapsed_ms: float) -> None:
+        """Record per-stage latency without retaining request or model payloads."""
+        timings = self.collected_info.setdefault("stage_timings_ms", {})
+        if isinstance(timings, dict):
+            timings[stage] = max(0, round(float(elapsed_ms)))
+
     def _query_rewrite_digest(self) -> str:
         import hashlib
         import json

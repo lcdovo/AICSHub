@@ -179,6 +179,27 @@ async def recognize_request(dependencies: "IntentDependencies", state: AgentStat
             from app.agent.task_loop import enter_task
             return enter_task(state, route_understanding(state, result))
         code = (state.collected_info.get("understanding_failure") or {}).get("code")
+        # 模型理解不可用时，安全的只读请求仍可走规则路由；写入型动作继续
+        # fail-closed，避免在模型不可用时误提交退款或投诉。供应商连接异常
+        # 可能没有可归一化的 failure_code，此时同样按只读/写入边界处理。
+        if code in {
+            "daily_model_budget_exhausted",
+            "request_model_budget_exceeded",
+            "run_model_budget_exhausted",
+            "provider_timeout",
+            "model_concurrency_exhausted",
+        } or code is None:
+            fallback = await recognize_rule_request(
+                dependencies, state, allow_llm_fallback=False
+            )
+            write_intent = state.detected_intent in {IntentType.REFUND, IntentType.COMPLAINT}
+            write_request = write_intent and explicit_action(state.detected_intent, state.user_message)
+            compound_request = state.task_loop_enabled and any(marker in state.user_message for marker in (
+                "并且", "同时", "另外", "顺便", "再告诉", "如果", "若", "要是"
+            ))
+            if not write_request and not compound_request:
+                state.collected_info["intent_source"] = "rules_after_model_failure"
+                return fallback
         notices = {
             "daily_model_budget_exhausted": "当前账号今日模型额度不足，本轮未执行后续操作。请稍后重试或联系管理员调整额度。",
             "request_model_budget_exceeded": "本轮模型预算不足，未执行后续操作。请缩小请求范围或联系管理员。",
@@ -194,7 +215,9 @@ async def recognize_request(dependencies: "IntentDependencies", state: AgentStat
     return await recognize_rule_request(dependencies, state)
 
 
-async def recognize_rule_request(dependencies: "IntentDependencies", state: AgentState) -> str:
+async def recognize_rule_request(
+    dependencies: "IntentDependencies", state: AgentState, *, allow_llm_fallback: bool = True
+) -> str:
     """独立保留的旧规则模式；候选模型路径不进入此函数或旧分类兜底。"""
     if question := ambiguous_order_question(state.user_message):
         state.set_business_parameters(order_id=None)
@@ -212,7 +235,7 @@ async def recognize_rule_request(dependencies: "IntentDependencies", state: Agen
         history_intent=state.detected_intent
         if context.history or context.known_order
         else None,
-        llm_primary=settings.LLM_INTENT_PRIMARY,
+        llm_primary=settings.LLM_INTENT_PRIMARY if allow_llm_fallback else False,
     )
     if (state.missing_slots and context.unfinished_topic and is_slot_reply(state.user_message)
             and not dependencies.smalltalk(state.user_message)):
@@ -244,7 +267,7 @@ async def recognize_rule_request(dependencies: "IntentDependencies", state: Agen
         and len(state.user_message.strip()) <= 20
         and intent_result.needs_clarification is False
     )
-    if (
+    if allow_llm_fallback and (
         intent_result.needs_llm_fallback
         and not is_smalltalk
         and not is_continuation_reply

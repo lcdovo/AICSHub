@@ -1,6 +1,7 @@
 """确定性检查、独立Judge和程序判决；不生成回复、不发布、不执行业务。"""
 from __future__ import annotations
 
+import time
 import asyncio
 import re
 from typing import TYPE_CHECKING
@@ -103,12 +104,16 @@ async def validate_candidate(context: ResponseContext, state: AgentState, *, tru
         from app.agent.intent_items import REVIEW_CONTEXT, snapshot as item_snapshot, verify_review, active
         item_context = item_snapshot(snapshot)
         context_token = REVIEW_CONTEXT.set(item_context)
+        judge_started = time.perf_counter()
         try:
             judgement = await context.llm_judge.judge(response=body, user_query=query,
                 kb_context=snapshot.current_evidence(), tool_evidence=tools)
         except Exception:
             judgement = unknown_judgement("judge_dependency_failed")
         finally:
+            # 记录到本轮主状态；snapshot 只用于固定审查输入，写入 snapshot
+            # 会导致 Judge 耗时在最终 ChatRun.result 中丢失。
+            state.record_stage_timing("judge", (time.perf_counter() - judge_started) * 1000)
             REVIEW_CONTEXT.reset(context_token)
         raw_items = judgement.get("item_checks") if isinstance(judgement, dict) else None
         diagnostic = judgement.get("diagnostic") if isinstance(judgement, dict) else None
@@ -127,6 +132,18 @@ async def validate_candidate(context: ResponseContext, state: AgentState, *, tru
             elif judgement["publish_allowed"]:
                 state.task_runtime.item_reviews = item_reviews
         state.collected_info["llm_judge"] = {key: value for key, value in judgement.items() if key != "_v2_verdict"}
+        if not judgement.get("publish_allowed"):
+            logger.info(
+                "llm_judge_rejected intent=%s session=%s support=%s validity=%s reason=%s fact_score=%s issues=%s item_checks=%s",
+                snapshot.detected_intent,
+                snapshot.session_id,
+                judgement.get("support"),
+                judgement.get("response_validity"),
+                judgement.get("reason"),
+                judgement.get("fact_score"),
+                judgement.get("response_issues"),
+                judgement.get("item_checks"),
+            )
         passed = judgement["publish_allowed"]
         status = "accepted" if passed else ("unknown" if judgement["response_validity"] == "unknown" else "rejected")
         report.update(judge_passed=passed, evidence_score=judgement["fact_score"],

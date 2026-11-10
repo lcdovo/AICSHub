@@ -473,9 +473,57 @@ def route_understanding(state, result):
             return AgentNode.RESPONSE_GENERATION
         return AgentNode.ROUTE_DECISION
     if result.request_type == "inquiry":
+        retrieval_query = result.retrieval_query
+        if result.topic == "technical":
+            extras = ["排障步骤"]
+            if "耳机" in state.user_message:
+                extras.append("无线蓝牙耳机")
+            if "充电" in state.user_message or "指示灯" in state.user_message:
+                extras.append("充电 指示灯")
+            if "蓝牙" in state.user_message or "连接" in state.user_message:
+                extras.append("蓝牙 配对 连接")
+            retrieval_query = f"{retrieval_query} {' '.join(extras)}"[:300]
+        if result.topic == "refund":
+            # 泛化的退货政策问题需要命中完整的申请条件条款；仅使用
+            # “退货/条件”等原词时，重排容易把自动审核或换货片段排在前面。
+            # 这里仅扩展检索词，不改变用户原意、意图或执行权限。
+            refund_terms = ("退货", "退换货", "无理由", "条件", "要求", "满足", "资格")
+            if any(term in state.user_message for term in refund_terms):
+                packaging_question = any(term in state.user_message for term in ("包装", "保留", "准备", "配件", "赠品", "发票"))
+                if packaging_question:
+                    # 包装要求是独立章节；使用紧凑查询，避免加入条件/例外条款后稀释精确匹配。
+                    retrieval_query = (
+                        f"{retrieval_query} 退货时建议保留原包装 原包装损坏 厚实纸箱 商品 配件 赠品 发票"
+                    )[:300]
+                else:
+                    if "换货" in state.user_message:
+                        extras = [
+                            "换货",
+                            "质量问题",
+                            "签收后15天",
+                            "同型号商品",
+                            "平台审核",
+                            "寄回原商品",
+                        ]
+                    else:
+                        extras = [
+                            "7天无理由退货",
+                            "申请条件",
+                            "商品完好",
+                            "配件 赠品 发票",
+                            "不适用商品",
+                        ]
+                    retrieval_query = f"{retrieval_query} {' '.join(extras)}"[:300]
+        if result.topic == "general":
+            from app.agent.routing_policy import service_scope_query
+            if service_scope_query(state.user_message):
+                state.set_workflow_reply(
+                    "我可以帮助您查询订单状态和物流、咨询退换货与售后政策、排查产品使用问题、了解优惠活动，也可以为您转接人工客服。"
+                )
+                return AgentNode.RESPONSE_GENERATION
         state.record_query_rewrite({
-            "original_query": state.user_message, "rewritten_query": result.retrieval_query,
-            "applied": result.retrieval_query != state.user_message,
+            "original_query": state.user_message, "rewritten_query": retrieval_query,
+            "applied": retrieval_query != state.user_message,
             "reason": "unified_understanding", "confidence": 0., "simple": False,
         }, "unified_understanding")
         return AgentNode.RAG_RETRIEVAL

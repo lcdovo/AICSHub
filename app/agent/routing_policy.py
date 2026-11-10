@@ -101,7 +101,15 @@ def explicit_action(topic: str, message: str) -> bool:
 
 def technical_inquiry(message: str) -> bool:
     return bool(re.search(r"怎么|如何|怎样|能否|吗|保修", message) and re.search(
-        r"连接|维修|安装|设置|配置|使用|保修|配对|开机", message))
+        r"连接|维修|安装|设置|配置|使用|保修|配对|开机|充电|指示灯|电池|耳机|蓝牙|故障|排查", message))
+
+
+def service_scope_query(message: str) -> bool:
+    """识别客服能力/服务范围问法，避免把固定能力说明送进业务 RAG。"""
+    return bool(re.search(
+        r"业务范围|提供哪些服务|能提供什么服务|可以提供什么|可以帮我什么|能帮我什么|你们能做什么|支持哪些服务|有什么功能",
+        message,
+    ))
 
 
 def is_follow_up(message: str) -> bool:
@@ -214,6 +222,8 @@ class RoutingPolicy:
         if topic == "general":
             if smalltalk:
                 return RouteDecision("response_generation", "general:smalltalk->template")
+            if service_scope_query(message):
+                return RouteDecision("response_generation", "general:service_scope->template")
             return RouteDecision("query_rewrite", "general:rag_fallback")
         destination = self.destination(topic)
         return RouteDecision(destination, f"intent:{topic}->{destination}")

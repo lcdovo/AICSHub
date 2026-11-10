@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+import contextlib
 import asyncio
 import logging
 import os
 import time
+import httpx
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +35,35 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 llm_service = LLMService()
+
+
+async def warmup_local_embedding() -> None:
+    """用应用真实调用的 OpenAI 兼容接口预热本地 Embedding。"""
+    base = (settings.EMBEDDING_API_BASE or "").rstrip("/")
+    if not base or not settings.EMBEDDING_API_KEY or "embedding-local" not in base:
+        return
+    started = time.perf_counter()
+    try:
+        timeout = min(float(settings.EMBEDDING_TIMEOUT_SECONDS), 20.0)
+        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+            response = await client.post(
+                f"{base}/embeddings",
+                headers={"Authorization": f"Bearer {settings.EMBEDDING_API_KEY}"},
+                json={"model": settings.EMBEDDING_MODEL, "input": ["warmup"],
+                      "encoding_format": "float", "dimensions": settings.EMBEDDING_DIM},
+            )
+            response.raise_for_status()
+        logger.info("Local embedding API warmup completed in %.0fms", (time.perf_counter() - started) * 1000)
+    except Exception as exc:
+        # 本地向量服务是可降级依赖；预热失败不能阻止 API 启动。
+        logger.warning("Local embedding API warmup unavailable: %s", type(exc).__name__)
+
+
+async def keep_local_embedding_warm() -> None:
+    """低频保持本地向量模型活跃，降低空闲后的首请求长尾。"""
+    while True:
+        await asyncio.sleep(30)
+        await warmup_local_embedding()
 
 
 @asynccontextmanager
@@ -83,8 +114,15 @@ async def lifespan(app: FastAPI):
             "status": "healthy" if mcp_ready else "degraded",
             "backend": settings.MCP_TRANSPORT if mcp_ready else "direct",
         }
+        await warmup_local_embedding()
+        app.state.embedding_keepalive = asyncio.create_task(keep_local_embedding_warm())
         yield
     finally:
+        keepalive = getattr(app.state, "embedding_keepalive", None)
+        if keepalive is not None:
+            keepalive.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await keepalive
         await shutdown_resources()
 
 

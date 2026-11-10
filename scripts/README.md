@@ -4,6 +4,8 @@
 
 ## 常用入口
 
+- 日常启停：根目录 `start.bat` / `stop.bat` 调用 [runtime.ps1](runtime.ps1)，复用已有容器，不构建或迁移。
+
 - 默认隔离回归：`python scripts/test_offline.py`
 - 启用配置链路的隔离回归：`python scripts/test_offline.py --profile active`
 - 工作区与部署镜像的同版本验证：`python scripts/verify_offline_release.py`

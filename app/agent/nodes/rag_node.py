@@ -1,6 +1,7 @@
 """RAG 链路节点：查询改写与混合检索。"""
 import asyncio
 import logging
+import time
 from dataclasses import dataclass
 from typing import Callable, Protocol, Any
 
@@ -78,6 +79,7 @@ async def rewrite_query(dependencies: QueryRewriteDependencies, state: AgentStat
 
 
 async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentState) -> str:
+    started = time.perf_counter()
     query = state.current_retrieval_query()
     top_k = dependencies.top_k()
 
@@ -133,6 +135,7 @@ async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentSta
         f"混合检索完成: {len(search_result.get('results', []))} 条结果, "
         f"耗时 {search_result.get('execution_time_ms', 0)}ms"
     )
+    state.record_stage_timing("rag_retrieval", (time.perf_counter() - started) * 1000)
 
     return AgentNode.RESPONSE_GENERATION
 

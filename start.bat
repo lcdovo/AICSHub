@@ -1,6 +1,8 @@
 @echo off
-rem One-click start: main stack + local embedding + reranker; local Qwen LLM stays off.
-rem To include Langfuse, pass -Langfuse to scripts\start.ps1 instead.
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start.ps1" -Reranker -LocalEmbedding
+setlocal
+rem Start existing AICSHub containers without rebuilding or changing configuration.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\runtime.ps1" -Action start
+set "RESULT=%ERRORLEVEL%"
 echo.
 pause
+exit /b %RESULT%

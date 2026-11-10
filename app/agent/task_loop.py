@@ -119,7 +119,15 @@ def enter_task(state: AgentState, default_next: str) -> str:
     # legacy subrequests list must not bypass a multi-item policy request.
     policy_only = (value.request_type == "inquiry" and not value.subrequests
                    and kind != "troubleshoot" and not resume and not item_candidate)
-    complex_request = not policy_only and bool(conditional_action or len(value.subrequests) > 1 or kind != "single" or resume)
+    # Itemized understanding may label even a single knowledge/troubleshooting
+    # question as ``multi``.  Such a request has no task state to coordinate:
+    # sending it through the task loop makes a transient Judge unknown turn a
+    # normal RAG answer into the generic "审查不可用" reply.  Keep the task
+    # loop for genuinely multi-item, conditional, or resumed requests.
+    itemized_single = itemized and len(item_plan) <= 1 and not conditional_action and not resume
+    complex_request = not policy_only and bool(
+        conditional_action or len(value.subrequests) > 1 or (kind != "single" and not itemized_single) or resume
+    )
     if (not complex_request or (value.topic not in {"technical", "refund", "query_order"} and not item_plan)
             or value.request_type not in {"query", "inquiry", "apply"}):
         # 独立新问题结束旧任务关联；SQL持久化时标记superseded。
@@ -538,6 +546,8 @@ class TaskExecutionNode:
                 call.arguments["item_id"] = item.item_id
             state.tool_calls.extend(working.tool_calls)
             groups.append(evidence)
+            if working.evidence_bundle and evidence:
+                epochs.add(working.evidence_bundle.knowledge_epoch)
             self.record(state, step, "succeeded" if evidence else "failed",
                 "search_knowledge:refund_policy" if item.item_id == "policy" else "search_knowledge:item:" + item.item_id)
         if len(epochs) > 1:

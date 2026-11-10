@@ -31,6 +31,22 @@ async def test_two_policy_items_enter_task_even_when_legacy_subrequests_are_empt
     assert state.task is not None and len(state.task.items)==2 and state.task_runtime is not None
 
 
+async def test_single_itemized_knowledge_question_bypasses_task_loop():
+    """A single RAG question must use the normal publication fallback path."""
+    from app.agent.state import AgentState, AgentNode
+    state, _ = request_state(kind='multi', message='投诉分为哪些级别，分别怎么处理？',
+        topic='complaint', request_type='inquiry', conditions=[], parameters={},
+        entities={'order_id': None, 'product': None}, subrequests=[])
+    raw = state.understanding.model_dump()
+    raw.update(task_kind='multi', subrequests=[], read_tasks=[],
+        items=[{'text': state.user_message, 'kind': 'knowledge'}],
+        itemization_version='intent-items.v1')
+    value = ItemizedTaskUnderstanding.model_validate(raw)
+    route = route_understanding(state, value)
+    assert enter_task(state, route) == route
+    assert state.task is None and state.task_runtime is None
+
+
 async def test_current_evidence_scope_is_item_bound_and_cannot_complete_a_policy_by_itself(monkeypatch):
     state,_,_=await acquired(monkeypatch)
     context=snapshot(state)

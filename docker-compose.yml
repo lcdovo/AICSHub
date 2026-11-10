@@ -194,6 +194,7 @@ services:
       LLM_OUTPUT_PRICE_PER_1K_USD: ${LLM_OUTPUT_PRICE_PER_1K_USD:-0.00060}
       COLLECTION_NAME: ${COLLECTION_NAME:-customer_service_knowledge}
       RAG_TOP_K: ${RAG_TOP_K:-5}
+      RAG_RERANK_K: ${RAG_RERANK_K:-8}
       RAG_SIMILARITY_THRESHOLD: ${RAG_SIMILARITY_THRESHOLD:-0.2}
       RAG_USE_RERANKER: ${RAG_USE_RERANKER:-true}
       RERANKER_API_BASE: ${RERANKER_API_BASE:-}
@@ -459,7 +460,13 @@ services:
   embedding-local:
     profiles: ["local-models", "local-embedding"]
     image: ollama/ollama:latest
-    command: serve
+    # 首次加载模型可能需要十几秒；启动时预热，避免首个真实请求在应用的5秒本地模型预算内被截断。
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      'ollama serve & pid=$$!;
+      until ollama list >/dev/null 2>&1; do sleep 1; done;
+      ollama run qwen3-embedding:0.6b "warmup" >/dev/null 2>&1 || true;
+      wait $$pid'
     ports:
       - "${EMBEDDING_LOCAL_PORT:-8012}:11434"
     environment:
@@ -470,7 +477,7 @@ services:
     volumes:
       - ollama_models:/root/.ollama
     healthcheck:
-      test: ["CMD", "ollama", "list"]
+      test: ["CMD-SHELL", "ollama ps | grep -q 'qwen3-embedding'"]
       interval: 10s
       timeout: 5s
       retries: 30

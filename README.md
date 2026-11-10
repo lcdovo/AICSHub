@@ -1,165 +1,79 @@
-# AI Customer
+# AICSHub · 智能客服
 
-项目文件导航：[文档分类](docs/README.md) · [脚本分类](scripts/README.md) · [验收材料](acceptance/README.md) · [协作指南](AGENTS.md)
+基于 FastAPI、LangGraph 和 React 的智能客服系统，面向订单查询、售后咨询、知识问答与人工协同场景，将请求理解、知识检索、业务工具和回答审查整合为统一服务。
 
-企业级智能客服与工单自动处理系统。基于 FastAPI + 官方 LangGraph 状态机，图形骨架由 LangGraph 提供，自研 13 节点业务编排（意图识别、RAG 检索、Function Calling 工具调用、人机协同、可观测性与 LLM 治理），覆盖完整闭环，重点展示单体应用内的模型编排与业务落地能力。
+## 核心能力
 
-## 核心链路
+- **对话与任务编排**：支持多轮会话、请求澄清和有界任务循环，可按事项处理复合诉求并记录完成状态。
+- **知识检索**：结合 BM25、向量召回与重排，支持知识版本管理、异步索引和发布快照校验。
+- **回答审查**：生成草稿经独立 Judge 检查事实、来源与事项覆盖后发布，保留证据绑定和失败拦截。
+- **业务处理**：提供订单查询、模拟退款申请、工单管理与转人工；写操作受权限、参数、幂等及本轮确认约束。
+- **可靠执行**：REST 与 WebSocket 共用业务链路，结合 SQL 执行账本、会话租约和后台 Worker 管理执行与恢复。
+- **可观测与治理**：提供链路追踪、调用计量、预算控制和敏感信息脱敏，支持隔离回归与版本化验收。
 
-```text
-用户消息 → 全局追踪中间件 → Redis 会话状态恢复(hydrate_state)
-→ Agent 状态机：
-  start → intent_recognition(规则优先，低置信度 LLM 兜底)
-       → route_decision(按意图分流)
-       → (clarification | query_rewrite → rag_retrieval | slot_filling → tool_execution | confirmation | human_handoff | response_generation)
-       → result_verification(事实/安全/完整性三层校验)
-       → response_generation(LLM 生成 + 降级话术)
-  → end
-→ 落库(messages/agent_traces/evaluation_results) + 回写 Redis 会话
-→ 流式输出(REST 分片 / WebSocket graph_updates)
+任务循环、多意图逐项处理和 Judge 协议按配置启用；仓库模板采用保守默认值，具体开关见 [.env.example](.env.example)。退款流程为模拟申请，不接入真实支付。
+
+## 技术栈
+
+| 层次 | 技术 |
+| --- | --- |
+| 前端 | React、TypeScript、Vite、Tailwind CSS |
+| 后端与编排 | FastAPI、Pydantic、LangGraph、MCP |
+| 数据与检索 | MySQL、SQLAlchemy、Alembic、Redis、Milvus、BM25 |
+| 模型服务 | OpenAI 兼容接口、独立 Embedding 与 Reranker 服务 |
+| 部署与测试 | Docker Compose、pytest、Vitest |
+
+## 快速启动
+
+准备 Docker Compose 和 Windows PowerShell。首次运行时创建本地配置：
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-7 类核心意图 + 1 个 `general` 兜底：`query_order`、`refund`、`complaint`、`technical`、`promotion`、`human`、`general`。退款意图内部进一步分流：政策咨询走 RAG，实际申请走工具并经 `confirmation` 节点二次确认。
+编辑 `.env`，设置数据库、MinIO 密码和至少32字符的 `AUTH_SECRET_KEY`，配置聊天模型、Embedding 与 Reranker 的地址及模型名称。密钥仅保存在本地配置中。
 
-## 当前实现重点
-
-- **规则优先、LLM 兜底的意图识别**：`EnhancedIntentRecognizer` 关键词加权匹配 + 否定词修正，置信度 < 0.4 或需澄清时调用 `LLMService.classify_intent` 结构化兜底，关键意图仍由确定性规则主导；低置信度输入自动进入 `CLARIFICATION` 澄清节点；支持意图升级模式检测（如 `query_order → refund → complaint` 自动转人工），并记录 `intent_source` 便于审计。
-- **混合 RAG 检索**：`KnowledgeBaseService` 实现 BM25 + 向量召回 + 分数融合 + 重排，支持查询扩展、同义词扩展、双向类目匹配；Milvus 不可用时降级到内存 + BM25，搜索结果中返回 `backend`、`degraded`、`degraded_reason`，不静默假装高可用。
-- **组合式多轮查询改写**：`LLMQueryRewriter` 采用"规则优先、LLM 增强"策略——先是 `ConservativeQueryRewriter` 无开销地改写指代/省略类追问，规则未命中且模型可用时再由 `LLMService.run_structured` 做语义改写增强 RAG 召回，全程零延迟保底、可观测。
-- **LLM-as-judge 防幻觉**：`validation_llm.py` 对 RAG/工具回答做事实一致性、引用对齐与"无据陈述"判定，无法锚定证据时选择"无据不答"并引导补充信息或转人工，而不是让模型为生成而编造；LLM 不可用自动退化为启发式校验。
-- **跨会话长期记忆 / 用户画像**：`UserMemoryService` 聚合 SQLite 历史与工单数据形成用户画像，Embedding 可用时做向量回忆、否则退化为关键词召回与空画像；`get_user_history` 工具接入真实数据（去 Mock），并在响应生成节点将画像注入 LLM 提示词。
-- **Function Calling 工具集**：8 个结构化工具（订单查询、退款申请、工单创建、知识检索、转人工、通知、工单状态更新、用户历史），统一封装参数校验、指数退避重试、超时控制、幂等缓存和简易熔断；通过 `langchain_tools` 转换为 LangChain `StructuredTool`。
-- **退款二次确认**：使用 LangGraph `interrupt`，首次请求只写 `refund_preview` 与 `pending_confirmations`，用户明确确认后才调用 `apply_refund`，支持取消路径和会话/订单/类型组合的幂等键。
-- **三层降级策略**：LLM 不可用 → 规则默认话术；Milvus 不可用 → 内存检索；工具失败 → 人工转接。
-- **多轮对话记忆**：`SessionManager` 基于 Redis 持久化 `AgentState` 快照（TTL 24h），支持分布式锁、Token 触发的上下文压缩、槽位快照保留，Redis 不可用时降级为进程内存。
-- **人机协同**：工单状态机（pending → processing → resolved/closed，支持 escalated）、转人工请求记录、客服负载分配、通知 outbox。
-- **可观测性**：`X-Trace-Id` 全链路贯穿，节点 Span 写入 `agent_traces`；`/metrics` 输出 Prometheus 文本；评测结果写入 `evaluation_results`，低分样本自动进入低分池供后台处理。
-- **LLM 治理基线**：`ArtifactRegistry` 管理 Prompt/Model/Schema/Route 版本与灰度；`BudgetManager` 控制单次与用户日预算；`SensitiveDataRedactor` 在模型边界脱敏；`PromptInjectionScanner` 拦截越权请求。
-- **统一编排入口**：`ChatService` 让 REST 与 WebSocket 只在传输层不同，状态恢复、Agent 执行、结果落库、评测与 Trace 共用同一套逻辑。
-
-## 项目结构
-
-```text
-app/
-├── agent/              # Agent 状态机与编排
-│   ├── graph.py        # AgentGraph：LangGraph 编排，run / run_stream
-│   ├── state.py        # AgentState、AgentNode、IntentType
-│   ├── intent.py       # 规则 + LLM 兜底意图识别
-│   ├── tools.py        # 8 个业务工具与重试/熔断基类
-│   ├── langchain_tools.py  # StructuredTool 适配
-│   ├── query_rewrite.py    # 保守的上下文问题改写
-│   ├── validation.py   # 事实/安全/完整性三层校验
-│   └── memory.py       # Redis 会话状态与上下文压缩
-├── routers/            # HTTP 路由（users/sessions/tickets/chat/analytics/feedback/knowledge）
-├── services/           # 业务服务（chat_service/knowledge_base/llm_service/llm_governance/evaluation/collaboration/embedding_service）
-├── models/models.py    # SQLAlchemy 模型
-├── schemas/schemas.py  # Pydantic 输入输出模型
-├── repositories/       # 幂等查询与状态变更仓储
-├── utils/              # database、tracking、milvus_client
-├── security.py         # JWT、RBAC、限流
-├── config/config.py    # Pydantic Settings
-└── main.py             # FastAPI 入口、中间件、健康检查
-frontend/               # React + Vite + Tailwind 前端（构建产物部署到 static/）
-static/                 # 构建后的前端静态资源
-scripts/                # seed_ecommerce_orders.py、import_rag_documents.py、dev.ps1
-docs/                   # API、AGENT_GRAPH、DEPLOYMENT、RAG_RELIABILITY、OBSERVABILITY、SECURITY、llm-governance、memory_architecture_optimization
-alembic/                # 数据库迁移
-docker-compose.yml      # 完整依赖栈部署
-Dockerfile              # 应用镜像
-requirements.txt        # 依赖
-.env.example            # 配置模板
+```powershell
+.\scripts\start.ps1 -SkipSeed
 ```
 
-## 本地开发
+脚本构建镜像、启动依赖、执行迁移后启动 API 与 Worker；`-SkipSeed` 跳过演示数据导入。本地模型按需使用 `-LocalEmbedding`、`-Reranker` 等选项，并配置对应服务地址。已有部署的升级与回滚请按[部署说明](docs/DEPLOYMENT.md)操作。
 
-依赖 Python 3.11+，依赖版本以 `requirements.txt` 为准。
+日常使用可双击 `start.bat` / `stop.bat`，仅启动或停止已有主栈、Embedding 与 Reranker 容器，保留部署镜像和配置，不构建、不迁移、不导入数据。首次安装仍使用上述 PowerShell 命令。
+
+默认应用地址为 `http://localhost:8100`，健康检查与接口文档分别位于 `/health`、`/docs`。停止服务使用 `.\scripts\stop.ps1`，保留数据卷。
+
+## 开发与验证
+
+后端使用 Python 3.11+，安装依赖时同时使用约束文件：
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-Copy-Item .env.example .env
-# 按需修改 .env：DATABASE_URL_OVERRIDE 指向本地 SQLite，或配置 MySQL/Redis/Milvus
-
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
-```
-
-启动后检查：
-
-- 应用首页：<http://localhost:8100/>
-- 健康检查：<http://localhost:8100/health>
-- OpenAPI 文档：<http://localhost:8100/docs>
-
-提交前执行语法检查：
-
-```powershell
+pip install -r requirements.txt -c requirements.lock
 python -m compileall app scripts
+python scripts/test_offline.py --profile active
 ```
 
-## Docker 部署
+隔离回归使用临时数据库与外部依赖替身，不调用真实供应商。完整配置和测试范围见[协作指南](AGENTS.md)。前端在 `frontend/` 下执行 `npm ci`、`npm run dev`；验证使用 `npm test` 和 `npm run build`。
 
-主栈包括 MySQL、Redis、Milvus、etcd、MinIO 和应用服务。Compose 配置位于 [docker-compose.yml](docker-compose.yml)，本地模型和 Langfuse 使用可选 profiles。
+## 项目结构
 
-LLM 配置模板使用 UINO 的 `deepseek-flash`，接口为 `https://token.uino.com/v1`，设置 `LLM_THINKING_MODE=disabled` 关闭思考模式，`LLM_STRUCTURED_OUTPUT_METHOD=function_calling` 适配结构化输出；密钥只填写到本地 `.env`。`LLM_LOCAL_BASE` 和 `LLM_LOCAL_MODEL` 默认留空，意图识别、问题改写和回答生成共用主模型（意图与改写保留现有规则优先策略）。Embedding 和 Reranker 使用各自的配置。
-
-双击 `start.bat` 启动主栈、本地 Embedding 和 Reranker，默认不启动本地 Qwen LLM。需要本地 Qwen 时显式使用 `scripts\start.ps1 -LocalModels`，或 `docker compose --profile local-llm up -d llm-local`；如需应用调用它，再设置 `LLM_LOCAL_BASE` 和 `LLM_LOCAL_MODEL`。
-
-### 1. 准备环境变量
-
-```powershell
-Copy-Item .env.example .env
-notepad .env
+```text
+app/          后端接口、Agent 编排、业务服务与数据访问
+frontend/     前端应用
+alembic/      数据库迁移
+文档/         业务知识原文
+docs/         架构、部署与验收说明
+scripts/      启动、维护与评测工具
+tests/        自动化回归测试
+acceptance/   固定验收场景与材料
 ```
 
-必须提供非空的 `MYSQL_ROOT_PASSWORD`、`MYSQL_APP_PASSWORD`、`MINIO_ROOT_PASSWORD` 和至少 32 字符的 `AUTH_SECRET_KEY`。生产环境还应填写 `LLM_API_BASE`、`LLM_API_KEY`、`EMBEDDING_API_BASE`、`EMBEDDING_API_KEY` 与模型名称。`.env` 不得提交到版本库。
+## 文档
 
-### 2. 启动依赖与应用
+- [架构与 Agent 链路](docs/AGENT_GRAPH.md) · [API 说明](docs/API.md)
+- [部署说明](docs/DEPLOYMENT.md) · [安全与权限](docs/SECURITY.md)
+- [文档分类](docs/README.md) · [脚本导航](scripts/README.md) · [验收材料](acceptance/README.md)
 
-```powershell
-docker compose up -d --build
-docker compose ps
-docker compose logs -f app
-```
-
-首次部署或升级数据库结构时，执行迁移：
-
-```powershell
-docker compose run --rm app alembic upgrade head
-```
-
-应用地址：<http://localhost:8100/>，OpenAPI 文档：<http://localhost:8100/docs>，健康检查：<http://localhost:8100/health>。
-
-### 3. 灌入测试数据
-
-```powershell
-docker compose exec app python scripts/seed_ecommerce_orders.py
-docker compose exec app python scripts/import_rag_documents.py --clear
-```
-
-### 4. 停止与数据
-
-```powershell
-docker compose down
-```
-
-MySQL、Redis、Milvus、etcd 和 MinIO 数据保存在 Docker named volumes 中。`docker compose down -v` 会删除这些数据卷，请仅在确认需要清空数据时使用。
-
-## 配置与安全
-
-- `ENVIRONMENT` 默认 `integration`，`DEBUG=false`，`USE_MILVUS=true`，`REDIS_ENABLED=true`；`production` 会强制校验 `AUTH_SECRET_KEY` 长度、关闭演示账号并禁止通配 CORS。
-- 生产环境必须使用随机的 `AUTH_SECRET_KEY`（至少 32 字符），保持 `AUTH_DEMO_ACCOUNTS_ENABLED=false`，配置明确的 `CORS_ALLOW_ORIGINS`。
-- 登录与聊天分别限制每 IP/用户每分钟 10 次和 60 次；消息长度、上传大小与批量数量由环境变量控制。
-- 外部服务不可用时，应用通过 `/health` 暴露降级原因，并按适配器降级；不替代对 MySQL、Redis、Milvus 和 LLM 的可用性监控。
-- 完整变量说明参见 [.env.example](.env.example) 注释。
-
-## 相关文档
-
-- [API 交付说明](docs/API.md)
-- [Agent 主链路](docs/AGENT_GRAPH.md)
-- [Docker 部署](docs/DEPLOYMENT.md)
-- [RAG 可靠性](docs/RAG_RELIABILITY.md)
-- [评测与可观测性](docs/OBSERVABILITY.md)
-- [认证与权限](docs/SECURITY.md)
-- [LLM 治理基线](docs/llm-governance.md)
-- [多轮对话记忆架构优化建议](docs/memory_architecture_optimization.md)
+验收记录按版本和场景保存，测试结果的适用范围以对应报告为准。

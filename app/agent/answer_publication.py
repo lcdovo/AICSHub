@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from typing import TYPE_CHECKING
 
 from app.agent.answer_contracts import AnswerDraft, candidate_binding, tool_evidence_text
@@ -11,8 +12,35 @@ from app.agent.publication_guard import SAFE_PUBLICATION_REPLY
 from app.agent.request_understanding import ReviewResult
 from app.agent.state import AgentNode, AgentState
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from app.agent.nodes.response_node import ResponseContext
+
+
+def _limited_evidence_notice(context: ResponseContext, state: AgentState) -> str | None:
+    """Judge 技术性 unknown 时，为低风险政策咨询提供只读证据降级。"""
+    understanding = state.understanding
+    if not understanding or understanding.request_type != "inquiry":
+        return None
+    if state.task_runtime or any(call.tool_name != "hybrid_search" for call in state.tool_calls):
+        return None
+    evidence = state.current_evidence()
+    if not evidence:
+        return None
+
+    lines = []
+    for item in evidence[:2]:
+        title, chapter, body = context._clean_chunk(
+            str(item.get("content", "")), str(item.get("title", ""))
+        )
+        if not body:
+            continue
+        label = f"{title}（{chapter}）" if chapter else (title or "知识库资料")
+        lines.append(f"- {label}：{body[:500]}")
+    if not lines:
+        return None
+    return "本轮回答未完成自动核验，以下仅展示当前检索到的资料摘要，不代表已核实您的个人资格或已提交任何业务操作：\n" + "\n".join(lines)
 
 
 async def publish_answer(context: ResponseContext, state: AgentState, draft: AnswerDraft) -> str:
@@ -21,10 +49,16 @@ async def publish_answer(context: ResponseContext, state: AgentState, draft: Ans
     if review is None:
         issues.append("missing_candidate_review")
     elif not review.passed:
+        if review.status == "unknown":
+            logger.warning(
+                "answer_review_unknown intent=%s session=%s issues=%s",
+                state.detected_intent, state.session_id, review.issue_codes,
+            )
         state.set_flow(answer_validated=False, rag_refused=True)
         if state.read_plan and review.status == "rejected":
             state.needs_clarification = True
-        state.reply = (
+        fallback = _limited_evidence_notice(context, state) if review.status == "unknown" else None
+        state.reply = fallback or (
             "本轮回答审查暂时不可用，尚未取得足够可靠的核验结果。请稍后重试，或回复“转人工”请求协助。"
             if review.status == "unknown" else
             "本轮回答未通过校验，暂时没有足够可靠的结论。请补充问题信息，或回复“转人工”请求协助。"
@@ -50,7 +84,16 @@ async def publish_answer(context: ResponseContext, state: AgentState, draft: Ans
             [entry.model_dump() for entry in state.task_runtime.item_reviews])
         issues.extend(item_issues)
     elif active(state) and state.task.status == "completed":
-        issues.append("item_review_missing_before_completion")
+        # 同一只读订单回执的确定性模板可以覆盖多个 query_order 子项；
+        # 这类回答没有模型生成段落，不能强制要求逐句 Judge item_checks。
+        # trusted_notice 只由受控工具模板产生，且 build_draft 已校验所有事项同类。
+        deterministic_order_template = (
+            draft.trusted_notice
+            and state.collected_info.get("reply_source") == "tool_template"
+            and all(item.kind == "query_order" for item in state.task.items)
+        )
+        if not deterministic_order_template:
+            issues.append("item_review_missing_before_completion")
     if (state.review_result and state.review_result.passed and not issues
             and not draft.trusted_notice and state.current_evidence()
             and judge.get("response_behavior") in (None, "answer", "answer_with_limits")):

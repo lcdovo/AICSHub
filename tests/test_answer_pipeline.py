@@ -9,7 +9,8 @@ import pytest
 from app.agent.answer_contracts import AnswerDraft, answer_requirements
 from app.agent.answer_publication import publish_answer
 from app.agent.answer_review import validate_candidate
-from app.agent.nodes.response_node import ResponseNode, ResponseServices
+from app.agent.nodes.response_node import ResponseNode, ResponseServices, build_order_reply_template
+from app.agent.read_plan import ReadTask, summarize_reads
 from app.agent.request_understanding import EvidenceBundle, RequestUnderstanding
 from app.agent.state import AgentNode, AgentState
 from app.agent.stream_context import stream_event_queue
@@ -85,6 +86,26 @@ async def test_safe_clarification_with_no_evidence_is_accepted_and_not_cached():
     assert model.run_structured.await_count == 1 and not cache.values
 
 
+def test_policy_inquiry_prompt_answers_policy_without_turning_it_into_an_application():
+    node, _, _ = component()
+    state = current()
+    state.user_message = "包装损坏的售后处理流程是什么？"
+    state.understanding = RequestUnderstanding(
+        topic="refund", request_type="inquiry", entities={}, conditions=[], subrequests=[],
+        service_preference="unspecified", emotion="neutral", clarification=None,
+        retrieval_query=state.user_message, entity_source="none",
+    )
+
+    prompt = node._build_llm_prompt(state)
+
+    assert "咨询与办理边界" in prompt
+    assert "不要主动询问是否登记、提交或启动售后" in prompt
+    assert "无关片段不能支持事实" in prompt
+    assert "没有相关证据" in prompt
+    assert "适当引导下一步操作" not in prompt
+    assert "政策/知识咨询应先直接回答" in prompt
+
+
 @pytest.mark.parametrize("issue", ["unnecessary_clarification", "unanswered_known_question"])
 async def test_redundant_question_or_omitted_known_answer_is_rejected(issue):
     node, _, _ = component(verdict(clarify=True, issue=issue))
@@ -123,6 +144,49 @@ async def test_judge_unknown_does_not_regenerate_or_create_handoff():
     assert "审查暂时不可用" in state.reply and state.review_result.status == "unknown"
     assert generate.await_count == model.run_structured.await_count == 1
     assert not state.need_human and not state.tool_calls and not cache.values
+
+
+async def test_judge_unknown_policy_inquiry_degrades_to_current_evidence_only():
+    generate = AsyncMock(return_value="未拆封且购买七日内，可以申请退货。另可准备发票寄回。")
+    node, model, cache = component(None, generate)
+    state = current()
+    state.user_message = "退货有什么条件？"
+    state.understanding = RequestUnderstanding(
+        topic="refund", request_type="inquiry", entities={}, conditions=[], subrequests=[],
+        service_preference="unspecified", emotion="neutral", clarification=None,
+        retrieval_query=state.user_message, entity_source="none",
+    )
+    assert await node(state) == AgentNode.END
+    assert "当前检索到的资料摘要" in state.reply
+    assert GOOD in state.reply
+    assert "另可准备发票寄回" not in state.reply
+    assert state.review_result.status == "unknown"
+    assert not cache.values and not state.need_human
+    assert model.run_structured.await_count == 1
+
+
+def test_order_logistics_without_shipping_is_explicitly_explained():
+    reply = build_order_reply_template(
+        {"order_id": "ORD20260901", "status": "待付款", "total_amount": "399.00", "shipping": None},
+        "帮我查一下订单 ORD20260901 的物流",
+    )
+    assert "尚未发货" in reply
+    assert "暂无物流信息" in reply
+
+
+def test_read_plan_logistics_summary_uses_order_template():
+    task = ReadTask(tool="query_order", resource_id="ORD20260901")
+    result = type("Result", (), {
+        "success": True,
+        "data": {"order_id": "ORD20260901", "status": "待付款", "total_amount": "399.00", "shipping": None},
+    })()
+    reply = summarize_reads([task], [(None, result)], user_message="帮我查一下订单 ORD20260901 的物流")
+    assert "目前尚未发货，暂无物流信息" in reply
+
+
+def test_general_service_scope_has_fixed_capability_answer():
+    node, _, _ = component()
+    assert "查询订单状态和物流" in node._get_default_reply("general", "你们可以提供哪些服务？")
 
 
 async def test_repair_is_bounded_and_never_creates_handoff():

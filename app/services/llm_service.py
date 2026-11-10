@@ -838,22 +838,27 @@ class LLMService:
                 }
                 return
             except Exception as exc:
-                logger.warning("模型流式调用失败: %s", type(exc).__name__)
+                from app.services.model_failure import failure_code
+                code = failure_code(exc)
+                self.last_call_metadata["failure_code"] = code
+                logger.warning("模型流式调用失败: %s (%s)", type(exc).__name__, code)
                 self.circuit_breaker.record_failure(model.name)
                 self._record_stats(model.name, False)
                 # 指数退避后再尝试下一模型，避免瞬时故障时蜂拥重试。
                 await asyncio.sleep(self.RETRY_DELAY * (2**attempt))
 
         # 所有模型均不可用：不输出内容，由上层降级到默认话术。
+        failure = self.last_call_metadata.get("failure_code") or "provider_unavailable"
         await self._record_call_metadata(
             user_id,
             "rule_fallback",
             0,
             started,
             degraded=True,
-            reason="provider_unavailable",
+            reason=failure,
         )
         self.last_call_metadata["stream_provider"] = "none"
+        self.last_call_metadata["failure_code"] = failure
         self.last_call_metadata["structured_output"] = {
             "reply": "",
             "intent": intent,

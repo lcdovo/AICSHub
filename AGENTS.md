@@ -44,7 +44,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
 
 - `docker compose up -d --build`：启动默认主栈 `app/worker/mysql/redis/etcd/minio/milvus`；已有数据库先迁移到当前head，再启动新API与Worker。
 - `.\scripts\start.ps1 -SkipSeed`：启动主栈并执行迁移，跳过演示数据导入；`-NoMigrate` 可跳过迁移。
-- `start.bat`：主栈 + 本地 Embedding + Reranker，默认不启动本地 Qwen LLM。启动服务不等于应用会使用它，仍需核对对应 API 地址和模型配置。
+- `start.bat` / `stop.bat`：通过 `scripts/runtime.ps1` 启停已有主栈、Embedding和Reranker容器，保留当前镜像与配置；不构建、不迁移、不导入数据，不启动本地Qwen LLM。缺少API或Worker容器时启动失败，首次安装或部署使用 `scripts/start.ps1 -SkipSeed`。启停完成不等于服务健康，需核对状态。
 - `-LocalEmbedding` 仅启用本地向量模型；`-Reranker` 启用重排模型；`-LocalModels` 同时启用本地 LLM 和 Embedding；`-Langfuse` 启用观测栈；`-All` 启用全部可选栈。
 - `docker compose --profile local-llm up -d llm-local`：单独启动本地 Qwen LLM；模型权重缓存保留在 named volumes 中。
 - `docker compose run --rm app alembic upgrade head`：执行数据库迁移。
@@ -340,3 +340,11 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
 - 捕获退款包装问答中segment7/8同时进入claims/nonfact_segments，原严格互斥检查正确拒绝；用户问题合理、3份发布知识支持，不能归因资料缺失。此前无回执的unknown不能倒推同因。
 - 非逐项v2启用每句一个互斥segments.sN结构，绑定原句后仍执行原覆盖/来源/版本/连续摘录校验；旧冲突不修补。逐项selector不变。真实固定问题10/10 REST通过、30模型调用usage已知，账号禁用，无退款/工单/转人工；非全业务或稳定P95。
 - 当前API/Worker同镜像84729bcf…（judge-contract-diagnostics-v1-20261108），LLM_JUDGE_SEGMENT_WIRE=true，保留judge-exclusive.v1；仅增加绑定错误码允许列表传递。断网容器65相关通过、compileall通过，非全仓；最终诊断补丁无新增真实付费调用。九服务healthy、health/docs/openapi通过。详见docs/JUDGE-DIAGNOSTICS-20261108.md及reports/judge-contract-diagnostics-v1/。
+
+
+### 本地旧版本清理（2026-11-09）
+
+- 已删除32个停止的本项目实验容器及44组未使用候选镜像；未使用强制删除或删除数据卷，其他项目资源保留。
+- 当前API/Worker镜像为 `af0109c9115b`（`ai-customer:latest`），保留最近回滚镜像 `84729bcf5fe7`（`judge-contract-diagnostics-v1-20261108`）；清理后九个业务服务仍healthy。该状态仅为本次检查快照。
+- 历史发布文档中的更早镜像已可能不在本机，不能直接照旧回滚命令执行。历史说明、固定验收输入、原始回执与账本仍保留，不作为清理目标；执行回滚前重新核对目标镜像及对应精确配置。
+- 已清理22个工具缓存目录；`.pytest_cache` 因访问权限保留。详细删除清单及实验容器末尾日志位于Git忽略目录 `.local/cleanup/20261109/`，不可提交其中的本地日志。

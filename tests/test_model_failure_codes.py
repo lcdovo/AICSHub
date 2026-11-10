@@ -44,6 +44,49 @@ async def test_budget_code_survives_understanding_and_gets_precise_user_notice(m
                      understanding_mode='model',task_loop_enabled=True)
     # The transport/API layer need not see any sensitive provider exception.
     deps=dependencies(model=model)
+    destination=await recognize_request(deps,state)
+    assert destination == 'route_decision'
+    assert state.detected_intent == 'refund'
+    assert state.collected_info['understanding_failure']['code']=='daily_model_budget_exhausted'
+
+
+@pytest.mark.parametrize('failure_code', [
+    'daily_model_budget_exhausted',
+    'request_model_budget_exceeded',
+    'run_model_budget_exhausted',
+])
+async def test_budget_exhaustion_falls_back_to_safe_read_only_rule_route(monkeypatch, failure_code):
+    from app.config.config import Settings,settings
+    from scripts.offline_profiles import ACTIVE_CONFIG
+    from app.agent.nodes.intent_node import recognize_request
+    from app.agent.state import AgentState, AgentNode
+    from tests.test_m4_intent_dependencies import dependencies
+    config=Settings(_env_file=None,**ACTIVE_CONFIG)
+    for key in ACTIVE_CONFIG:monkeypatch.setattr(settings,key,getattr(config,key))
+    model=SimpleNamespace(is_available=lambda:True,run_structured=AsyncMock(return_value=None),
+                          get_last_call_metadata=lambda:{'failure_code':failure_code})
+    state=AgentState(session_id='budget-read-only',user_id=101,user_message='退货运费谁出？',
+                     understanding_mode='model',task_loop_enabled=False)
+    deps=dependencies(model=model)
+    destination=await recognize_request(deps,state)
+    assert destination == AgentNode.ROUTE_DECISION
+    assert state.detected_intent == 'refund'
+    assert '今日模型额度不足' not in state.reply
+
+
+async def test_budget_exhaustion_keeps_refund_submission_fail_closed(monkeypatch):
+    from app.config.config import Settings,settings
+    from scripts.offline_profiles import ACTIVE_CONFIG
+    from app.agent.nodes.intent_node import recognize_request
+    from app.agent.state import AgentState
+    from tests.test_m4_intent_dependencies import dependencies
+    config=Settings(_env_file=None,**ACTIVE_CONFIG)
+    for key in ACTIVE_CONFIG:monkeypatch.setattr(settings,key,getattr(config,key))
+    model=SimpleNamespace(is_available=lambda:True,run_structured=AsyncMock(return_value=None),
+                          get_last_call_metadata=lambda:{'failure_code':'daily_model_budget_exhausted'})
+    state=AgentState(session_id='budget-write',user_id=101,user_message='我要申请退款，商品破损',
+                     understanding_mode='model',task_loop_enabled=False)
+    deps=dependencies(model=model)
     await recognize_request(deps,state)
     assert '今日模型额度不足' in state.reply
-    assert state.collected_info['understanding_failure']['code']=='daily_model_budget_exhausted'
+    assert not state.tool_calls

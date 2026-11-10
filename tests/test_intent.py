@@ -36,6 +36,16 @@ def test_continuation_keeps_history_intent():
     assert result.intent == "query_order"
 
 
+def test_charging_indicator_troubleshooting_is_technical_not_order_query():
+    from app.agent.intent import EnhancedIntentRecognizer
+
+    result = EnhancedIntentRecognizer().recognize(
+        "耳机充电时没有指示灯怎么排查", llm_primary=False
+    )
+
+    assert result.intent == "technical"
+
+
 def test_tracking_number_boosts_query_order():
     result = recognizer.recognize("SF12345678 走到哪了")
     assert result.intent == "query_order"

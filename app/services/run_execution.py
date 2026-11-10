@@ -314,9 +314,16 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
 
 def finish(db: AsyncSession, run: ChatRun, message: Message, state: AgentState) -> None:
     run.status = "awaiting_confirmation" if state.pending_confirmations else "succeeded"
+    node_timings_ms = {
+        str(trace.get("node")): int(trace.get("duration_ms", 0) or 0)
+        for trace in (state.trace or [])
+        if trace.get("node")
+    }
     run.assistant_message_id = message.id
     run.result = dict(run_id=run.id, run_status=run.status, message_id=message.id, session_id=run.session_id,
-                      reply=state.reply, intent=state.detected_intent, response_time_ms=state.execution_time_ms, trace_id=run.id)
+                      reply=state.reply, intent=state.detected_intent, response_time_ms=state.execution_time_ms,
+                      stage_timings_ms=state.collected_info.get("stage_timings_ms", {}),
+                      node_timings_ms=node_timings_ms, trace_id=run.id)
     task_payload = {"task_id": state.task.task_id, "task_status": state.task.status} if state.task else {}
     run.result.update(task_payload)
     run.updated_at = datetime.utcnow()

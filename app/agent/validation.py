@@ -211,10 +211,12 @@ class CompletenessValidator:
 
     def _extract_keywords(self, text: str) -> set:
         text = text.lower()
-        words = re.findall(r'[\u4e00-\u9fff]+', text)
-        if not words:
-            words = re.findall(r'[\w]+', text)
-        return set(words) if words else set()
+        # 中文没有空格分词；把整句当成一个词会让正确回答被误报为
+        # low_relevance（例如“蓝牙耳机连接不上”与回答中的“耳机连接”）。
+        # 使用单字集合与英文/数字词并列，保持轻量且不引入新的分词依赖。
+        chinese = {char for char in text if "\u4e00" <= char <= "\u9fff"}
+        words = set(re.findall(r"[a-z0-9_]+", text))
+        return chinese | words
 
 
 class ResponseValidator:

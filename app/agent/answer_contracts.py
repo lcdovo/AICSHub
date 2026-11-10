@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.agent.state import AgentState
 
-ANSWER_POLICY_VERSION = "answer-pipeline.v14-shared-schema-forty-segments"
+ANSWER_POLICY_VERSION = "answer-pipeline.v15-logistics-scope-routing"
 
 CLARIFICATION_QUESTIONS = {
     "query_order": "您想查询订单的哪项信息？",
