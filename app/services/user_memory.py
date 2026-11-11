@@ -8,8 +8,9 @@
 """
 import logging
 import math
-from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+from app.agent.context_relevance import lexical_matches, query_units
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +18,11 @@ logger = logging.getLogger(__name__)
 class UserMemoryService:
     """用户画像聚合与历史召回。"""
 
-    def __init__(self, max_items: int = 5):
+    def __init__(self, max_items: int = 5, min_similarity: float = 0.65):
         self.max_items = max(0, min(max_items, 50))
+        if not math.isfinite(min_similarity) or not 0 <= min_similarity <= 1:
+            raise ValueError("invalid_user_memory_min_similarity")
+        self.min_similarity = min_similarity
 
     async def get_user_profile(
         self,
@@ -35,6 +39,7 @@ class UserMemoryService:
             "tags": [],
             "history": [],
             "recalled": [],
+            "preferences": [],
             "memory_source": "none",
         }
         if not user_id or user_id <= 0:
@@ -65,6 +70,13 @@ class UserMemoryService:
                 level = user.level
                 profile["user_level"] = level.value if hasattr(level, "value") else (level or "normal")
                 profile["tags"] = list(user.tags or [])
+            # Separate savepoint: an unmigrated table cannot poison ordinary history reads.
+            try:
+                async with session.begin_nested():
+                    from app.services.long_term_memory import load_preferences
+                    profile["preferences"] = await load_preferences(session, user_id)
+            except Exception as exc:
+                logger.warning("长期偏好不可用: %s", type(exc).__name__)
             profile["total_sessions"] = (
                 await session.scalar(
                     select(func.count()).select_from(Session).where(Session.user_id == user_id, Session.deleted_at.is_(None))
@@ -125,16 +137,8 @@ class UserMemoryService:
 
     @staticmethod
     def _query_units(query: str) -> List[str]:
-        """query 切分为去重 bigram；不足两字时回退单字。
-
-        单字匹配虚命中率高（"退" 命中 "让步"），bigram 在零依赖下显著更准。
-        """
-        text = "".join(query.split())
-        if not text:
-            return []
-        if len(text) < 2:
-            return [text]
-        return list(dict.fromkeys(text[i : i + 2] for i in range(len(text) - 1)))
+        """仅使用具体双字/英文词，不以单字或常见问句制造相关性。"""
+        return sorted(query_units(query))
 
     @staticmethod
     def _record_recall_metrics(profile: Dict[str, Any], backend: str) -> None:
@@ -159,13 +163,14 @@ class UserMemoryService:
         浪费候选名额；assistant 的工具模板长回复是编码噪声，用户画像记的是
         "用户说过什么"。
         """
+        from app.services.long_term_memory import preference_change
         candidates = [
             h for h in history
             if h.get("role") == "user" and not h.get("current", False)
+            and preference_change(h.get("content", "")) is None
         ]
-        if not candidates:
+        if not candidates or self.max_items == 0 or not self._query_units(query):
             return [], "none"
-        units = self._query_units(query)
         try:
             from app.services.embedding_service import get_embedding_service
 
@@ -176,7 +181,7 @@ class UserMemoryService:
                 # 避免 60 条历史拆多次 API。
                 scored_candidates = sorted(
                     candidates,
-                    key=lambda h: sum(1 for u in units if u in h.get("content", "")),
+                    key=lambda h: lexical_matches(query, h.get("content", "")),
                     reverse=True,
                 )[: self._EMBED_CANDIDATE_LIMIT]
 
@@ -184,12 +189,11 @@ class UserMemoryService:
                 vecs = await self._encode_with_cache(
                     svc, [h["content"] for h in scored_candidates]
                 )
-                ranked = sorted(
-                    range(len(scored_candidates)),
-                    key=lambda i: self._cosine(q, vecs[i]),
-                    reverse=True,
-                )
-                top = ranked[: self.max_items]
+                scores = [self._cosine(q, vec) for vec in vecs]
+                ranked = sorted(range(len(scored_candidates)), key=lambda i: scores[i], reverse=True)
+                # 向量成功但不相关时直接空召回，不用关键词重新补入被拒历史。
+                top = [i for i in ranked if math.isfinite(scores[i]) and scores[i] > 0
+                       and scores[i] >= self.min_similarity][:self.max_items]
                 return [
                     {
                         "content": scored_candidates[i]["content"],
@@ -197,7 +201,7 @@ class UserMemoryService:
                         "message_id": scored_candidates[i]["message_id"],
                         "session_id": scored_candidates[i]["session_id"],
                         "source_type": scored_candidates[i]["source_type"],
-                        "semantic": round(self._cosine(q, vecs[i]), 3),
+                        "semantic": round(scores[i], 3),
                     }
                     for i in top
                 ], "vector"
@@ -205,8 +209,8 @@ class UserMemoryService:
             logger.warning("向量记忆召回不可用，回退关键词: %s", type(exc).__name__)
 
         scored = sorted(
-            candidates,
-            key=lambda h: sum(1 for u in units if u in h.get("content", "")),
+            [h for h in candidates if lexical_matches(query, h.get("content", "")) > 0],
+            key=lambda h: lexical_matches(query, h.get("content", "")),
             reverse=True,
         )
         return [
@@ -294,6 +298,7 @@ def get_user_memory_service() -> UserMemoryService:
         from app.config.config import settings
 
         _service_instance = UserMemoryService(
-            max_items=int(getattr(settings, "USER_MEMORY_MAX_ITEMS", 5) or 5)
+            max_items=settings.USER_MEMORY_MAX_ITEMS,
+            min_similarity=settings.USER_MEMORY_MIN_SIMILARITY,
         )
     return _service_instance

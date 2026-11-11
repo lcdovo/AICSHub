@@ -10,14 +10,18 @@ Compose 的插值默认值应与 `Settings` 默认值一致。若希望开发机
 
 新增 Settings 字段时，应同时检查 Compose 映射、模板值及 `tests/test_compose_configuration.py`。密钥只保存在本地 `.env` 或密钥管理服务中，不写入本文、截图或版本控制。
 
+用户历史召回新增`USER_MEMORY_MIN_SIMILARITY`（默认0.65，范围0至1），API/Worker共用Compose映射。向量分数低于门槛时允许空召回，Embedding故障后的关键词回退要求有效匹配。该值为可配置初值，未代表当前模型已完成语义校准；详见[上下文与记忆优化](MEMORY-CONTEXT-OPTIMIZATION-20261111.md)。
+
+共享上下文预算集中在`app/agent/context_budget.py`，以UTF-8字节控制背景组合规模，不修改供应商/独立Judge原有门槛。长期沟通偏好采集受`USER_MEMORY_ENABLED`控制，180天到期；本机已完成0014迁移并部署。实现边界见[记忆分层优化](MEMORY-LAYERS-OPTIMIZATION-20261111.md)，实际发布见[完整功能部署](FULL-FEATURE-ROLLOUT-20261111.md)。
+
 ## 本机运行快照
 
 以下是 **2026-11-11** 在本机容器内读取的非敏感有效配置，不是模板默认值，也不代表其他环境：
 
 | 项目 | 实际值 |
 | --- | --- |
-| API 与 Worker | 同一镜像 `f31c83cc2bd0`；检查时均 healthy |
-| 数据库迁移 | `0013_agent_reliability` |
+| API 与 Worker | 同一镜像 `732fa406e83b`；检查时均 healthy |
+| 数据库迁移 | `0014_user_memory_entries` |
 | 请求理解 | `model`，灰度 100% |
 | 任务循环 / 多意图逐项 | 开启 / 开启 |
 | SQL 模型网关 | 开启 |
@@ -26,5 +30,7 @@ Compose 的插值默认值应与 `Settings` 默认值一致。若希望开发机
 | RAG 候选 / 最终重排 | recall 20 / rerank 12 / top 3 |
 | RAG 上下文 | RRF 60，证据上限 8000 字符，邻块 1 |
 | 本地重排 batch | 20 |
+| RAG 向量相似度阈值 | 0.4 |
+| 用户记忆 / 历史向量门槛 | 开启 / 0.65，尚未语义校准 |
 
-检查依据为容器内 `Settings`、`docker inspect` 健康状态、`/health` 和 `alembic current`。该检查只确认配置已传入及服务当前健康；不代表完整语义准入、生产容量验收或新工作区改动已部署。历史的阶段性部署和模型验收边界仍按各自报告保留。
+检查依据为容器内 `Settings`、`docker inspect` 健康状态、`/health` 和实际SQL迁移版本。本次实现源码与运行镜像的核对及合成SQL/HTTP检查见完整功能部署记录；不代表完整语义准入或生产容量验收。历史的阶段性部署和模型验收边界仍按各自报告保留。

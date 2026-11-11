@@ -258,7 +258,8 @@ def input_payload(state) -> str:
             "order_id": state.task.order_id, "product": state.task.product,
             "conditions": state.task.conditions, "refund_requested": state.task.refund_requested,
             "waiting_for": state.task.waiting_for, "trusted_as_evidence": False}
-    return json.dumps(payload, ensure_ascii=False)
+    from app.agent.context_budget import fit_context, UNDERSTANDING_PAYLOAD_BYTES
+    return json.dumps(fit_context(payload, max_bytes=UNDERSTANDING_PAYLOAD_BYTES), ensure_ascii=False)
 
 
 def validate_semantics(result, state, context: RequestContext | None = None):
@@ -356,6 +357,10 @@ async def understand(service, state):
                               if not line.startswith("条件诉求如没发货就退款：") and "read_tasks" not in line)
         base_prompt+="\n条件申请保留最终意向和conditions；subrequests只登记用户的独立诉求，内部前置读不增加用户目标；条件、权限及本轮确认仍由程序核验。"
     payload = input_payload(state)
+    # Validate only the history actually sent after shared budget selection.
+    from app.agent.request_context import HistoryMessage
+    context = context.model_copy(update={"history": tuple(
+        HistoryMessage.model_validate(item) for item in json.loads(payload)["history"])})
     for attempt in range(1 if task_enabled else 2):
         try:
             result = await service.run_structured(

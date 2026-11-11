@@ -58,6 +58,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { page: "handoff", label: "人工协同", icon: Headphones },
         { page: "knowledge", label: "知识文档", icon: BookOpen },
         { page: "search", label: "检索测试", icon: Search },
+        { page: "feedback", label: "回答反馈", icon: MessageSquare },
         { page: "analytics", label: "运行分析", icon: ChartNoAxesCombined },
         { page: "users", label: "用户管理", icon: Users },
       ]

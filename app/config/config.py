@@ -132,6 +132,8 @@ class Settings(BaseSettings):
     USER_MEMORY_ENABLED: bool = Field(default=True)
     # 用户画像注入 LLM 提示词的最大历史条数。
     USER_MEMORY_MAX_ITEMS: int = Field(default=5, ge=0, le=50)
+    # 保守初值，需按实际Embedding的固定留出集校准；低于门槛允许空召回。
+    USER_MEMORY_MIN_SIMILARITY: float = Field(default=0.65, ge=0, le=1, allow_inf_nan=False)
 
     # ---- MCP 工具协议（可选，默认开启）----
     # 工具层通过 FastMCP server 暴露为标准 MCP 协议：agent 内经 MCP client 调用，

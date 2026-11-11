@@ -6,10 +6,12 @@ export type PageId =
   | "handoff"
   | "knowledge"
   | "search"
+  | "feedback"
   | "analytics"
   | "users"
   | "account";
 export const adminPages: PageId[] = [
+  "feedback",
   "handoff",
   "knowledge",
   "search",

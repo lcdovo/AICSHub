@@ -4,7 +4,7 @@
 
 Judge v2现已接入逐项检查：同次独立调用同时检查逐句claim与逐项阶段，发布时重核本轮输入及来源绑定。v1仍保留，业务默认未切换；v2首组真实诊断因供应商非法JSON停止，未获准入。见[JUDGE-V2-ITEM-INTEGRATION-v1.md](JUDGE-V2-ITEM-INTEGRATION-v1.md)。
 
-> **当前本机状态（2026-11-11）：**model理解/100%、有限任务循环、多意图逐项与Judge v2 JSON配置开启；数据库为0013，API/Worker同镜像且健康。有效配置见[当前配置快照](CONFIGURATION.md)，部署历史与验收边界见[部署收口](RELIABILITY-ROLLOUT-20261107.md)。下文较早的rules/灰度0及未部署描述是阶段记录。
+> **当前本机状态（2026-11-11）：**model理解/100%、有限任务循环、多意图逐项与Judge v2 JSON配置开启；数据库为0014，API/Worker同镜像`732fa406e83b`且健康，分层记忆优化已发布。有效配置见[当前配置快照](CONFIGURATION.md)，本次部署与验证边界见[完整功能发布](FULL-FEATURE-ROLLOUT-20261111.md)。下文较早的rules/灰度0及未部署描述是阶段记录。
 
 2026-11-07真实冒烟发现条件诉求的最终apply意向与当前query步骤混淆。现离线分离`execution_request_type`：条件办理当前只能只读查单，后续缺原因不阻止前置查询，条件政策咨询仍查知识；不得自动准备/提交退款。原真实失败保留，新版只完成离线回归，默认仍rules/灰度0。见[MODEL-FIRST-ADMISSION-EVIDENCE-v1.md](MODEL-FIRST-ADMISSION-EVIDENCE-v1.md)。
 
@@ -37,6 +37,12 @@ Judge v2现已接入逐项检查：同次独立调用同时检查逐句claim与�
 `route_decision → slot_filling / tool_execution → confirmation / result_verification → response_generation`
 
 `result_verification` 检查工具执行状态；最终文本统一在响应节点校验。
+
+## 上下文与记忆候选改进（2026-11-11，未部署）
+
+工作区增加共享背景预算：当前问题、必要任务状态与本轮证据完整保留，超限先舍弃完整的低优先级记忆；理解校验使用实际发送的历史快照。生成不再重复发送历史，回答策略为v17。SQL摘要Job与SessionManager兼容压缩共用`structured-excerpts-v2`契约，旧摘要模型不再调用，SQL仍是Run恢复权威。
+
+新增持久沟通偏好条目保存原消息、更新时间、180天有效期和撤回状态，加载重新核对身份/来源/删除状态；不把订单事实或历史确认长期化。需先迁移0014，再按部署流程更新API/Worker，本轮未执行。范围、预算数值和验证见[记忆分层优化](MEMORY-LAYERS-OPTIMIZATION-20261111.md)；下文历史`rules-v1`表述保留为当时M2记录。
 
 ## 退款确认
 

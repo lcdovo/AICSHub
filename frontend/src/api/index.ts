@@ -180,6 +180,11 @@ export const api = {
     request<MetricsResult>("/api/v1/analytics/metrics", { signal }),
   health: (signal?: AbortSignal) =>
     request<HealthResult>("/health", { signal }),
+  sessionVotes: (sessionId: string, signal?: AbortSignal) =>
+    request<Record<string, "like" | "dislike">>("/api/v1/feedback/session/" + encodeURIComponent(sessionId), { signal }),
+  feedbackRecords: (page: number, type: string, signal?: AbortSignal) =>
+    request<{ total: number; records: { feedback_id: string; username: string; session_id: string; feedback_type: string; answer: string | null; created_at: string }[] }>(
+      `/api/v1/feedback/records?page=${page}&page_size=20${type ? "&feedback_type=" + type : ""}`, { signal }),
   feedback: (
     userId: number,
     sessionId: string,
@@ -193,7 +198,6 @@ export const api = {
         session_id: sessionId,
         message_id: message.id,
         feedback_type: type,
-        content: message.content,
       }),
     ),
   users: (page: number, signal?: AbortSignal) =>

@@ -8,7 +8,6 @@ from __future__ import annotations
 from app.utils.utc_time import utc_now_db, utc_now
 
 import uuid
-from datetime import datetime
 from typing import Any, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,8 +83,8 @@ class ChatService:
                 state.conversation_summary = persisted.summary
                 history = (await db.execute(select(Message).where(Message.session_id == session_id, Message.id > persisted.summary_cursor)
                                             .order_by(Message.id.desc()).limit(40))).scalars().all()
-                transcript = [{"role": m.role.value, "content": m.content} for m in reversed(history)]
-                if transcript and transcript[-1] == {"role": "user", "content": message}:
+                transcript = [{"role": m.role.value, "content": m.content, "message_id": m.id} for m in reversed(history)]
+                if transcript and transcript[-1]["role"] == "user" and transcript[-1]["content"] == message:
                     transcript.pop()
                 state.messages = transcript + [{"role": "user", "content": message}]
                 query = select(RefundAction).where(RefundAction.session_id == session_id, RefundAction.user_id == user_id)
@@ -261,21 +260,18 @@ class ChatService:
         if state.task is not None or state.superseded_task_id:
             from app.services.agent_tasks import persist_task
             await persist_task(db, state)
+        if settings.USER_MEMORY_ENABLED and state.source_message_id and (state.actor_id or state.user_id) == state.user_id:
+            from app.services.long_term_memory import preference_change, record_preference
+            if preference_change(user_query):
+                await record_preference(db, user_id=state.user_id, session_id=state.session_id,
+                                        message_id=state.source_message_id)
         if not commit:
             return assistant_message, evaluation
+        from app.services.background_jobs import enqueue
+        enqueue(db, "summary", state.session_id, state.user_id, f"summary:{assistant_message.id}")
         await db.commit()
         await db.refresh(assistant_message)
         await session_manager.save_state(state)
-        # 长对话上下文压缩：消息数或 Token 估算超阈值时触发（LLM 摘要，降级规则摘要）。
-        await session_manager.maybe_compress(state.session_id)
-        # 如果有摘要，更新意图序列到摘要并持久化
-        summary = await session_manager.get_summary(state.session_id)
-        if summary:
-            current_intent = state.detected_intent
-            if current_intent not in summary.intent_history:
-                summary.intent_history.append(current_intent)
-                summary.intent_history = summary.intent_history[-10:]
-            await session_manager._save_summary_to_redis(state.session_id, summary)
         return assistant_message, evaluation
 
 

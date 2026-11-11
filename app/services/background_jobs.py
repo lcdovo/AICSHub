@@ -117,11 +117,9 @@ async def _summary(factory: async_sessionmaker[AsyncSession], jid: str, token: s
                 Message.id > session.summary_cursor).order_by(Message.id).limit(40))).scalars().all()
             if len(rows) >= 20:
                 old = rows[:-10]
-                from app.services.llm_governance import SensitiveDataRedactor
-                redactor = SensitiveDataRedactor()
-                snippets = [f"{row.id}:{row.role.value}:{redactor.redact(row.content)[:70]}" for row in old]
-                session.summary = ((session.summary or "") + "\n" + "\n".join(snippets))[-1200:]
-                session.summary_cursor, session.summary_policy = old[-1].id, "rules-v1"
+                from app.services.conversation_summary import SUMMARY_POLICY, update_summary
+                session.summary = update_summary(session.summary, old)
+                session.summary_cursor, session.summary_policy = old[-1].id, SUMMARY_POLICY
                 session.summary_version += 1
         job.status, job.lease_token, job.lease_expires_at = "succeeded", None, None
         await db.commit()

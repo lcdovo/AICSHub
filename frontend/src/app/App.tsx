@@ -7,6 +7,7 @@ import { adminPages, useRoute } from "./router";
 import { AppLayout } from "../layouts/AppLayout";
 import { Button, Empty, ErrorState, Loading } from "../components/ui";
 import LoginPage from "../pages/LoginPage";
+const FeedbackPage = lazy(() => import("../pages/FeedbackPage"));
 const ChatPage = lazy(() => import("../pages/ChatPage"));
 const HistoryPage = lazy(() => import("../pages/HistoryPage"));
 const TicketsPage = lazy(() => import("../pages/TicketsPage"));
@@ -84,6 +85,7 @@ export default function App() {
     knowledge: <KnowledgePage />,
     search: <SearchPage />,
     analytics: <AnalyticsPage />,
+    feedback: <FeedbackPage />,
     users: <UsersPage />,
     account: <AccountPage />,
   };

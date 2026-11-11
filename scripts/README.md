@@ -90,6 +90,7 @@
 
 ## 离线验证与其他维护工具
 
+- [audit_rag_evidence.py](audit_rag_evidence.py)：只读检索与邻块对照；会按所选模式调用本地Embedding/重排，不调用理解、生成或Judge，见对应证据核查文档。
 - [dev.ps1](dev.ps1)
 - [diagnose_local_admission.py](diagnose_local_admission.py)
 - [eval_gate.py](eval_gate.py)

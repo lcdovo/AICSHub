@@ -4,7 +4,7 @@
 from app.utils.utc_time import utc_now_db
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Depends
@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from app.services.evaluation import get_answer_evaluator, get_low_score_pool
 from app.utils.tracking import get_tracer
-from app.models.models import User, UserFeedback, Session
+from app.models.models import User, UserFeedback, Session, Message, MessageRole
 from app.utils.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -49,9 +49,25 @@ async def submit_feedback(feedback: FeedbackRequest, db: AsyncSession = Depends(
         raise HTTPException(status_code=400, detail="反馈类型无效")
     if feedback.feedback_type == "csat" and (feedback.score is None or not 1 <= feedback.score <= 5):
         raise HTTPException(status_code=400, detail="CSAT 评分必须在1-5之间")
-    session = await db.get(Session, feedback.session_id)
+    session = (await db.execute(select(Session).where(Session.id == feedback.session_id).with_for_update())).scalar_one_or_none()
     if not session or session.user_id != feedback.user_id:
         raise HTTPException(status_code=404, detail="会话不存在")
+    if feedback.message_id is not None:
+        message = await db.get(Message, feedback.message_id)
+        if not message or message.session_id != session.id or message.role != MessageRole.ASSISTANT:
+            raise HTTPException(status_code=404, detail="客服回复不存在")
+    elif feedback.feedback_type in {"like", "dislike"}:
+        raise HTTPException(status_code=400, detail="点赞或点踩必须指定客服回复")
+    if feedback.feedback_type in {"like", "dislike"}:
+        existing = (await db.execute(select(UserFeedback).where(
+            UserFeedback.user_id == feedback.user_id,
+            UserFeedback.message_id == feedback.message_id,
+            UserFeedback.feedback_type.in_(["like", "dislike"]),
+        ).order_by(UserFeedback.created_at.desc(), UserFeedback.id.desc()))).scalars().first()
+        if existing:
+            existing.feedback_type = feedback.feedback_type
+            await db.commit()
+            return FeedbackResponse(feedback_id=existing.id, status="received", message="评价已更新")
     item = UserFeedback(id=feedback_id, user_id=feedback.user_id, session_id=feedback.session_id,
                         message_id=feedback.message_id, feedback_type=feedback.feedback_type,
                         score=feedback.score, content=feedback.content, categories=feedback.categories or [])
@@ -123,8 +139,8 @@ async def get_feedback_stats(
     db: AsyncSession = Depends(get_db), _: User = Depends(require_admin),
 ):
     """获取反馈统计"""
-    cutoff_date = utc_now_db()
-    records = (await db.execute(select(UserFeedback))).scalars().all()
+    cutoff_date = utc_now_db() - timedelta(days=days)
+    records = (await db.execute(select(UserFeedback).where(UserFeedback.created_at >= cutoff_date))).scalars().all()
     total_feedbacks = len(records)
 
     type_distribution = {}
@@ -158,3 +174,40 @@ async def get_feedback_stats(
             ),
         },
     }
+
+
+@router.get("/session/{session_id}")
+async def session_votes(session_id: str, db: AsyncSession = Depends(get_db),
+                        current_user: User = Depends(get_current_user)):
+    """读取当前用户在指定会话的评价。"""
+    session = await db.get(Session, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    ensure_owner_or_admin(current_user, session.user_id)
+    records = (await db.execute(select(UserFeedback).where(
+        UserFeedback.session_id == session_id, UserFeedback.user_id == current_user.id,
+        UserFeedback.feedback_type.in_(["like", "dislike"]),
+    ).order_by(UserFeedback.created_at, UserFeedback.id))).scalars().all()
+    return {"code": 0, "data": {str(r.message_id): r.feedback_type for r in records if r.message_id is not None}}
+
+
+@router.get("/records")
+async def feedback_records(
+    feedback_type: Optional[str] = Query(default=None, pattern="^(like|dislike|csat|comment)$"),
+    page: int = Query(default=1, ge=1), page_size: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db), _: User = Depends(require_admin),
+):
+    """管理员分页读取评价及对应的客服原文。"""
+    filters = [UserFeedback.feedback_type == feedback_type] if feedback_type else []
+    total = await db.scalar(select(func.count()).select_from(UserFeedback).where(*filters))
+    rows = (await db.execute(select(UserFeedback, User.username, Message.content)
+        .join(User, User.id == UserFeedback.user_id)
+        .outerjoin(Message, Message.id == UserFeedback.message_id)
+        .where(*filters).order_by(UserFeedback.created_at.desc(), UserFeedback.id.desc())
+        .offset((page - 1) * page_size).limit(page_size))).all()
+    return {"code": 0, "data": {"total": total, "records": [
+        {"feedback_id": r.id, "user_id": r.user_id, "username": username,
+         "session_id": r.session_id, "message_id": r.message_id,
+         "feedback_type": r.feedback_type, "answer": answer,
+         "created_at": r.created_at.isoformat(), "content": r.content}
+        for r, username, answer in rows]}}

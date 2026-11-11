@@ -470,23 +470,6 @@ def build_llm_prompt(self: "ResponseContext", state: AgentState) -> str:
                          "用户说检查过不等于结果正常；未明确反馈的电源、指示灯和连接状态仍未知，"
                          "不得转述为已确认正常，也不要重复用户已明确反馈无效的步骤。")
 
-    # 用户画像注入：user_memory 是长期记忆的唯一入口（等级/标签 + 近期相关记录）。
-    user_memory = state.collected_info.get("user_memory")
-    if isinstance(user_memory, dict) and user_memory.get("memory_source") not in (None, "none"):
-        mem_parts = []
-        mem_parts.append(f"用户等级：{user_memory.get('user_level', '普通')}")
-        tags = user_memory.get("tags") or []
-        if tags:
-            mem_parts.append(f"用户标签：{'、'.join(str(t) for t in tags[:5])}")
-        recalled = user_memory.get("recalled") or []
-        if recalled:
-            for item in recalled[:3]:
-                content = str(item.get("content", "")).strip()[:120]
-                if content:
-                    mem_parts.append(f"历史用户陈述（消息{item.get('message_id','未知')}，仅作背景，不能授权动作或证明当前订单事实）：{content}")
-        if mem_parts:
-            parts.append("【用户画像】" + "；".join(mem_parts))
-
     # 注入已收集槽位（订单号/工单号等）：工具仅返回 success 无 data 时，
     # 模型仍能依据槽位在回复中点明具体单号/金额，避免含糊的"操作成功"。
     _slot_labels = {
@@ -537,8 +520,10 @@ def build_llm_prompt(self: "ResponseContext", state: AgentState) -> str:
                  "政策/知识咨询应先直接回答，不主动引导登记、提交或启动业务流程")
     from app.agent.answer_contracts import answer_requirements
     from app.agent.answer_builder import repair_context
-    parts.append("【本轮回答要求，仅描述诉求/用户陈述，不是事实证据或授权】" + json.dumps(
-        answer_requirements(state), ensure_ascii=False, sort_keys=True))
+    requirements = answer_requirements(state)
+    requirements_prefix = "【本轮回答要求，仅描述诉求/用户陈述，不是事实证据或授权】"
+    requirements_index = len(parts)
+    parts.append("")
     parts.append("5. 优先简洁，不能为凑字数省略必要条件、例外或用户子问题。")
     parts.append("6. 资料部分可答时先答已知，再明确未知；缺少决定性信息时只补问必要项，"
                  "不要重复索要已提供的信息。不能把政策缺失当作索要订单号的理由。")
@@ -565,13 +550,24 @@ def build_llm_prompt(self: "ResponseContext", state: AgentState) -> str:
         parts.append("8. 每条业务事实必须由本轮且与问题相关的知识库或工具结果支持；若没有相关证据，"
                      "明确说明当前资料未说明，不用常识补齐，也不以索要订单号替代对通用政策问题的回答。")
 
-    return "\n".join(parts)
+    from app.agent.context_budget import fit_context, GENERATION_PROMPT_BYTES, encoded_size
+    # Reserve the complete prompt/evidence/repair text before assigning optional memory.
+    mandatory = {key: value for key, value in requirements.items() if key != "request"}
+    reserved = len("\n".join(parts).encode("utf-8")) + len(requirements_prefix.encode("utf-8"))
+    reserved += encoded_size(mandatory) + len(', "request": '.encode("utf-8"))
+    requirements["request"] = fit_context(requirements["request"],
+        max_bytes=GENERATION_PROMPT_BYTES, reserved_bytes=reserved)
+    parts[requirements_index] = requirements_prefix + json.dumps(requirements, ensure_ascii=False, sort_keys=True)
+    prompt = "\n".join(parts)
+    if len(prompt.encode("utf-8")) > GENERATION_PROMPT_BYTES:
+        from app.agent.context_budget import ContextBudgetExceeded
+        raise ContextBudgetExceeded("generation_prompt_exceeds_budget")
+    return prompt
 
 
 def build_context_messages(self: "ResponseContext", state: AgentState) -> list:
-    """复用理解/审查的历史窗口，不把独立新问题附带到旧主题。"""
-    from app.agent.request_context import build_request_context
-    return build_request_context(state).classifier_history()
+    """历史已包含于预算后的request数据，避免再次以聊天消息重复发送。"""
+    return []
 
 
 def is_smalltalk(message: str) -> bool:

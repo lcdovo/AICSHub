@@ -1,5 +1,7 @@
 # 项目文档导航
 
+- [2026-11-11记忆、会话删除与安全修复本机发布](FULL-FEATURE-ROLLOUT-20261111.md)：当前API/Worker统一发布及0014迁移、验证与兼容回滚。
+
 本索引于2026-11-09整理，按主题列出本目录现有文件。文件名中的日期和版本属于各自记录；历史验收不能视为当前运行状态，当前状态需核对部署说明、对应报告和实际服务。
 
 - 项目目录与维护规则：[AGENTS.md](../AGENTS.md)
@@ -18,6 +20,8 @@
 - [CONFIGURATION.md](CONFIGURATION.md)
 - [EMBEDDING-HTTP-LIFECYCLE-v1.md](EMBEDDING-HTTP-LIFECYCLE-v1.md)
 - [llm-governance.md](llm-governance.md)
+- [MEMORY-CONTEXT-OPTIMIZATION-20261111.md](MEMORY-CONTEXT-OPTIMIZATION-20261111.md)
+- [MEMORY-LAYERS-OPTIMIZATION-20261111.md](MEMORY-LAYERS-OPTIMIZATION-20261111.md)：共享输入预算、统一摘要与有来源/过期/撤回的长期沟通偏好；已随当日完整功能发布部署。
 - [LOCAL-ADMISSION-DIAGNOSIS-v1.md](LOCAL-ADMISSION-DIAGNOSIS-v1.md)
 - [LOCAL-INFERENCE-BUDGET-v1.md](LOCAL-INFERENCE-BUDGET-v1.md)
 - [LOCAL-LEASE-RELEASE-v1.md](LOCAL-LEASE-RELEASE-v1.md)
@@ -40,6 +44,7 @@
 - [PROJECT-AC-INDEX-v1.json](PROJECT-AC-INDEX-v1.json)
 - [PROJECT-AC-INDEX-v1.md](PROJECT-AC-INDEX-v1.md)
 - [RAG-STRUCTURE-v2.md](RAG-STRUCTURE-v2.md)
+- [RAG-EVIDENCE-AUDIT-20261111.md](RAG-EVIDENCE-AUDIT-20261111.md)：固定案例检索、逐项覆盖与邻块对照；未修改业务检索算法。
 - [RAG_RELIABILITY.md](RAG_RELIABILITY.md)
 - [REQUEST-CONTEXT-v1.md](REQUEST-CONTEXT-v1.md)
 - [ROUTING-POLICY-v1.md](ROUTING-POLICY-v1.md)
@@ -163,3 +168,5 @@
 
 - [frontend/](frontend/)
 - [m5-review/](m5-review/)
+
+- [回答反馈本机部署与回滚（2026-11-11）](ANSWER-FEEDBACK-DEPLOYMENT-20261111.md)

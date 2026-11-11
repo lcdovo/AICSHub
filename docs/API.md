@@ -240,3 +240,13 @@ POST /search支持独立recall_k/rerank_k/top_k，结果含逐路ID、score_type
 
 任务状态包括running、waiting_input、waiting_confirmation、completed、stopped、cancelled。退款任务到waiting_confirmation只代表预览已准备；独立当前确认及领域事务成功后才能completed。AGENT_TASK_LOOP_ENABLED默认false，需0012迁移和阶段准入。
 > 2026-11-07 当前本机业务服务已启用任务循环，REST/WS复用Run执行器与同一16节点图，响应可含task_id/task_status，任务进度持久化到0012新增表；模拟退款仍须独立本轮确认。当前部署验证见 [统一升级记录](LATEST-ROLLOUT-20261107.md)。
+
+
+## 回答点赞与点踩
+
+- `POST /api/v1/feedback/submit`：登录用户提交 `user_id/session_id/message_id/feedback_type`，点赞和点踩必须绑定该会话的 assistant 消息。重复评价更新最新选择，支持改评；会话行锁串行化同会话写入。不调用聊天模型。
+- `GET /api/v1/feedback/session/{session_id}`：返回当前用户在该会话的评价映射，用于恢复按钮状态。其他用户无权读取。
+- `GET /api/v1/feedback/records?page=1&page_size=20&feedback_type=dislike`：仅管理员可访问，返回总数、评价人、时间、会话及客服原文；类型可选，分页上限100。
+- 管理后台导航“回答反馈”可筛选点赞/点踩并打开会话。复用已有 user_feedback 表，无新增迁移。历史重复记录保留，不清理旧数据。统计接口按 days 限制时间范围。
+
+2026-11-11：源码功能更新；部署与浏览器真实服务联调需单独执行。

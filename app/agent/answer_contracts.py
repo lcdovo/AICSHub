@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.agent.state import AgentState
 
-ANSWER_POLICY_VERSION = "answer-pipeline.v15-logistics-scope-routing"
+ANSWER_POLICY_VERSION = "answer-pipeline.v17-budgeted-memory-context"
 
 CLARIFICATION_QUESTIONS = {
     "query_order": "您想查询订单的哪项信息？",
@@ -32,7 +32,7 @@ def answer_requirements(state: AgentState) -> dict:
     understanding = state.understanding
     from app.agent.diagnostic_feedback import diagnostic_feedback_contract
     from app.agent.intent_items import snapshot
-    return {
+    payload = {
         "request": stage_context(state),
         "conditions": [item.model_dump() for item in understanding.conditions] if understanding else [],
         "subrequests": [item.model_dump() for item in understanding.subrequests] if understanding else [],
@@ -42,6 +42,13 @@ def answer_requirements(state: AgentState) -> dict:
         "diagnostic_feedback": diagnostic_feedback_contract(state),
         "intent_items": snapshot(state),
     }
+    # Late response-only memory must not alter the task loop's canonical context digest.
+    from app.agent.context_budget import fit_context, memory_projection
+    memory = state.collected_info.get("user_memory")
+    if isinstance(memory, dict):
+        payload["request"]["user_memory"] = memory_projection(memory)
+        payload["request"] = fit_context(payload["request"])
+    return payload
 
 
 def review_query(state: AgentState) -> str:

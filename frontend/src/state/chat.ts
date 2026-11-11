@@ -5,6 +5,7 @@ type ChatStore = {
   drafts: Record<string, string>;
   setRoom: (id: string, value: Room | ((room?: Room) => Room)) => void;
   setDraft: (id: string, value: string) => void;
+  removeSession: (id: string) => void;
   clear: () => void;
 };
 export const useChat = create<ChatStore>((set) => ({
@@ -20,4 +21,11 @@ export const useChat = create<ChatStore>((set) => ({
   setDraft: (id, value) =>
     set((state) => ({ drafts: { ...state.drafts, [id]: value } })),
   clear: () => set({ rooms: {}, drafts: {} }),
+  removeSession: (id) => set((state) => {
+    const rooms = { ...state.rooms };
+    const drafts = { ...state.drafts };
+    delete rooms[id];
+    delete drafts[id];
+    return { rooms, drafts };
+  }),
 }));

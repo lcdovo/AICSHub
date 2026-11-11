@@ -24,7 +24,7 @@ def test_heartbeat_requires_live_process_current_schema_and_recent_cycle(tmp_pat
         assert not run_worker.healthy(path)
 
 
-async def test_schema_gate_rejects_old_revision_and_missing_journal(tmp_path):
+async def test_schema_gate_rejects_old_revision_and_missing_required_tables(tmp_path):
     engine = create_async_engine("sqlite+aiosqlite:///" + (tmp_path / "schema.db").as_posix())
     factory = async_sessionmaker(engine)
     try:
@@ -39,6 +39,14 @@ async def test_schema_gate_rejects_old_revision_and_missing_journal(tmp_path):
             await run_worker.verify_schema(factory)
         async with engine.begin() as db:
             await db.execute(text("CREATE TABLE agent_capability_calls (id VARCHAR(36))"))
+        with pytest.raises(RuntimeError, match="worker_schema_migration_required"):
+            await run_worker.verify_schema(factory)
+        async with engine.begin() as db:
+            await db.execute(text("UPDATE alembic_version SET version_num='0014_user_memory_entries'"))
+        with pytest.raises(RuntimeError, match="worker_schema_migration_required"):
+            await run_worker.verify_schema(factory)
+        async with engine.begin() as db:
+            await db.execute(text("CREATE TABLE user_memory_entries (id VARCHAR(36))"))
         await run_worker.verify_schema(factory)
     finally:
         await engine.dispose()

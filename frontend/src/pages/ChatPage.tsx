@@ -24,6 +24,7 @@ import { MessageList } from "../features/chat/MessageList";
 import { HandoffDialog } from "../features/chat/HandoffDialog";
 import { Diagnostics } from "../features/chat/Diagnostics";
 import { RefundPanel } from "../features/chat/RefundPanel";
+import { DeleteSessionButton } from "../features/chat/DeleteSessionButton";
 export default function ChatPage() {
   const user = useAuth((s) => s.user)!;
   const admin = user.role === "admin";
@@ -122,6 +123,7 @@ export default function ChatPage() {
           />
         ) : (
           sessions.data.map((session) => (
+            <div className="session-row" key={session.id}>
             <a
               href={"#/chat/" + session.id}
               className={
@@ -156,6 +158,16 @@ export default function ChatPage() {
                 {session.status === "closed" ? "已关闭" : "进行中"}
               </small>
             </a>
+            <DeleteSessionButton session={session} onDeleted={() => {
+              if (session.id === id) {
+                setHistoryOpen(false);
+                setHumanOpen(false);
+                setLimit(50);
+                navigate("chat");
+              }
+              if (sessions.data.length === 1 && page > 1) setPage(page - 1);
+            }} />
+            </div>
           ))
         )}
       </div>

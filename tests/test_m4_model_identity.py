@@ -172,7 +172,7 @@ async def test_standalone_stream_releases_scope_and_uses_new_run_each_request(fa
         await service.close()
 
 
-async def test_legacy_summary_uses_state_user_and_unique_context(factory, monkeypatch):
+async def test_legacy_summary_does_not_dispatch_another_model(factory, monkeypatch):
     service = fake_service(monkeypatch, factory)
     monkeypatch.setattr("app.services.llm_service.LLMService", lambda: service)
     manager = SessionManager()
@@ -182,8 +182,10 @@ async def test_legacy_summary_uses_state_user_and_unique_context(factory, monkey
         assert await manager._compress_context(state)
         async with factory() as db:
             row = await db.scalar(select(ModelCallRecord))
-            assert row.user_id == 101 and row.run_id.startswith("summary:")
-            assert row.purpose == "conversation_summary"
+            assert row is None
+        from app.services.conversation_summary import parse_summary
+        assert parse_summary(state.conversation_summary) is not None
+        assert all(message["role"] != "system" for message in state.messages)
         assert CALL_CONTEXT.get() is None
     finally:
         await service.close()

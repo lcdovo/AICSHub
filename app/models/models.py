@@ -606,3 +606,18 @@ class AgentCapabilityCall(Base):
     task_progress = Column(JSON, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utc_now_db)
     finished_at = Column(DateTime, nullable=True)
+
+
+class UserMemoryEntry(Base):
+    """Explicit communication preferences, never business facts or authorization."""
+    __tablename__ = "user_memory_entries"
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    memory_key = Column(String(40), nullable=False)
+    content = Column(Text, nullable=False)
+    source_session_id = Column(String(36), ForeignKey("sessions.id"), nullable=False)
+    source_message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    updated_at = Column(DateTime, nullable=False, default=utc_now_db)
+    expires_at = Column(DateTime, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    __table_args__ = (UniqueConstraint("user_id", "memory_key", name="uq_user_memory_key"),)

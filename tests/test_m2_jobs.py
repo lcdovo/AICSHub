@@ -107,14 +107,16 @@ async def test_summary_cursor_is_monotonic_and_resumes_without_recount(tmp_path)
         await jobs.tick(factory,kind="summary")
         async with factory() as db:
             first=await db.get(Session,"session-101")
-            assert first.summary_cursor==30 and first.summary_version==1 and first.summary_policy=="rules-v1"
+            assert first.summary_cursor==30 and first.summary_version==1 and first.summary_policy=="structured-excerpts-v2"
             jobs.enqueue(db,"summary","session-101",101,"summary-2")
             await db.commit()
         await jobs.tick(factory,kind="summary")
         async with factory() as db:
             second=await db.get(Session,"session-101")
             assert second.summary_cursor==40 and second.summary_version==2
-            assert "41:" not in second.summary
+            import json
+            excerpts = json.loads(second.summary)["sections"]
+            assert all(item["message_id"] <= 40 for items in excerpts.values() for item in items)
 
 
 async def test_unknown_handler_max_attempt_and_payload_never_saved(tmp_path):

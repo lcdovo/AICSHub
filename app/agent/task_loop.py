@@ -313,7 +313,7 @@ def decision_payload(state: AgentState) -> dict:
                 continue
             observations.append({"capability": call.tool_name, "success": call.success, "data": data})
     from app.agent.intent_items import snapshot
-    return {"goal": state.task.goal, "kind": state.task.kind, "intent_items": snapshot(state),
+    payload = {"goal": state.task.goal, "kind": state.task.kind, "intent_items": snapshot(state),
             "request": stage_context(state),
             "visible_order": state.task.order_id, "product": state.task.product,
             "conditions": [c.model_dump() for c in state.understanding.conditions],
@@ -323,6 +323,8 @@ def decision_payload(state: AgentState) -> dict:
             "remaining_decisions": settings.AGENT_TASK_MAX_DECISIONS - state.task_runtime.decisions,
             "remaining_tools": settings.AGENT_TASK_MAX_TOOL_CALLS - state.task_runtime.tool_calls,
             "completion_gaps": completion_gaps(state)}
+    from app.agent.context_budget import fit_stage_payload, DECISION_PAYLOAD_BYTES
+    return fit_stage_payload(payload, max_bytes=DECISION_PAYLOAD_BYTES)
 
 
 @dataclass(frozen=True)

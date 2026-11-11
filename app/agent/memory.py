@@ -13,9 +13,9 @@ RedisCheckpointSaver 负责（key 前缀 agent_ckpt:*）。两者 key 空间隔�
 - 摘要对象持久化到 Redis（进程重启不丢失）
 - get_state 内置内存缓存（进程内复用）
 - Token 数动态触发压缩（避免长对话 OOM）：由 ChatService 每轮调用 maybe_compress
-- LLM 生成对话摘要（提升压缩后上下文质量）
+- 与SQL共用有来源的结构化摘录摘要，不调用LLM
 - 分布式锁防止并发状态覆盖
-- 压缩时保留槽位快照（长对话槽位不丢失）
+- 槽位及任务由独立状态契约保留，摘要不授予业务权限
 """
 from app.utils.utc_time import utc_now
 import asyncio
@@ -27,32 +27,15 @@ import re
 import time
 import logging
 from typing import Any, Dict, List, Optional
-from datetime import datetime
-
-from pydantic import BaseModel, Field
 
 from app.agent.state import AgentState
 from app.utils.database import get_redis
 
 logger = logging.getLogger(__name__)
 
-SUMMARY_SYSTEM_PROMPT = (
-    "你是客服对话摘要助手。将一段客服对话压缩为 200 字以内的简洁摘要，"
-    "保留：1. 用户核心诉求与意图；2. 关键实体（订单号、金额等）；"
-    "3. 已提供的解决方案或结论；4. 未解决的问题。"
-    "只依据对话内容提炼，不臆造、不补充未提及的信息。"
-)
-
-
-class _SummaryResult(BaseModel):
-    """对话摘要输出契约。"""
-
-    summary_text: str = Field(default="", description="200 字以内的对话摘要")
-
 SESSION_TTL_SECONDS = 86400
 MAX_MESSAGES_BEFORE_COMPRESSION = 40
 MIN_MESSAGES_AFTER_COMPRESSION = 10
-SUMMARY_MAX_LENGTH = 500
 # Token 估算阈值：超过此值也触发压缩（与消息数取先到者）
 TOKEN_COMPRESSION_THRESHOLD = 3000
 # 分布式锁超时：需大于单轮最长执行（长 LLM/流式回答可能超过 30s），
@@ -303,8 +286,8 @@ class SessionManager:
         """检查并按需压缩超长会话上下文，防止 messages 无限膨胀。
 
         由 ChatService 在每轮持久化后调用。触发条件 = 消息数或 Token 估算超阈值；
-        压缩核心保留最近 MIN_MESSAGES_AFTER_COMPRESSION 条，其余由 LLM 摘要
-        （不可用降级规则摘要）概括，并把关键槽位快照到摘要实体，最后持久化。
+        压缩使用与SQL相同的结构化摘录契约，不调用LLM，不生成system摘要。
+        SQL恢复始终以持久摘要和游标为准；此方法仅兼容非Run内存使用者。
         返回是否触发了压缩。
         """
         state = await self.get_state(session_id)
@@ -315,15 +298,13 @@ class SessionManager:
         if not compressed:
             return False
 
-        summary = self._summarize_messages(state.messages[:-MIN_MESSAGES_AFTER_COMPRESSION])
-        if len(self._summaries)>=1024 and session_id not in self._summaries:
+        summary = ConversationSummary()
+        summary.summary_text = state.conversation_summary or ""
+        summary.message_count = len(state.messages)
+        if len(self._summaries) >= 1024 and session_id not in self._summaries:
             self._summaries.pop(next(iter(self._summaries)))
         self._summaries[session_id] = summary
-        state.conversation_summary = summary.summary_text
-        # 摘要持久化到 Redis，进程重启后不丢失
         await self._save_summary_to_redis(session_id, summary)
-        # 压缩时保留槽位快照
-        self._snapshot_collected_info(state, summary)
         await self.save_state(state)
         return True
 
@@ -349,105 +330,40 @@ class SessionManager:
         if len(state.messages) <= MIN_MESSAGES_AFTER_COMPRESSION:
             return False
 
-        recent = state.messages[-MIN_MESSAGES_AFTER_COMPRESSION:]
+        from types import SimpleNamespace
+        from app.services.conversation_summary import StructuredSummary, parse_summary, update_summary
+        from app.services.llm_governance import SensitiveDataRedactor
+
         older = state.messages[:-MIN_MESSAGES_AFTER_COMPRESSION]
-
-        # 优先使用 LLM 生成摘要，降级到规则摘要
-        from app.services.model_gateway import inherited_model_context
-        async with inherited_model_context(state.user_id, "summary"):
-            summary = await self._generate_llm_summary(older)
-        if not summary:
-            summary = self._generate_summary(older)
-        if not summary:
-            return False
-
-        summary_msg = {
-            "role": "system",
-            "content": f"[对话摘要] {summary}",
-            "type": "summary",
-            "message_count": len(older),
-            "generated_at": utc_now().isoformat(timespec="milliseconds"),
-        }
-
-        state.messages = [summary_msg] + recent
-        logger.info(
-            f"压缩会话上下文: {len(older)} 条消息压缩为摘要, 保留 {len(recent)} 条"
-        )
+        rows = [SimpleNamespace(id=m["message_id"], role=SimpleNamespace(value=m["role"]), content=m["content"])
+                for m in older if isinstance(m.get("message_id"), int) and m["message_id"] > 0
+                and m.get("role") in {"user", "assistant"}]
+        previous = parse_summary(state.conversation_summary) or StructuredSummary(
+            legacy_context=(state.conversation_summary or "")[-1200:])
+        # Unsourced legacy state stays explicitly unverified; never invent message IDs.
+        unsourced = [SensitiveDataRedactor().redact(m.get("content", "")) for m in older
+                     if not m.get("message_id") and m.get("role") in {"user", "assistant"}]
+        for text in unsourced:
+            if len(previous.legacy_context) + len(text) + 1 <= 1200:
+                previous.legacy_context += "\n" + text
+            else:
+                previous.omitted_excerpts += 1
+        state.conversation_summary = update_summary(previous.model_dump_json(), rows)
+        state.messages = state.messages[-MIN_MESSAGES_AFTER_COMPRESSION:]
         return True
 
     async def _generate_llm_summary(self, messages: List[Dict[str, Any]]) -> str:
-        """调用 LLM 生成对话摘要，失败时返回空字符串降级到规则摘要。"""
-        llm_service = None
-        try:
-            from app.services.llm_service import LLMService
-            llm_service = LLMService()
-
-            # 构建对话文本
-            dialog_parts = []
-            for msg in messages:
-                role = msg.get("role", "unknown")
-                content = msg.get("content", "")
-                if role == "system" and msg.get("type") == "summary":
-                    dialog_parts.append(f"[已有摘要] {content}")
-                else:
-                    dialog_parts.append(f"{role}: {content}")
-
-            dialog_text = "\n".join(dialog_parts[-20:])  # 最多取20条避免过长
-
-            # 走独立摘要 system prompt + 结构化契约，避免复用"客服答复"链路
-            # （原实现调用 chat()，模型以客服身份执行摘要任务且输出被硬塞进 reply）。
-            result = await llm_service.run_structured(
-                SUMMARY_SYSTEM_PROMPT,
-                dialog_text,
-                _SummaryResult,
-                tags=["conversation_summary"],
-            )
-            summary = result.summary_text.strip() if result else ""
-            if summary and len(summary) > 10:
-                return summary[:SUMMARY_MAX_LENGTH]
-        except Exception as e:
-            logger.warning("LLM 生成摘要失败，降级到规则摘要: %s", type(e).__name__)
-        finally:
-            if llm_service is not None:
-                await llm_service.close()
-
-        return ""
+        """旧方法名兼容：已改为统一规则摘录，绝不调用LLM。"""
+        return self._generate_summary(messages)
 
     def _generate_summary(self, messages: List[Dict[str, Any]]) -> str:
-        user_messages = [m for m in messages if m.get("role") == "user"]
-        assistant_messages = [m for m in messages if m.get("role") == "assistant"]
-
-        topics = []
-        entities = []
-
-        for msg in user_messages:
-            content = msg.get("content", "")
-            if content:
-                topics.append(content[:30])
-
-                order_ids = re.findall(r'ORD\d{6,}', content.upper())
-                entities.extend(order_ids)
-
-        for msg in assistant_messages:
-            content = msg.get("content", "")
-            if content and any(
-                kw in content
-                for kw in ["订单", "退款", "工单", "物流", "状态", "金额"]
-            ):
-                entities.append(content[:50])
-
-        if not topics:
-            return ""
-
-        summary_parts = []
-        for i, topic in enumerate(topics[-5:]):
-            summary_parts.append(f"{i + 1}. 用户询问: {topic}")
-
-        entity_str = ", ".join(set(entities[:5]))
-        if entity_str:
-            summary_parts.append(f"涉及实体: {entity_str}")
-
-        return " | ".join(summary_parts)[:SUMMARY_MAX_LENGTH]
+        """Compatibility adapter; no second model, schema or invented source IDs."""
+        from types import SimpleNamespace
+        from app.services.conversation_summary import update_summary
+        rows = [SimpleNamespace(id=m["message_id"], role=SimpleNamespace(value=m["role"]), content=m["content"])
+                for m in messages if isinstance(m.get("message_id"), int) and m["message_id"] > 0
+                and m.get("role") in {"user", "assistant"}]
+        return update_summary(None, rows)
 
     def _summarize_messages(self, messages: List[Dict[str, Any]]) -> ConversationSummary:
         summary = ConversationSummary()

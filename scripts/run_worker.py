@@ -11,7 +11,7 @@ import time
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 
 logger = logging.getLogger(__name__)
-SCHEMA_REVISION = "0013_agent_reliability"
+SCHEMA_REVISION = "0014_user_memory_entries"
 
 
 async def verify_schema(factory):
@@ -19,7 +19,10 @@ async def verify_schema(factory):
     async with factory() as db:
         revision = await db.scalar(text("SELECT version_num FROM alembic_version"))
         connection = await db.connection()
-        present = await connection.run_sync(lambda conn: inspect(conn).has_table("agent_capability_calls"))
+        present = await connection.run_sync(lambda conn: all(
+            inspect(conn).has_table(name)
+            for name in ("agent_capability_calls", "user_memory_entries")
+        ))
         if revision != SCHEMA_REVISION or not present:
             raise RuntimeError("worker_schema_migration_required")
 

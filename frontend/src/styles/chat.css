@@ -35,6 +35,19 @@
   flex: 1;
   min-height: 0;
 }
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.session-row .session-item {
+  flex: 1;
+  min-width: 0;
+}
+.session-delete.button {
+  flex: none;
+  padding: 8px;
+}
 .session-item {
   display: block;
   color: var(--text);

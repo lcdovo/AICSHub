@@ -1,3 +1,5 @@
+import "../../styles/feedback.css";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { lazy, memo, Suspense, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowDown, Check, Copy, ThumbsDown, ThumbsUp } from "lucide-react";
@@ -46,7 +48,29 @@ const MessageRow = memo(function MessageRow({
   feedback: boolean;
 }) {
   const [copied, setCopied] = useState(false);
-  const [voted, setVoted] = useState(false);
+  const [submitting, setSubmitting] = useState<"like" | "dislike" | null>(null);
+  const [voteSaved, setVoteSaved] = useState(false);
+  const cache = useQueryClient();
+  const votes = useQuery({
+    queryKey: ["feedback-votes", userId, sessionId],
+    queryFn: ({ signal }) => api.sessionVotes(sessionId, signal),
+    enabled: feedback,
+  });
+  const voted = votes.data?.[String(message.id)];
+  const vote = async (type: "like" | "dislike") => {
+    setSubmitting(type);
+    setVoteSaved(false);
+    try {
+      await api.feedback(userId, sessionId, message, type);
+      cache.setQueryData<Record<string, "like" | "dislike">>(
+        ["feedback-votes", userId, sessionId],
+        (old) => ({ ...old, [String(message.id)]: type }),
+      );
+      setVoteSaved(true);
+    } finally {
+      setSubmitting(null);
+    }
+  };
   const task = useTask();
   const timer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -100,36 +124,44 @@ const MessageRow = memo(function MessageRow({
             <>
               <Button
                 tone="plain"
-                disabled={voted}
-                busy={task.pending}
+                className="vote-button"
+                aria-pressed={voted === "like"}
+                disabled={task.pending || votes.isLoading || !!votes.error}
+                busy={submitting === "like"}
                 onClick={() =>
                   task.run(async () => {
-                    await api.feedback(userId, sessionId, message, "like");
-                    setVoted(true);
+                    await vote("like");
                   })
                 }
               >
                 <ThumbsUp size={14} />
-                {voted ? "已反馈" : "有帮助"}
+                {voted === "like" ? "已点赞" : "点赞"}
               </Button>
               <Button
                 tone="plain"
-                disabled={voted}
+                className="vote-button vote-dislike"
+                busy={submitting === "dislike"}
+                aria-pressed={voted === "dislike"}
+                disabled={task.pending || votes.isLoading || !!votes.error}
                 onClick={() =>
                   task.run(async () => {
-                    await api.feedback(userId, sessionId, message, "dislike");
-                    setVoted(true);
+                    await vote("dislike");
                   })
                 }
               >
                 <ThumbsDown size={14} />
-                需改进
+                {voted === "dislike" ? "已点踩" : "点踩"}
               </Button>
+              {voteSaved && (
+                <span className="vote-status" role="status">
+                  评价已保存，感谢反馈
+                </span>
+              )}
             </>
           )}
         </div>
       )}
-      <ErrorState error={task.error} />
+      <ErrorState error={task.error || (feedback ? votes.error : null)} />
     </article>
   );
 });
