@@ -123,8 +123,9 @@ def enter_task(state: AgentState, default_next: str) -> str:
     # question as ``multi``.  Such a request has no task state to coordinate:
     # sending it through the task loop makes a transient Judge unknown turn a
     # normal RAG answer into the generic "审查不可用" reply.  Keep the task
-    # loop for genuinely multi-item, conditional, or resumed requests.
-    itemized_single = itemized and len(item_plan) <= 1 and not conditional_action and not resume
+    # loop for genuinely multi-item, conditional, resumed, or refund-preview requests.
+    itemized_single = (itemized and len(item_plan) <= 1 and not conditional_action and not resume
+                       and kind != "after_sales")
     complex_request = not policy_only and bool(
         conditional_action or len(value.subrequests) > 1 or (kind != "single" and not itemized_single) or resume
     )

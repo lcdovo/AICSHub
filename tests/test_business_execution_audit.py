@@ -1,7 +1,7 @@
 """Evaluation gates must fail before credentials or dispatch, with no business services."""
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 from scripts import continue_business_acceptance as runner
@@ -55,10 +55,12 @@ def test_repairs_cannot_change_frozen_app_cases_or_old_accounts(tmp_path,monkeyp
 
 def test_preflight_artifact_layout_fits_windows_paths():
     # Reproduced setup failure: deeply nested preview + phase hash + nonce >260.
-    original=runner.OUT/'live'/('a'*64)/'continuation-v1'/'preflights'/('t'*65)/'continuation-v1/private'/('b'*32+'.env')
-    shortened=runner.OUT/'preflights-c1'/('t'*65)/'continuation-v1/private'/('b'*32+'.env')
-    assert len(str(original.resolve()))>260
-    assert len(str(shortened.resolve()))<240
+    # Model the Windows path limit independently of the Linux checkout prefix.
+    windows_out=PureWindowsPath('C:/Users/test/Desktop/projects/AICSHub')/runner.OUT.relative_to(runner.ROOT).as_posix()
+    original=windows_out/'live'/('a'*64)/'continuation-v1'/'preflights'/('t'*65)/'continuation-v1/private'/('b'*32+'.env')
+    shortened=windows_out/'preflights-c1'/('t'*65)/'continuation-v1/private'/('b'*32+'.env')
+    assert len(str(original))>260
+    assert len(str(shortened))<240
 
 
 def test_bundle_only_copies_fingerprinted_inputs_and_rejects_shadow(tmp_path):

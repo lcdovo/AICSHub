@@ -1,5 +1,6 @@
 """冻结合成语义材料及逐项契约评测；离线结果不冒充真实模型语义质量。"""
 from __future__ import annotations
+from contextlib import closing
 
 import argparse
 import ast
@@ -224,7 +225,7 @@ def prepare(output: Path, dataset: dict, *, provider: dict | None = None, revali
         phase=original.get("phase_prepared_id",original["prepared_id"])
         ledger=ROOT/"reports/multi-intent/live-budget"/phase/"dispatch.sqlite"
         if not ledger.exists(): raise ValueError("original_phase_ledger_required")
-        with sqlite3.connect(ledger) as db:
+        with closing(sqlite3.connect(ledger)) as db, db:
             rows=db.execute("SELECT * FROM dispatches ORDER BY operation").fetchall()
         unknown=[row[0] for row in rows if row[4]!="http_complete"]
         if unknown and not resume_counted_unknown: raise ValueError("unknown_dispatch_requires_adjudication")
@@ -255,7 +256,7 @@ def prepare(output: Path, dataset: dict, *, provider: dict | None = None, revali
             account=original.get("supplemental_account_id",original["prepared_id"])
             supplement_path=ledger.parent/"supplements"/account/"dispatch.sqlite"
             if not supplement_path.exists(): raise ValueError("previous_supplement_ledger_required")
-            with sqlite3.connect(supplement_path) as db:
+            with closing(sqlite3.connect(supplement_path)) as db, db:
                 prior=db.execute("SELECT * FROM dispatches ORDER BY operation").fetchall()
             if prior: raise ValueError("previous_supplement_must_be_preserved_unused")
             plan.update(supplemental_account_id=account,supplemental_previous_requests=0,
@@ -266,7 +267,7 @@ def prepare(output: Path, dataset: dict, *, provider: dict | None = None, revali
             extra_account=original.get("extra_supplemental_account_id",original["prepared_id"])
             extra_path=ledger.parent/"extra-supplements"/extra_account/"dispatch.sqlite"
             if not extra_path.exists(): raise ValueError("previous_extra_account_ledger_required")
-            with sqlite3.connect(extra_path) as db:
+            with closing(sqlite3.connect(extra_path)) as db, db:
                 extra_rows=db.execute("SELECT * FROM dispatches ORDER BY operation").fetchall()
             if extra_rows: raise ValueError("previous_extra_account_must_be_preserved_unused")
             plan.update(extra_supplemental_account_id=extra_account,extra_previous_requests=0,
@@ -275,7 +276,7 @@ def prepare(output: Path, dataset: dict, *, provider: dict | None = None, revali
                 continuation_account=original.get("continuation_account_id",original["prepared_id"])
                 continuation_path=ledger.parent/"continuations"/continuation_account/"dispatch.sqlite"
                 if not continuation_path.exists(): raise ValueError("previous_continuation_ledger_required")
-                with sqlite3.connect(continuation_path) as db:
+                with closing(sqlite3.connect(continuation_path)) as db, db:
                     continuation_rows=db.execute("SELECT * FROM dispatches ORDER BY operation").fetchall()
                 if continuation_rows: raise ValueError("previous_continuation_must_be_unused")
                 plan.update(continuation_account_id=continuation_account,continuation_previous_requests=0,

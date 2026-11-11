@@ -1,5 +1,6 @@
 """授权后固定语义评测；--rehearse只走真实SDK/合成HTTP，不能证明模型质量。"""
 from __future__ import annotations
+from contextlib import closing
 
 import argparse
 import asyncio
@@ -115,7 +116,7 @@ def validated_plan(path: Path, authorization: Path | None, *, rehearse=False):
             import sqlite3
             ledger=ROOT/"reports/multi-intent/live-budget"/value["phase_prepared_id"]/"dispatch.sqlite"
             if not ledger.exists(): raise ValueError("original_ledger_missing")
-            with sqlite3.connect(ledger) as db:
+            with closing(sqlite3.connect(ledger)) as db, db:
                 rows=db.execute("SELECT * FROM dispatches WHERE operation NOT LIKE ? ORDER BY operation",
                     (value["operation_prefix"]+"%",)).fetchall()
             if (len(rows)!=value["previous_requests"] or hashlib.sha256(json.dumps(rows,sort_keys=True).encode()).hexdigest()!=value["previous_rows_sha256"]):
@@ -128,7 +129,7 @@ def validated_plan(path: Path, authorization: Path | None, *, rehearse=False):
                     raise ValueError("supplemental_account_identity_invalid")
                 supplement_path=ledger.parent/"supplements"/account/"dispatch.sqlite"
                 if not supplement_path.exists(): raise ValueError("original_supplement_ledger_missing")
-                with sqlite3.connect(supplement_path) as db:
+                with closing(sqlite3.connect(supplement_path)) as db, db:
                     previous=db.execute("SELECT * FROM dispatches WHERE operation NOT LIKE ? ORDER BY operation",
                         (value["operation_prefix"]+"%",)).fetchall()
                 if (len(previous)!=value["supplemental_previous_requests"] or hashlib.sha256(
@@ -140,7 +141,7 @@ def validated_plan(path: Path, authorization: Path | None, *, rehearse=False):
                     raise ValueError("extra_account_identity_invalid")
                 extra_path=ledger.parent/"extra-supplements"/account/"dispatch.sqlite"
                 if not extra_path.exists(): raise ValueError("original_extra_ledger_missing")
-                with sqlite3.connect(extra_path) as db:
+                with closing(sqlite3.connect(extra_path)) as db, db:
                     previous=db.execute("SELECT * FROM dispatches WHERE operation NOT LIKE ? ORDER BY operation",
                         (value["operation_prefix"]+"%",)).fetchall()
                 if (len(previous)!=value["extra_previous_requests"] or hashlib.sha256(
@@ -152,7 +153,7 @@ def validated_plan(path: Path, authorization: Path | None, *, rehearse=False):
                         raise ValueError("continuation_identity_invalid")
                     path=ledger.parent/"continuations"/account/"dispatch.sqlite"
                     if not path.exists(): raise ValueError("original_continuation_ledger_missing")
-                    with sqlite3.connect(path) as db:
+                    with closing(sqlite3.connect(path)) as db, db:
                         previous=db.execute("SELECT * FROM dispatches WHERE operation NOT LIKE ? ORDER BY operation",
                             (value["operation_prefix"]+"%",)).fetchall()
                     if (len(previous)!=value["continuation_previous_requests"] or hashlib.sha256(

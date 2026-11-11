@@ -29,6 +29,9 @@ def api_case(case, directory, sources, *, install_model):
     try:
         generator = session_api.__wrapped__(directory, patch)
         client, factory, manager, redis, users = next(generator)
+        # Match production lifespan: load MCP dependencies before per-tool deadlines.
+        from app.agent.mcp_client import warmup_mcp_client
+        client.portal.call(warmup_mcp_client)
         selected = [dict(row) for row in sources['items'] if row['id'] in case['source_ids']]
         class FrozenKnowledge:
             def evidence_is_current(self, items):
@@ -91,6 +94,8 @@ def api_case(case, directory, sources, *, install_model):
         yield send, records
     finally:
         if graph is not None and client is not None and client.portal is not None:
+            from app.agent.mcp_client import shutdown_mcp_client
+            client.portal.call(shutdown_mcp_client)
             client.portal.call(graph.llm_service.close)
         if generator is not None:
             generator.close()

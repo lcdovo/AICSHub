@@ -8,6 +8,7 @@
 
 - 默认隔离回归：`python scripts/test_offline.py`
 - 启用配置链路的隔离回归：`python scripts/test_offline.py --profile active`
+- 全仓Linux回归测试镜像（含Git及SQLite测试依赖，禁止部署为业务服务）：`docker build --build-arg RUNTIME_IMAGE=实际固定业务镜像 -f scripts/Dockerfile.offline -t aicshub-offline-test .`。从Git工作区运行：`docker run --rm --network none -v "${PWD}:/workspace" aicshub-offline-test -q tests`；仅测试报告/临时目录写入工作区。生产镜像不负责提供Git测试环境。
 - 工作区与部署镜像的同版本验证：`python scripts/verify_offline_release.py`
 - 启动主栈：`./scripts/start.ps1 -SkipSeed`，会启动服务并执行迁移。
 - 停止服务：`./scripts/stop.ps1`，数据清理选项需单独授权。

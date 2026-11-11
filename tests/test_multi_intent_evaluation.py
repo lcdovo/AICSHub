@@ -1,5 +1,6 @@
 """冻结材料与授权入口测试；不会调用供应商或更改旧评测账本。"""
 import json
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -59,11 +60,11 @@ def test_resumed_complete_run_is_bounded_and_preserves_unknown_request(tmp_path)
     ledger=DispatchLedger(tmp_path/"dispatch.sqlite","same-phase",limits,operations)
     body=json.dumps({"max_tokens":500,"messages":[]}).encode()
     ledger.reserve("revision-v2/MI-02/bad",body)
-    with sqlite3.connect(ledger.path) as db: before=db.execute("SELECT * FROM dispatches").fetchall()
+    with closing(sqlite3.connect(ledger.path)) as db, db: before=db.execute("SELECT * FROM dispatches").fetchall()
     ledger.reserve("revision-v3/MI-02/bad",body)
     with pytest.raises(ValueError,match="operation_already_dispatched_no_retry"):
         ledger.reserve("revision-v2/MI-02/bad",body)
-    with sqlite3.connect(ledger.path) as db:
+    with closing(sqlite3.connect(ledger.path)) as db, db:
         assert db.execute("SELECT * FROM dispatches WHERE operation='revision-v2/MI-02/bad'").fetchall()==before
     assert ledger.snapshot()["requests"]==2 and ledger.snapshot()["usage_unknown_requests"]==2
 
@@ -124,7 +125,7 @@ def test_unknown_resume_binds_preserved_history_and_explicit_adjudication(tmp_pa
         for case in ("MI-01","MI-02"):
             for stage in ("understanding","good","bad"):
                 ledger.reserve(prefix+case+"/"+stage,body)
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db, db:
         db.execute("UPDATE dispatches SET status='http_complete' WHERE operation!='revision-v2/MI-02/bad'")
         db.commit()
         before=db.execute("SELECT * FROM dispatches ORDER BY operation").fetchall()
@@ -139,13 +140,13 @@ def test_unknown_resume_binds_preserved_history_and_explicit_adjudication(tmp_pa
     resumed=prepare(tmp_path/"approved",dataset,provider=provider,revalidate=prior,resume_counted_unknown=True)
     assert resumed["max_planned_new_requests"]==resumed["max_additional_requests"]==68
     assert resumed["unknown_dispatch_adjudication"]["usage_remains_unknown"]
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db, db:
         assert db.execute("SELECT * FROM dispatches ORDER BY operation").fetchall()==before
     assert resumed["preserved_operations"]==[row[0] for row in before]
     with pytest.raises(ValueError,match="unused_prefix"):
         prepare(tmp_path/"reuse",dataset,provider=provider,revalidate=prior,resume_counted_unknown=True,
                 continuation_prefix="revision-v2/")
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db, db:
         for index in range(4):
             db.execute("INSERT INTO dispatches VALUES (?, 1, 1, 'hash', 'unknown_dispatched', NULL, NULL, NULL)",
                        (f"diagnostic-v4/synthetic-{index}",))
@@ -170,11 +171,11 @@ def test_revalidation_reuses_original_ledger_without_resetting_rows(tmp_path):
     first=DispatchLedger(path,"original-phase",limits,operation_limits(dataset))
     body=json.dumps({"max_tokens":500,"messages":[]}).encode()
     first.reserve("MI-01/understanding",body)
-    with sqlite3.connect(path) as db: before=db.execute('SELECT * FROM dispatches').fetchone()
+    with closing(sqlite3.connect(path)) as db, db: before=db.execute('SELECT * FROM dispatches').fetchone()
     second=DispatchLedger(path,"original-phase",limits,operation_limits(dataset,"revision-v2/"))
     second.reserve("revision-v2/MI-01/understanding",body)
     assert second.snapshot()["requests"]==2
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db, db:
         assert db.execute("SELECT * FROM dispatches WHERE operation='MI-01/understanding'").fetchone()==before
     with pytest.raises(ValueError,match="authorization_changed"):
         DispatchLedger(path,"replacement-phase",limits,operation_limits(dataset,"revision-v2/"))
@@ -206,3 +207,32 @@ def test_segmented_carry_is_hash_bound_before_provider_initialization(tmp_path):
     path=tmp_path/'plan.json';path.write_text(json.dumps(value))
     with pytest.raises(ValueError,match='carried_evidence_changed'):
         validated_plan(path,None,rehearse=True)
+
+
+def test_revalidation_rejection_closes_ledger_connection(tmp_path, monkeypatch):
+    import sqlite3
+    from scripts.evaluate_multi_intent import prepare
+    from scripts.m5_live_budget import DispatchLedger
+    dataset=json.loads(DATA.read_bytes())
+    path=tmp_path/'reports/multi-intent/live-budget/original/dispatch.sqlite'
+    ledger=DispatchLedger(path,'original',
+        {'max_requests':80,'max_input_tokens':80*24576,'max_output_tokens':80*1024},
+        operation_limits(dataset))
+    ledger.reserve('MI-01/understanding',json.dumps({'max_tokens':500,'messages':[]}).encode())
+    original=tmp_path/'prior.json'
+    original.write_text(json.dumps({'prepared_id':'original'}),encoding='utf-8')
+    connections=[]
+    connect=sqlite3.connect
+    def capture(*args,**kwargs):
+        db=connect(*args,**kwargs)
+        connections.append(db)
+        return db
+    monkeypatch.setattr('scripts.evaluate_multi_intent.ROOT',tmp_path)
+    monkeypatch.setattr('scripts.test_provenance.snapshot_sources',lambda root:{'fingerprint':'frozen'})
+    monkeypatch.setattr(sqlite3,'connect',capture)
+    with pytest.raises(ValueError,match='unknown_dispatch_requires_adjudication'):
+        prepare(tmp_path/'unapproved',dataset,provider={},revalidate=original)
+    assert connections
+    for db in connections:
+        with pytest.raises(sqlite3.ProgrammingError,match='closed'):
+            db.execute('SELECT 1')

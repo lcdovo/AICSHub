@@ -1,0 +1,13 @@
+# Build separately; never deploy this test-only image as app/worker.
+ARG RUNTIME_IMAGE=ai-customer:latest
+FROM ${RUNTIME_IMAGE}
+USER root
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get -o Acquire::Retries=1 -o Acquire::https::Timeout=20 update \
+    && apt-get -o Acquire::Retries=1 -o Acquire::https::Timeout=20 install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+ARG AIOSQLITE_VERSION=0.20.0
+RUN pip install --no-cache-dir aiosqlite==${AIOSQLITE_VERSION} && pip check
+RUN git config --system --add safe.directory /workspace
+WORKDIR /workspace
+ENTRYPOINT ["python", "scripts/test_offline.py"]
