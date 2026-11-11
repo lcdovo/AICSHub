@@ -1,4 +1,5 @@
 """持久座席闸门串行化分配与容量判定；名册规则仍来自现有演示配置。"""
+from app.utils.utc_time import utc_now_db
 import uuid
 from datetime import datetime
 
@@ -70,7 +71,7 @@ async def assign_request(db: AsyncSession, actor: User, request_id: str, agent_i
         raise HTTPException(status_code=409, detail="座席当前不可分配")
     if type(agent.max_load) is not int or agent.max_load <= 0:
         raise HTTPException(status_code=409, detail="座席负载已满或容量无效")
-    now = datetime.utcnow()
+    now = utc_now_db()
     owner_id = item.user_id
     try:
         await reserve_capacity(db, agent)

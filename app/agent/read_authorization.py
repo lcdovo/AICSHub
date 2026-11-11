@@ -1,4 +1,5 @@
 """私有只读工具凭据：参数不能作为身份，调用时重新检查账号和角色。"""
+from app.utils.utc_time import utc_now
 from datetime import datetime, timedelta, timezone
 import uuid
 
@@ -27,7 +28,7 @@ def authorize_read(name: str, payload: dict, actor_id: int) -> str:
     if type(actor_id) is not int or actor_id <= 0:
         raise ValueError("Invalid actor")
     return jwt.encode({"purpose": name, "sub": str(actor_id), "request_hash": request_hash(payload),
-                       "exp": datetime.now(timezone.utc) + timedelta(minutes=2)},
+                       "exp": utc_now() + timedelta(minutes=2)},
                       settings.AUTH_SECRET_KEY, algorithm="HS256")
 
 

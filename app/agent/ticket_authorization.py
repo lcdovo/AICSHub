@@ -2,6 +2,7 @@
 
 凭据由工具节点签发，不接受模型提供；不能记录到Trace/工具历史或回复。
 """
+from app.utils.utc_time import utc_now
 import hashlib
 import json
 from datetime import datetime, timedelta, timezone
@@ -37,7 +38,7 @@ def authorize_ticket_update(payload: dict, actor_id: int) -> str:
         raise ValueError("Invalid actor")
     return jwt.encode({"purpose": "update_ticket_status", "sub": str(actor_id),
                        "request_hash": request_hash(payload),
-                       "exp": datetime.now(timezone.utc) + timedelta(minutes=2)},
+                       "exp": utc_now() + timedelta(minutes=2)},
                       settings.AUTH_SECRET_KEY, algorithm="HS256")
 
 
@@ -71,7 +72,7 @@ def authorize_ticket(payload: dict, message_id: int, actor_id: int | None = None
     return jwt.encode({
         "purpose": "create_ticket", "sub": str(payload["user_id"]), "message_id": message_id,
         "actor_id": actor_id,
-        "request_hash": request_hash(payload), "exp": datetime.now(timezone.utc) + timedelta(minutes=2),
+        "request_hash": request_hash(payload), "exp": utc_now() + timedelta(minutes=2),
     }, settings.AUTH_SECRET_KEY, algorithm="HS256")
 
 

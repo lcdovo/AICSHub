@@ -1,4 +1,5 @@
 """M1退款预览/确认/审核领域服务；所有结果均为模拟，不调用支付。"""
+from app.utils.utc_time import utc_now_db
 import hashlib
 import uuid
 from datetime import datetime, timedelta
@@ -33,7 +34,7 @@ class RefundActionCoordinator:
         async with factory() as db:
             return int(await db.scalar(select(func.count()).select_from(RefundAction).where(
                 RefundAction.user_id == user_id, RefundAction.session_id == session_id,
-                RefundAction.status == "pending", RefundAction.expires_at > datetime.utcnow(),
+                RefundAction.status == "pending", RefundAction.expires_at > utc_now_db(),
             )) or 0)
 
 
@@ -96,7 +97,7 @@ async def qualification(db: AsyncSession, owner_id: int, order_id: str, *, exclu
     total = Decimal(str(order.total_amount))
     if not total.is_finite() or total <= 0 or order.currency != "CNY":
         raise HTTPException(409, "订单金额或币种不支持模拟全额申请")
-    if order.received_at and (order.received_at > datetime.utcnow() or datetime.utcnow() > order.received_at + timedelta(days=7)):
+    if order.received_at and (order.received_at > utc_now_db() or utc_now_db() > order.received_at + timedelta(days=7)):
         raise HTTPException(409, "订单签收时间无效或已超过7天期限")
     rows = (await db.execute(select(RefundApplication).where(
         RefundApplication.order_id == order_id, RefundApplication.user_id == owner_id,
@@ -162,7 +163,7 @@ async def prepare(factory: async_sessionmaker[AsyncSession], actor_id: int, payl
         item.preconditions = list(checks)
         item.order_id, item.type, item.reason = order.order_id, payload["type"], payload["reason"]
         item.amount, item.currency, item.status = total, order.currency, "pending"
-        item.expires_at = datetime.utcnow() + timedelta(seconds=settings.REFUND_ACTION_TTL_SECONDS)
+        item.expires_at = utc_now_db() + timedelta(seconds=settings.REFUND_ACTION_TTL_SECONDS)
         db.add(OperationAudit(operation="prepare_refund", idempotency_key=f"refund-preview:{item.id}:{item.version}",
                               user_id=item.user_id, resource_id=item.id,
                               request_payload={"actor_id": actor_id, "owner_id": item.user_id},
@@ -213,7 +214,7 @@ async def resolve_action(db: AsyncSession, payload: dict[str, Any], actor_id: in
         raise HTTPException(409, "提交参数与预览不一致，请重新预览")
     if item.status == "submitted":
         return item
-    if item.status != "pending" or item.expires_at <= datetime.utcnow():
+    if item.status != "pending" or item.expires_at <= utc_now_db():
         raise HTTPException(409, "退款预览已取消或到期，请重新预览")
     return item
 
@@ -240,7 +241,7 @@ async def review(factory: async_sessionmaker[AsyncSession], actor_id: int, appli
                 raise HTTPException(409, "缺少签收时间，不能批准申请")
             if remaining < item.amount or total != item.amount:
                 raise HTTPException(409, "订单金额或剩余额度已变化，不能批准")
-        item.status, item.review_note, item.reviewed_at = decision, note, datetime.utcnow()
+        item.status, item.review_note, item.reviewed_at = decision, note, utc_now_db()
         db.add(OperationAudit(operation="review_refund", idempotency_key=f"refund-review:{item.id}", user_id=item.user_id,
                               resource_id=item.id, request_payload={"actor_id": actor_id, "decision": decision, "note": note},
                               result_payload={"status": decision, "is_simulated": True, "paid": False}))

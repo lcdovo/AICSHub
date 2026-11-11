@@ -2,6 +2,7 @@
 Agent 状态定义 - 定义 Agent 在执行过程中需要追踪的所有状态
 """
 
+from app.utils.utc_time import utc_now
 from typing import Any, List, Dict, Optional
 from pydantic import BaseModel, Field
 from copy import deepcopy
@@ -539,7 +540,7 @@ class AgentState(BaseModel):
             {
                 "role": "user",
                 "content": message,
-                "timestamp": datetime.now().isoformat(timespec="milliseconds"),
+                "timestamp": utc_now().isoformat(timespec="milliseconds"),
             }
         )
         return state
@@ -558,7 +559,7 @@ class AgentState(BaseModel):
                 "input": input_data,
                 "output": output_data,
                 "duration_ms": duration_ms,
-                "timestamp": __import__("datetime").datetime.now().isoformat(),
+                "timestamp": utc_now().isoformat(),
             }
         )
 

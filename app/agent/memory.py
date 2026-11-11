@@ -17,6 +17,7 @@ RedisCheckpointSaver 负责（key 前缀 agent_ckpt:*）。两者 key 空间隔�
 - 分布式锁防止并发状态覆盖
 - 压缩时保留槽位快照（长对话槽位不丢失）
 """
+from app.utils.utc_time import utc_now
 import asyncio
 import contextlib
 import uuid
@@ -365,7 +366,7 @@ class SessionManager:
             "content": f"[对话摘要] {summary}",
             "type": "summary",
             "message_count": len(older),
-            "generated_at": datetime.now().isoformat(timespec="milliseconds"),
+            "generated_at": utc_now().isoformat(timespec="milliseconds"),
         }
 
         state.messages = [summary_msg] + recent
@@ -451,7 +452,7 @@ class SessionManager:
     def _summarize_messages(self, messages: List[Dict[str, Any]]) -> ConversationSummary:
         summary = ConversationSummary()
         summary.message_count = len(messages)
-        summary.created_at = datetime.now().isoformat(timespec="milliseconds")
+        summary.created_at = utc_now().isoformat(timespec="milliseconds")
 
         user_messages = [m for m in messages if m.get("role") == "user"]
         assistant_messages = [m for m in messages if m.get("role") == "assistant"]
@@ -561,7 +562,7 @@ class SessionManager:
             "user_emotion": state.user_emotion,
             "total_tokens": state.total_tokens,
             "conversation_summary": state.conversation_summary,
-            "created_at": datetime.now().isoformat(timespec="milliseconds"),
+            "created_at": utc_now().isoformat(timespec="milliseconds"),
         }
 
     def _deserialize_state(self, data: Dict[str, Any]) -> AgentState:

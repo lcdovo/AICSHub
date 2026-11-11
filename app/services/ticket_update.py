@@ -1,4 +1,5 @@
 """工单更新共享事务：管理员授权、既有状态机、CAS与操作回执。"""
+from app.utils.utc_time import utc_now_db
 import hashlib
 import json
 import uuid
@@ -73,7 +74,7 @@ async def update_ticket(
     original = {field: getattr(ticket, field) for field in (
         "status", "priority", "assigned_to", "resolution", "resolved_at", "updated_at", "user_id"
     )}
-    values: dict[str, Any] = {"updated_at": datetime.utcnow()}
+    values: dict[str, Any] = {"updated_at": utc_now_db()}
     if changes.get("status"):
         try:
             target = TicketStatus(changes["status"])
@@ -83,7 +84,7 @@ async def update_ticket(
             raise HTTPException(status_code=409, detail=f"不允许从 {old_status.value} 转换到 {target.value}")
         values["status"] = target
         if target in {TicketStatus.RESOLVED, TicketStatus.CLOSED}:
-            values["resolved_at"] = datetime.utcnow()
+            values["resolved_at"] = utc_now_db()
     if changes.get("priority"):
         try:
             values["priority"] = TicketPriority(changes["priority"])

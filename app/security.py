@@ -11,6 +11,7 @@ import time
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
+from app.utils.utc_time import utc_now_db, utc_now
 from typing import Callable
 
 import jwt
@@ -59,7 +60,7 @@ def verify_password(password: str, encoded: str | None) -> bool:
 
 
 def _encode_token(user: User, token_type: str, expires_delta: timedelta, token_id: str | None = None) -> str:
-    now = datetime.now(timezone.utc)
+    now = utc_now()
     payload = {
         "sub": str(user.id),
         "type": token_type,
@@ -82,7 +83,7 @@ def token_digest(token: str) -> str:
 
 async def issue_refresh_token(db: AsyncSession, user: User) -> tuple[str, RefreshToken]:
     token_id = str(uuid.uuid4())
-    expires_at = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expires_at = utc_now_db() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     token = _encode_token(user, "refresh", timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS), token_id)
     record = RefreshToken(
         id=token_id,

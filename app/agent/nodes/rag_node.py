@@ -131,9 +131,19 @@ async def retrieve_evidence(dependencies: RetrievalDependencies, state: AgentSta
     else:
         state.set_flow(rag_grounded=True)
 
+    sources = [
+        {
+            "id": item.get("id"),
+            "title": str(item.get("title") or "")[:80],
+            "score": item.get("final_score", item.get("hybrid_score")),
+        }
+        for item in search_result.get("results", [])[:3]
+    ]
     logger.info(
-        f"混合检索完成: {len(search_result.get('results', []))} 条结果, "
-        f"耗时 {search_result.get('execution_time_ms', 0)}ms"
+        "混合检索完成: %s 条结果, 耗时 %sms, sources=%s",
+        len(search_result.get("results", [])),
+        search_result.get("execution_time_ms", 0),
+        sources,
     )
     state.record_stage_timing("rag_retrieval", (time.perf_counter() - started) * 1000)
 

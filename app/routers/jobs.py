@@ -1,4 +1,5 @@
 """任务管理只暴露引用/固定错误码，重试与通知查询均执行资源权限。"""
+from app.utils.utc_time import utc_now_db
 from datetime import datetime
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
@@ -28,7 +29,7 @@ async def retry(job_id: str, db: AsyncSession=Depends(get_db), actor: User=Depen
     job=await db.scalar(select(BackgroundJob).where(BackgroundJob.id==job_id).with_for_update())
     if job is None: raise HTTPException(404,"任务不存在")
     if job.status != "failed": raise HTTPException(409,"只有失败任务可重试")
-    job.status,job.attempts,job.next_run="queued",0,datetime.utcnow()
+    job.status,job.attempts,job.next_run="queued",0,utc_now_db()
     job.lease_token,job.lease_expires_at=None,None
     db.add(OperationAudit(operation="retry_job",idempotency_key="job-retry:"+uuid.uuid4().hex,
         user_id=job.user_id,resource_id=job.id,request_payload={"actor_id":actor.id,"owner_id":job.user_id},

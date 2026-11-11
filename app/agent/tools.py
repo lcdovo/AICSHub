@@ -3,6 +3,7 @@
 实现订单查询、工单创建、退换货申请等8个结构化工具
 支持重试机制、参数校验、错误处理、执行追踪
 """
+from app.utils.utc_time import utc_now_db
 import uuid as uuid  # 保留既有故障注入接口，验证失败时不会构造回执ID。
 import asyncio
 import time
@@ -243,7 +244,7 @@ class QueryOrderTool(BaseTool):
                 }
                 deadline = order_row.received_at + timedelta(days=7) if order_row.received_at else None
                 can_refund = (order_row.status_code in {"shipped", "delivered", "completed"}
-                              and deadline is not None and order_row.received_at <= datetime.utcnow() <= deadline)
+                              and deadline is not None and order_row.received_at <= utc_now_db() <= deadline)
                 return {
                     "success": True, "data": order, "can_refund": can_refund,
                     "refund_deadline": deadline.isoformat() if deadline else None,

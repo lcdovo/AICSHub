@@ -1,6 +1,7 @@
 """
 统计分析与监控 API - Phase 4 实现
 """
+from app.utils.utc_time import utc_now_db
 from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import PlainTextResponse
 from typing import Optional
@@ -106,7 +107,7 @@ async def get_evaluation_stats(
 
     query = select(EvaluationResult)
     if hours:
-        query = query.where(EvaluationResult.created_at >= datetime.utcnow() - timedelta(hours=hours))
+        query = query.where(EvaluationResult.created_at >= utc_now_db() - timedelta(hours=hours))
     if model:
         query = query.where(EvaluationResult.model_name == model)
     if intent:
@@ -182,7 +183,7 @@ async def resolve_low_score_sample(
     success = False
     if row:
         row.processed = True
-        row.processed_at = datetime.utcnow()
+        row.processed_at = utc_now_db()
         row.processing_action = action
         row.processing_note = note
         await db.commit()

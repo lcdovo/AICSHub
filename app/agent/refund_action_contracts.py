@@ -1,5 +1,6 @@
 """领域动作回执的展示快照；显示核验不替代SQL资格、确认和幂等。"""
 
+from app.utils.utc_time import utc_now
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal
@@ -37,7 +38,7 @@ class RefundActionView(BaseModel):
         return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
     def is_pending(self) -> bool:
-        return self.status == "pending" and self.expiry() > datetime.now(timezone.utc)
+        return self.status == "pending" and self.expiry() > utc_now()
 
     def matches(self, preview: RefundPreview | None) -> bool:
         return bool(preview and self.action_id == preview.action_id and self.version == preview.action_version

@@ -1,4 +1,5 @@
 """退款登记内部凭据：仅绑定当前明确确认轮次及精确提交参数。"""
+from app.utils.utc_time import utc_now
 from datetime import datetime, timedelta, timezone
 import re
 from typing import Literal
@@ -73,7 +74,7 @@ def authorize_refund(payload: dict, message_id: int, actor_id: int | None = None
     actor_id = payload["user_id"] if actor_id is None else actor_id
     return jwt.encode({"purpose": "apply_refund", "sub": str(payload["user_id"]), "actor_id": actor_id,
                        "message_id": message_id, "request_hash": request_hash(payload),
-                       "exp": datetime.now(timezone.utc) + timedelta(minutes=2)},
+                       "exp": utc_now() + timedelta(minutes=2)},
                       settings.AUTH_SECRET_KEY, algorithm="HS256")
 
 

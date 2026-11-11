@@ -1,6 +1,10 @@
 # Docker 部署
 
-> 2026-11-07当前本机已迁移0013，默认主栈包含常驻业务worker，API/Worker使用同一镜像与Redis本地模型准入。迁移顺序、备份、容器回归及真实冒烟见[当前部署收口](RELIABILITY-ROLLOUT-20261107.md)。以下分阶段“尚未迁移”陈述为当时记录；不能覆盖此后实查状态。
+> **当前快照（2026-11-11）：**本机API与Worker运行同一镜像，容器健康，数据库迁移为0013。Judge v2/JSON、model理解、任务循环和多意图逐项在当前实例配置中开启。配置及快照证据见[配置来源与当前运行快照](CONFIGURATION.md)；历史文档中的“未部署/未启用”只描述其记录日期对应的阶段。
+
+### 时间戳约定
+
+运行时/API/序列化时间统一通过 `app.utils.utc_time.utc_now()` 生成带时区 UTC 值。现有数据库列仍是 `DateTime(timezone=False)`，写入与比较使用 `utc_now_db()`，明确保存 naive UTC；不要在未完成数据库迁移和历史数据校准前把两种类型直接混比。`scripts/test_offline.py` 将运行工作目录与 pytest `basetemp` 分开放在 `.local/offline-test-runs/`。2026-11-11 全量回归未通过，报告 **19 项失败**：1 项网关测试中的动态导入调用被本轮迁移误改（已还原，定向复验通过），其余 18 项集中在退款事项端到端断言；没有在还原后重跑全量，因此不能把18项写成当前全量失败数或通过结论。选择器与 pytest 选项分流已修正，并分别验证了 `-k` 单独使用及与测试路径并用；本次不以完整套件通过作为验收结论。
 
 本地模型`LOCAL_MODEL_COORDINATOR=batch`是默认关闭的单进程实验候选，不能与其他API/Job进程共用同一模型资源并声称全局限流；WORKERS大于1时拒绝。仅隔离候选测试启用，不修改业务`.env`，不在在途执行时热切配置。Embedding微批与重排独立通道的原5秒截止保持，完整压力延迟仍FAIL；运行与回退记录见[M5-CROSS-REQUEST-BATCH-v1.md](M5-CROSS-REQUEST-BATCH-v1.md)。
 
@@ -96,7 +100,7 @@ Embedding批量2、导入HTTP时限90秒（检索调用仍有独立5秒外层边
 
 业务显式LLM_GATEWAY_ENABLED=true，REQUEST_UNDERSTANDING_MODE=rules，percentage=0；M4未过门槛时保持此模式。新环境默认网关false为兼容开关，不能宣称已有SQL预算保证；启用前先迁移。旧实例/未升级进程不在新SQL网关并发保证范围。账号实际扣费尚未对账，LLM_PRICE_VERIFIED=false。
 
-Judge契约候选开关LLM_JUDGE_CONTRACT_VERSION默认v1。v2仅完成离线契约/SDK替身验证，真实供应商兼容/质量/成本尚未验收；不能据单元测试自动改业务.env启用。缓存key已区分版本及审查prompt/schema，升级后旧策略缓存不复用。见M5-JUDGE-CONTRACT-v2.md。
+Judge契约默认值仍是v1；本机当前实例显式运行v2与`json_object`，见[当前配置快照](CONFIGURATION.md)。本段有关“仅离线验证、未启用”的文字是早期部署记录，保留其阶段性证据边界，不表示当前开关状态或完整语义准入结论。缓存key按契约及审查prompt/schema隔离，背景设计见M5-JUDGE-CONTRACT-v2.md。
 
 
 ## RAG结构索引升级（2026-11-07）
@@ -110,9 +114,9 @@ Judge契约候选开关LLM_JUDGE_CONTRACT_VERSION默认v1。v2仅完成离线契
 开关默认false。启用要求REQUEST_UNDERSTANDING_MODE=model、LLM_GATEWAY_ENABLED=true、AGENT_TASK_MAX_OUTPUT_TOKENS不超过LLM_MAX_TOKENS。默认3次决策/4次能力/20秒调度阶段/256决策输出tokens，仍共享整Run网关预算。需先按[验收文档](AGENT-TASK-LOOP-ACCEPTANCE-v1.md)完成真实模型和运行验收；原请求理解通过不能替代新任务准入。
 > 2026-11-07 本机已切换最新16节点Agent及0012迁移，任务循环和模拟退款预览开启；24份发布文档采用structured-source-v2/context-document-v2新索引。Embedding和同模型float32重排使用GPU，Embedding批量1，单Run模型费用预留上限0.2美元，Langfuse未运行故关闭上报。备份、恢复演练、清理与验证见 [统一升级记录](LATEST-ROLLOUT-20261107.md)。这些是本机配置，不自动作为其他主机或生产容量建议。
 
-后续Agent可靠性开发新增0013_agent_reliability（agent_capability_calls独立执行账本）。切换该版本前须备份并先迁移到0013，再一并升级API及Run恢复Worker；旧表、原回执和知识索引不清理。当前业务未应用此迁移或切换镜像，离线验证与限制见[Agent可靠性优化](AGENT-RELIABILITY-v1.md)。
+后续Agent可靠性开发新增0013_agent_reliability（agent_capability_calls独立执行账本）。本段“切换前”及“当前业务未应用”的判断是该阶段的历史部署准备记录；2026-11-11本机已运行0013，当前API/Worker镜像与状态见[配置快照](CONFIGURATION.md)。旧表、原回执和知识索引不清理；实现离线验证与限制见[Agent可靠性优化](AGENT-RELIABILITY-v1.md)。
 
 
 ### 2026-11-08 最小降级优化发布v2
 
-本机API/Worker目前运行ai-customer:degradation-opt-v2-20261108（20f856b0…），仅8文件覆盖旧d8镜像。其余工作区候选未部署。使用reports/optimization-release-v2/private/candidate-exact.yml和rollback-exact.yml做精确切换，文件含凭据不得输出/提交；不要用latest或普通Compose推定候选。业务配置/SQL0013/数据卷不变，实际回滚演练已执行；九服务healthy。性能先导批次在Judge unknown处停止，各意图仅6-7样本，不代表完整准入。详见OPTIMIZATION-RELEASE-20261108.md。
+截至2026-11-08的部署记录：本机API/Worker运行ai-customer:degradation-opt-v2-20261108（20f856b0…），仅8文件覆盖旧d8镜像。其余工作区候选未部署。使用reports/optimization-release-v2/private/candidate-exact.yml和rollback-exact.yml做精确切换，文件含凭据不得输出/提交；不要用latest或普通Compose推定候选。业务配置/SQL0013/数据卷不变，实际回滚演练已执行；当时九服务healthy。性能先导批次在Judge unknown处停止，各意图仅6-7样本，不代表完整准入。此处运行镜像描述为历史快照；当前配置见[配置来源与当前运行快照](CONFIGURATION.md)。详见OPTIMIZATION-RELEASE-20261108.md。

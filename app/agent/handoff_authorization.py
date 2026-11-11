@@ -1,5 +1,6 @@
 """人工请求的内部轮次凭据，与工单凭据隔离用途。"""
 from datetime import datetime, timedelta, timezone
+from app.utils.utc_time import utc_now
 from typing import Literal
 
 import jwt
@@ -27,7 +28,7 @@ def authorize_handoff(payload: dict, message_id: int, actor_id: int | None = Non
         raise ValueError("Invalid actor")
     return jwt.encode({"purpose": "request_handoff", "sub": str(payload["user_id"]),
                        "actor_id": actor_id, "message_id": message_id, "request_hash": request_hash(payload),
-                       "exp": datetime.now(timezone.utc) + timedelta(minutes=2)},
+                       "exp": utc_now() + timedelta(minutes=2)},
                       settings.AUTH_SECRET_KEY, algorithm="HS256")
 
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from app.utils.utc_time import utc_now
 import logging
 from typing import TYPE_CHECKING
 
@@ -141,7 +142,7 @@ async def publish_answer(context: ResponseContext, state: AgentState, draft: Ans
 
     state.messages.append({"role": "assistant", "content": state.reply, "intent": state.detected_intent,
         "tool_calls": [call.tool_name for call in state.tool_calls],
-        "timestamp": datetime.now().isoformat(timespec="milliseconds")})
+        "timestamp": utc_now().isoformat(timespec="milliseconds")})
     from app.agent.stream_context import stream_event_queue
     queue = stream_event_queue.get()
     if queue is not None:

@@ -1,5 +1,6 @@
 """M3幂等索引阶段；外部写只写不可变version的chunkID，发布由SQL最终fence控制。"""
 
+from app.utils.utc_time import utc_now_db
 from datetime import datetime, timedelta
 from contextlib import nullcontext
 from app.config.config import settings
@@ -24,9 +25,9 @@ def owned(db, jid: str, token: str) -> BackgroundJob:
             BackgroundJob.id == jid,
             BackgroundJob.status == "running",
             BackgroundJob.lease_token == token,
-            BackgroundJob.lease_expires_at > datetime.utcnow(),
+            BackgroundJob.lease_expires_at > utc_now_db(),
         )
-        .values(updated_at=datetime.utcnow())
+        .values(updated_at=utc_now_db())
     )
     if result.rowcount != 1:
         raise RuntimeError("job_lease_lost")
@@ -60,7 +61,7 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
                 raise ValueError("index_policy_version_unsupported")
             version.chunk_policy = CHUNK_POLICY_VERSION
             title, keywords = version.title, version.keywords or []
-            job.lease_expires_at = datetime.utcnow() + timedelta(seconds=120)
+            job.lease_expires_at = utc_now_db() + timedelta(seconds=120)
             content, vid, number, did = (
                 version.content,
                 version.id,
@@ -80,7 +81,7 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
         for offset in range(0, len(chunks), max(1, settings.EMBEDDING_BATCH_SIZE)):
             with repository.transaction() as db:
                 current = owned(db, jid, token)
-                current.lease_expires_at = datetime.utcnow() + timedelta(seconds=120)
+                current.lease_expires_at = utc_now_db() + timedelta(seconds=120)
             from app.services.local_inference import inference_scope
             from app.services.local_admission import request_scope, uses_local_models
             with inference_scope(priority="background"):
@@ -179,7 +180,7 @@ def index_job(repository, embedding, vector_store, jid: str, token: str) -> None
                     "failed" if exhausted else "draft", "local_model_busy" if not exhausted else "attempts_exhausted")
                 job.status = "failed" if exhausted else "retrying"
                 job.last_error = version.error_code
-                job.next_run = datetime.utcnow() + timedelta(seconds=min(60, 2 ** job.attempts))
+                job.next_run = utc_now_db() + timedelta(seconds=min(60, 2 ** job.attempts))
                 job.lease_token, job.lease_expires_at = None, None
                 return
             version.status, version.error_code = (

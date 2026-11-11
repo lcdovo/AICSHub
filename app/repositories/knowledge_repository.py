@@ -1,6 +1,7 @@
 """SQLAlchemy知识事实仓储；同步仅在线程/独立worker使用，SQL为发布过滤事实源。"""
 
 from __future__ import annotations
+from app.utils.utc_time import utc_now_db
 from contextlib import contextmanager
 from typing import Iterator
 from datetime import datetime
@@ -209,7 +210,7 @@ class KnowledgeRepository:
                     KnowledgeDoc.version == expected,
                     KnowledgeDoc.deleted_at.is_(None),
                 )
-                .values(updated_at=datetime.utcnow())
+                .values(updated_at=utc_now_db())
             )
             if owned.rowcount != 1:
                 raise KnowledgeConflict("document_version_conflict")
@@ -255,7 +256,7 @@ class KnowledgeRepository:
                 update(KnowledgeDoc)
                 .where(KnowledgeDoc.id == doc.id)
                 .values(
-                    deleted_at=datetime.utcnow(),
+                    deleted_at=utc_now_db(),
                     is_published=False,
                     published_version=None,
                     lifecycle_status="archived",
@@ -375,7 +376,7 @@ class KnowledgeRepository:
                 update(KnowledgeDoc)
                 .where(KnowledgeDoc.deleted_at.is_(None))
                 .values(
-                    deleted_at=datetime.utcnow(),
+                    deleted_at=utc_now_db(),
                     is_published=False,
                     published_version=None,
                     lifecycle_status="archived",

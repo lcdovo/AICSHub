@@ -1,4 +1,5 @@
 """与聊天最终提交共事务的任务CAS；恢复只取提示，绝不重跑旧工具或旧写。"""
+from app.utils.utc_time import utc_now_db
 from datetime import datetime, timedelta
 import uuid
 
@@ -13,7 +14,7 @@ async def load_pending_task(db: AsyncSession, user_id: int, session_id: str) -> 
     row = await db.scalar(select(AgentTask).where(
         AgentTask.user_id == user_id, AgentTask.session_id == session_id,
         AgentTask.status.in_(["waiting_input", "waiting_confirmation"]),
-        AgentTask.updated_at >= datetime.utcnow() - timedelta(hours=24),
+        AgentTask.updated_at >= utc_now_db() - timedelta(hours=24),
     ).order_by(AgentTask.updated_at.desc()).limit(1))
     if row is None:
         return None
@@ -34,7 +35,7 @@ async def persist_task(db: AsyncSession, state) -> None:
         await db.execute(update(AgentTask).where(AgentTask.id == state.superseded_task_id,
             AgentTask.user_id == state.user_id, AgentTask.session_id == state.session_id,
             AgentTask.status.in_(["waiting_input", "waiting_confirmation"])).values(
-                status="stopped", updated_at=datetime.utcnow(), version=AgentTask.version + 1))
+                status="stopped", updated_at=utc_now_db(), version=AgentTask.version + 1))
     if state.task is None:
         return
     task = state.task
@@ -45,7 +46,7 @@ async def persist_task(db: AsyncSession, state) -> None:
     if task.status == "waiting_confirmation":
         action = await db.get(RefundAction, task.action_id) if task.action_id else None
         if (action is not None and action.user_id == task.user_id and action.session_id == task.session_id
-                and (action.status in {"submitted", "cancelled"} or action.expires_at <= datetime.utcnow())):
+                and (action.status in {"submitted", "cancelled"} or action.expires_at <= utc_now_db())):
             status = "completed" if action.status == "submitted" else "cancelled" if action.status == "cancelled" else "stopped"
             task = task.model_copy(update={"status": status, "waiting_for": None,
                                           "stop_reason": "confirmation_" + action.status})
@@ -64,7 +65,7 @@ async def persist_task(db: AsyncSession, state) -> None:
         return
     proposed = task.model_copy(update={"version": task.version + 1})
     values = {"progress": proposed.model_dump(), "version": proposed.version,
-              "status": proposed.status, "last_run_id": state.run_id, "updated_at": datetime.utcnow()}
+              "status": proposed.status, "last_run_id": state.run_id, "updated_at": utc_now_db()}
     if task.version == 0:
         db.add(AgentTask(id=task.task_id, user_id=task.user_id, actor_id=task.actor_id,
                          session_id=task.session_id, **values))

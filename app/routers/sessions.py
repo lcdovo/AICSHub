@@ -1,3 +1,4 @@
+from app.utils.utc_time import utc_now_db
 from datetime import datetime
 from typing import List, Optional
 
@@ -111,7 +112,7 @@ async def close_session(
     ensure_owner_or_admin(current_user, session.user_id)
 
     session.status = SessionStatus.CLOSED
-    session.closed_at = datetime.utcnow()
+    session.closed_at = utc_now_db()
     session.version += 1
     session.lease_token, session.lease_expires_at = None, None
     await db.commit()

@@ -4,6 +4,7 @@
 外部供应商路径都可以复用同一套约束。
 """
 from __future__ import annotations
+from app.utils.utc_time import utc_now
 
 import hashlib
 import json
@@ -126,7 +127,7 @@ class BudgetManager:
 
     @staticmethod
     def _day() -> str:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        return utc_now().strftime("%Y-%m-%d")
 
     def _redis_key(self, user_id: int | str) -> str:
         return f"{self.REDIS_PREFIX}:{user_id}:{self._day()}"

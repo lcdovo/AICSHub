@@ -1,4 +1,5 @@
 """Run租约保护的能力派发账本；中断只恢复目标和对账线索，不重放写操作。"""
+from app.utils.utc_time import utc_now_db
 from contextvars import ContextVar
 from datetime import datetime
 import hashlib
@@ -27,7 +28,7 @@ class CapabilityJournal:
         from app.agent.memory import SessionLeaseError
         run = await db.get(ChatRun, self.run_id)
         if (run is None or run.status != "running" or run.lease_token != self.token
-                or not run.lease_expires_at or run.lease_expires_at <= datetime.utcnow()):
+                or not run.lease_expires_at or run.lease_expires_at <= utc_now_db()):
             raise SessionLeaseError("能力调用所属Run租约已失效")
         await assert_fence(db, run, self.token, self.version)
         return run
@@ -71,7 +72,7 @@ class CapabilityJournal:
             changed = await db.execute(update(AgentCapabilityCall).where(AgentCapabilityCall.id == call_id,
                 AgentCapabilityCall.run_id == self.run_id, AgentCapabilityCall.status == "running").values(
                     status=status, result_digest=digest(result), error_code=error,
-                    **({"resource_id": resource_id} if resource_id else {}), finished_at=datetime.utcnow()))
+                    **({"resource_id": resource_id} if resource_id else {}), finished_at=utc_now_db()))
             if changed.rowcount != 1:
                 raise ValueError("capability_receipt_already_recorded")
             await db.commit()
@@ -84,7 +85,7 @@ async def settle_open_calls(db: AsyncSession, run: ChatRun) -> None:
         AgentCapabilityCall.user_id == run.user_id, AgentCapabilityCall.actor_id == run.actor_id,
         AgentCapabilityCall.session_id == run.session_id, AgentCapabilityCall.status == "running").values(
             status=case((AgentCapabilityCall.effect == "write", "unknown"), else_="failed"),
-            error_code="capability_interrupted", finished_at=datetime.utcnow()))
+            error_code="capability_interrupted", finished_at=utc_now_db()))
 
 
 async def recover_calls(db: AsyncSession, run: ChatRun) -> dict:
@@ -109,13 +110,13 @@ async def recover_calls(db: AsyncSession, run: ChatRun) -> dict:
             if (action and action.user_id == run.user_id and action.actor_id == run.actor_id
                     and action.session_id == run.session_id):
                 row.resource_id, row.status, row.error_code = action.id, "succeeded", None
-                row.finished_at = row.finished_at or datetime.utcnow()
+                row.finished_at = row.finished_at or utc_now_db()
                 run.action_id = action.id
-                if action.status == "pending" and action.expires_at > datetime.utcnow():
+                if action.status == "pending" and action.expires_at > utc_now_db():
                     previews[row.task_id] = action.id
         if row.status == "running":
             row.status = "unknown" if row.effect == "write" else "failed"
-            row.error_code, row.finished_at = "run_interrupted", datetime.utcnow()
+            row.error_code, row.finished_at = "run_interrupted", utc_now_db()
         unknown_write |= row.effect == "write" and row.status == "unknown"
         if row.task_id and row.task_progress:
             try:
@@ -139,7 +140,7 @@ async def recover_calls(db: AsyncSession, run: ChatRun) -> dict:
             "version": (persisted.version if persisted else 0) + 1})
         if persisted:
             persisted.progress, persisted.status, persisted.version = value.model_dump(), value.status, value.version
-            persisted.last_run_id, persisted.updated_at = run.id, datetime.utcnow()
+            persisted.last_run_id, persisted.updated_at = run.id, utc_now_db()
         else:
             db.add(AgentTask(id=task_id, user_id=run.user_id, actor_id=run.actor_id, session_id=run.session_id,
                 last_run_id=run.id, progress=value.model_dump(), status=value.status, version=value.version))

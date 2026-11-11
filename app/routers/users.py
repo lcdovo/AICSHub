@@ -1,3 +1,4 @@
+from app.utils.utc_time import utc_now_db
 from datetime import datetime
 from typing import Optional
 
@@ -60,7 +61,7 @@ async def refresh_token(request: RefreshRequest, db: AsyncSession = Depends(get_
     payload = decode_token(request.refresh_token, "refresh")
     result = await db.execute(select(RefreshToken).where(RefreshToken.token_hash == token_digest(request.refresh_token)))
     stored = result.scalar_one_or_none()
-    now = datetime.utcnow()
+    now = utc_now_db()
     if not stored or stored.revoked_at or stored.expires_at <= now or str(payload.get("sub")) != str(stored.user_id):
         raise HTTPException(status_code=401, detail="Refresh Token 无效或已撤销")
     user = await user_for_token(payload, db)
@@ -78,7 +79,7 @@ async def logout(request: LogoutRequest | None = Body(default=None), current_use
         result = await db.execute(select(RefreshToken).where(RefreshToken.token_hash == token_digest(request.refresh_token), RefreshToken.user_id == current_user.id))
         stored = result.scalar_one_or_none()
         if stored and not stored.revoked_at:
-            stored.revoked_at = datetime.utcnow()
+            stored.revoked_at = utc_now_db()
     current_user.token_version += 1
     await db.commit()
     return APIResponse(code=0, message="已退出登录", data=None)
@@ -131,7 +132,7 @@ async def update_user(user_id: int, user_data: UserUpdate, current_user: User = 
             value = UserLevel(value)
         if value is not None:
             setattr(user, key, value)
-    user.updated_at = datetime.utcnow()
+    user.updated_at = utc_now_db()
     await db.commit()
     return APIResponse(code=0, message="更新成功", data={"id": user.id})
 
@@ -142,7 +143,7 @@ async def delete_user(user_id: int, _: User = Depends(require_admin), db: AsyncS
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     user.status = False
-    user.disabled_at = datetime.utcnow()
+    user.disabled_at = utc_now_db()
     user.token_version += 1
     await db.commit()
     return APIResponse(code=0, message="删除成功", data=None)

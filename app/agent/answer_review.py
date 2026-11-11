@@ -4,6 +4,7 @@ from __future__ import annotations
 import time
 import asyncio
 import re
+import logging
 from typing import TYPE_CHECKING
 
 from app.agent.answer_contracts import candidate_binding, review_query, workflow_binding, tool_evidence_text
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 
 VERSION_CHANGED_REPLY = "知识版本已变化，请重新提问以读取最新发布内容。"
 VERSION_UNKNOWN_REPLY = "本轮知识版本暂时无法核实，请稍后重试。"
+logger = logging.getLogger(__name__)
 
 
 def answer_body(text: str) -> str:
@@ -134,12 +136,13 @@ async def validate_candidate(context: ResponseContext, state: AgentState, *, tru
         state.collected_info["llm_judge"] = {key: value for key, value in judgement.items() if key != "_v2_verdict"}
         if not judgement.get("publish_allowed"):
             logger.info(
-                "llm_judge_rejected intent=%s session=%s support=%s validity=%s reason=%s fact_score=%s issues=%s item_checks=%s",
+                "llm_judge_rejected intent=%s session=%s support=%s validity=%s reason=%s contract_code=%s fact_score=%s issues=%s item_checks=%s",
                 snapshot.detected_intent,
                 snapshot.session_id,
                 judgement.get("support"),
                 judgement.get("response_validity"),
                 judgement.get("reason"),
+                judgement.get("contract_failure_code"),
                 judgement.get("fact_score"),
                 judgement.get("response_issues"),
                 judgement.get("item_checks"),

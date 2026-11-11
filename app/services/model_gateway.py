@@ -1,6 +1,7 @@
 """SQL模型网关：原子预留/结算、跨实例槽、每次尝试可审计，Redis不可用不绕过。"""
 
 from __future__ import annotations
+from app.utils.utc_time import utc_now_db
 from contextvars import ContextVar
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -108,7 +109,7 @@ class ModelGateway:
             str(context.get("reserved_cost", 0))
         ) > Decimal(str(settings.LLM_MAX_COST_USD)):
             raise RuntimeError("request_model_budget_exceeded")
-        now = datetime.utcnow()
+        now = utc_now_db()
         key = str(context["user_id"]) + ":" + now.strftime("%Y-%m-%d")
         cid = str(uuid.uuid4())
         async with factory() as db:

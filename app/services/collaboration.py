@@ -4,6 +4,7 @@
 2. 工单管理与分配
 3. 人机协作时机控制
 """
+from app.utils.utc_time import as_utc, utc_now, utc_now_db
 import time
 import uuid
 import json
@@ -84,7 +85,7 @@ class HandoffRequest:
         self.context = context or {}
         self.status = "pending"
         self.assigned_to: Optional[str] = None
-        self.created_at = datetime.utcnow().isoformat()
+        self.created_at = utc_now().isoformat()
         self.assigned_at: Optional[str] = None
         self.resolved_at: Optional[str] = None
         self.sla_deadline: str = ""
@@ -99,7 +100,7 @@ class HandoffRequest:
             "low": 48,
         }
         hours = sla_hours.get(self.priority, 24)
-        deadline = datetime.utcnow() + timedelta(hours=hours)
+        deadline = utc_now() + timedelta(hours=hours)
         self.sla_deadline = deadline.isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
@@ -244,7 +245,7 @@ class HumanAgentService:
 
         agent.assign()
         request.assigned_to = agent_id
-        request.assigned_at = datetime.utcnow().isoformat()
+        request.assigned_at = utc_now().isoformat()
         request.status = "assigned"
 
         return True
@@ -280,7 +281,7 @@ class HumanAgentService:
             return False
 
         request.status = "resolved"
-        request.resolved_at = datetime.utcnow().isoformat()
+        request.resolved_at = utc_now().isoformat()
         request.resolution = resolution
 
         if agent_id and agent_id in self._agents:
@@ -304,7 +305,7 @@ class TicketManager:
         priority: str = "medium",
         session_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        ticket_id = f"TKT{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        ticket_id = f"TKT{utc_now().strftime('%Y%m%d%H%M%S')}"
         self._ticket_counter += 1
 
         sla_deadline = self._calculate_sla_deadline(priority)
@@ -319,8 +320,8 @@ class TicketManager:
             "assigned_to": None,
             "session_id": session_id,
             "sla_deadline": sla_deadline,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": utc_now().isoformat(),
+            "updated_at": utc_now().isoformat(),
             "resolution": None,
         }
 
@@ -337,7 +338,7 @@ class TicketManager:
             "low": 48,
         }
         hours = sla_hours.get(priority, 24)
-        deadline = datetime.utcnow() + timedelta(hours=hours)
+        deadline = utc_now() + timedelta(hours=hours)
         return deadline.isoformat()
 
     def get_ticket(self, ticket_id: str) -> Optional[Dict[str, Any]]:
@@ -361,14 +362,14 @@ class TicketManager:
             return None
 
         ticket["status"] = status
-        ticket["updated_at"] = datetime.utcnow().isoformat()
+        ticket["updated_at"] = utc_now().isoformat()
 
         if assigned_to:
             ticket["assigned_to"] = assigned_to
 
         if resolution:
             ticket["resolution"] = resolution
-            ticket["resolved_at"] = datetime.utcnow().isoformat()
+            ticket["resolved_at"] = utc_now().isoformat()
 
         return ticket
 
@@ -412,7 +413,7 @@ class TicketManager:
         priority_counts = {}
         overdue_count = 0
 
-        now = datetime.utcnow()
+        now = utc_now_db()
 
         for ticket in tickets:
             status = ticket["status"]
@@ -426,7 +427,7 @@ class TicketManager:
                 if sla_deadline:
                     try:
                         deadline = datetime.fromisoformat(sla_deadline)
-                        if now > deadline:
+                        if as_utc(now) > as_utc(deadline):
                             overdue_count += 1
                     except ValueError:
                         pass

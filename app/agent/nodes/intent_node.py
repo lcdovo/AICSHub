@@ -364,8 +364,13 @@ async def route_request(dependencies: "RoutingDependencies", state: AgentState) 
             state.set_workflow_reply("本轮理解或对象来源无法核实，请重新说明请求。")
             state.needs_clarification = True
             return AgentNode.RESPONSE_GENERATION
+        request_type = execution_request_type(state.understanding)
+        # 对投诉政策问法保留规则优先，避免模型仅因出现“投诉”就误判为建单申请。
+        if (state.detected_intent == IntentType.COMPLAINT
+                and dependencies.policy.request_kind(IntentType.COMPLAINT, state.user_message) == "inquiry"):
+            request_type = "inquiry"
         decision = dependencies.policy.decide_structured(
-            topic=state.detected_intent, request_type=execution_request_type(state.understanding),
+            topic=state.detected_intent, request_type=request_type,
             parameters=state.current_business_parameters().model_dump(exclude_none=True),
             missing_information=execution_missing_information(state.understanding),
         )
@@ -464,8 +469,12 @@ async def intent_recognition_node(graph, state: AgentState) -> str:
     from app.agent.nodes.tool_node import persistent_actions
     return await recognize_request(IntentDependencies(
         getattr(graph, "intent_recognizer", None), lambda: graph.llm_service,
-        lambda value: graph._refund_confirmed(value), lambda value: graph._refund_cancelled(value),
-        lambda text: graph._is_smalltalk(text), lambda history, current: graph._detect_intent_escalation(history, current),
+        lambda value: getattr(graph, "_refund_confirmed", lambda _: False)(value),
+        lambda value: getattr(graph, "_refund_cancelled", lambda _: False)(value),
+        lambda text: graph._is_smalltalk(text),
+        lambda history, current: getattr(
+            graph, "_detect_intent_escalation", detect_escalation
+        )(history, current),
         persistent_actions(),
     ), state)
 

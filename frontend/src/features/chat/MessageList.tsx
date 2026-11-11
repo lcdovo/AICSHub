@@ -1,35 +1,16 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { lazy, memo, Suspense, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ArrowDown, Check, Copy, ThumbsDown, ThumbsUp } from "lucide-react";
 import type { Message } from "../../api/types";
 import { api } from "../../api";
 import { Button, ErrorState, dateTime } from "../../components/ui";
 import { useTask } from "../../hooks/useTask";
-const plugins = [remarkGfm];
+const MarkdownContent = lazy(() => import("./MarkdownContent"));
 const Markdown = memo(function Markdown({ content }: { content: string }) {
   return (
-    <ReactMarkdown
-      remarkPlugins={plugins}
-      components={{
-        table: (props) => (
-          <div
-            className="markdown-table"
-            tabIndex={0}
-            role="region"
-            aria-label="回答中的表格"
-          >
-            <table {...props} />
-          </div>
-        ),
-        a: (props) => (
-          <a {...props} target="_blank" rel="noopener noreferrer" />
-        ),
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+    <Suspense fallback={<p>{content}</p>}>
+      <MarkdownContent content={content} />
+    </Suspense>
   );
 });
 const AssistantContent = memo(function AssistantContent({

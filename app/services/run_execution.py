@@ -1,5 +1,6 @@
 """SQL轮次协调。进程任务只负责执行，Run/消息/事件/回执才是恢复事实。"""
 from __future__ import annotations
+from app.utils.utc_time import utc_now_db
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -9,6 +10,7 @@ import hashlib
 import json
 import time
 import uuid
+import logging
 
 from fastapi import HTTPException
 from sqlalchemy import select, update, or_
@@ -19,13 +21,17 @@ from app.agent.memory import SessionBusyError, SessionLeaseError
 from app.agent.state import AgentState
 from app.models.models import ChatRun, RunEvent, Session, SessionStatus, Message, MessageRole, User, OperationAudit, RefundAction
 from app.security import ensure_owner_or_admin, authenticate_access_token
+from app.config.config import settings
+from app.services.model_failure import failure_code
 
 FINAL = {"succeeded", "awaiting_confirmation", "failed", "cancelled"}
-LEASE_SECONDS = 45
-from app.config.config import settings
+# 执行预算为 90 秒；租约必须覆盖完整执行窗口并留出最终落库余量。
+# 过短租约会让长 RAG/Judge 请求被恢复器提前接管，误记为 interrupted_unknown。
+LEASE_SECONDS = max(120, int(settings.CHAT_RUN_TIMEOUT_SECONDS) + 30)
 
 RUN_TIMEOUT_SECONDS = settings.CHAT_RUN_TIMEOUT_SECONDS
 TASKS: dict[str, asyncio.Task] = {}
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -56,7 +62,18 @@ def append_event(db: AsyncSession, run: ChatRun, kind: str, payload: dict) -> No
 
 
 def public_event(item: RunEvent) -> dict:
-    return {**item.payload, "type": item.event_type, "run_id": item.run_id, "session_id": item.session_id,
+    # 历史事件可能包含旧版本写入的异常原文；读取时也做防御性清理。
+    private_error_fields = {"error", "error_message", "exception", "traceback", "stack_trace"}
+
+    def public_payload(value):
+        if isinstance(value, dict):
+            return {key: public_payload(child) for key, child in value.items()
+                    if key not in private_error_fields}
+        if isinstance(value, list):
+            return [public_payload(child) for child in value]
+        return value
+
+    return {**public_payload(item.payload), "type": item.event_type, "run_id": item.run_id, "session_id": item.session_id,
             "event_id": item.id, "sequence": item.sequence, "schema_version": item.schema_version,
             "timestamp": item.created_at.isoformat() + "Z"}
 
@@ -79,7 +96,7 @@ async def guard_write(db: AsyncSession, source: Message) -> None:
             raise HTTPException(409,"共享租约已失效，禁止继续提交")
     owned = await db.execute(update(Session).where(
         Session.id == run.session_id, Session.lease_token == run.lease_token,
-        Session.lease_expires_at > datetime.utcnow(), Session.deleted_at.is_(None),
+        Session.lease_expires_at > utc_now_db(), Session.deleted_at.is_(None),
         Session.status == SessionStatus.ACTIVE).values(version=Session.version))
     if owned.rowcount != 1:
         raise HTTPException(409, "轮次租约或会话状态已失效，禁止继续提交")
@@ -116,7 +133,7 @@ async def accept(db: AsyncSession, actor: User, body) -> tuple[ChatRun, bool]:
     payload["_task_loop_enabled"] = settings.AGENT_TASK_LOOP_ENABLED
     run = ChatRun(id=str(uuid.uuid4()), user_id=body.user_id, actor_id=actor.id, session_id=sid,
                   client_message_id=cid, request_hash=digest, request_data=payload,
-                  lease_expires_at=datetime.utcnow() + timedelta(seconds=LEASE_SECONDS))
+                  lease_expires_at=utc_now_db() + timedelta(seconds=LEASE_SECONDS))
     db.add(run)
     append_event(db, run, "stream_start", {"status": "accepted"})
     try:
@@ -139,10 +156,10 @@ async def _claim(factory: async_sessionmaker[AsyncSession], rid: str, token: str
         if actor is None or not actor.status or actor.disabled_at is not None:
             raise HTTPException(401, "身份已失效")
         ensure_owner_or_admin(actor, run.user_id)
-        expires = datetime.utcnow() + timedelta(seconds=LEASE_SECONDS)
+        expires = utc_now_db() + timedelta(seconds=LEASE_SECONDS)
         result = await db.execute(update(Session).where(Session.id == run.session_id,
             Session.deleted_at.is_(None), Session.status == SessionStatus.ACTIVE,
-            or_(Session.lease_token.is_(None), Session.lease_expires_at <= datetime.utcnow()))
+            or_(Session.lease_token.is_(None), Session.lease_expires_at <= utc_now_db()))
             .values(lease_token=token, lease_expires_at=expires))
         if result.rowcount != 1:
             await db.rollback()
@@ -171,7 +188,7 @@ async def _claim(factory: async_sessionmaker[AsyncSession], rid: str, token: str
 
 async def assert_fence(db: AsyncSession, run: ChatRun, token: str, version: int) -> None:
     result = await db.execute(update(Session).where(Session.id == run.session_id,
-        Session.lease_token == token, Session.version == version, Session.lease_expires_at > datetime.utcnow(),
+        Session.lease_token == token, Session.version == version, Session.lease_expires_at > utc_now_db(),
         Session.status == SessionStatus.ACTIVE, Session.deleted_at.is_(None)).values(version=Session.version))
     if result.rowcount != 1:
         raise SessionLeaseError("轮次所有权或会话版本已失效")
@@ -183,7 +200,7 @@ async def _renew(factory: async_sessionmaker[AsyncSession], run: ChatRun, token:
             await asyncio.sleep(10)
             await assert_owner()
             async with factory() as db:
-                now = datetime.utcnow()
+                now = utc_now_db()
                 result = await db.execute(update(Session).where(Session.id == run.session_id, Session.lease_token == token,
                     Session.lease_expires_at > now, Session.status == SessionStatus.ACTIVE, Session.deleted_at.is_(None))
                     .values(lease_expires_at=now + timedelta(seconds=LEASE_SECONDS)))
@@ -286,6 +303,11 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
     except BaseException as exc:
         if isinstance(exc, (KeyboardInterrupt, SystemExit)):
             raise
+        safe_failure = failure_code(exc)
+        logger.error(
+            "chat run execution failed: run_id=%s status=%s error_type=%s failure_code=%s",
+            rid, getattr(exc, "status_code", None), type(exc).__name__, safe_failure,
+        )
         # 提交窗口异常保留reconciling；恢复器只读业务回执，绝不重做图中的写操作。
         with suppress(Exception):
             async with factory() as db:
@@ -294,10 +316,12 @@ async def execute(factory: async_sessionmaker[AsyncSession], rid: str, service, 
                     run.status = "reconciling" if run.user_message_id else "failed"
                     run.error_code = str(exc.status_code) if isinstance(exc, HTTPException) else (
                         "409" if isinstance(exc, SessionBusyError) else "503")
-                    run.lease_expires_at = datetime.utcnow()
-                    append_event(db, run, "run_status", {"status": run.status})
+                    run.lease_expires_at = utc_now_db()
+                    append_event(db, run, "run_status", {"status": run.status,
+                                                          "error_code": run.error_code,
+                                                          "failure_code": safe_failure})
                     await db.execute(update(Session).where(Session.id == run.session_id, Session.lease_token == token)
-                                     .values(lease_expires_at=datetime.utcnow()))
+                                     .values(lease_expires_at=utc_now_db()))
                     await db.commit()
     finally:
         if journal_token is not None:
@@ -326,7 +350,7 @@ def finish(db: AsyncSession, run: ChatRun, message: Message, state: AgentState) 
                       node_timings_ms=node_timings_ms, trace_id=run.id)
     task_payload = {"task_id": state.task.task_id, "task_status": state.task.status} if state.task else {}
     run.result.update(task_payload)
-    run.updated_at = datetime.utcnow()
+    run.updated_at = utc_now_db()
     append_event(db, run, "token", {"content": state.reply, "provider": "validated"})
     append_event(db, run, "done", {"reply": state.reply, "intent": state.detected_intent, **task_payload})
     append_event(db, run, "stream_end", {"message_id": message.id, "status": run.status})
@@ -338,11 +362,11 @@ async def recover(factory: async_sessionmaker[AsyncSession], rid: str) -> None:
     from app.models.models import Ticket, HandoffRequestRecord
     async with factory() as db:
         run = await db.get(ChatRun, rid)
-        if run is None or run.status in FINAL or (run.lease_expires_at and run.lease_expires_at > datetime.utcnow()):
+        if run is None or run.status in FINAL or (run.lease_expires_at and run.lease_expires_at > utc_now_db()):
             return
         session = await db.scalar(select(Session).where(Session.id == run.session_id).with_for_update())
         run = await db.scalar(select(ChatRun).where(ChatRun.id == rid).with_for_update().execution_options(populate_existing=True))
-        if run.status in FINAL or (run.lease_expires_at and run.lease_expires_at > datetime.utcnow()):
+        if run.status in FINAL or (run.lease_expires_at and run.lease_expires_at > utc_now_db()):
             return
         if session is None or session.user_id != run.user_id or session.deleted_at is not None or session.status == SessionStatus.CLOSED:
             run.status = "cancelled"
@@ -350,7 +374,7 @@ async def recover(factory: async_sessionmaker[AsyncSession], rid: str) -> None:
             await db.commit()
             return
         # 不抢走其他Run的新租约。
-        if session.lease_token and session.lease_token != run.lease_token and session.lease_expires_at > datetime.utcnow():
+        if session.lease_token and session.lease_token != run.lease_token and session.lease_expires_at > utc_now_db():
             return
         from app.services.capability_journal import recover_calls
         recovery = await recover_calls(db, run)
@@ -438,7 +462,7 @@ async def wait(factory: async_sessionmaker[AsyncSession], rid: str) -> dict:
                     return run.result
                 code = int(run.error_code) if run.error_code and run.error_code.isdecimal() else 503
                 raise HTTPException(code, {400:"会话已关闭",401:"身份已失效",403:"无权执行该轮次",404:"会话不存在",409:"当前会话正在处理其他消息，请稍后重试"}.get(code,"本轮未完成，原请求不会自动重做；请查询运行状态"))
-            expired = run.lease_expires_at and run.lease_expires_at <= datetime.utcnow()
+            expired = run.lease_expires_at and run.lease_expires_at <= utc_now_db()
         if expired:
             await recover(factory, rid)
         if asyncio.get_running_loop().time() >= deadline:

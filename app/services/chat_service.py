@@ -5,6 +5,7 @@ keeps AgentState hydration and graph execution in one place; the streaming
 adapter also uses the shared persistence/evaluation finalizer.
 """
 from __future__ import annotations
+from app.utils.utc_time import utc_now_db, utc_now
 
 import uuid
 from datetime import datetime
@@ -89,11 +90,11 @@ class ChatService:
                 state.messages = transcript + [{"role": "user", "content": message}]
                 query = select(RefundAction).where(RefundAction.session_id == session_id, RefundAction.user_id == user_id)
                 query = query.where(RefundAction.id == action_id) if action_id else query.where(
-                    RefundAction.status == "pending", RefundAction.expires_at > datetime.utcnow()
+                    RefundAction.status == "pending", RefundAction.expires_at > utc_now_db()
                 )
                 action = await db.scalar(query.order_by(RefundAction.created_at.desc()).limit(1))
                 if action:
-                    if action.status == "pending" and action.expires_at > datetime.utcnow():
+                    if action.status == "pending" and action.expires_at > utc_now_db():
                         state.pending_confirmations.append("apply_refund")
                     state.collected_info.update(order_id=action.order_id, reason=action.reason, refund_type=action.type,
                         refund_action=action_receipt(action), refund_preview={"order_id": action.order_id,
@@ -135,7 +136,7 @@ class ChatService:
         # Keep the persisted transcript and next-turn history consistent.
         if not state.messages or state.messages[-1].get("role") != "assistant" or state.messages[-1].get("content") != state.reply:
             state.messages.append({"role": "assistant", "content": state.reply,
-                                   "timestamp": datetime.now().isoformat(timespec="milliseconds")})
+                                   "timestamp": utc_now().isoformat(timespec="milliseconds")})
         if assistant_message is None:
             assistant_message = Message(
                 session_id=session.id,
@@ -256,7 +257,7 @@ class ChatService:
 
         session.message_count += 1
         session.last_intent = state.detected_intent
-        session.updated_at = datetime.utcnow()
+        session.updated_at = utc_now_db()
         if state.task is not None or state.superseded_task_id:
             from app.services.agent_tasks import persist_task
             await persist_task(db, state)

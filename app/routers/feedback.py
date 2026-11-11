@@ -1,6 +1,7 @@
 """
 用户反馈 API - Phase 4 实现
 """
+from app.utils.utc_time import utc_now_db
 import time
 import uuid
 from datetime import datetime
@@ -122,7 +123,7 @@ async def get_feedback_stats(
     db: AsyncSession = Depends(get_db), _: User = Depends(require_admin),
 ):
     """获取反馈统计"""
-    cutoff_date = datetime.utcnow()
+    cutoff_date = utc_now_db()
     records = (await db.execute(select(UserFeedback))).scalars().all()
     total_feedbacks = len(records)
 

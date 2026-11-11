@@ -1,5 +1,6 @@
 """有界SQL任务与Outbox。未知投递只对账，不把至少一次称为恰好一次。"""
 from __future__ import annotations
+from app.utils.utc_time import utc_now_db
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from datetime import datetime, timedelta
@@ -37,7 +38,7 @@ async def import_outbox(factory: async_sessionmaker[AsyncSession], limit: int = 
 
 async def claim(factory: async_sessionmaker[AsyncSession], *, kind: str | None = None, lease_seconds: int = 30) -> tuple[str,str] | None:
     async with factory() as db:
-        now = datetime.utcnow()
+        now = utc_now_db()
         eligible = or_(BackgroundJob.status.in_(["queued", "retrying"]),
                        (BackgroundJob.status == "running") & (BackgroundJob.lease_expires_at <= now))
         query = select(BackgroundJob).where(eligible, BackgroundJob.next_run <= now,
@@ -79,8 +80,8 @@ async def claim(factory: async_sessionmaker[AsyncSession], *, kind: str | None =
 
 async def _owned(db: AsyncSession, jid: str, token: str) -> BackgroundJob:
     result = await db.execute(update(BackgroundJob).where(BackgroundJob.id == jid, BackgroundJob.lease_token == token,
-        BackgroundJob.status == "running", BackgroundJob.lease_expires_at > datetime.utcnow())
-        .values(updated_at=datetime.utcnow()))
+        BackgroundJob.status == "running", BackgroundJob.lease_expires_at > utc_now_db())
+        .values(updated_at=utc_now_db()))
     if result.rowcount != 1:
         raise RuntimeError("job_lease_lost")
     return await db.get(BackgroundJob, jid, populate_existing=True)
@@ -174,7 +175,7 @@ async def perform(factory: async_sessionmaker[AsyncSession], jid: str, token: st
             item = await db.get(NotificationRecord, resource_id)
             if not already_sent:
                 item.status, item.provider_receipt = NotificationStatus.SENT, receipt
-                item.is_simulated, item.sent_at = bool(adapter.is_simulated), datetime.utcnow()
+                item.is_simulated, item.sent_at = bool(adapter.is_simulated), utc_now_db()
             job.status, job.lease_token, job.lease_expires_at = "succeeded", None, None
             await db.commit()
     except Exception as exc:
@@ -188,7 +189,7 @@ async def perform(factory: async_sessionmaker[AsyncSession], jid: str, token: st
                 return
             retryable = code == "dependency_error" and job.attempts < job.max_attempts
             job.status = "retrying" if retryable else "failed"
-            job.next_run = datetime.utcnow()+timedelta(seconds=min(300,2**job.attempts))
+            job.next_run = utc_now_db()+timedelta(seconds=min(300,2**job.attempts))
             job.last_error, job.lease_token, job.lease_expires_at = code, None, None
             if job.kind == "notification":
                 item = await db.get(NotificationRecord,job.resource_id)

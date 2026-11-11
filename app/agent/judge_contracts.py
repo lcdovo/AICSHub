@@ -93,6 +93,22 @@ def judge_input_fingerprint(response: str, items: list[dict], tool_evidence: str
     return hashlib.sha256(json.dumps([user_query, response, items, tool_evidence], ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
+def _quote_matches(quote: str, source: str) -> bool:
+    """接受原文精确引用及仅 Markdown/空白布局不同的同一段原文。
+
+    标点、符号、否定词和数字必须保留。它们可能改变政策语义，不能为了
+    兼容模型排版而从引用中删除。
+    """
+    def normalize(value: str) -> str:
+        # 代码围栏和换行只是呈现差异；标点、符号、引号和事实字符保留。
+        value = value.strip().strip("`")
+        value = re.sub(r"\s+", " ", value)
+        return value
+
+    normalized_quote = normalize(quote)
+    return bool(normalized_quote) and normalized_quote in normalize(source)
+
+
 def assess_v2(value: dict, response: str, items: list[dict], tool_evidence: str = "", user_query: str = "") -> dict:
     """只校验引用/片段和一致性；论断分类及蕴含关系仍依赖待验证的模型判断。"""
     verdict = JudgeVerdictV2.model_validate(value)
@@ -120,7 +136,7 @@ def assess_v2(value: dict, response: str, items: list[dict], tool_evidence: str 
             key = (ref.kind, ref.source_id, ref.version_id)
             if key not in catalog:
                 raise JudgeContractError("evidence_identity_or_version_invalid")
-            if ref.quote not in catalog[key]:
+            if not _quote_matches(ref.quote, catalog[key]):
                 raise JudgeContractError("evidence_quote_not_in_current_source")
             reference_key = (*key, ref.quote)
             if reference_key in references:

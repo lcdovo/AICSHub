@@ -8,6 +8,7 @@
 供 Analytics 与评测脚本使用；与之相对，agent/validation.py 是「内联质量闸门」
 （不通过 → 重生成/转人工）。两者指标维度相近但职责不同，刻意保持独立。
 """
+from app.utils.utc_time import utc_now
 import time
 import uuid
 import json
@@ -302,7 +303,7 @@ class LowScoreSamplePool:
             "failure_reason": failure_reason,
             "metadata": metadata or {},
             "status": "pending",
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": utc_now().isoformat(),
         }
         self._samples.append(sample)
 
@@ -338,7 +339,7 @@ class LowScoreSamplePool:
                 sample["status"] = "processed"
                 sample["action"] = action
                 sample["note"] = note
-                sample["processed_at"] = datetime.utcnow().isoformat()
+                sample["processed_at"] = utc_now().isoformat()
                 return True
         return False
 
@@ -382,7 +383,7 @@ class ABTestFramework:
             "variants": variants,
             "traffic_split": traffic_split,
             "status": "active",
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": utc_now().isoformat(),
             "end_time": None,
             "stats": {variant["id"]: {"count": 0, "success": 0, "failures": 0} for variant in variants},
         }
@@ -471,7 +472,7 @@ class ABTestFramework:
         experiment = self._experiments.get(experiment_id)
         if experiment:
             experiment["status"] = "completed"
-            experiment["end_time"] = datetime.utcnow().isoformat()
+            experiment["end_time"] = utc_now().isoformat()
             experiment["winner"] = winner_variant_id
 
     def get_active_experiments(self) -> List[Dict[str, Any]]:

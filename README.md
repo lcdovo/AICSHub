@@ -33,6 +33,8 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 
 编辑 `.env`，设置数据库、MinIO 密码和至少32字符的 `AUTH_SECRET_KEY`，配置聊天模型、Embedding 与 Reranker 的地址及模型名称。密钥仅保存在本地配置中。
 
+Compose 配置映射、模板默认值与当前本机运行快照见[配置说明](docs/CONFIGURATION.md)。
+
 ```powershell
 .\scripts\start.ps1 -SkipSeed
 ```

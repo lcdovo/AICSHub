@@ -10,6 +10,7 @@
 仍来自 ``app.agent.tools.TOOL_REGISTRY``。派发前连接失败可进程内回退；
 写调用派发后异常只查持久回执，无法确定时返回unknown，不能盲目重做。
 """
+from app.utils.utc_time import utc_now
 import asyncio
 import json
 import logging
@@ -237,7 +238,7 @@ async def invoke_tool(tool_name: str, **kwargs: Any) -> Optional[ToolExecutionRe
                 error_type="unknown" if spec.effect == "write" else "invalid_output")
     outcome = ("succeeded" if result.success else "unknown" if spec.effect == "write" and result.error_type in unknown_errors else "rejected" if result.error_type in {
         "validation", "permission", "business", "conflict"} else "failed")
-    result = result.model_copy(update={"call_id": call_id, "observed_at": datetime.now(timezone.utc).isoformat(),
+    result = result.model_copy(update={"call_id": call_id, "observed_at": utc_now().isoformat(),
                                        "transport": transport, "outcome": outcome})
     if journal:
         receipt = result.data.get(spec.receipt_key) if spec.receipt_key and isinstance(result.data, dict) else None

@@ -1,4 +1,5 @@
 """人工请求解决事务：幂等终态、座席归属断言及追加审计。"""
+from app.utils.utc_time import utc_now_db
 import uuid
 from datetime import datetime
 
@@ -41,7 +42,7 @@ async def resolve_request(db: AsyncSession, actor: User, request_id: str,
     try:
         if original_agent is not None:
             await lock_capacity_gate(db, original_agent)
-        now = datetime.utcnow()
+        now = utc_now_db()
         result = await db.execute(update(HandoffRequestRecord).where(
             HandoffRequestRecord.id == request_id, HandoffRequestRecord.status == old_status,
             HandoffRequestRecord.assigned_to == original_agent,

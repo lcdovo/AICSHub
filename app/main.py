@@ -19,6 +19,7 @@ from app.services.llm_service import LLMService
 from app.utils.tracking import get_tracer, structured_logger, generate_trace_id
 from app.utils.langfuse_tracing import shutdown_langfuse
 from app.security import require_admin
+from app.services.model_failure import failure_code
 from app.routers.users import router as users_router
 from app.routers.sessions import router as sessions_router
 from app.routers.tickets import router as tickets_router
@@ -221,7 +222,7 @@ async def tracing_middleware(request: Request, call_next):
         structured_logger.log_error(
             trace_id=trace_id,
             error_type="internal_error",
-            error_message=str(exc),
+            error_message=type(exc).__name__,
             method=request.method,
             path=request.url.path,
             duration_ms=duration_ms,
@@ -285,7 +286,7 @@ async def _probe_dependencies() -> dict:
             await asyncio.wait_for(conn.execute(text("SELECT 1")), timeout=timeout)
         result["database"] = {"status": "healthy", "backend": settings.DATABASE_URL.split(":", 1)[0], "latency_ms": round((time.perf_counter() - started) * 1000, 2), "timeout_seconds": timeout}
     except Exception as exc:
-        result["database"] = {"status": "unhealthy", "backend": settings.DATABASE_URL.split(":", 1)[0], "reason": str(exc), "timeout_seconds": timeout}
+        result["database"] = {"status": "unhealthy", "backend": settings.DATABASE_URL.split(":", 1)[0], "reason": failure_code(exc), "timeout_seconds": timeout}
 
     redis = await get_redis()
     if redis is None:
@@ -296,7 +297,7 @@ async def _probe_dependencies() -> dict:
             await asyncio.wait_for(redis.ping(), timeout=timeout)
             result["redis"] = {"status": "healthy", "backend": "redis", "latency_ms": round((time.perf_counter() - started) * 1000, 2), "timeout_seconds": timeout}
         except Exception as exc:
-            result["redis"] = {"status": "degraded", "backend": "memory", "reason": f"Redis 不可用: {exc}", "timeout_seconds": timeout}
+            result["redis"] = {"status": "degraded", "backend": "memory", "reason": failure_code(exc), "timeout_seconds": timeout}
 
     if settings.USE_MILVUS:
         try:
@@ -311,7 +312,7 @@ async def _probe_dependencies() -> dict:
                 "timeout_seconds": timeout,
             }
         except Exception as exc:
-            result["milvus"] = {"status": "degraded", "backend": "memory", "reason": str(exc), "timeout_seconds": timeout}
+            result["milvus"] = {"status": "degraded", "backend": "memory", "reason": failure_code(exc), "timeout_seconds": timeout}
     return result
 
 
@@ -338,13 +339,13 @@ async def prometheus_metrics(_: object = Depends(require_admin)):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.error("Unhandled exception: error_type=%s", type(exc).__name__)
     return JSONResponse(
         status_code=500,
         content={
             "code": 500,
             "message": "Internal Server Error",
-            "detail": str(exc) if settings.DEBUG else "An unexpected error occurred",
+            "detail": "An unexpected error occurred",
         },
     )
 

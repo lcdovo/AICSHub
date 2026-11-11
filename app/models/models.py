@@ -1,3 +1,4 @@
+from app.utils.utc_time import utc_now_db
 from datetime import datetime
 
 from sqlalchemy import (
@@ -37,8 +38,8 @@ class User(Base):
     avatar_url = Column(String(500), nullable=True)
     tags = Column(JSON, default=list)
     status = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_db)
+    updated_at = Column(DateTime, default=utc_now_db, onupdate=utc_now_db)
 
     sessions = relationship("Session", back_populates="user")
     tickets = relationship("Ticket", back_populates="user")
@@ -54,7 +55,7 @@ class RefreshToken(Base):
     expires_at = Column(DateTime, nullable=False, index=True)
     revoked_at = Column(DateTime, nullable=True, index=True)
     replaced_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now_db, nullable=False)
 
     user = relationship("User", back_populates="refresh_tokens")
 
@@ -83,8 +84,8 @@ class Session(Base):
     lease_token = Column(String(36), nullable=True)
     lease_expires_at = Column(DateTime, nullable=True)
     deleted_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_db, index=True)
+    updated_at = Column(DateTime, default=utc_now_db, onupdate=utc_now_db)
     closed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="sessions")
@@ -109,7 +110,7 @@ class Message(Base):
     response_time_ms = Column(Integer, nullable=True)
     tool_calls = Column(JSON, nullable=True)
     run_id = Column(String(36), nullable=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utc_now_db, index=True)
 
     session = relationship("Session", back_populates="messages")
 
@@ -129,7 +130,7 @@ class Order(Base):
     received_at = Column(DateTime, nullable=True)
     currency = Column(String(3), nullable=False, default="CNY")
     shipping = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now_db, nullable=False)
     pay_method = Column(String(50), nullable=True)
     address = Column(String(500), nullable=True)
 
@@ -155,7 +156,7 @@ class RefundApplication(Base):
     business_hash = Column(String(64), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
     review_note = Column(Text, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class RefundAction(Base):
@@ -174,7 +175,7 @@ class RefundAction(Base):
     expires_at = Column(DateTime, nullable=False)
     application_id = Column(String(36), nullable=True)
     preconditions = Column(JSON, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class RefundBusinessClaim(Base):
@@ -212,8 +213,8 @@ class Ticket(Base):
     resolution = Column(Text, nullable=True)
     idempotency_key = Column(String(128), nullable=True, unique=True, index=True)
     sla_deadline = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_db, index=True)
+    updated_at = Column(DateTime, default=utc_now_db, onupdate=utc_now_db)
     resolved_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="tickets")
@@ -248,7 +249,7 @@ class HandoffRequestRecord(Base):
     assigned_to = Column(String(50), nullable=True, index=True)
     resolution = Column(Text, nullable=True)
     sla_deadline = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now_db, nullable=False, index=True)
     assigned_at = Column(DateTime, nullable=True)
     resolved_at = Column(DateTime, nullable=True)
     idempotency_key = Column(String(128), nullable=True, unique=True, index=True)
@@ -277,9 +278,9 @@ class NotificationRecord(Base):
     attempts = Column(Integer, nullable=False, default=0)
     last_error = Column(Text, nullable=True)
     idempotency_key = Column(String(128), nullable=False, unique=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now_db, nullable=False, index=True)
     sent_at = Column(DateTime, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now_db, onupdate=utc_now_db)
 
 
 class OperationAudit(Base):
@@ -295,7 +296,7 @@ class OperationAudit(Base):
     request_payload = Column(JSON, nullable=True)
     result_payload = Column(JSON, nullable=True)
     status = Column(String(20), nullable=False, default="succeeded")
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now_db, nullable=False, index=True)
 
 
 class UserFeedback(Base):
@@ -311,7 +312,7 @@ class UserFeedback(Base):
     score = Column(Integer, nullable=True)
     content = Column(Text, nullable=True)
     categories = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now_db, nullable=False, index=True)
 
 
 class KnowledgeDoc(Base):
@@ -327,8 +328,8 @@ class KnowledgeDoc(Base):
     keywords = Column(JSON, nullable=True, default=list)
     source = Column(String(500), nullable=True, default="")
     deleted_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_db)
+    updated_at = Column(DateTime, default=utc_now_db, onupdate=utc_now_db)
 
     stable_id = Column(String(40), nullable=True, unique=True, index=True)
     published_version = Column(Integer, nullable=True)
@@ -354,7 +355,7 @@ class KnowledgeChunk(Base):
     chunk_index = Column(Integer, nullable=False, default=0)
     version = Column(Integer, nullable=False, default=1, index=True)
     is_active = Column(Boolean, nullable=False, default=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now_db, nullable=False)
 
     content_hash = Column(String(64), nullable=True)
     start_offset = Column(Integer, nullable=True)
@@ -388,7 +389,7 @@ class AgentTrace(Base):
     route_version = Column(String(50), nullable=True)
     success = Column(Boolean, default=True)
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utc_now_db, index=True)
 
 
 class EvaluationResult(Base):
@@ -419,7 +420,7 @@ class EvaluationResult(Base):
     processing_action = Column(String(50), nullable=True)
     processing_note = Column(Text, nullable=True)
     processed = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utc_now_db, index=True)
 
 
 class ChatRun(Base):
@@ -443,8 +444,8 @@ class ChatRun(Base):
     sequence = Column(Integer, nullable=False, default=0)
     result = Column(JSON, nullable=True)
     error_code = Column(String(50), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
+    updated_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class RunEvent(Base):
@@ -457,7 +458,7 @@ class RunEvent(Base):
     schema_version = Column(Integer, nullable=False, default=1)
     event_type = Column(String(40), nullable=False)
     payload = Column(JSON, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class BackgroundJob(Base):
@@ -470,12 +471,12 @@ class BackgroundJob(Base):
     status = Column(String(30), nullable=False, default="queued", index=True)
     attempts = Column(Integer, nullable=False, default=0)
     max_attempts = Column(Integer, nullable=False, default=3)
-    next_run = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    next_run = Column(DateTime, nullable=False, default=utc_now_db, index=True)
     lease_token = Column(String(36), nullable=True)
     lease_expires_at = Column(DateTime, nullable=True)
     last_error = Column(String(100), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
+    updated_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class SimulatedDelivery(Base):
@@ -483,7 +484,7 @@ class SimulatedDelivery(Base):
     __tablename__ = "simulated_deliveries"
     event_id = Column(String(36), primary_key=True)
     receipt_id = Column(String(128), nullable=False, unique=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class KnowledgeVersion(Base):
@@ -503,7 +504,7 @@ class KnowledgeVersion(Base):
     embedding_metadata = Column(JSON, nullable=True)
     chunk_policy = Column(String(40), nullable=False, default="bounded-source-v1")
     error_code = Column(String(80), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class KnowledgeEpoch(Base):
@@ -541,7 +542,7 @@ class ModelCallRecord(Base):
     usage_basis=Column(String(30),nullable=False,default="reserved_estimate")
     latency_ms=Column(Integer,nullable=True)
     error_code=Column(String(80),nullable=True)
-    created_at=Column(DateTime,nullable=False,default=datetime.utcnow)
+    created_at=Column(DateTime,nullable=False,default=utc_now_db)
     expires_at=Column(DateTime,nullable=False,index=True)
     request_hash=Column(String(64),nullable=False)
 
@@ -564,8 +565,8 @@ class AgentTask(Base):
     version = Column(Integer, nullable=False, default=1)
     status = Column(String(30), nullable=False, index=True)
     progress = Column(JSON, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
+    updated_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class AgentTaskStep(Base):
@@ -581,7 +582,7 @@ class AgentTaskStep(Base):
     status = Column(String(20), nullable=False)
     input_digest = Column(String(64), nullable=False)
     error_code = Column(String(80), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
 
 
 class AgentCapabilityCall(Base):
@@ -603,5 +604,5 @@ class AgentCapabilityCall(Base):
     result_digest = Column(String(64), nullable=True)
     error_code = Column(String(80), nullable=True)
     task_progress = Column(JSON, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utc_now_db)
     finished_at = Column(DateTime, nullable=True)

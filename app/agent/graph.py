@@ -17,6 +17,7 @@ import logging
 import random
 from typing import AsyncGenerator, Dict, Any, Callable, TypedDict
 from datetime import datetime
+from app.utils.utc_time import utc_now
 
 from langchain_core.runnables import RunnableLambda
 from langgraph.graph import END as LANGGRAPH_END
@@ -334,8 +335,8 @@ class AgentGraph:
         initial_node = state.current_node
         # 保持既有 WebSocket 协议：首事件仍为入口节点。流式事实：
         # 节点级快照来自 LangGraph updates；文本在校验后由响应节点分片发布。
-        yield {"type": "node_start", "node": initial_node, "timestamp": datetime.now().isoformat()}
-        yield {"type": "stream_mode", "mode": "updates", "token_stream": "validated", "timestamp": datetime.now().isoformat()}
+        yield {"type": "node_start", "node": initial_node, "timestamp": utc_now().isoformat()}
+        yield {"type": "stream_mode", "mode": "updates", "token_stream": "validated", "timestamp": utc_now().isoformat()}
         first_update = True
         token_index = 0
         event_queue: asyncio.Queue = asyncio.Queue(maxsize=64)
@@ -373,7 +374,7 @@ class AgentGraph:
                 # 新一轮 token 属于改写后的最终稿：让前端清空上一轮再重打，
                 # 避免出现两版草稿文本拼接。
                 if emitted_token:
-                    yield {"type": "token_reset", "timestamp": datetime.now().isoformat()}
+                    yield {"type": "token_reset", "timestamp": utc_now().isoformat()}
                 continue
             if kind == "token":
                 content = str(payload or "")
@@ -381,7 +382,7 @@ class AgentGraph:
                     emitted_token = True
                     yield {"type": "token", "content": content, "index": token_index,
                            "streaming": True, "provider": "validated",
-                           "timestamp": datetime.now().isoformat()}
+                           "timestamp": utc_now().isoformat()}
                     token_index += len(content)
                 continue
             if kind == "error":
@@ -395,7 +396,7 @@ class AgentGraph:
                 continue
             node_name, payload = next(iter(update.items()))
             updated_state = payload.get("state", state)
-            node_start = datetime.now().isoformat()
+            node_start = utc_now().isoformat()
             if not (first_update and node_name == initial_node):
                 yield {"type": "node_start", "node": node_name, "timestamp": node_start}
             first_update = False
@@ -403,39 +404,39 @@ class AgentGraph:
 
             if node_name == AgentNode.INTENT_RECOGNITION:
                 yield {"type": "intent", "intent": state.detected_intent, "confidence": state.intent_confidence,
-                       "needs_clarification": state.needs_clarification, "timestamp": datetime.now().isoformat()}
+                       "needs_clarification": state.needs_clarification, "timestamp": utc_now().isoformat()}
             if node_name == AgentNode.QUERY_REWRITE:
                 yield {"type": "query_rewrite", "applied": state.query_rewrite_applied,
                        "original_query": state.user_message,
                        "rewritten_query": state.rewritten_query or state.user_message,
                        "reason": state.query_rewrite_reason or "",
-                       "timestamp": datetime.now().isoformat()}
+                       "timestamp": utc_now().isoformat()}
             if node_name == AgentNode.RAG_RETRIEVAL:
                 results = state.collected_info.get("kb_results", [])
                 yield {"type": "rag_result", "results_count": len(results),
                        "top_score": results[0].get("final_score", 0) if results else 0,
-                       "timestamp": datetime.now().isoformat()}
+                       "timestamp": utc_now().isoformat()}
             if node_name == AgentNode.RESPONSE_GENERATION and state.collected_info.get("validation"):
                 validation = state.collected_info["validation"]
                 yield {"type": "validation", "passed": validation.get("passed", False),
                        "overall_score": validation.get("overall_score", 0),
                        "needs_regeneration": validation.get("needs_regeneration", False),
-                       "timestamp": datetime.now().isoformat()}
+                       "timestamp": utc_now().isoformat()}
             if node_name == AgentNode.HUMAN_HANDOFF:
                 yield {"type": "handoff", "reason": state.human_reason or "需要人工介入",
-                       "timestamp": datetime.now().isoformat()}
+                       "timestamp": utc_now().isoformat()}
 
             for call in state.tool_calls[previous_tool_count:]:
                 yield {"type": "tool_call_start", "tool": call.tool_name, "args": call.arguments,
-                       "timestamp": datetime.now().isoformat()}
+                       "timestamp": utc_now().isoformat()}
                 yield {"type": "tool_call_complete", "tool": call.tool_name, "success": call.success,
-                       "error": call.error_message, "timestamp": datetime.now().isoformat()}
+                       "error": call.error_message, "timestamp": utc_now().isoformat()}
             previous_tool_count = len(state.tool_calls)
 
             trace = state.trace[-1] if state.trace else {}
             yield {"type": "node_complete", "node": node_name,
                    "duration_ms": trace.get("duration_ms", 0),
-                   "next_node": payload.get("next_node"), "timestamp": datetime.now().isoformat()}
+                   "next_node": payload.get("next_node"), "timestamp": utc_now().isoformat()}
 
         finally:
             _stream_event_queue.reset(queue_token)
@@ -451,7 +452,7 @@ class AgentGraph:
         yield {"type": "done", "reply": state.reply, "intent": state.detected_intent,
                "execution_time_ms": state.execution_time_ms,
                "tool_calls": [{"tool": tc.tool_name, "success": tc.success} for tc in state.tool_calls],
-               "need_human": state.need_human, "timestamp": datetime.now().isoformat()}
+               "need_human": state.need_human, "timestamp": utc_now().isoformat()}
 
     async def run(self, state: AgentState) -> AgentState:
         from app.services.model_gateway import inherited_model_context

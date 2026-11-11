@@ -1,4 +1,5 @@
 """第 3 步持久化仓储：集中封装幂等查询和状态变更。"""
+from app.utils.utc_time import utc_now_db
 from datetime import datetime
 from typing import Optional
 
@@ -25,9 +26,9 @@ class TicketRepository:
         if target != ticket.status and target not in allowed.get(ticket.status, set()):
             raise ValueError(f"不允许从 {ticket.status.value} 转换到 {target.value}")
         ticket.status = target
-        ticket.updated_at = datetime.utcnow()
+        ticket.updated_at = utc_now_db()
         if target in {TicketStatus.RESOLVED, TicketStatus.CLOSED}:
-            ticket.resolved_at = datetime.utcnow()
+            ticket.resolved_at = utc_now_db()
         return ticket
 
 
@@ -46,7 +47,7 @@ class HandoffRepository:
             raise ValueError("仅待处理请求可分配")
         item.status = HandoffStatus.ASSIGNED
         item.assigned_to = agent_id
-        item.assigned_at = datetime.utcnow()
+        item.assigned_at = utc_now_db()
         return item
 
 
@@ -66,7 +67,7 @@ class OutboxRepository:
     async def mark_sent(self, item: NotificationRecord) -> NotificationRecord:
         item.status = NotificationStatus.SENT
         item.attempts += 1
-        item.sent_at = datetime.utcnow()
+        item.sent_at = utc_now_db()
         item.last_error = None
         return item
 

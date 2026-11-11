@@ -1,4 +1,5 @@
 """工单/人工请求的原子创建与持久幂等；不使用进程锁或成功缓存。"""
+from app.utils.utc_time import utc_now_db
 import hashlib
 import json
 import uuid
@@ -128,7 +129,7 @@ async def create_request(
         )
         event_type, result_field = "ticket.created", "ticket_id"
     else:
-        now = datetime.utcnow()
+        now = utc_now_db()
         hours = {"urgent": 1, "high": 4, "normal": 24, "low": 48}[payload["priority"]]
         item = HandoffRequestRecord(
             id=resource_id, **payload, status=HandoffStatus.PENDING,

@@ -1,4 +1,5 @@
 """兼容导入入口，与版本化索引Job共用结构分块。"""
+from app.utils.utc_time import utc_now
 from datetime import datetime
 from typing import Any
 import uuid
@@ -22,7 +23,7 @@ class DocumentChunker:
         for index, chunk in enumerate(chunks):
             chunk.update(id=f"chunk_{uuid.uuid4().hex[:12]}", chunk_index=index,
                          total_chunks=len(chunks), char_count=len(chunk["content"]),
-                         created_at=datetime.now().isoformat())
+                         created_at=utc_now().isoformat())
             if metadata:
                 chunk["metadata"] = dict(metadata)
             chunk["retrieval_text"] = retrieval_text({**(metadata or {}), **chunk})

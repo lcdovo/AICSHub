@@ -13,6 +13,7 @@
   默认关闭，不替代自研落库与指标。
 导出 metrics/prometheus 时仅取聚合指标，span 明细不在内存长期驻留。
 """
+from app.utils.utc_time import utc_now, utc_from_timestamp
 import time
 import uuid
 import json
@@ -98,8 +99,8 @@ class TraceSpan:
             "span_id": self.span_id,
             "parent_span_id": self.parent_span_id,
             "span_name": self.span_name,
-            "start_time": datetime.fromtimestamp(self.start_time).isoformat(),
-            "end_time": datetime.fromtimestamp(self.end_time).isoformat() if self.end_time else None,
+            "start_time": utc_from_timestamp(self.start_time).isoformat(),
+            "end_time": utc_from_timestamp(self.end_time).isoformat() if self.end_time else None,
             "duration_ms": self.duration_ms,
             "status": self.status,
             "error_message": self.error_message,
@@ -364,7 +365,7 @@ class MetricsCollector:
             }
 
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": utc_now().isoformat(),
             "counters": dict(self._counters),
             "response_time": response_time_stats,
             "chat_response_time": {**self._window_stats(self._chat_times),
@@ -661,7 +662,7 @@ class AlertManager:
             "current_value": actual_value,
             "threshold": threshold,
             "message": f"告警: {rule['rule']} 当前值 {actual_value:.2f} 超过阈值 {threshold}",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": utc_now().isoformat(),
             "notification_channels": self.ALERT_LEVELS[rule["level"]]["channels"],
         }
 

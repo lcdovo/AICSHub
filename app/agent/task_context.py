@@ -1,4 +1,5 @@
 """任务对话记录；只记录原始用户反馈与通过审查的建议，不提取授权或订单事实。"""
+from app.utils.utc_time import utc_now
 from datetime import datetime, timezone
 import re
 from typing import TYPE_CHECKING
@@ -19,7 +20,7 @@ def remember_task_turn(state: "AgentState", source: str, content: str) -> None:
     if any(note.source == source and note.turn_digest == scope for note in task.notes):
         return
     note = TaskNote(source=source, message_id=state.source_message_id, turn_digest=scope,
-                    content=content[:600], recorded_at=datetime.now(timezone.utc).isoformat())
+                    content=content[:600], recorded_at=utc_now().isoformat())
     state.task = task.model_copy(update={"notes": [*task.notes, note][-24:]})
 
 

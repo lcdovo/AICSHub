@@ -46,6 +46,25 @@ def test_client_id_replay_conflict_authorization_and_event_cursor(auth_api):
     assert calls==[101]
 
 
+def test_public_event_removes_legacy_exception_text_recursively():
+    event = RunEvent(
+        id="event-private", run_id="run-private", session_id="session-private", sequence=1,
+        schema_version=1, event_type="run_status",
+        payload={"status": "failed", "error_code": "503", "error_message": "secret-password-value",
+                 "details": [{"exception": "private database URL", "error": "private host name",
+                              "safe_code": "provider_timeout"}]},
+        created_at=datetime(2026, 1, 1),
+    )
+
+    public = runs.public_event(event)
+
+    assert public["error_code"] == "503" and public["details"] == [{"safe_code": "provider_timeout"}]
+    assert "error_message" not in public
+    assert "secret-password-value" not in repr(public)
+    assert "private database URL" not in repr(public)
+    assert "private host name" not in repr(public)
+
+
 def test_ws_final_events_reference_already_committed_result(auth_api):
     client,factory,_,users,_=auth_api
     from app.security import create_access_token

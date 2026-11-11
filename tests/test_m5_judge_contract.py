@@ -93,6 +93,45 @@ def test_tool_evidence_identity_is_bound_to_current_receipt_content():
         assess_v2(raw, "模拟申请待审核。", [], tool.replace("pending_review", "rejected"))
 
 
+def test_knowledge_quote_cannot_be_borrowed_from_another_source_with_same_version():
+    response = "B条款。"
+    raw = verdict(response)
+    raw["claims"][0]["evidence"][0].update(source_id="policy-a", quote="B条款。")
+    evidence = [
+        {"id": "policy-a", "version_id": "v1", "content": "A条款。"},
+        {"id": "policy-b", "version_id": "v1", "content": "B条款。"},
+    ]
+
+    with pytest.raises(ValueError, match="evidence_quote_not_in_current_source"):
+        assess_v2(raw, response, evidence)
+
+
+def test_candidate_text_cannot_replace_a_missing_source_quote():
+    response = "合成设备仅适用于允许机洗的织物。"
+    raw = verdict(response)
+    raw["claims"][0]["text"] = "不在来源中的事实。"
+    raw["claims"][0]["evidence"][0]["quote"] = "不在来源中的事实。"
+    raw["claims"][0]["text"] = response
+
+    with pytest.raises(ValueError, match="evidence_quote_not_in_current_source"):
+        assess_v2(raw, response, EVIDENCE)
+
+
+@pytest.mark.parametrize(("source", "quote", "matches"), [
+    ("仅限原包装完好。", "仅限原包装完好。", True),
+    ("仅限\n原包装完好。", "仅限 原包装完好。", True),
+    ("仅限原包装完好。", "只限原包装完好。", False),
+    ("至少7天内申请。", "至少7天内申请", True),
+    ("至少7天内申请。", "至少8天内申请。", False),
+    ("A*B为订单编号的一部分。", "AB为订单编号的一部分。", False),
+    ("原文没有对应条款。", "***", False),
+])
+def test_quote_normalization_preserves_semantic_punctuation_and_numbers(source, quote, matches):
+    from app.agent.judge_contracts import _quote_matches
+
+    assert _quote_matches(quote, source) is matches
+
+
 def test_normalized_metadata_does_not_persist_candidate_or_evidence_quotes():
     raw = verdict()
     result = assess_v2(raw, EVIDENCE[0]["content"], EVIDENCE)

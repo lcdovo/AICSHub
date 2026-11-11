@@ -72,11 +72,20 @@ def main() -> int:
         os.environ.pop(key, None)
     sys.path.insert(0, str(root))
     original_directory = Path.cwd()
-    with tempfile.TemporaryDirectory(prefix="aicshub-t0-") as temporary:
+    # Keep pytest's disposable basetemp beside, not inside, the runtime cwd.
+    # Both live under .local so Windows temp cleanup and pytest cleanup cannot
+    # remove the parent directory while another test still uses it.
+    offline_root = root / ".local" / "offline-test-runs"
+    offline_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="aicshub-t0-", dir=offline_root) as temporary:
+        run_root = Path(temporary)
+        runtime_root = run_root / "runtime"
+        runtime_root.mkdir()
+        pytest_basetemp = run_root / "pytest"
         # Settings 的相对 .env 和运行时文件都落在空目录，不读取项目 .env。
-        os.chdir(temporary)
+        os.chdir(runtime_root)
         config = {
-            "DATABASE_URL_OVERRIDE": f"sqlite+aiosqlite:///{Path(temporary).as_posix()}/offline.db",
+            "DATABASE_URL_OVERRIDE": f"sqlite+aiosqlite:///{runtime_root.as_posix()}/offline.db",
             "REDIS_ENABLED": "false", "USE_MILVUS": "false",
             "LANGFUSE_ENABLED": "false", "USER_MEMORY_ENABLED": "false",
             "AUTH_DEMO_ACCOUNTS_ENABLED": "false", "LLM_API_KEY": "",
@@ -116,13 +125,20 @@ def main() -> int:
         sys._aicshub_offline_guard = True
         import pytest
 
-        if test_arguments:
+        # Treat only existing paths/node ids as selectors. Bare values such as
+        # the argument to ``-k`` are pytest options, not test selectors.
+        has_test_selector = any(
+            not argument.startswith("-")
+            and (root / argument.split("::", 1)[0]).exists()
+            for argument in test_arguments
+        )
+        if has_test_selector:
             arguments = test_arguments
         elif options.profile == "active":
             from scripts.offline_profiles import ACTIVE_TESTS
-            arguments = ["-q", *ACTIVE_TESTS]
+            arguments = ["-q", *ACTIVE_TESTS, *test_arguments]
         else:
-            arguments = ["-q", "tests"]
+            arguments = ["-q", "tests", *test_arguments]
         arguments = [str(root / arg) if (root / arg.split("::")[0]).exists()
                      and not arg.startswith("-") else arg for arg in arguments]
         manifest = {
@@ -142,7 +158,7 @@ def main() -> int:
             with (output / "pytest.log").open("w", encoding="utf-8") as log:
                 with redirect_stdout(Tee(sys.stdout, log)), redirect_stderr(Tee(sys.stderr, log)):
                     code = int(pytest.main(["-c", str(root / "pytest.ini"),
-                                           f"--basetemp={Path(temporary) / 'pytest'}",
+                                           f"--basetemp={pytest_basetemp}",
                                            f"--junitxml={output / 'junit.xml'}", *arguments]))
             source_end = snapshot_sources(root)
             comparison = compare_sources(source_start, source_end)

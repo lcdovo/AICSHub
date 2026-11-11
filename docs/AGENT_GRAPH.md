@@ -4,7 +4,7 @@
 
 Judge v2现已接入逐项检查：同次独立调用同时检查逐句claim与逐项阶段，发布时重核本轮输入及来源绑定。v1仍保留，业务默认未切换；v2首组真实诊断因供应商非法JSON停止，未获准入。见[JUDGE-V2-ITEM-INTEGRATION-v1.md](JUDGE-V2-ITEM-INTEGRATION-v1.md)。
 
-> 当前本机状态：16节点任务循环、model/100%、0013能力执行账本及常驻Worker已部署；API/Worker共享SQL与Redis准入。当前验证及限制见[部署收口](RELIABILITY-ROLLOUT-20261107.md)。下文早期rules/灰度0及未部署描述保留为阶段历史。
+> **当前本机状态（2026-11-11）：**model理解/100%、有限任务循环、多意图逐项与Judge v2 JSON配置开启；数据库为0013，API/Worker同镜像且健康。有效配置见[当前配置快照](CONFIGURATION.md)，部署历史与验收边界见[部署收口](RELIABILITY-ROLLOUT-20261107.md)。下文较早的rules/灰度0及未部署描述是阶段记录。
 
 2026-11-07真实冒烟发现条件诉求的最终apply意向与当前query步骤混淆。现离线分离`execution_request_type`：条件办理当前只能只读查单，后续缺原因不阻止前置查询，条件政策咨询仍查知识；不得自动准备/提交退款。原真实失败保留，新版只完成离线回归，默认仍rules/灰度0。见[MODEL-FIRST-ADMISSION-EVIDENCE-v1.md](MODEL-FIRST-ADMISSION-EVIDENCE-v1.md)。
 
@@ -208,9 +208,9 @@ QueryRewriteObservation冻结本轮原文、查询、applied及scope摘要；统
 
 固定事实闸门补齐终身免费/无条件服务、已经真实/实际支付等有界句式；claim_scope按局部否定及转折判断，前半句否定不能豁免后半句肯定。publication_guard同步拒绝聊天声称已授予/修改/绕过权限，所有workflow最终出口适用。该保护不改变SQL授权/动作执行，也不替代独立政策Judge或通用语义校验。固定P0及正确候选的离线诊断边界见M5-OFFLINE-CHAIN-v1.md。
 
-### Judge v2候选分维度审查
+### Judge v2分维度审查（候选阶段记录）
 
-LLM_JUDGE_CONTRACT_VERSION默认v1，显式v2才启用候选schema。v2将问题可回答性、回复行为、候选有效性分开，逐句覆盖并绑定当前候选/问题/知识版本/工具回执；引用与quote身份核验不能代替语义蕴含。程序硬约束保留，unknown/partial正确补问可发布但不缓存；纯补问/拒答不附无关引用。缓存key含Judge契约及prompt/schema指纹。仅离线契约/SDK替身通过，真实v2质量未验，不自动切业务，详见M5-JUDGE-CONTRACT-v2.md。
+`LLM_JUDGE_CONTRACT_VERSION`代码默认仍为v1；本机当前配置显式使用v2及JSON协议，见[当前配置快照](CONFIGURATION.md)。本段关于“仅离线、未切业务”的描述是早期候选阶段记录。契约将问题可回答性、回复行为、候选有效性分开，逐句绑定当前候选/问题/来源版本/工具回执；来源绑定不等于语义蕴含证明，详细范围与未验边界见M5-JUDGE-CONTRACT-v2.md及对应后续验收记录。
 
 
 ## RAG结构检索优化（2026-11-07）
